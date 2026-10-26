@@ -1,11 +1,20 @@
-import type { Flow, WalkerOS } from '@walkeros/core';
-import { createEvent, getEvent, isObject } from '@walkeros/core';
+import type { Flow } from '@walkeros/core';
+import { createEvent, getEvent } from '@walkeros/core';
+
+/**
+ * Meta Pixel step examples. The four standard events follow Meta's Pixel
+ * reference, run with the settings `{ pixelId: '1234567890' }`. Each out is
+ * the call recorded on `window.fbq`; the fourth argument carries the walkerOS
+ * event id as `eventID`, so the Conversions API can deduplicate it.
+ *
+ * Functions in mappings are published as source code, so they must not use
+ * imported helpers.
+ */
 
 /**
  * Destination bootstrap.
  * Given the canonical settings, init loads the Meta Pixel script and calls
- * fbq('init', pixelId). Reproduce by passing the same settings to
- * `startFlow` as the destination config.
+ * fbq('init', pixelId).
  */
 export const init: Flow.StepExample = {
   title: 'Pixel init',
@@ -17,29 +26,32 @@ export const init: Flow.StepExample = {
       pixelId: '1234567890',
     },
   },
-  out: [['fbq', 'init', '1234567890']],
+  out: [['window.fbq', 'init', '1234567890']],
 };
 
-export const purchase: Flow.StepExample = {
-  title: 'Purchase',
+export const pageView: Flow.StepExample = {
+  title: 'Page view',
   description:
-    'An order complete event is mapped to the Meta Pixel Purchase standard event with value, currency, and product contents.',
-  in: getEvent('order complete', {
-    timestamp: 1700000000,
-    id: '1700000000-gr0up-1',
-  }),
+    'A page view is sent to Meta Pixel as the PageView standard event, with the event id for deduplication.',
+  in: getEvent('page view'),
+  out: [
+    ['window.fbq', 'track', 'PageView', {}, { eventID: 'f0cc5f6fec3d8eeb' }],
+  ],
+};
+
+export const viewContent: Flow.StepExample = {
+  title: 'View content',
+  description:
+    'A product view is mapped to the Meta Pixel ViewContent standard event with product contents, currency and value.',
+  in: getEvent('product view'),
   mapping: {
-    name: 'Purchase',
+    name: 'ViewContent',
     data: {
       map: {
-        value: 'data.value',
-        currency: { value: 'EUR' },
+        content_type: { value: 'product' },
         contents: {
-          loop: [
-            'nested',
+          set: [
             {
-              condition: (entity: unknown) =>
-                isObject(entity) && entity.entity === 'product',
               map: {
                 id: 'data.id',
                 quantity: { key: 'data.quantity', value: 1 },
@@ -47,32 +59,23 @@ export const purchase: Flow.StepExample = {
             },
           ],
         },
-        content_type: { value: 'product' },
-        num_items: {
-          fn: (event: unknown) =>
-            (event as WalkerOS.Event).nested.filter(
-              (item) => item.entity === 'product',
-            ).length,
-        },
+        currency: { key: 'data.currency', value: 'EUR' },
+        value: 'data.price',
       },
     },
   },
   out: [
     [
-      'fbq',
+      'window.fbq',
       'track',
-      'Purchase',
+      'ViewContent',
       {
-        value: 555,
-        currency: 'EUR',
-        contents: [
-          { id: 'ers', quantity: 1 },
-          { id: 'cc', quantity: 1 },
-        ],
         content_type: 'product',
-        num_items: 2,
+        contents: [{ id: 'ers', quantity: 1 }],
+        currency: 'EUR',
+        value: 420,
       },
-      { eventID: '1700000000-gr0up-1' },
+      { eventID: 'db22fb16c70f663d' },
     ],
   ],
 };
@@ -80,17 +83,13 @@ export const purchase: Flow.StepExample = {
 export const addToCart: Flow.StepExample = {
   title: 'Add to cart',
   description:
-    'A product add event is mapped to the Meta Pixel AddToCart standard event with product contents and value.',
-  in: getEvent('product add', {
-    timestamp: 1700000001,
-    id: '1700000001-gr0up-1',
-  }),
+    'A product add is mapped to the Meta Pixel AddToCart standard event with product contents, currency and value.',
+  in: getEvent('product add'),
   mapping: {
     name: 'AddToCart',
     data: {
       map: {
-        value: 'data.price',
-        currency: { value: 'EUR' },
+        content_type: { value: 'product' },
         contents: {
           set: [
             {
@@ -101,44 +100,46 @@ export const addToCart: Flow.StepExample = {
             },
           ],
         },
-        content_type: { value: 'product' },
+        currency: { key: 'data.currency', value: 'EUR' },
+        value: 'data.price',
       },
     },
   },
   out: [
     [
-      'fbq',
+      'window.fbq',
       'track',
       'AddToCart',
       {
+        content_type: 'product',
+        contents: [{ id: 'ers', quantity: 1 }],
         currency: 'EUR',
         value: 420,
-        contents: [{ id: 'ers', quantity: 1 }],
-        content_type: 'product',
       },
-      { eventID: '1700000001-gr0up-1' },
+      { eventID: '83e860384d50953f' },
     ],
   ],
 };
 
-export const viewContent: Flow.StepExample = {
-  title: 'View content',
+export const purchase: Flow.StepExample = {
+  title: 'Purchase',
   description:
-    'A product view event is mapped to the Meta Pixel ViewContent standard event with single-product contents.',
-  in: getEvent('product view', {
-    timestamp: 1700000002,
-    id: '1700000002-gr0up-1',
-  }),
+    'An order complete is mapped to the Meta Pixel Purchase standard event with value, currency, product contents and item count.',
+  in: getEvent('order complete'),
   mapping: {
-    name: 'ViewContent',
+    name: 'Purchase',
     data: {
       map: {
-        value: 'data.price',
-        currency: { value: 'EUR' },
         content_type: { value: 'product' },
         contents: {
-          set: [
+          loop: [
+            'nested',
             {
+              condition: (entity: unknown) =>
+                typeof entity === 'object' &&
+                entity !== null &&
+                'entity' in entity &&
+                entity.entity === 'product',
               map: {
                 id: 'data.id',
                 quantity: { key: 'data.quantity', value: 1 },
@@ -146,33 +147,52 @@ export const viewContent: Flow.StepExample = {
             },
           ],
         },
+        currency: { key: 'data.currency', value: 'EUR' },
+        num_items: {
+          fn: (event: unknown) =>
+            typeof event === 'object' &&
+            event !== null &&
+            'nested' in event &&
+            Array.isArray(event.nested)
+              ? event.nested.filter(
+                  (entity: unknown) =>
+                    typeof entity === 'object' &&
+                    entity !== null &&
+                    'entity' in entity &&
+                    entity.entity === 'product',
+                ).length
+              : 0,
+        },
+        value: 'data.value',
       },
     },
   },
   out: [
     [
-      'fbq',
+      'window.fbq',
       'track',
-      'ViewContent',
+      'Purchase',
       {
-        currency: 'EUR',
-        value: 420,
-        contents: [{ id: 'ers', quantity: 1 }],
         content_type: 'product',
+        contents: [
+          { id: 'ers', quantity: 1 },
+          { id: 'cc', quantity: 1 },
+        ],
+        currency: 'EUR',
+        num_items: 2,
+        value: 555,
       },
-      { eventID: '1700000002-gr0up-1' },
+      { eventID: '235d0d7bd7a213f2' },
     ],
   ],
 };
 
 export const initiateCheckout: Flow.StepExample = {
+  public: false,
   title: 'Initiate checkout',
   description:
     'A cart view event is mapped to the Meta Pixel InitiateCheckout standard event with value and product contents.',
-  in: getEvent('cart view', {
-    timestamp: 1700000003,
-    id: '1700000003-gr0up-1',
-  }),
+  in: getEvent('cart view'),
   mapping: {
     name: 'InitiateCheckout',
     data: {
@@ -184,7 +204,10 @@ export const initiateCheckout: Flow.StepExample = {
             'nested',
             {
               condition: (entity: unknown) =>
-                isObject(entity) && entity.entity === 'product',
+                typeof entity === 'object' &&
+                entity !== null &&
+                'entity' in entity &&
+                entity.entity === 'product',
               map: {
                 id: 'data.id',
                 quantity: { key: 'data.quantity', value: 1 },
@@ -194,16 +217,25 @@ export const initiateCheckout: Flow.StepExample = {
         },
         num_items: {
           fn: (event: unknown) =>
-            (event as WalkerOS.Event).nested.filter(
-              (item) => item.entity === 'product',
-            ).length,
+            typeof event === 'object' &&
+            event !== null &&
+            'nested' in event &&
+            Array.isArray(event.nested)
+              ? event.nested.filter(
+                  (entity: unknown) =>
+                    typeof entity === 'object' &&
+                    entity !== null &&
+                    'entity' in entity &&
+                    entity.entity === 'product',
+                ).length
+              : 0,
         },
       },
     },
   },
   out: [
     [
-      'fbq',
+      'window.fbq',
       'track',
       'InitiateCheckout',
       {
@@ -212,30 +244,18 @@ export const initiateCheckout: Flow.StepExample = {
         contents: [{ id: 'ers', quantity: 2 }],
         num_items: 1,
       },
-      { eventID: '1700000003-gr0up-1' },
+      { eventID: '17fc82ac689238a0' },
     ],
   ],
 };
 
-export const pageView: Flow.StepExample = {
-  title: 'Page view',
-  description:
-    'A page view event is forwarded to Meta Pixel as the PageView standard event with no extra parameters.',
-  in: getEvent('page view', {
-    timestamp: 1700000004,
-    id: '1700000004-gr0up-1',
-  }),
-  mapping: undefined,
-  out: [['fbq', 'track', 'PageView', {}, { eventID: '1700000004-gr0up-1' }]],
-};
-
 export const customEventWithTrackCustom: Flow.StepExample = {
+  public: false,
   title: 'Custom event',
   description:
     'A video complete event is sent as a Meta Pixel trackCustom call with a custom event name and parameters.',
   in: createEvent({
     name: 'video complete',
-    timestamp: 1700000005,
     id: '1700000005-gr0up-1',
     data: { video_id: 'v1d30', duration: 120 },
   }),
@@ -250,7 +270,7 @@ export const customEventWithTrackCustom: Flow.StepExample = {
   },
   out: [
     [
-      'fbq',
+      'window.fbq',
       'trackCustom',
       'VideoComplete',
       { video_id: 'v1d30', duration: 120 },
@@ -263,10 +283,7 @@ export const customEventWithTrackCustom: Flow.StepExample = {
 export const silentRule: Flow.StepExample = {
   public: false,
   description: 'A rule with silent: true sends no fbq event.',
-  in: getEvent('page view', {
-    timestamp: 1700000006,
-    id: '1700000006-gr0up-1',
-  }),
+  in: getEvent('page view'),
   mapping: { silent: true },
   out: [],
 };

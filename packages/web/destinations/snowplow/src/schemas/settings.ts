@@ -37,6 +37,7 @@ export const TrackerContextsSchema = z.object({
     .boolean()
     .optional()
     .describe('Client session context - enables client_session schema'),
+  browser: z.boolean().optional().describe('Browser context'),
   performanceTiming: z
     .boolean()
     .optional()

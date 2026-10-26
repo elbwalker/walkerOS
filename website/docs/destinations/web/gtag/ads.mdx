@@ -62,6 +62,14 @@ const { elb } = await startFlow({
 
 <Configuration type="destination" data={data} />
 
+## Conversion example
+
+An `order complete` event with a `label` on its rule is sent as a Google Ads
+conversion. The destination builds `send_to` from the conversion ID and the
+label, and takes the currency from the `ads` settings.
+
+<StepExample example={data.examples.step.googleAdsConversion} />
+
 ## Enhanced conversions
 
 [Enhanced conversions](https://support.google.com/google-ads/answer/9888656)
@@ -98,3 +106,5 @@ from `event.user`, `event.data`, or anywhere a mapping reaches.
 The `address` object accepts `first_name`, `last_name`, `street`, `city`,
 `region`, `postal_code`, and `country`. When no user data resolves, the
 `set user_data` call is skipped and the conversion is sent normally.
+
+<StepExample example={data.examples.step.adsEnhancedConversions} />

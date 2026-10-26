@@ -40,7 +40,7 @@ await elb({ name: 'page view', data: { title: 'Home' } });
   language="typescript"
 />
 
-That's it. You just sent your first event and saw it in the console.
+This sends your first event and logs it to the console.
 
 ---
 
@@ -160,11 +160,14 @@ const result = await elb({
   data: { id: 'abc', name: 'Widget', price: 29.99 },
 });
 
-if (!result.ok) console.error(result.error);
+if (!result.ok) console.error(result.failed ?? result.error);
 ```
 
 `result.done` lists the destinations that received the event, `result.queued`
-those waiting for consent, and `result.failed` those whose push failed. The
+those waiting (for consent, for a batch flush, or while the destination is
+held), and `result.failed` those whose push failed, each with a `reason`. When
+the event was rejected or a step before the destinations failed,
+`result.error` says why. The
 [event model](/docs/getting-started/event-model#push-an-event) lists the fields
 a partial event takes and what the collector adds.
 
@@ -274,7 +277,7 @@ The basic setup above logs every event it receives. Run it (Node, or your app's 
   language="typescript"
 />
 
-Integrated mode verifies where it runs: in your console. For an offline CLI test loop with mocked destinations, use [bundled mode](/docs/getting-started/modes/bundled#see-your-event).
+In Integrated mode you check events where the flow runs, in your console. For an offline CLI test loop with mocked destinations, use [bundled mode](/docs/getting-started/modes/bundled#see-your-event).
 
 ---
 

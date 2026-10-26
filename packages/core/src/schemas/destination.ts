@@ -90,7 +90,7 @@ export const ConfigSchema = z
         id: 'DestinationEnv',
         title: 'Destination.Env',
         description:
-          'Environment dependencies (destination-defined shape) — platform, SDK, or mock hook.',
+          'Environment dependencies (destination-defined shape): platform, SDK, or mock hook.',
       })
       .describe('Environment dependencies (platform-specific)')
       .optional(),
@@ -351,7 +351,7 @@ export const BatchSchema = z
   .object({
     key: z
       .string()
-      .describe('Batch key (usually mapping key like "product.view")'),
+      .describe('Batch key (usually mapping key like "product view")'),
     events: z.array(EventSchema).describe('Array of events in batch'),
     data: z
       .array(

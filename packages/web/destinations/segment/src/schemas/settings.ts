@@ -11,7 +11,7 @@ export const SettingsSchema = z
     cdnURL: z
       .string()
       .describe(
-        'Not applied: the destination passes it in the load() options, where Analytics.js does not read it, so settings are always fetched from https://cdn.segment.com.',
+        'Custom CDN host Analytics.js fetches its settings from, for a self-hosted proxy. Passed as cdnURL in the first load() argument. Default: https://cdn.segment.com.',
       )
       .optional(),
     initialPageview: z

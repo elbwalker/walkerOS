@@ -1,5 +1,5 @@
 /**
- * Pinterest destination — step examples runner.
+ * Pinterest destination: step examples runner.
  *
  * Every fixture in `examples.step` is a test case. The runner installs a
  * spy as `env.window.pintrk`, pushes the example event through a real
@@ -8,6 +8,7 @@
  */
 
 import type { WalkerOS, Mapping as WalkerOSMapping } from '@walkeros/core';
+import { runInNewContext } from 'vm';
 import { startFlow } from '@walkeros/collector';
 import type { Logger } from '@walkeros/core';
 import { clone, createEvent, isObject, isString, Level } from '@walkeros/core';
@@ -53,7 +54,24 @@ function spyEnv(env: Env): { env: Env; collected: () => CallRecord[] } {
   return { env, collected: () => calls };
 }
 
-describe('pinterest destination — step examples', () => {
+// Functions in examples are published as `{ $code: fn.toString() }` in
+// walkerOS.json and evaluated without the module scope they were written in.
+function asPublished(
+  rule: WalkerOSMapping.Rule | undefined,
+): WalkerOSMapping.Rule | undefined {
+  if (rule === undefined) return rule;
+  return JSON.parse(
+    JSON.stringify(rule, (_, value) =>
+      typeof value === 'function' ? { $code: value.toString() } : value,
+    ),
+    (_, value) =>
+      isObject(value) && typeof value.$code === 'string'
+        ? runInNewContext(`(${value.$code})`)
+        : value,
+  );
+}
+
+describe('pinterest destination: step examples', () => {
   it.each(Object.entries(examples.step))('%s', async (name, example) => {
     const env = clone(examples.env.push);
     const { env: spiedEnv, collected } = spyEnv(env);
@@ -98,6 +116,57 @@ describe('pinterest destination — step examples', () => {
     });
 
     expect(actual).toEqual([...(example.out ?? [])]);
+  });
+
+  it.each(
+    Object.entries(examples.step).filter(
+      ([, example]) => example.command === undefined && isEvent(example.in),
+    ),
+  )('%s as published', async (_name, example) => {
+    const env = clone(examples.env.push);
+    const { env: spiedEnv, collected } = spyEnv(env);
+    const dest = jest.requireActual('../').default;
+    const { elb } = await startFlow();
+
+    if (!isEvent(example.in)) throw new Error('no event input');
+    const event = example.in;
+    const mapping = asPublished(
+      isRule(example.mapping) ? example.mapping : undefined,
+    );
+
+    await elb('walker destination', {
+      code: { ...dest, env: spiedEnv },
+      config: {
+        settings: { apiKey: '2612345678901' },
+        mapping: mapping
+          ? { [event.entity]: { [event.action]: mapping } }
+          : undefined,
+      },
+    });
+    await elb(event);
+
+    const actual = collected().filter(
+      (call) => call[1] !== 'load' && call[1] !== 'page',
+    );
+    expect(actual).toEqual([...(example.out ?? [])]);
+  });
+
+  it('sends product fields inside line_items', () => {
+    const topLevel = Object.entries(examples.step).filter(([, example]) => {
+      const rule = isRule(example.mapping) ? example.mapping : undefined;
+      const map = isObject(rule?.data) ? rule.data.map : undefined;
+      return isObject(map) && ('product_id' in map || 'product_name' in map);
+    });
+    expect(topLevel.map(([name]) => name)).toEqual([]);
+  });
+
+  it('maps product_name from the product name', () => {
+    const fromColor = Object.entries(examples.step).filter(([, example]) =>
+      JSON.stringify(example.mapping ?? {}).includes(
+        '"product_name":"data.color"',
+      ),
+    );
+    expect(fromColor.map(([name]) => name)).toEqual([]);
   });
 
   it('writes one DEBUG line naming the event and the mapping key for a declared skip', async () => {

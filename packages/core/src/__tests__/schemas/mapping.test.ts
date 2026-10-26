@@ -1,4 +1,30 @@
-import { RuleSchema } from '../../schemas/mapping';
+import { BatchSchema } from '../../schemas/destination';
+import { ResultSchema, RuleSchema } from '../../schemas/mapping';
+
+// These descriptions render into the docs property tables and MCP package_get.
+describe('RuleSchema descriptions', () => {
+  const { batch, condition, extend } = RuleSchema.shape;
+
+  it('condition: a false condition tries the next rule', () => {
+    expect(condition.description).toMatch(/next rule/);
+    expect(condition.description).not.toMatch(/process event/);
+  });
+  it('batch: the number form is current and needs pushBatch', () => {
+    expect(batch.description).not.toMatch(/legacy/i);
+    expect(batch.description).toMatch(/pushBatch/);
+  });
+  it('extend: names the only place that merges it', () => {
+    expect(extend.description).toMatch(/@walkeros\/transformer-ga4/);
+    expect(extend.description).not.toMatch(/today/);
+  });
+  it.each([
+    ['Result mappingKey', ResultSchema.shape.mappingKey.description],
+    ['Batch key', BatchSchema.shape.key.description],
+  ])('%s: the example is a real mapping key', (_, description) => {
+    expect(description).toMatch(/"product view"/);
+  });
+});
+
 describe('RuleSchema extend/remove', () => {
   it('preserves extend with a nested partial rule', () => {
     expect(

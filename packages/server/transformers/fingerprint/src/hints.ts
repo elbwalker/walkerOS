@@ -2,7 +2,7 @@ import type { Hint } from '@walkeros/core';
 
 export const hints: Hint.Hints = {
   'ingest-prerequisite': {
-    text: 'The default inputs ip and userAgent read ingest.ip and ingest.userAgent, so the server source must have config.ingest configured. config.ingest MUST use the map operator with direct request field paths (no req. prefix); a bare object like { ip: "req.ip" } is silently inert and leaves ingest empty. An input that resolves empty logs one warning ("Fingerprint input ... resolved empty") and the hash is still generated, but less distinct. Behind a load balancer the request ip is the balancer; read the client from headers.x-forwarded-for instead.',
+    text: 'The default inputs ip and userAgent read ingest.ip and ingest.userAgent, so the server source must have config.ingest configured. config.ingest MUST use the map operator with direct request field paths (no req. prefix); a bare object like { ip: "req.ip" } is silently inert and leaves ingest empty. An input that resolves empty logs one warning ("Fingerprint input ... resolved empty") and the hash is still generated, but less distinct. Behind a proxy the request ip is the address of the proxy: map the single-address header the proxy sets, or follow the Express source docs, section "Client IP behind a proxy". An ip that is not one address is reported as an error and left out of the hash.',
     code: [
       {
         lang: 'json',
@@ -16,7 +16,7 @@ export const hints: Hint.Hints = {
                   settings: { port: 8080 },
                   ingest: {
                     map: {
-                      ip: { key: 'ip' },
+                      ip: { key: 'headers.x-client-ip' },
                       userAgent: { key: 'headers.user-agent' },
                     },
                   },

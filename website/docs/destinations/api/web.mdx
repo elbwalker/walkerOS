@@ -154,9 +154,10 @@ per element, not once for the whole array. Batched requests carry no
 there is no single identity to stamp.
 
 Keep `size` small: the `beacon` transport is rejected by the browser once the
-bodies in flight exceed 64 KiB, and the default `size` is 1000 events. The
-`fetch` transport sends a request larger than that without `keepalive`, so it
-may be lost if the page unloads first. A full event is around 0.5 to 1 KiB.
+bodies in flight exceed 64 KiB, and the default `size` is 1000 events. Once the
+`keepalive` bodies in flight would exceed 64 KiB, the `fetch` transport sends
+without `keepalive`, so that request may be lost if the page unloads first. A
+full event is around 0.5 to 1 KiB.
 
 <CodeSnippet
   code={`import { startFlow } from '@walkeros/collector';
@@ -189,8 +190,11 @@ const { collector, elb } = await startFlow({
 A failed request is reported as a failed push: an error status, a network
 error, a timeout (10 seconds for `fetch`) or a beacon the browser refuses. The
 event counts as failed, reaches the dead-letter queue and the collector logs one
-ERROR line per cause and minute. A `4xx` answer (other than `429`) is not
-retried. A beacon over 64 KiB is rejected and not retried either.
+ERROR line per cause and minute. The failure is `retryable` for a `429`, a
+`5xx`, a network error, a timeout and a refused beacon of up to 64 KiB, and not
+for other `4xx` answers or a larger beacon. Nothing resends a failed event; it
+stays in the dead-letter queue, which keeps 100 entries by default (`dlqMax`)
+and drops the oldest first.
 
 A rule with `silent: true` sends nothing. Without `settings.url` the destination
 does not start and every push fails with the `config` code.

@@ -59,13 +59,15 @@ exactly one runs, in this order, and the rest never run: `loop`, `map`, `set`,
 including a `loop` over something that is not a list. `condition`, `consent`
 and `validate` filter the result and combine freely.
 
-An object needs at least one of `key`, `value`, `fn`, `map`, `loop` or `set`.
-An object with none of them, such as `{ total: 'data.value' }` where
+An object with none of these keys, such as `{ total: 'data.value' }` where
 `{ map: { total: 'data.value' } }` was meant, has no operator: `walkeros
 validate` and the bundle reject it (`MAPPING_VALUE_NO_OPERATOR`), and if it
 still runs, the value is dropped, the event goes out without it, and the
 collector logs one ERROR line per cause saying how to fix it. An object with
-two producers is rejected the same way (`MAPPING_VALUE_PRODUCERS`).
+only filters passes that check and, when the filters pass, resolves to the
+whole input: `{ consent: { marketing: true } }` alone as a destination's `data`
+yields the whole event. An object with two producers is rejected the same way
+(`MAPPING_VALUE_PRODUCERS`).
 
 A callback that throws inside a value (`fn`, `validate`, a value-level
 `condition`) drops only that value and the collector reports it once per cause and mapping rule (the log step is `mapping.<rule>`);

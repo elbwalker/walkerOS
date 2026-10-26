@@ -55,7 +55,7 @@ interface Field {
   arg: string;
   value: unknown;
   required?: boolean;
-  type?: 'number' | 'integer';
+  type?: 'number' | 'integer' | 'currency';
 }
 
 /** Renders fields in order; a missing required or malformed value is invalid. */
@@ -70,6 +70,14 @@ function toParams(method: MethodName, fields: Field[]): MethodResult {
 
     if (!type) {
       params.push([param, String(value)]);
+      continue;
+    }
+
+    // `cur` takes three uppercase letters; anything else fails loudly.
+    if (type === 'currency') {
+      if (typeof value !== 'string' || !/^[A-Z]{3}$/.test(value))
+        return { invalid: `${method}: ${arg} not an ISO 4217 code` };
+      params.push([param, value]);
       continue;
     }
 
@@ -96,6 +104,16 @@ function toSearchCategories(category: unknown): string | undefined {
     .filter((item) => !isMissing(item) && isPrimitive(item))
     .map(String);
   return categories.length ? JSON.stringify(categories) : undefined;
+}
+
+/** `cur`: the `currencyCode` of an ecommerce method's trailing options object. */
+function currency(options: unknown): Field {
+  return {
+    param: 'cur',
+    arg: 'currencyCode',
+    value: isObject(options) ? options.currencyCode : undefined,
+    type: 'currency',
+  };
 }
 
 /** Ecommerce methods: products first, then the rest with ec_products in place. */
@@ -174,25 +192,28 @@ const METHODS: Record<MethodName, Translate> = {
       { param: 'c_t', arg: 'target', value: target },
     ]),
 
-  ecommerceProductDetailView: ([products]) =>
+  ecommerceProductDetailView: ([products, options]) =>
     ecommerce('ecommerceProductDetailView', products, (ecProducts) => [
       { param: 'e_t', arg: 'type', value: 'product-detail-view' },
       ecProducts,
+      currency(options),
     ]),
 
-  ecommerceAddToCart: ([products]) =>
+  ecommerceAddToCart: ([products, options]) =>
     ecommerce('ecommerceAddToCart', products, (ecProducts) => [
       { param: 'e_t', arg: 'type', value: 'add-to-cart' },
       ecProducts,
+      currency(options),
     ]),
 
-  ecommerceRemoveFromCart: ([products]) =>
+  ecommerceRemoveFromCart: ([products, options]) =>
     ecommerce('ecommerceRemoveFromCart', products, (ecProducts) => [
       { param: 'e_t', arg: 'type', value: 'remove-from-cart' },
       ecProducts,
+      currency(options),
     ]),
 
-  ecommerceCartUpdate: ([products, grandTotal]) =>
+  ecommerceCartUpdate: ([products, grandTotal, options]) =>
     ecommerce('ecommerceCartUpdate', products, (ecProducts) => [
       { param: 'e_t', arg: 'type', value: 'cart-update' },
       ecProducts,
@@ -203,9 +224,10 @@ const METHODS: Record<MethodName, Translate> = {
         required: true,
         type: 'number',
       },
+      currency(options),
     ]),
 
-  ecommerceOrder: ([products, info]) => {
+  ecommerceOrder: ([products, info, options]) => {
     if (isMissing(products))
       return { invalid: 'ecommerceOrder: products missing' };
     if (!isObject(info)) return { invalid: 'ecommerceOrder: info missing' };
@@ -224,6 +246,7 @@ const METHODS: Record<MethodName, Translate> = {
       { param: 'ec_sh', arg: 'shipping', value: info.shipping, type: 'number' },
       { param: 'ec_dt', arg: 'discount', value: info.discount, type: 'number' },
       ecProducts,
+      currency(options),
     ]);
   },
 

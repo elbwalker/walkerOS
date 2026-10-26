@@ -92,18 +92,28 @@ Add to your `flow.json` destinations:
   </TabItem>
 </Tabs>
 
+The destination loads `core.js` unless `loadScript` is `false`, and walkerOS
+injects it once per page. If your page already has the Pinterest base code, set
+`loadScript: false`, or the tag loads twice; the destination still calls
+`pintrk('load', tagId)` and, unless `settings.pageview` is `false`,
+`pintrk('page')`.
+
 <Configuration type="destination" data={data} />
 
 ## Standard event taxonomy
 
-Pinterest expects lowercase concatenated event names. The destination never
-auto-maps. Every conversion event needs an explicit `mapping.name`.
+Pinterest expects lowercase concatenated event names. The destination does not
+translate event names, so every conversion event needs an explicit
+`mapping.name`. An event without a rule is sent under its walkerOS name, which
+is no Pinterest standard event (`pintrk('track', 'product view', { event_id })`).
+To send only the events you map, add a wildcard rule with `ignore: true`
+(`'*': { '*': { ignore: true } }`).
 
 | walkerOS event   | Pinterest event | Notes                                                                              |
 | ---------------- | --------------- | ---------------------------------------------------------------------------------- |
-| `page view`      | `pagevisit`     | Fired automatically by `pintrk('page')` on init unless `settings.pageview: false`. |
-| `product view`   | `viewcontent`   | Single product. Use `value`, `currency`, `product_id`, `product_name`.             |
-| `product add`    | `addtocart`     | Single product. Wrap in a `line_items` array if you also want item-level data.     |
+| `page view`      | `pagevisit`     | Separate from the base code's `pintrk('page')` call the destination makes on init. |
+| `product view`   | `viewcontent`   | Single product. `value`, `currency`, and the product in a one-item `line_items` array. |
+| `product add`    | `addtocart`     | Single product. Product fields (`product_id`, `product_name`, ...) go in `line_items`. |
 | `order complete` | `checkout`      | Multi-product. Use `mapping.data.line_items.loop` to iterate `event.nested`.       |
 | `site search`    | `search`        | Use `search_query` field.                                                          |
 | `user login`     | `lead`          | Optional `lead_type`. Combine with `settings.identify` for enhanced matching.      |
@@ -112,20 +122,20 @@ auto-maps. Every conversion event needs an explicit `mapping.name`.
 
 ## Enhanced matching
 
-Pinterest's web tag accepts two enhanced matching fields, both auto-hashed by
-the JS tag with SHA-256:
+Pinterest's web tag accepts two enhanced matching fields:
 
-| Field         | Source                              | Notes                                                    |
-| ------------- | ----------------------------------- | -------------------------------------------------------- |
-| `em`          | `data.email` / `user.email` / etc.  | Pinterest auto-hashes. Pass raw email, do NOT pre-hash.  |
-| `external_id` | `data.id` / `user.id`               | Stable user identifier. Auto-hashed by Pinterest.        |
+| Field         | Source                              | Notes                                                                               |
+| ------------- | ----------------------------------- | ----------------------------------------------------------------------------------- |
+| `em`          | `data.email` / `user.email` / etc.  | Plain or hashed. The Pinterest tag hashes a plain email with SHA-256 in the browser. |
+| `external_id` | `data.id` / `user.id`               | Stable user identifier, sent as resolved.                                           |
 
-The destination strictly limits to these two fields. CAPI-only fields (`ph`,
-`fn`, `ln`, `address`, `country`, `ip`, `ua`) belong to the future server
-destination and are intentionally not accepted here.
+The destination sends only these two fields. CAPI-only fields (`ph`,
+`fn`, `ln`, `address`, `country`, `ip`, `ua`) belong to the
+[server destination](/docs/destinations/server/pinterest) and are
+intentionally not accepted here.
 
 Identity is diffed against the destination's runtime state, and `pintrk('set',
-...)` only fires when the resolved identity actually changes. The
+...)` fires only when the resolved identity changes. The
 destination-level `settings.identify` is resolved lazily on the first event
 (init has no event to bind to), so `pintrk('load', tagId)` is called without
 an identity object.
@@ -144,33 +154,28 @@ Pinterest is an advertising platform. The walkerOS consent key is
   language="typescript"
 />
 
-The walkerOS `config.consent` gate blocks unconsented events from reaching
-the destination in the first place. **Pinterest has no `opt_in`/`opt_out` SDK
-API**, so the destination implements consent revocation as a runtime
-suppression flag:
-
-1. `on('consent')` reads `config.consent` to determine which keys to check.
-2. If any required key resolves to `false`, the destination flips
-   `_state.consentGranted = false` and silently suppresses all subsequent
-   `pintrk('track', ...)` calls.
-3. If consent is later re-granted (all required keys `true`), the flag flips
-   back and tracking resumes.
-
-The Pinterest Tag itself stays loaded throughout. Only the walkerOS bridge
-goes silent.
+Until `marketing` is granted, the destination does not load the Pinterest Tag
+and the collector holds its events in a queue. They are sent once consent is
+granted, see [consent management](/docs/guides/consent). After a revocation,
+walkerOS holds new events again until the next grant. The destination does not
+tell the loaded tag: Pinterest's consent call
+[`pintrk('setconsent', false)`](https://help.pinterest.com/en/business/article/install-the-base-code)
+deletes the tag's first-party cookies and storage, and the destination never
+makes it, so the tag stays in the page and keeps them.
 
 :::note Auto page view
 The destination fires `pintrk('page')` once on init by default to match
-Pinterest's base code convention. Set `settings.pageview: false` if your
-walkerOS sources already emit page view events that you map to `pagevisit`,
-which prevents a duplicate initial fire.
+Pinterest's base code convention. Set `settings.pageview: false` to leave it
+out.
 :::
 
-## Future: Conversions API
+## Conversions API {#future-conversions-api}
 
-A server-side Pinterest Conversions API destination is planned as a follow-up,
-matching the Meta / TikTok / LinkedIn web+server split. It will share the
-`event_id` field with this web destination for cross-channel deduplication.
+The [server Pinterest destination](/docs/destinations/server/pinterest) sends
+conversions through the Conversions API. Both destinations send the event's
+`id` as `event_id`, unless a rule's `data` maps its own `event_id`, which
+replaces it. Give an event the same Pinterest event name and `event_id` on both
+sides so Pinterest can deduplicate it.
 
 ## Related
 

@@ -301,6 +301,56 @@ export const missingInput: Flow.StepExample = {
   `@walkeros/web-core/dev` in the options, and a web source may pass it;
   `runExamples` takes the same option.
 
+### Public examples, `claims` and literal outs
+
+A destination has exactly one public example per standard event it maps: the
+most complete, fully implemented case. Its `in` starts from `getEvent(name)`
+(`page view`, `product view`, `product add`, `order complete`). Edge cases,
+other tools and failures are `public: false`; they still run as tests.
+
+- **`claims`.** `runExamples('destination', step, examples, { claims })` takes
+  the standard events the destination maps. It fails when a claimed event has no
+  public example, when that example does not start from `getEvent(name)`, or
+  when a public event example is not claimed. Init examples (config as `in`) are
+  not events and are ignored by `claims`.
+- **Mappings run through the real destination config.** The runner looks the
+  example up by event name and applies `example.mapping ?? config.mapping`. A
+  public example whose setup needs other settings runs in its own `runExamples`
+  call with those `settings`.
+- **`published: true`** runs each example's mapping functions the way
+  `walkerOS.json` publishes them: as source text, outside the module they were
+  written in. A condition that calls an imported helper passes as written and
+  fails published, which is how it would fail in a user's flow.
+- **An `out` is a literal.** Write it from the vendor's documented request (or a
+  captured one), cite the source in the example, and only then run the code.
+  Never compute an `out` with production code (a helper from `src/`, the
+  destination's own encoder): the example would then agree with the code by
+  construction. A mismatch between research and code is a finding; fix the
+  product or the example and say why.
+- **No personal data or credentials** in an example: placeholders
+  (`G-XXXXXXXXXX`), `example.com` addresses and RFC 5737 IPs (`192.0.2.1`).
+
+```typescript
+import type { StandardEventName } from '@walkeros/core';
+import { runExamples } from '@walkeros/collector/dev';
+
+const CLAIMS: StandardEventName[] = [
+  'page view',
+  'product view',
+  'product add',
+  'order complete',
+];
+
+it('maps the claimed standard events', async () => {
+  await runExamples('destination', destinationX, events, {
+    settings,
+    env,
+    claims: CLAIMS,
+    published: true,
+  });
+});
+```
+
 ## Writing Examples
 
 ### Best Practices
@@ -756,6 +806,9 @@ When adding step examples to a package or flow:
 - [ ] Include at least one happy-path example
 - [ ] For transformers, include a `false` (filtered) case
 - [ ] Add `it.each` test using step examples
+- [ ] Exactly one public example per standard event the destination maps, from
+      `getEvent(name)`, with `claims` and `published: true` in a `runExamples`
+      call; every `out` a literal written from the vendor's documentation
 - [ ] Failure examples (`public: false`, `outcome`, `respond`) for every event
       the step cannot send, a `silent` example for a destination, and a
       conformance test (`conformance` from `@walkeros/collector/dev`)

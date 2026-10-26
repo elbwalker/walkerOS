@@ -25,9 +25,8 @@
  *
  * A UA match is a claim, not proof: Screaming Frog ships Googlebot and Bingbot
  * presets, and any client can send any UA. Vendor IP ranges and reverse DNS
- * suffixes for the entries that publish them are listed in
- * `docs/research/2026-08-20-search-crawler-list.md` and are consumed once
- * identity verification exists.
+ * suffixes, for the entries that publish them, are in the vendor docs below
+ * and will be used once identity verification exists.
  *
  * Vendor docs of record (verified 2026-08):
  *   Google:          https://developers.google.com/search/docs/crawling-indexing/google-common-crawlers

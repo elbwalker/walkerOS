@@ -1,16 +1,14 @@
 # walkerOS Storybook Demo
 
-A lean demonstration of the **walkerOS Storybook addon** that helps developers
-visualize and debug event tracking in React components.
+A demo of the walkerOS Storybook addon, for viewing and debugging the event
+tracking of React components.
 
 ## Why Use the walkerOS Storybook Addon?
 
-- **Validate Implementation**: Ensure tracking works correctly before deployment
-- **Component Development**: Build tracking directly into your component library
-- **Team Collaboration**: Share tracking specifications with stakeholders using
-  Storybook
-- **Debug Tracking**: See walkerOS events in real-time as you interact with
-  components
+- Check that tracking works before deployment
+- Build tracking directly into your component library
+- Share tracking specifications with stakeholders in Storybook
+- See walkerOS events in real time as you interact with components
 
 ## Quick Start
 
@@ -67,9 +65,8 @@ export const Button = ({ label, dataElb }: ButtonProps) => {
 };
 ```
 
-The **tagger utility** automatically converts your tracking configuration into
-the proper `data-elb*` attributes that walkerOS needs, while keeping your
-component code clean.
+The tagger turns your tracking configuration into the `data-elb*` attributes
+that walkerOS reads, so the component only spreads the result.
 
 ### 3. Configure Storybook Controls
 
@@ -117,8 +114,8 @@ src/
   shared/      the kit, stories under Shared/*
     atoms/       Badge, Button, Heading, Icon, Image, Input, Link, Price,
                  Select, StarRating, Text
-    molecules/   ConsentControls, FormField, LanguageToggle, NavLinks,
-                 SocialLinks, StatusMessage, UserSwitch
+    molecules/   ConsentControls, Dropdown, FormField, LanguageToggle,
+                 NavLinks, SocialLinks, StatusMessage, UserSwitch
     organisms/   ConsentBar, Footer, Header
     templates/   OnePager: header, sections, footer, pinned consent bar
     language/    elbish(), toEnglish() and the text function useText()
@@ -248,10 +245,10 @@ A standalone `npm install` of this package, outside the monorepo, needs an
 
 ## Key Features
 
-- **Real-time Events**: See tracking fire as you interact with components
-- **Event Inspector**: Detailed JSON view of all event properties
-- **Auto-refresh**: Events update automatically when you change component props
-- **Clean Integration**: Use modern React patterns with the `dataElb` prop
+- Events appear as you interact with components
+- A JSON view shows every event property
+- Events refresh when you change component props
+- Components take their tracking through the `dataElb` prop
 
 ## Useful Commands
 
@@ -276,14 +273,12 @@ The demo pages ship with the website; they have no deploy of their own:
   `demos/index.html`, and fails the build when the demo build is missing.
 - `website.yml` also runs on changes under `apps/demos/storybook/`.
 
-This Storybook deploys as before, through `storybook.yml` to
-`storybook.walkeros.io`.
+This Storybook deploys through `storybook.yml` to `storybook.walkeros.io`.
 
-Before the merge to `main` that brings the Demos page: in the app flow "Tagging
-demo", allow the origin `https://www.walkeros.io` next to
-`https://tagging.walkeros.io` and redeploy the flow. Its server flow answers
-cross-origin requests from `https://tagging.walkeros.io` only, so without this
-every event sent from the demo pages after Accept is blocked.
+The app flow "Tagging demo" must allow the origin `https://www.walkeros.io` next
+to `https://tagging.walkeros.io`. Its server flow answers cross-origin requests
+only from the origins it allows, so without it every event sent from the demo
+pages after Accept is blocked.
 
 The static tagging demo at `tagging.walkeros.io` stays: it is the app's preview
 sandbox (`DEMO_SITE_URL`). Never add `www.walkeros.io` to the app's preview
@@ -292,5 +287,5 @@ allowlist: the "Tagging demo" bundle accepts any project's preview code.
 ## Learn More
 
 - [walkerOS Documentation](https://www.walkeros.io/docs)
-- [Storybook Addon Source](../../../storybook-addon/)
+- [Storybook Addon Source](../../storybook-addon/)
 - [walkerOS GitHub](https://github.com/elbwalker/walkerOS)

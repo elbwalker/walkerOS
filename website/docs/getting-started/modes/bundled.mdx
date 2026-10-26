@@ -298,7 +298,12 @@ Define different flows for different environments:
     "production": {
       "config": { "platform": "web" },
       "destinations": {
-        "ga4": { "package": "@walkeros/web-destination-gtag" }
+        "ga4": {
+          "package": "@walkeros/web-destination-gtag",
+          "config": {
+            "settings": { "ga4": { "measurementId": "G-XXXXXXXXXX" } }
+          }
+        }
       }
     }
   }

@@ -97,7 +97,7 @@ In the browser, the Piwik PRO tracker sends the visitor's IP address, user agent
     "config": {
       "ingest": {
         "map": {
-          "ip": { "key": "ip" },
+          "ip": { "key": "headers.x-client-ip" },
           "userAgent": { "key": "headers.user-agent" },
           "language": { "key": "headers.accept-language" }
         }
@@ -108,7 +108,7 @@ In the browser, the Piwik PRO tracker sends the visitor's IP address, user agent
   language="json"
 />
 
-Without it, Piwik PRO receives no client IP, user agent or language, and locates every visitor at your server. Behind a load balancer or a CDN, `ip` is the address of the last proxy; see [client IP behind a proxy](/docs/sources/server/express#client-ip-behind-a-proxy) for the header to map instead. The other server sources take the same map, see the [request scope](/docs/sources/scope).
+Without it, Piwik PRO receives no client IP, user agent or language, and locates every visitor at your server. Replace `x-client-ip` with the single-address header your proxy sets or overwrites with the visitor's address, see [Client IP behind a proxy](/docs/sources/server/express#client-ip-behind-a-proxy). The other server sources take the same map, see the [request scope](/docs/sources/scope).
 
 ## What each setting sends
 
@@ -148,14 +148,16 @@ The server builds hits for 13 methods. A required argument is marked with `*`. W
 | `trackLink(linkAddress*, linkType*[, dimensions])` | `link` or `download`, by `linkType`, which must be `"link"` or `"download"`. `url` is set to the same address. |
 | `trackContentImpression(contentName*[, contentPiece[, contentTarget]])` | `c_n`, `c_p`, `c_t` |
 | `trackContentInteraction(contentInteraction*, contentName*[, contentPiece[, contentTarget]])` | `c_i`, `c_n`, `c_p`, `c_t` |
-| `ecommerceProductDetailView(products*)` | `e_t=product-detail-view`, `ec_products` |
-| `ecommerceAddToCart(products*)` | `e_t=add-to-cart`, `ec_products` |
-| `ecommerceRemoveFromCart(products*)` | `e_t=remove-from-cart`, `ec_products` |
-| `ecommerceCartUpdate(products*, grandTotal*)` | `e_t=cart-update`, `ec_products`, `revenue` |
-| `ecommerceOrder(products*, { orderId*, grandTotal*, subTotal, tax, shipping, discount })` | `e_t=order`, `ec_id`, `revenue`, `ec_st`, `ec_tx`, `ec_sh`, `ec_dt`, `ec_products` |
+| `ecommerceProductDetailView(products*[, { currencyCode }])` | `e_t=product-detail-view`, `ec_products`, `cur` |
+| `ecommerceAddToCart(products*[, { currencyCode }])` | `e_t=add-to-cart`, `ec_products`, `cur` |
+| `ecommerceRemoveFromCart(products*[, { currencyCode }])` | `e_t=remove-from-cart`, `ec_products`, `cur` |
+| `ecommerceCartUpdate(products*, grandTotal*[, { currencyCode }])` | `e_t=cart-update`, `ec_products`, `revenue`, `cur` |
+| `ecommerceOrder(products*, { orderId*, grandTotal*, subTotal, tax, shipping, discount }[, { currencyCode }])` | `e_t=order`, `ec_id`, `revenue`, `ec_st`, `ec_tx`, `ec_sh`, `ec_dt`, `ec_products`, `cur` |
 | `ping()` | `ping=6` |
 
 Numbers may also arrive as numeric strings. `products` is an array of 1 to 100 product objects with `sku*`, `name`, `category` (a string or up to 5 strings), `price`, `quantity`, `brand`, `variant` and `customDimensions` (keyed by bare dimension id). A product without `sku`, a category that is not a string or up to 5 strings, a price or quantity that is not a number, or more than 100 products make the event invalid.
+
+The ecommerce methods take the currency as a trailing options object, `{ "currencyCode": "EUR" }`, the same argument the browser destination passes to `_paq`. It is sent as `cur`. A `currencyCode` that is not three uppercase letters, such as `eur`, makes the event invalid and it fails with `missing-input`; a missing one only leaves `cur` out.
 
 State setters such as `setUserId` exist only in the browser. The server keeps no tracker state, so it skips any method outside this table with a warning. The user id comes from the `userId` setting instead.
 
@@ -201,7 +203,8 @@ A page view, a custom event with a goal and an ecommerce order:
               "tax": "data.taxes",
               "shipping": "data.shipping"
             }
-          }
+          },
+          { "map": { "currencyCode": { "key": "data.currency", "value": "EUR" } } }
         ]
       }
     }

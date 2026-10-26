@@ -12,9 +12,9 @@ and data science needs.
 
 ## Entity-action approach
 
-The Entity-Action approach is central to the walkerOS event model: a
-framework for capturing user interactions in a structured, flexible way. Two
-primary components define each event:
+The walkerOS event model is built on the entity-action approach, which
+captures user interactions in a structured, flexible way. Two components
+define each event:
 
 * the **'entity'** (what is involved within an interaction) and
 * the **'action'** (what is done with the entity)
@@ -36,7 +36,7 @@ A walkerOS event consists of three components:
 * an **entity** (e.g. page)
 * an **action** (e.g. view)
 
-Here's an example of the structure and components of a walkerOS event. Keys are
+This example shows the structure and components of a walkerOS event. Keys are
 static, their content can be defined dynamically with different value types.
 
 <CodeSnippet
@@ -60,7 +60,7 @@ static, their content can be defined dynamically with different value types.
   custom: {}, // Additional space for individual setups
   user: {
     // Contains user identifiers for different identification levels
-    // Require consent and set manually for sessions building and cross-device
+    // Need consent; the session source can set session and device, you set id
     id: 'us3r1d',
     device: 'c00k131d',
     session: 's3ss10n1d',
@@ -83,12 +83,12 @@ static, their content can be defined dynamically with different value types.
   timing: 3.14, // Seconds from the start of the run until the event fired
   source: {
     // Details about the origin of the event
-    type: 'browser', // Source kind (e.g. browser, dataLayer, express)
+    type: 'browser', // Source kind (e.g. browser, dataLayer, session)
     platform: 'web', // Runtime platform (web or server)
     schema: '4', // walkerOS event schema version
     trace: '0123456789abcdef0123456789abcdef', // run-scoped W3C trace_id (groups all events of a run)
     count: 1, // emission sequence within the run
-    release: { web: '3' }, // per-flow config release map, accumulates web to server (a bundle defaults to a content id of its config)
+    release: { web: '3' }, // per-flow config release map, accumulates web to server (a bundle defaults to a content id of its config, packages and CLI version)
     url: 'https://github.com/elbwalker/walkerOS', // Page or request URL
     referrer: 'https://www.walkeros.io/', // Referrer URL
   },
@@ -98,7 +98,7 @@ static, their content can be defined dynamically with different value types.
   language="javascript"
 />
 
-**Event names** are a combination of the entities involved (*promotion*) and the
+Event names are a combination of the entities involved (*promotion*) and the
 action performed (*view*).
 
 ```mermaid
@@ -109,8 +109,8 @@ flowchart
     A(event = entity + action)
 ```
 
-The structure remains consistent across all interactions, whether the event e.g.
-is a `page view`, `session start`, `product visible`, or `order complete`.
+The structure is the same for every interaction, whether the event is a
+`page view`, `session start`, `product visible`, or `order complete`.
 
 ### Data properties
 
@@ -132,8 +132,8 @@ These might include the theme used, page type for web, or cart value.
 
 ### Custom
 
-A reserved space for individual setups to comply with the defined structure, but
-also to support custom requirements.
+A reserved space for the custom requirements of individual setups, within the
+defined structure.
 
 ### User
 
@@ -177,7 +177,9 @@ also be added. A few values are recommended:
   language="typescript"
 />
 
-`email` must be a valid email address (`format: true` checks it); put hashed values in `hash`.
+`email` holds a plain email address (the
+[validate transformer](/docs/transformers/validate) checks it with
+`format: true`); put hashed values in `hash`.
 
 ### Consent
 
@@ -188,10 +190,12 @@ complying with privacy regulations.
 ### Source
 
 The source describes the origin of the event. `type` identifies the source
-kind (e.g. `browser`, `dataLayer`, `express`), `platform` distinguishes the
+kind (e.g. `browser`, `dataLayer`, `session`), `platform` distinguishes the
 runtime (`web` or `server`), `schema` records the walkerOS event schema
 version, and `url` plus `referrer` capture page-context for basic journey
-attribution.
+attribution. An event that arrives without a source, such as one pushed with
+`elb` from a `startFlow` that has no sources, or one a server source receives
+without `source`, gets `type: 'collector'`.
 
 `trace` is a [W3C Trace Context](https://www.w3.org/TR/trace-context/)
 `trace_id` (32 lowercase hex characters) minted on each run and shared by every
@@ -212,7 +216,7 @@ and the collector completes the event before any destination receives it.
   context: { stage: ['cart', 1] },
 });
 
-if (!result.ok) console.error(result.error);`}
+if (!result.ok) console.error(result.failed ?? result.error);`}
   language="typescript"
 />
 
@@ -228,10 +232,13 @@ A source can add fields on the way in: the browser source sets `source.url`,
 `source.referrer` and the globals tagged on the page.
 
 `elb` resolves with the push result. `done`, `queued` and `failed` list the
-destinations by id, and `event` is the completed event. `ok` is `false` when a
-destination failed or the event was rejected. A rejected event reaches no
+destinations by id, each failed one with a `reason` (`code`, `message`,
+`retryable`), and `event` is the completed event. `ok` is `false` when a
+destination failed, the event was rejected, or a step before the destinations
+failed; in the last two cases `error` says why. A rejected event reaches no
 destination: a name without an action, such as `'purchase'`, returns
 `{ ok: false, invalid: true, error: 'Event name is invalid' }`.
+[What a push answers](/docs/collector#what-a-push-answers) lists every case.
 
 A first argument that starts with `walker `, such as
 `elb('walker consent', { analytics: true })`, is a
@@ -246,14 +253,14 @@ browser source also installs it as `window.elb`
 
 ### Structured flexibility
 
-walkerOS is the single source of truth of data collection. The event model
-ensures comparability, manageability, and minimizes implementation efforts,
-preventing data leaks or inaccuracies.
+Every event has the same structure, whatever source captured it, so events
+stay comparable across sources and destinations.
 
 ### Vendor-agnostic
 
-The event model is designed to be resilient, allowing adaptability to future
-legal or internal requirements without vendor lock-in.
+Events carry no vendor-specific fields. Each destination translates them with
+its own [mapping](#how-events-get-transformed), so adding or replacing a tool
+changes the mapping, not the tracking.
 
 ### Industry-agnostic
 
@@ -262,7 +269,7 @@ and more.
 
 ## How events get transformed
 
-walkerOS events use a **vendor-agnostic format**. When sending to destinations like GA4, BigQuery, or your API, events are transformed using **mapping**.
+walkerOS events use a vendor-agnostic format. When sending to destinations like GA4, BigQuery, or your API, events are transformed using mapping.
 
 <FlowMap
   sources={{ default: { label: 'walkerOS', text: 'Event' } }}
@@ -278,4 +285,4 @@ Mapping lets you:
 - Apply conditional transformations
 - Process nested entities (like products in an order)
 
-[**Learn more about mapping →**](/docs/mapping)
+[Learn more about mapping](/docs/mapping)

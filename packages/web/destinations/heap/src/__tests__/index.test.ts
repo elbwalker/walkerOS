@@ -70,4 +70,31 @@ describe('heap destination', () => {
     expect(tracked).toEqual(['page view', 'product view']);
     expect(collector.status.destinations.heap?.failed ?? 0).toBe(0);
   });
+
+  it('writes disableTextCapture, secureCookie and heapConfig into the loader only with loadScript', async () => {
+    const settings = {
+      appId: 'APPID',
+      secureCookie: true,
+      heapConfig: { trackingServer: 'https://heap.example.com' },
+    };
+    await startFlow({
+      destinations: {
+        heap: { code: destinationHeap, config: { loadScript: true, settings } },
+      },
+    });
+    expect(window.heap).toEqual({
+      appid: 'APPID',
+      config: {
+        disableTextCapture: true,
+        secureCookie: true,
+        trackingServer: 'https://heap.example.com',
+      },
+    });
+
+    delete window.heap;
+    await startFlow({
+      destinations: { heap: { code: destinationHeap, config: { settings } } },
+    });
+    expect(window.heap).toBeUndefined();
+  });
 });

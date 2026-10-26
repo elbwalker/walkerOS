@@ -32,13 +32,18 @@ npm install @walkeros/web-destination-optimizely
       "destinations": {
         "optimizely": {
           "package": "@walkeros/web-destination-optimizely",
-          "config": { "settings": { "sdkKey": "YOUR_SDK_KEY" } }
+          "config": {
+            "settings": { "sdkKey": "YOUR_SDK_KEY", "userId": "user.id" }
+          }
         }
       }
     }
   }
 }
 ```
+
+An event whose `user.id` is not set fails with `missing-input`. The docs show a
+fallback for anonymous visitors.
 
 ## Documentation
 

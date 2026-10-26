@@ -92,7 +92,10 @@ Add to your `flow.json` destinations:
 Without `settings.consent`, a destination with `config.consent` stops capture
 when the required consent is revoked (`shutdown`) and starts it on a grant
 (`start`). A missing `orgId` is a `config` error, and a FullStory call that
-fails fails the event.
+throws fails the event. A FullStory script (`fs.js`) that an ad blocker or a
+Content Security Policy blocks is not reported: FullStory drops the calls
+without an error, so events count as delivered, the push result stays `ok` and
+no ERROR line is logged.
 
 ## Consent
 

@@ -1,5 +1,5 @@
-import type { Flow, WalkerOS } from '@walkeros/core';
-import { getEvent, isObject } from '@walkeros/core';
+import type { Flow } from '@walkeros/core';
+import { getEvent } from '@walkeros/core';
 
 // Build-time version define. The collector stamps source.release with this on
 // push, so the include-all expectation below must track it rather than a
@@ -7,27 +7,29 @@ import { getEvent, isObject } from '@walkeros/core';
 declare const __VERSION__: string;
 
 /**
- * Fixed system time used by the step-examples test so init calls
- * that reference `new Date()` produce deterministic output.
- * Inlined (not exported) so it isn't surfaced as a step example.
+ * gtag step examples. The four standard events are the GA4 recommended
+ * events from Google's reference, run with the settings
+ * `{ ga4: { measurementId: 'G-XXXXXXXXXX', pageview: false } }`. Each out is
+ * the call recorded on `window.gtag` or `window.dataLayer.push`.
+ *
+ * Functions in mappings are published as source code, so they must not use
+ * imported helpers.
  */
-const INIT_DATE_MS = 1700000000000;
-const INIT_DATE = new Date(INIT_DATE_MS);
 
 /**
- * GA4 destination bootstrap.
- * Initializes gtag infrastructure and configures the GA4 measurementId.
+ * GA4 destination bootstrap: configures the measurementId. gtag already
+ * exists here, so no `js` is sent.
  */
 export const ga4Init: Flow.StepExample = {
   title: 'GA4 init',
   description:
-    'Configures a GA4 property via its measurementId. gtag already exists here, so no `js` is sent: that would be a second, false initialisation signal.',
+    'Configures a GA4 property with pageview false, so gtag sends no page_view of its own next to the walkerOS page view.',
   in: {
     settings: {
-      ga4: { measurementId: 'G-XXXXXXXXXX' },
+      ga4: { measurementId: 'G-XXXXXXXXXX', pageview: false },
     },
   },
-  out: [['gtag', 'config', 'G-XXXXXXXXXX', {}]],
+  out: [['window.gtag', 'config', 'G-XXXXXXXXXX', { send_page_view: false }]],
 };
 
 /**
@@ -43,7 +45,7 @@ export const adsInit: Flow.StepExample = {
       ads: { conversionId: 'AW-123456789', currency: 'EUR' },
     },
   },
-  out: [['gtag', 'config', 'AW-123456789']],
+  out: [['window.gtag', 'config', 'AW-123456789']],
 };
 
 /**
@@ -62,10 +64,120 @@ export const gtmInit: Flow.StepExample = {
   },
   out: [
     [
-      'dataLayer.push',
+      'window.dataLayer.push',
       {
-        'gtm.start': INIT_DATE_MS,
+        'gtm.start': 1700000000000,
         event: 'gtm.js',
+      },
+    ],
+  ],
+};
+
+export const pageView: Flow.StepExample = {
+  title: 'Page view',
+  description:
+    'A page view becomes the GA4 page_view event; gtag adds the page location and title itself, and pageview false keeps it from counting twice.',
+  in: getEvent('page view'),
+  out: [['window.gtag', 'event', 'page_view', { send_to: 'G-XXXXXXXXXX' }]],
+};
+
+export const productView: Flow.StepExample = {
+  title: 'View item',
+  description:
+    'A product view becomes the GA4 view_item event with currency, value and the product as its one item.',
+  in: getEvent('product view'),
+  mapping: {
+    name: 'view_item',
+    data: {
+      map: {
+        currency: { key: 'data.currency', value: 'EUR' },
+        value: 'data.price',
+        items: {
+          loop: [
+            'this',
+            {
+              map: {
+                item_id: 'data.id',
+                item_name: 'data.name',
+                item_variant: 'data.color',
+                price: 'data.price',
+                quantity: { key: 'data.quantity', value: 1 },
+              },
+            },
+          ],
+        },
+      },
+    },
+  },
+  out: [
+    [
+      'window.gtag',
+      'event',
+      'view_item',
+      {
+        currency: 'EUR',
+        value: 420,
+        items: [
+          {
+            item_id: 'ers',
+            item_name: 'Everyday Ruck Snack',
+            item_variant: 'black',
+            price: 420,
+            quantity: 1,
+          },
+        ],
+        send_to: 'G-XXXXXXXXXX',
+      },
+    ],
+  ],
+};
+
+export const addToCart: Flow.StepExample = {
+  title: 'Add to cart',
+  description:
+    'A product add becomes the GA4 add_to_cart event with currency, value and the added product as its item.',
+  in: getEvent('product add'),
+  mapping: {
+    name: 'add_to_cart',
+    data: {
+      map: {
+        currency: { key: 'data.currency', value: 'EUR' },
+        value: 'data.price',
+        items: {
+          loop: [
+            'this',
+            {
+              map: {
+                item_id: 'data.id',
+                item_name: 'data.name',
+                item_variant: 'data.color',
+                price: 'data.price',
+                quantity: { key: 'data.quantity', value: 1 },
+              },
+            },
+          ],
+        },
+      },
+    },
+  },
+  out: [
+    [
+      'window.gtag',
+      'event',
+      'add_to_cart',
+      {
+        currency: 'EUR',
+        value: 420,
+        items: [
+          {
+            item_id: 'ers',
+            item_name: 'Everyday Ruck Snack',
+            item_variant: 'black',
+            price: 420,
+            quantity: 1,
+          },
+        ],
+        send_to: 'G-XXXXXXXXXX',
       },
     ],
   ],
@@ -74,11 +186,10 @@ export const gtmInit: Flow.StepExample = {
 export const purchase: Flow.StepExample = {
   title: 'Purchase',
   description:
-    'An order complete event is mapped to the GA4 purchase event with transaction details and nested product items.',
-  in: getEvent('order complete', { timestamp: 1700000100 }),
+    'An order complete becomes the GA4 purchase event with transaction id, value, tax, shipping, currency and one item per product.',
+  in: getEvent('order complete'),
   mapping: {
     name: 'purchase',
-    include: ['data', 'context'],
     data: {
       map: {
         transaction_id: 'data.id',
@@ -91,10 +202,15 @@ export const purchase: Flow.StepExample = {
             'nested',
             {
               condition: (entity: unknown) =>
-                isObject(entity) && entity.entity === 'product',
+                typeof entity === 'object' &&
+                entity !== null &&
+                'entity' in entity &&
+                entity.entity === 'product',
               map: {
                 item_id: 'data.id',
                 item_name: 'data.name',
+                item_variant: 'data.color',
+                price: 'data.price',
                 quantity: { key: 'data.quantity', value: 1 },
               },
             },
@@ -105,7 +221,7 @@ export const purchase: Flow.StepExample = {
   },
   out: [
     [
-      'gtag',
+      'window.gtag',
       'event',
       'purchase',
       {
@@ -115,200 +231,16 @@ export const purchase: Flow.StepExample = {
         shipping: 5.22,
         currency: 'EUR',
         items: [
-          { item_id: 'ers', item_name: 'Everyday Ruck Snack', quantity: 1 },
-          { item_id: 'cc', item_name: 'Cool Cap', quantity: 1 },
+          {
+            item_id: 'ers',
+            item_name: 'Everyday Ruck Snack',
+            item_variant: 'black',
+            price: 420,
+            quantity: 1,
+          },
+          { item_id: 'cc', item_name: 'Cool Cap', price: 42, quantity: 1 },
         ],
-        // include: ['data', 'context'] flattens both sections as prefixed params.
-        data_id: '0rd3r1d',
-        data_currency: 'EUR',
-        data_shipping: 5.22,
-        data_taxes: 73.76,
-        data_value: 555,
-        context_shopping: 'complete',
         send_to: 'G-XXXXXXXXXX',
-      },
-    ],
-  ],
-};
-
-export const addToCart: Flow.StepExample = {
-  title: 'Add to cart',
-  description:
-    'A product add event is mapped to the GA4 add_to_cart event with item details and value.',
-  in: getEvent('product add', { timestamp: 1700000101 }),
-  mapping: {
-    name: 'add_to_cart',
-    include: ['data'],
-    data: {
-      map: {
-        currency: { value: 'EUR', key: 'data.currency' },
-        value: 'data.price',
-        items: {
-          loop: [
-            'this',
-            {
-              map: {
-                item_id: 'data.id',
-                item_variant: 'data.color',
-                quantity: { value: 1, key: 'data.quantity' },
-              },
-            },
-          ],
-        },
-      },
-    },
-  },
-  out: [
-    [
-      'gtag',
-      'event',
-      'add_to_cart',
-      {
-        currency: 'EUR',
-        value: 420,
-        items: [{ item_id: 'ers', item_variant: 'black', quantity: 1 }],
-        // include: ['data'] flattens data as prefixed params.
-        data_id: 'ers',
-        data_name: 'Everyday Ruck Snack',
-        data_color: 'black',
-        data_size: 'l',
-        data_price: 420,
-        send_to: 'G-XXXXXXXXXX',
-      },
-    ],
-  ],
-};
-
-export const pageView: Flow.StepExample = {
-  title: 'Page view',
-  description:
-    'A page view event is forwarded as a GA4 page_view event with no additional mapping.',
-  in: getEvent('page view', { timestamp: 1700000102 }),
-  mapping: undefined,
-  out: [['gtag', 'event', 'page_view', { send_to: 'G-XXXXXXXXXX' }]],
-};
-
-/**
- * Google Ads conversion tracking.
- * Shows how settings.ads.label maps an event to an Ads conversion call.
- * The Ads push produces gtag('event', 'conversion', { send_to, currency, ...data }).
- */
-export const googleAdsConversion: Flow.StepExample = {
-  title: 'Ads conversion',
-  description:
-    'An order complete event is sent as a Google Ads conversion with a configured label and transaction value.',
-  in: getEvent('order complete', { timestamp: 1700000103 }),
-  mapping: {
-    name: 'PURCHASE_CONV',
-    settings: {
-      ads: { label: 'PURCHASE_CONV' },
-    },
-    data: {
-      map: {
-        value: 'data.value',
-      },
-    },
-  },
-  out: [
-    [
-      'gtag',
-      'event',
-      'conversion',
-      {
-        send_to: 'AW-123456789/PURCHASE_CONV',
-        currency: 'EUR',
-        value: 555,
-      },
-    ],
-  ],
-};
-
-/**
- * Google Ads conversion with Enhanced Conversions.
- * enhancedConversions maps event fields to Google's user_data. The destination
- * resolves each mapping value and calls gtag('set', 'user_data', {...}) before
- * gtag('event', 'conversion', {...}).
- */
-export const adsEnhancedConversions: Flow.StepExample = {
-  title: 'Enhanced conversions',
-  description:
-    'enhancedConversions maps event fields into a gtag set user_data call sent immediately before the conversion event.',
-  in: getEvent('order complete', {
-    timestamp: 1700000109,
-    data: {
-      id: '0rd3r1d',
-      currency: 'EUR',
-      shipping: 5.22,
-      taxes: 73.76,
-      value: 555,
-      customerEmail: 'buyer@shop.com',
-      customerPhone: '+1234567890',
-    },
-  }),
-  mapping: {
-    name: 'PURCHASE_EC2',
-    settings: {
-      ads: { label: 'PURCHASE_EC2' },
-    },
-    data: {
-      map: {
-        value: 'data.value',
-      },
-    },
-  },
-  out: [
-    [
-      'gtag',
-      'set',
-      'user_data',
-      {
-        email: 'buyer@shop.com',
-        phone_number: '+1234567890',
-      },
-    ],
-    [
-      'gtag',
-      'event',
-      'conversion',
-      {
-        send_to: 'AW-123456789/PURCHASE_EC2',
-        currency: 'EUR',
-        value: 555,
-      },
-    ],
-  ],
-};
-
-/**
- * GTM dataLayer push.
- * Shows how settings.gtm triggers a window.dataLayer.push() call
- * with { event: mappedName, ...mappedData }.
- * Note: GTM pushes to dataLayer (not gtag), so the out format is a plain object.
- */
-export const gtmDataLayerPush: Flow.StepExample = {
-  title: 'GTM dataLayer push',
-  description:
-    'A page view event is pushed to window.dataLayer for GTM with the mapped event name and parameters.',
-  in: getEvent('page view', { timestamp: 1700000104 }),
-  mapping: {
-    name: 'page_view',
-    settings: {
-      gtm: {},
-    },
-    data: {
-      map: {
-        page_title: 'data.title',
-        page_location: 'data.domain',
-      },
-    },
-  },
-  out: [
-    [
-      'dataLayer.push',
-      {
-        event: 'page_view',
-        page_title: 'walkerOS documentation',
-        page_location: 'www.example.com',
       },
     ],
   ],
@@ -332,7 +264,7 @@ export const consentModeV2: Flow.StepExample = {
   out: [
     // First consent call sets default to denied for all mapped parameters.
     [
-      'gtag',
+      'window.gtag',
       'consent',
       'default',
       {
@@ -343,7 +275,7 @@ export const consentModeV2: Flow.StepExample = {
       },
     ],
     [
-      'gtag',
+      'window.gtag',
       'consent',
       'update',
       {
@@ -351,6 +283,133 @@ export const consentModeV2: Flow.StepExample = {
         ad_user_data: 'granted',
         ad_personalization: 'granted',
         analytics_storage: 'granted',
+      },
+    ],
+  ],
+};
+
+/**
+ * Google Ads conversion tracking, with the settings
+ * `{ ads: { conversionId: 'AW-123456789', currency: 'EUR' } }`.
+ * The Ads push produces gtag('event', 'conversion', { send_to, currency, ...data }).
+ */
+export const googleAdsConversion: Flow.StepExample = {
+  public: false,
+  title: 'Ads conversion',
+  description:
+    'An order complete event is sent as a Google Ads conversion with a configured label and transaction value.',
+  in: getEvent('order complete'),
+  mapping: {
+    name: 'PURCHASE_CONV',
+    settings: {
+      ads: { label: 'PURCHASE_CONV' },
+    },
+    data: {
+      map: {
+        value: 'data.value',
+      },
+    },
+  },
+  out: [
+    [
+      'window.gtag',
+      'event',
+      'conversion',
+      {
+        send_to: 'AW-123456789/PURCHASE_CONV',
+        currency: 'EUR',
+        value: 555,
+      },
+    ],
+  ],
+};
+
+/**
+ * Google Ads conversion with Enhanced Conversions, with
+ * `enhancedConversions: { email: 'data.customerEmail', phone_number:
+ * 'data.customerPhone' }` on the Ads settings. The destination resolves each
+ * mapping value and calls gtag('set', 'user_data', {...}) before
+ * gtag('event', 'conversion', {...}).
+ */
+export const adsEnhancedConversions: Flow.StepExample = {
+  public: false,
+  title: 'Enhanced conversions',
+  description:
+    'enhancedConversions maps event fields into a gtag set user_data call sent immediately before the conversion event.',
+  in: getEvent('order complete', {
+    data: {
+      id: '0rd3r1d',
+      currency: 'EUR',
+      shipping: 5.22,
+      taxes: 73.76,
+      value: 555,
+      customerEmail: 'buyer@example.com',
+      customerPhone: '+1234567890',
+    },
+  }),
+  mapping: {
+    name: 'PURCHASE_EC2',
+    settings: {
+      ads: { label: 'PURCHASE_EC2' },
+    },
+    data: {
+      map: {
+        value: 'data.value',
+      },
+    },
+  },
+  out: [
+    [
+      'window.gtag',
+      'set',
+      'user_data',
+      {
+        email: 'buyer@example.com',
+        phone_number: '+1234567890',
+      },
+    ],
+    [
+      'window.gtag',
+      'event',
+      'conversion',
+      {
+        send_to: 'AW-123456789/PURCHASE_EC2',
+        currency: 'EUR',
+        value: 555,
+      },
+    ],
+  ],
+};
+
+/**
+ * GTM dataLayer push, with the settings `{ gtm: { containerId:
+ * 'GTM-XXXXXXX' } }`: window.dataLayer.push({ event: mappedName, ...mappedData }).
+ */
+export const gtmDataLayerPush: Flow.StepExample = {
+  public: false,
+  title: 'GTM dataLayer push',
+  description:
+    'A page view event is pushed to window.dataLayer for GTM with the mapped event name and parameters.',
+  in: getEvent('page view'),
+  mapping: {
+    name: 'page_view',
+    settings: {
+      gtm: {},
+    },
+    data: {
+      map: {
+        page_title: 'data.title',
+        page_location: 'data.domain',
+      },
+    },
+  },
+  out: [
+    [
+      'window.dataLayer.push',
+      {
+        event: 'page_view',
+        page_title: 'walkerOS documentation',
+        page_location: 'www.example.com',
       },
     ],
   ],
@@ -365,6 +424,7 @@ export const consentModeV2: Flow.StepExample = {
  * would couple the fixture to the release version.
  */
 export const ga4WithIncludeAll: Flow.StepExample = {
+  public: false,
   title: 'GA4 include all',
   description:
     'Include flattens every event section into prefixed GA4 params, exposing data, context, user, source, and event fields.',
@@ -383,7 +443,7 @@ export const ga4WithIncludeAll: Flow.StepExample = {
   },
   out: [
     [
-      'gtag',
+      'window.gtag',
       'event',
       'page_view',
       {
@@ -425,19 +485,20 @@ export const ga4WithIncludeAll: Flow.StepExample = {
 };
 
 /**
- * One event pushed to GA4 + Ads + GTM simultaneously.
- * Shows settings for all three tools in a single mapping rule.
- * The out is a flat array of all observable calls in execution order:
+ * One event pushed to GA4 + Ads + GTM simultaneously, with all three tools
+ * in the settings. The out is a flat array of all observable calls in
+ * execution order:
  *
  * - GA4: gtag('event', eventName, { ...params, send_to })
  * - Ads: gtag('event', 'conversion', { send_to, currency, ...data })
  * - GTM: window.dataLayer.push({ event: eventName, ...data })
  */
 export const multipleToolsSimultaneous: Flow.StepExample = {
+  public: false,
   title: 'Multi-tool push',
   description:
     'A single order event fans out to GA4, Google Ads, and GTM from one mapping rule with per-tool settings.',
-  in: getEvent('order complete', { timestamp: 1700000107 }),
+  in: getEvent('order complete'),
   mapping: {
     name: 'purchase',
     include: ['data'],
@@ -455,7 +516,7 @@ export const multipleToolsSimultaneous: Flow.StepExample = {
   },
   out: [
     [
-      'gtag',
+      'window.gtag',
       'event',
       'purchase',
       {
@@ -471,7 +532,7 @@ export const multipleToolsSimultaneous: Flow.StepExample = {
       },
     ],
     [
-      'gtag',
+      'window.gtag',
       'event',
       'conversion',
       {
@@ -486,7 +547,7 @@ export const multipleToolsSimultaneous: Flow.StepExample = {
       },
     ],
     [
-      'dataLayer.push',
+      'window.dataLayer.push',
       {
         event: 'purchase',
         value: 555,
@@ -506,7 +567,7 @@ export const silentRule: Flow.StepExample = {
   public: false,
   description:
     'A rule with silent: true sends no GA4 event, no Ads conversion and no GTM push.',
-  in: getEvent('page view', { timestamp: 1700000500 }),
+  in: getEvent('page view'),
   mapping: { silent: true },
   out: [],
 };

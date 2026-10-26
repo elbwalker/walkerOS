@@ -43,7 +43,7 @@ const { collector, elb } = await startFlow({
       code: destinationGtag,
       config: {
         settings: {
-          /* custom config */
+          ga4: { measurementId: 'G-XXXXXXXXXX' },
         },
       },
     },
@@ -55,7 +55,7 @@ const { collector, elb } = await startFlow({
 :::tip
 
 To add a destination at runtime, use the `walker destination` command,
-`elb('walker destination', { code: destinationGtag, config: {} })`, or
+`elb('walker destination', { code: destinationGtag, config: { settings: { ga4: { measurementId: 'G-XXXXXXXXXX' } } } })`, or
 `collector.addDestination()`. See destination-specific documentation for
 configuration options.
 
@@ -75,7 +75,9 @@ consent is granted. A command only updates the keys it contains.
 When none of the keys in a destination's `config.consent` is granted, the
 destination stops receiving events. Its events wait in a queue instead, and
 once consent is granted during the same run, the queued events are delivered
-in order.
+in order. Server flows built by the CLI skip these events instead of queueing
+them (`consentDenied: 'skip'`, see
+[Consent-denied events on a server](/docs/collector#consent-denied-events-on-a-server)).
 
 :::info
 
@@ -315,12 +317,21 @@ This gives five practical guarantees:
   its waiting `on` deliveries reach it then. The collector waits for
   an async handler to finish, up to the destination's `config.timeout`, before it
   delivers events. If the handler does not finish in that time, or fails, the
-  destination's events stay in its queue instead of going out without the
-  state, until a later delivery of the state finishes. Those held events are
-  discarded at the next `walker run`. Lifecycle handlers such as `on('run')`
-  are awaited too, bounded by the same timeout; one that does not finish holds
-  no events. Handlers of different destinations run independently, so a slow
-  handler in one destination does not delay events to other destinations.
+  destination's events wait in its queue instead of going out without the
+  state (`queued` with the reason `held`) for one `config.timeout` window. A
+  new delivery of the state starts only once the handler has settled: a
+  handler that failed is retried by a push after the window, and one that
+  timed out starts the new delivery when it settles late. When that delivery
+  succeeds, the held events are delivered and the destination receives events
+  again. Until then, after the window, the held events and every later one
+  fail with `blocked` and go to the dead-letter queue; a handler that never
+  settles keeps the destination blocked (see the codes in
+  [Logger](./logger#failure-codes)). Events still held when the next
+  `walker run` starts are discarded. Lifecycle
+  handlers such as `on('run')` are awaited too, bounded by the same timeout;
+  one that does not finish holds no events. Handlers of different destinations
+  run independently, so a slow handler in one destination does not delay events
+  to other destinations.
 * **Commands wait for handlers.** An async destination `on` handler must
   settle: until it settles or reaches `config.timeout`, that destination
   receives no events. `elb` commands and `startFlow` resolve only after the
@@ -356,10 +367,10 @@ await elb('walker run'); // 'page view' is delivered now`}
 * **Exactly-once.** A second `run` does not re-deliver events an earlier run
   already replayed.
 * **Bounded.** The buffer holds at most `queueMax` events (default `1000`, the
-  same setting that caps the collector's replay buffer) and drops the oldest
-  entries on overflow. A drop is counted on
-  `collector.status.dropped['collector.preRun'].queue` and logged once per
-  overflow at `warn` level; each hold is logged at `debug` level.
+  same setting that caps the collector's replay buffer). When it is full, the
+  newest event is refused and the held ones stay: that push answers
+  `ok: false` with the reason `queue-full`, counts in `collector.status.failed`
+  and logs an ERROR line. Each hold is logged at `debug` level.
 
 Commands are unaffected: they continue to apply immediately, as described above.
 

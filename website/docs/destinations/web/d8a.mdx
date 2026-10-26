@@ -122,6 +122,13 @@ This produces:
   language="typescript"
 />
 
+## Page views
+
+d8a sends a `page_view` itself when the tracker starts. A walkerOS
+`page view` event (the browser source sends one by default) arrives as a
+second `page_view`, so each page counts twice. Set `send_page_view: false`, or
+ignore the walkerOS event with a rule (`page: { view: { ignore: true } }`).
+
 ## Consent Mode
 
 The destination supports d8a's gtag-compatible consent mode. By default,
@@ -132,7 +139,19 @@ walkerOS consent keys map to d8a consent fields:
 | `marketing`          | `ad_storage`, `ad_user_data`, `ad_personalization` |
 | `functional`         | `analytics_storage`                                |
 
-Disable consent mode with `como: false`, or provide a custom mapping via the
-`como` setting.
+The first consent command sets every mapped field to `denied` before it
+applies the update. A walkerOS consent key the mapping does not name changes
+nothing: if your consent source reports analytics consent as `analytics`,
+`analytics_storage` stays denied until you map it, like
+`como: { analytics: 'analytics_storage', marketing: ['ad_storage', 'ad_user_data', 'ad_personalization'] }`.
+Disable consent mode with `como: false`.
+
+Until the first consent command, d8a counts consent as granted. Without
+`config.consent`, as in the installation example, the page view d8a sends when
+the tracker starts goes out as granted, and the `_d8a` cookies are set before a
+later denial and stay after it. With `config.consent`, such as
+`{ functional: true }`, the collector holds the destination until that consent
+is granted (see [consent management](/docs/guides/consent)), so the tracker
+starts and sends its page view only after the grant.
 
 <Configuration type="destination" data={data} />

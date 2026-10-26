@@ -1,5 +1,7 @@
 # walkerOS demos
 
+- [Flows](./flows/): a server flow on Cloud Run with BigQuery, and the web flow
+  that sends to it
 - [React](./react/)
 - [Storybook](./storybook/): the shared demo kit and the demos built from it,
   with the walkerOS Storybook addon

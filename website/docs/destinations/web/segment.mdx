@@ -91,7 +91,7 @@ Add to your `flow.json` destinations:
 
 ## Consent
 
-The destination supports two complementary consent mechanisms.
+The destination has two consent mechanisms, and you can use both.
 
 **Automatic context forwarding.** When `settings.consent` is configured,
 every `track`, `identify`, `group`, and `page` call is stamped with
@@ -110,15 +110,16 @@ to Segment category names:
 />
 
 **Deferred-load consent pattern.** When `config.consent` is declared (see
-[consent management](/docs/guides/consent)), `AnalyticsBrowser.load()` is held until the first `walker consent` command
-that grants all required keys. Analytics.js has no `optOut()` method, so the
-destination enforces consent by not loading the SDK before it is granted. A
-later revocation stops further events at the walkerOS consent gate; the
-loaded SDK stays on the page. Analytics.js loads on the first event after the
-grant. `settings.cdnURL` reaches Analytics.js, so a proxy set there is used.
+[consent management](/docs/guides/consent)), `AnalyticsBrowser.load()` waits
+until one of the required keys is granted: Analytics.js loads with the first
+event delivered after the grant, an event that waited for consent or the next
+one. Analytics.js has no `optOut()` method, so the destination enforces consent
+by not loading the SDK before it is granted. A later revocation stops further
+events at the walkerOS consent gate; the loaded SDK stays on the page.
 
 A missing `apiKey` fails the destination with a `config` error. If Analytics.js
-fails to load, later events fail visibly instead of disappearing.
+fails to load, the event that started the load and every later event fail and
+show up as failed pushes.
 
 <CodeSnippet
   code={`destinations: {

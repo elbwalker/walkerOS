@@ -1882,7 +1882,7 @@
             },
             "ingest": {
               "map": {
-                "ip": "ip",
+                "ip": "headers.x-client-ip",
                 "path": "path",
                 "method": "method",
                 "url": "url",

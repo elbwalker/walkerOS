@@ -92,8 +92,12 @@ Add to your `flow.json` destinations:
 `loadScript: true` loads the classic Heap SDK
 (`https://cdn.heapanalytics.com/js/heap-<appId>.js`). Events pushed while the
 script loads wait for it and reach Heap once it is ready; if the script is
-blocked or fails to load, later pushes fail and show up as failed events. Pass
-SDK options in `settings.heapConfig`. The classic SDK has no switch to stop
+blocked or fails to load, those and later pushes fail with `vendor-not-loaded`
+and show up as failed events. `disableTextCapture` (default `true`),
+`secureCookie` and further SDK options in `heapConfig` go into the config the
+classic SDK reads when it loads, so they apply only with `loadScript: true`.
+Without `loadScript` the destination ignores them and nothing reports it: set
+these options in your own Heap snippet. The classic SDK has no switch to stop
 tracking, so a consent revocation stops the events walkerOS sends but not
 Heap's own autocapture (see Consent).
 :::
@@ -102,16 +106,17 @@ Heap's own autocapture (see Consent).
 
 ## Consent
 
-With `config.consent` declared, the destination is not loaded before the
-required consent keys are granted (see
-[consent management](/docs/guides/consent)). On each consent command it calls
-`heap.startTracking()` when all required keys are granted and
-`heap.stopTracking()` otherwise.
+With `config.consent` declared, the collector initializes the destination, and
+with `loadScript: true` loads Heap's script, only once one of the required
+consent keys is granted (see [consent management](/docs/guides/consent)). On
+each consent command that names a required key, once Heap has loaded, the
+destination calls `heap.startTracking()` while the required consent is granted
+(one granted key is enough) and `heap.stopTracking()` otherwise.
 
-The classic SDK that `loadScript: true` loads has neither method. Consent
-commands after it has loaded do not stall the destination, but a revocation
-only stops the events walkerOS sends: Heap's own autocapture keeps running
-because the classic SDK cannot be switched off. To keep Heap from capturing
+The classic SDK that `loadScript: true` loads has neither method, so the
+destination calls neither. A revocation then only stops the events walkerOS
+sends: Heap's own autocapture keeps running because the classic SDK cannot be
+switched off. To keep Heap from capturing
 before consent, load Heap's script only after consent is granted, which is what
 `config.consent` does with `loadScript: true`.
 

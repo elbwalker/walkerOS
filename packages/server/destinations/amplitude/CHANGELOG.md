@@ -279,9 +279,6 @@
     and `event.context` remain required.
   - Each source self-registers via TypeScript module augmentation of `SourceMap`
     in `@walkeros/core`.
-  - App-side coordination (`/workspaces/developer/app`) is a follow-up plan, not
-    part of this release. Telemetry from v4 CLI/MCP will not validate against
-    the existing app schema until that follow-up ships.
   - `Mapping.Rule.skip` is renamed to `Mapping.Rule.silent`. Customer flow.json
     configs using `skip: true` in mapping rules must rename to `silent: true`.
     Hard cut: no legacy alias, the field is gone.

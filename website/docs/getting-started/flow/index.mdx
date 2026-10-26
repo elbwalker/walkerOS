@@ -6,7 +6,7 @@ sidebar_position: 4
 
 # Flow
 
-Flow configuration is walkerOS's **"configuration as code"** approach. A single JSON file defines your entire event collection pipeline, making it portable, version-controlled, and deployable across environments.
+Flow configuration is walkerOS's configuration-as-code approach. A single JSON file defines your entire event collection pipeline, so you can keep it under version control and deploy the same file to each environment.
 
 :::note Reference page
 This page is the complete Flow configuration reference. If you are new to walkerOS, start with the [Quickstart](/docs/getting-started/quickstart/) and the [GA4 ecommerce tutorial](/docs/getting-started/ga4-ecommerce), then come back here to look up specific options.
@@ -99,7 +99,7 @@ The CLI automatically applies platform-specific build defaults:
 - **Web**: IIFE format, ES2020 target
 - **Server**: ESM format, Node20 target
 
-The bundle is written to stdout by default. Use `-o` to write to a file (e.g., `-o ./dist/walker.js` for web, `-o ./dist/bundle.mjs` for server).
+A web bundle is written to stdout by default; `-o ./dist/walker.js` writes it to a file. A server bundle loads its step packages from `node_modules/`, so build it with `-o ./dist/`: the CLI writes `flow.mjs`, `package.json` and `node_modules/` there, and you ship the whole directory (see [Bundle command](/docs/apps/cli#bundle-command)).
 
 ### Bundle
 
@@ -116,6 +116,7 @@ Build-time configuration lives under `flows.<name>.config.bundle`. The `packages
           "imports": ["sourceBrowser"]
         },
         "@walkeros/web-destination-api": {
+          "version": "^4",
           "imports": ["destinationAPI"]
         }
       },
@@ -240,11 +241,11 @@ Destinations receive processed events and send them to analytics tools, database
 - **`settings`** - Destination-specific configuration (API keys, endpoints, etc.)
 - **`mapping`** - Event transformation rules (see [Mapping documentation](/docs/mapping))
 - **`consent`** - Required consent states
-- **`policy`** - Processing rules
+- **`policy`** - Event fields to set or remove before `data` resolves (see [Mapping rule](/docs/mapping/rule))
 
 **Consent gating:**
 
-Gate a destination on consent with `config.consent`. The destination initializes once one of the listed consent keys is granted; until then its events wait in a queue and are delivered after the grant, during the same run. A denial keeps them waiting:
+Gate a destination on consent with `config.consent`. The destination initializes once one of the listed consent keys is granted:
 
 <CodeSnippet
   code={`{
@@ -260,6 +261,8 @@ Gate a destination on consent with `config.consent`. The destination initializes
 }`}
   language="json"
 />
+
+Until then, its events wait in a queue and are delivered after the grant, during the same run; a denial keeps them waiting. Server flows built by the CLI default to `consentDenied: 'skip'` instead: such an event is skipped, counted in the destination's `skipped`, and never delivered later (see [Consent-denied events on a server](/docs/collector/#consent-denied-events-on-a-server)).
 
 `require` is a separate mechanism that waits for collector events, not for granted consent (see [Deferred activation with `require`](#deferred-activation-with-require)).
 
@@ -286,11 +289,12 @@ Transformers process events between sources and destinations. They validate, enr
 **Configuration options:**
 - **`package`** - The npm package (required for package-based steps, optional when using `code:`)
 - **`import`** - Named export of `package` to use (optional; the package's default export otherwise)
-- **`code`** - Inline code object `{ push, type?, init?, pushBatch?, on?, destroy? }`, used instead of `package` (see [Inline Code](#inline-code-without-packages))
+- **`code`** - Inline code object `{ push, type?, init?, destroy? }`, used instead of `package` (see [Inline Code](#inline-code-without-packages))
 - **`config`** - Transformer-specific configuration
-- **`env`** - Environment-specific settings
+- **`env`** - Dependencies the transformer reads, such as a store (`"store": "$store.assets"`)
 - **`before`** - Pre-transformer chain (runs before this transformer's push)
 - **`next`** - Next transformer in chain (omit to end chain)
+- **`cache`**, **`state`**, **`mapping`** - Cache rules, declarative store reads and writes, and a code-free event mapping (see [Transformers](/docs/transformers/#configuration))
 - **`variables`** - Transformer-level variable overrides
 
 **Chaining transformers:**
@@ -308,7 +312,10 @@ Link transformers together using `next`:
       "next": "fingerprint"
     },
     "fingerprint": {
-      "package": "@walkeros/server-transformer-fingerprint"
+      "package": "@walkeros/server-transformer-fingerprint",
+      "config": {
+        "settings": { "salt": "$env.FINGERPRINT_SALT" }
+      }
     }
   }
 }`}
@@ -317,7 +324,7 @@ Link transformers together using `next`:
 
 **Explicit chain control with arrays:**
 
-For explicit control over the order, use an array instead of a string. The array is the backbone of the chain: its entries run in order, and a member's own `next` runs right after that member before the array continues:
+For explicit control over the order, use an array instead of a string. Its entries run in order, and a member's own `next` runs right after that member before the array continues:
 
 <CodeSnippet
   code={`{
@@ -328,7 +335,12 @@ For explicit control over the order, use an array instead of a string. The array
     }
   },
   "transformers": {
-    "fingerprint": { "package": "@walkeros/server-transformer-fingerprint" },
+    "fingerprint": {
+      "package": "@walkeros/server-transformer-fingerprint",
+      "config": {
+        "settings": { "salt": "$env.FINGERPRINT_SALT" }
+      }
+    },
     "enrich": {
       "code": {
         "type": "enrich",
@@ -365,7 +377,7 @@ page.
 
 All chain fields (`before` and `next`, including `collector.next`) accept the same route grammar: a transformer id, an array, or a route config (see [Conditional routing](./routing.mdx#conditional-routing)).
 
-See [Transformers documentation](/docs/transformers/) for available transformers and custom transformer guide.
+See [Transformers documentation](/docs/transformers/) for available transformers and the guide to writing your own.
 
 ### Connection rules
 
@@ -469,7 +481,10 @@ The collector processes events from sources and routes them to destinations:
     "consent": {
       "functional": true
     },
-    "next": ["bot", "session"]
+    "next": "bot"
+  },
+  "transformers": {
+    "bot": { "package": "@walkeros/server-transformer-bot" }
   }
 }`}
   language="json"
@@ -505,9 +520,9 @@ For browser bundles, you can configure the collector's window variable name via
 
 The `window.elb` function is owned by the browser source: set `elb` in the
 browser source's `config.settings` to change its global name (default:
-`"elb"`). If the deprecated `config.settings.windowElb` is set, the CLI forwards its value to
+`"elb"`). If `config.settings.windowElb` is set, the CLI forwards its value to
 the browser source's `settings.elb` and logs a warning; if that source already
-sets `elb`, `windowElb` is ignored.
+sets `elb`, `windowElb` is ignored, also with a warning.
 
 ## Multi-flow configuration
 
@@ -535,7 +550,7 @@ Flows in the same file can reference each other's `config` block via `$flow.<nam
 
 <FlowSlice feature="ref-flow" />
 
-Cross-flow refs read values from another flow's `config` block (`platform`, `url`, `settings.*`), keeping web and server flows in sync without duplication. The bundler resolves `$flow.server.url` to the server flow's `config.url` at build time. Validate resolves the reference the same way the bundle does: an unknown flow or a missing key is an error in both. An empty `config.url` fails the schema check in `bundle` and in `validate` without `--flow`; `validate --flow web` does not check the server flow and passes. An empty value under `settings` resolves to an empty string.
+Cross-flow refs read a value from another flow's `config` block (`url`, `platform`, a `settings.*` path or any other key), keeping web and server flows in sync without duplication. The bundler resolves `$flow.server.url` to the server flow's `config.url` at build time. A `$flow` reference must be the whole string value; inside a longer string it fails `walkeros validate` and the bundle. An unknown flow, a missing key or an empty value is an error in `walkeros validate`, with or without `--flow`, and in `bundle`.
 
 ## Dynamic patterns
 
@@ -569,7 +584,7 @@ Reference environment variables with optional defaults:
 - `$env.GA4_ID:default` - Uses "default" if not set
 
 :::note Why only `$env` supports defaults
-Environment variables are external and unpredictable - they might not be set in all environments. Config variables (`$var`) are explicitly defined, so a missing one indicates a configuration error.
+Environment variables come from outside the file and might not be set in every environment. Config variables (`$var`) are defined in the file, so a missing one indicates a configuration error.
 :::
 
 ### `$code:` - Inline JavaScript
@@ -582,6 +597,7 @@ Embed JavaScript code directly in JSON config values:
     "api": {
       "package": "@walkeros/web-destination-api",
       "config": {
+        "settings": { "url": "https://collect.example.com/events" },
         "mapping": {
           "product": {
             "view": {
@@ -615,8 +631,9 @@ The `$code:` prefix is stripped during bundling, outputting raw JavaScript:
 />
 
 A `fn` receives the value being mapped (here the whole event, inside a `loop`
-the item) and returns the result, so it reads the field itself. A `fn` next to a
-`key` never runs: each value has one producer.
+the item) and returns the result, so it reads the field itself.
+`walkeros validate` and the bundle reject a `fn` next to a `key`: each value
+has one producer (see [Value](/docs/mapping/value)).
 
 **Use cases:**
 - **`fn:` callbacks** - Transform values in mapping
@@ -630,7 +647,7 @@ the item) and returns the result, so it reads the field itself. A `fn` next to a
 
 ## Type hierarchy
 
-walkerOS uses a clear type hierarchy:
+walkerOS uses this type hierarchy:
 
 ```
 ┌─────────────────────────────────────────────────────────────────┐
@@ -641,11 +658,12 @@ walkerOS uses a clear type hierarchy:
 │       └── default: Flow                                         │
 └─────────────────────────────────────────────────────────────────┘
                               │
-                              │ CLI resolves $var, $env, $flow, $contract, $secret
+                              │ CLI resolves $var, $env, $flow, $contract
+                              │ (a server flow reads $env and $secret at start)
                               ▼
 ┌─────────────────────────────────────────────────────────────────┐
 │  Flow (resolved flow)                                           │
-│  ├── config: { platform, url?, settings?, bundle? }             │
+│  ├── config: { platform, url?, settings?, bundle?, observe? }   │
 │  ├── sources: { ... }                                           │
 │  ├── transformers: { ... }                                      │
 │  ├── destinations: { ... }                                      │
@@ -693,7 +711,7 @@ You can also use configuration programmatically with the `startFlow` function:
 import { sourceExpress } from '@walkeros/server-source-express';
 import { destinationDemo } from '@walkeros/destination-demo';
 
-const { collector, elb } = await startFlow({
+const { collector } = await startFlow({
   sources: {
     http: {
       code: sourceExpress,

@@ -806,15 +806,15 @@ capture these variations so they are identified early.
 
 ## Reference files
 
-| What               | Where                                          |
-| ------------------ | ---------------------------------------------- |
-| Skill examples     | [examples/](examples/)                         |
-| Skill templates    | [templates/cmp/](templates/cmp/)               |
-| Canonical template | `packages/web/sources/cmps/cookiefirst/`       |
-| Source types       | `packages/core/src/types/source.ts`            |
-| Consent guide      | `website/docs/guides/consent/`                 |
-| Usercentrics plan  | `docs/plans/2026-02-15-usercentrics-source.md` |
-| CookiePro plan     | `docs/plans/2026-02-15-cookiepro-source.md`    |
+| What                | Where                                     |
+| ------------------- | ----------------------------------------- |
+| Skill examples      | [examples/](examples/)                    |
+| Skill templates     | [templates/cmp/](templates/cmp/)          |
+| Canonical template  | `packages/web/sources/cmps/cookiefirst/`  |
+| Source types        | `packages/core/src/types/source.ts`       |
+| Consent guide       | `website/docs/guides/consent/`            |
+| Usercentrics source | `packages/web/sources/cmps/usercentrics/` |
+| CookiePro source    | `packages/web/sources/cmps/cookiepro/`    |
 
 ## Related skills
 

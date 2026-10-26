@@ -137,6 +137,7 @@ For example, transforming a `product add` event into GA4's `add_to_cart`:
   ga4: {
     code: destinationGtag,
     config: {
+      settings: { ga4: { measurementId: 'G-XXXXXXXXXX' } },
       mapping: {
         product: {
           add: {
@@ -373,8 +374,9 @@ thrown in a source (its factory or `init`), in a transformer's `init` or in an
 transformer's `push`, it is handled like any other error thrown there and does
 not propagate. Thrown in a mapping callback of a destination, it does not
 propagate either, but it fails that destination's push and the event goes to
-its dead-letter queue. An ordinary error there drops only the value, or, in a
-rule `condition`, makes that rule not match.
+its dead-letter queue. An ordinary error in a value callback drops only that
+value; in a rule `condition` it fails the push the same way, with the reason
+`mapping`.
 
 <CodeSnippet
   code={`import { FatalError } from '@walkeros/core';
@@ -434,8 +436,9 @@ overflow. What happens to the entry and how loud it is depends on the buffer:
 | `destination.queuePush` | Per-destination consent-denied buffer                | 1000        | `Destination.Config.queueMax`       |
 | `destination.dlq`       | Per-destination dead-letter queue of failed pushes   | 100         | `Destination.Config.dlqMax`         |
 
-Each step has its own knob; no cascade. Set the collector cap on the collector,
-and per-destination caps on each destination:
+Each step has its own cap, and the collector's value does not carry over to
+its destinations. Set the collector cap on the collector, and per-destination
+caps on each destination:
 
 <CodeSnippet
   code={`const { collector } = await startFlow({
@@ -466,8 +469,8 @@ key with `stepId()` from `@walkeros/core`):
 const collectorDrops =
   collector.status.dropped[stepId('collector')]?.queue ?? 0;
 
-// Events dropped before the collector ran
-const preRunDrops = collector.status.dropped['collector.preRun']?.queue ?? 0;
+// Events refused before the collector ran are not drops: they count in
+// collector.status.failed, and their push result has the reason queue-full.
 
 // Destination drops by buffer:
 //  - queue: consent-denied events evicted from the destination's queuePush
@@ -499,7 +502,7 @@ not event data:
 
 ## See also
 
-- [**Operating modes**](/docs/getting-started/modes): integrated vs bundled approaches
-- [**CLI documentation**](/docs/apps/cli): configure with JSON and build with CLI
-- [**Sources**](/docs/sources): available event capture sources
-- [**Destinations**](/docs/destinations): available event delivery destinations
+- [Operating modes](/docs/getting-started/modes): integrated vs bundled approaches
+- [CLI documentation](/docs/apps/cli): configure with JSON and build with CLI
+- [Sources](/docs/sources): available event capture sources
+- [Destinations](/docs/destinations): available event delivery destinations

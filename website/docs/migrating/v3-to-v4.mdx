@@ -8,12 +8,12 @@ sidebar_position: 1
 
 walkerOS Flow v4 reshapes `flow.json` so each flow has a dedicated `config`
 block (platform, url, settings, bundle), and adds the `$flow.X.Y` reference
-syntax for cross-flow lookups inside the same file. The v4 CLI rejects v3
-input outright, so every existing `flow.json` needs a one-time edit.
+syntax for cross-flow lookups inside the same file. The v4 CLI rejects a file
+with `"version": 3`, so every existing `flow.json` needs a one-time edit.
 
-This guide walks through the four mechanical JSON transforms, then covers
-the matching TypeScript type renames for code that imports `Flow.*` from
-`@walkeros/core`.
+This guide walks through the JSON transforms, then covers the TypeScript type
+renames for code that imports `Flow.*` from `@walkeros/core`, the changed
+event fields and the changed runtime commands.
 
 ## What changed at a glance
 
@@ -28,7 +28,12 @@ the matching TypeScript type renames for code that imports `Flow.*` from
   `config.bundle`.
 - **New `$flow.X.Y` reference syntax** lets one flow read another flow's
   resolved `config` (e.g., `$flow.server.url`).
-- **Hard cut:** the v4 CLI refuses v3 input. There is no compat shim.
+- **Inside steps:** the mapping rule field `skip` is now `silent`, the
+  references `$store:id` and `$secret:NAME` are now `$store.id` and
+  `$secret.NAME`, and mapping callbacks take `(value, context)`.
+- **Event fields:** `event.id` is a span id, `group`, `count` and `version`
+  are gone, and `source` has new fields (see [Event fields](#event-fields)).
+- **Hard cut:** the v4 CLI refuses `"version": 3`. There is no compat shim.
 - **No automated migration command.** Edits are mechanical, see below.
 
 ## Step-by-step JSON migration
@@ -43,8 +48,8 @@ The transforms are independent; apply them in any order.
 }
 ```
 
-Was `"version": 3`. The v4 CLI fails fast on any other value with a clear
-`unsupported flow.json version` error.
+Was `"version": 3`. `walkeros validate` and `walkeros bundle` fail on any
+other value with `version: Invalid input: expected 4`.
 
 ### Transform 2: update `$schema`
 
@@ -54,8 +59,7 @@ Was `"version": 3`. The v4 CLI fails fast on any other value with a clear
 }
 ```
 
-Was `https://walkeros.io/schema/flow/v3.json`. The v3 schema file has been
-removed from the docs site.
+Was `https://walkeros.io/schema/flow/v3.json`.
 
 ### Transform 3: lift `web` / `server` into `config`
 
@@ -97,9 +101,12 @@ v4:
 
 The v3 `windowElb` name moves to the browser source: set `elb` in the browser
 source's `config.settings` (default `"elb"`, so it can usually be dropped).
-The `windowElb` key is deprecated in v4; when set, its value is forwarded to
-the browser source with a warning. Keeping `windowCollector` preserves your
-existing global; dropping it uses the v4 default, `window.walkerOS`.
+Move it rather than carrying it into `config.settings`. A `windowElb` left
+there is handled by `walkeros bundle` with a warning: its value is forwarded to
+the browser source's `elb` when that source sets none, and ignored when the
+source already sets `elb` or the flow has no browser source.
+Keeping `windowCollector` preserves your existing global; dropping it uses the
+v4 default, `window.walkerOS`.
 
 For server flows, the transform is the same: drop `"server": {}`, add
 `"config": { "platform": "server" }`. Server flows can also set
@@ -148,6 +155,46 @@ v4:
 
 `bundle.overrides` (transitive dependency pins) lives in the same place,
 under `config.bundle.overrides`.
+
+### Transform 5: rename the mapping rule field `skip` to `silent`
+
+A mapping rule that ran its side effects without the destination's default
+call used `skip: true`. In v4 the field is `silent`:
+
+```json
+{
+  "page": {
+    "view": { "silent": true }
+  }
+}
+```
+
+`walkeros validate` does not report a leftover `skip`. The rule then has no
+effect, and the destination sends its default call for that event.
+
+### Transform 6: use a dot in `$store` and `$secret` references
+
+`$store:id` is now `$store.id`, and `$secret:NAME` is now `$secret.NAME`. The
+other references (`$var.`, `$env.`, `$contract.`, `$code:`) are unchanged.
+`walkeros validate` warns on the colon form, for example
+`Malformed reference "$secret:API_TOKEN", use a dot, not a colon: "$secret.API_TOKEN".`,
+and `--strict` turns the warning into a failure.
+
+### Transform 7: callback arguments in `$code:`
+
+Mapping `fn`, `condition` and `validate` callbacks take `(value, context)`. The
+v3 second argument `mapping` is now `context.mapping`, and the context also
+carries `event`, `collector`, `logger` and `consent`. A rule-level
+`condition` takes `(event, context)`:
+
+```json
+{
+  "fn": "$code:(value, context) => context.mapping"
+}
+```
+
+A v3 callback such as `(value, mapping, options) => ...` still runs, but its
+second argument is now the context object and its third is `undefined`.
 
 ## Worked example
 
@@ -216,8 +263,9 @@ The same flow in v4:
 ```
 
 Notice that `sources`, `destinations`, `transformers`, `stores`, and
-`collector` keep their old shapes. Only the platform/bundle plumbing
-moves.
+`collector` keep their shapes, apart from transforms 5 to 7 and the step
+`import` field (see [Step shape](#step-shape-import-replaces-code-name)). Only
+the platform/bundle plumbing moves.
 
 ## The new `$flow.X.Y` reference
 
@@ -250,13 +298,11 @@ its API destination at the URL of a sibling server flow:
 }
 ```
 
-Strictness rules:
-
-- `walkeros bundle` errors if `$flow.X.Y` resolves to an empty value.
-- `walkeros validate` warns by default, escalates to error with
-  `--strict`.
-- The error message points you to the source: set
-  `flows.server.config.url`, or deploy the `server` flow first.
+`walkeros validate` and `walkeros bundle` both fail when a `$flow` reference
+does not resolve. Without `flows.server.config.url`, the message is
+`Path "url" not found in "$flow.server": "url" does not exist`; an unknown
+flow name fails with `Flow "<name>" not found in $flow.<name>`. Set
+`config.url` yourself: deploying a flow does not fill it in.
 
 ## TypeScript type renames
 
@@ -304,14 +350,34 @@ function buildFlow(): Flow {
 ## No automated codemod
 
 walkerOS v4 does not ship a `walkeros migrate` command. The transforms
-are mechanical (four edits per file, all string-level), and even complex
-configs produce a small, readable diff. Apply the four transforms
-manually, run `walkeros validate` to confirm the result parses, and
-you're done.
+are mechanical string-level edits, and even complex configs produce a small,
+readable diff. Apply them manually, then run `walkeros validate`.
 
-If validate reports an error, the message will name the exact path that
-still looks like v3, e.g., a stray top-level `bundle` or a `web` block
-left behind.
+Validate does not catch every v3 leftover. It reports a `"version": 3` and a
+colon reference, but it ignores a `web`, `server` or `bundle` key left at the
+top level of a flow, and a mapping rule's `skip`. Search for them by hand.
+`walkeros bundle` stops on a flow without `config.platform`
+(`Flow must have config.platform set to "web" or "server"`), and it ignores a
+top-level `bundle` without a message, so the package versions and overrides
+in it are not applied.
+
+## Event fields
+
+Events have a new shape in v4. Update every mapping `key`, contract and
+downstream query that reads one of these fields:
+
+- `event.id` is a [W3C Trace Context](https://www.w3.org/TR/trace-context/)
+  span id (16 lowercase hex characters), generated by the collector per
+  event.
+- `event.group`, `event.count` and `event.version` are removed. Use
+  `source.trace` in place of `group`: a W3C trace id (32 lowercase hex
+  characters) minted on each run, shared by every event of that run and kept
+  across the web to server hop. Use `source.count` in place of `count`, the
+  per-run sequence.
+- `source.type` is the source kind (`browser`, `dataLayer`, `express`, ...),
+  and the new `source.platform` is the runtime (`web` or `server`).
+- `source.id` and `source.previous_id` are removed. The browser source sets
+  `source.url` and `source.referrer` in their place.
 
 ## Walker commands take an Init object
 
@@ -319,6 +385,12 @@ Three runtime `elb('walker ...')` commands changed shape in v4. The
 positional and shorthand forms are removed, every one of them now takes a
 single Init object. The `walker hook` command also has a real runtime
 handler now (in v3 it accepted arguments but never wired anything up).
+
+A call in a v3 form changes nothing and still answers `ok: true`. With a third
+argument, the collector logs
+`elb ignored an argument it does not take: ...` at ERROR. Without one, for
+example `elb('walker destination', destination)` or the `{ push }`
+shorthand, it adds no destination and logs nothing.
 
 ### `walker destination`
 
@@ -347,13 +419,13 @@ elb('walker destination', {
 
 ### `walker hook`
 
-Was: `elb('walker hook', name, fn)` (no-op at runtime, the dispatch
-silently dropped the call).
+Was: `elb('walker hook', name, fn)`, which v3 accepted without registering
+the hook.
 
-Now: `elb('walker hook', { name, fn })`, and the hook actually runs.
+Now: `elb('walker hook', { name, fn })`, and the hook runs.
 
 ```ts
-// v3 (silently ignored)
+// v3
 elb('walker hook', 'prePush', (params, ...args) => params.fn(...args));
 
 // v4
@@ -367,12 +439,14 @@ elb('walker hook', {
 
 Was: `elb('walker on', type, rules)`.
 
-Now: `elb('walker on', { type, rules })`.
+Now: `elb('walker on', { type, rules })`. The callbacks take
+`(data, context)`: the v3 first argument `collector` is now
+`context.collector`, next to `context.logger`.
 
 ```ts
 // v3
 elb('walker on', 'consent', {
-  marketing: (consent, context) => {
+  marketing: (collector, consent) => {
     // ...
   },
 });
@@ -394,7 +468,7 @@ If your code calls into the collector directly (rather than through
 `elb`), three signatures lost their third `options` parameter:
 
 - `collector.command(name, data)` (was `command(name, data, options)`)
-- `addDestination(collector, destination)` (was
+- `addDestination(collector, { code, config })` (was
   `addDestination(collector, destination, config)`)
 - `commonHandleCommand(collector, name, data)` (was
   `commonHandleCommand(collector, name, data, options)`)
@@ -411,8 +485,8 @@ Every step (source, transformer, destination, store) now accepts a new
 from that package. Using `package` alone still loads the default export.
 Inline code stays object-only: `code: { push, type?, init? }`.
 
-The legacy string form `code: "<exportName>"` is no longer accepted.
-Rename it to `import: "<exportName>"`:
+The v3 string form `code: "<exportName>"` is rejected. Rename it to
+`import: "<exportName>"`:
 
 ```diff
  "destinations": {
@@ -425,14 +499,12 @@ Rename it to `import: "<exportName>"`:
  }
 ```
 
-Empty step entries (no `package`, `import`, `code`, or chain fields) are
-now valid no-ops in any of the four step kinds.
+`walkeros validate` reports these step shapes:
 
-Validation raises one of these error codes when a step shape is invalid:
-
-- `MISSING_PACKAGE`: `import` set without `package`.
-- `OBSOLETE_CODE_STRING`: legacy `code: "<name>"` form. Rename hint points
-  to `import`.
-- `INVALID_IMPORT`: `import` is not a non-empty string.
-- `INVALID_CODE_SHAPE`: `code` is not an object with a `push` function.
-- `UNKNOWN_KEY` and `CONFLICT` are retained from earlier validators.
+- `code: "<name>"`: `code: Invalid input: expected object, received string`.
+- `import` without `package`: ``import: `import` requires `package` ``.
+- An `import` that is not a JavaScript identifier:
+  `import: import must be a valid JavaScript identifier`.
+- `code` together with `package`: `Cannot specify both package and code.`
+- An unknown key on a destination:
+  `Unknown key "<key>" on Destination is ignored by the runtime.`

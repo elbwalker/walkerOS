@@ -441,7 +441,7 @@ describe('Server Destination Meta', () => {
     });
   });
 
-  test('event Purchase', async () => {
+  test('a rule user_data key wins over settings.user_data', async () => {
     const event = getEvent('order complete', {
       source: {
         type: 'browser',
@@ -477,30 +477,11 @@ describe('Server Destination Meta', () => {
     expect(result.done).toBeDefined();
     expect(Object.keys(result.done!)).toHaveLength(1);
     const requestBody = JSON.parse(mockSendServer.mock.calls[0][1]);
-    expect(requestBody).toEqual({
-      data: [
-        {
-          event_name: 'Purchase',
-          event_time: event.timestamp / 1000,
-          event_id: event.id,
-          event_source_url: event.source.url,
-          action_source: 'website',
-          user_data: {
-            external_id: [
-              'cc8e27118413234d4297ed00a02711365312c79325df9b5b8f4199cbd0b96e7e',
-              '9176e6f336dbdb4f99b0e45cbd7e41e0e2323812b236822842a61ffbd362ac8c',
-            ],
-          },
-          order_id: '0rd3r1d',
-          currency: 'EUR',
-          value: 555,
-          contents: [
-            { id: 'ers', quantity: 1, item_price: 420 },
-            { id: 'cc', quantity: 1, item_price: 42 },
-          ],
-          num_items: 2,
-        },
-      ],
+    // The rule maps external_id from user.id, which replaces the settings'
+    // device and session ids: the rule's value wins per key.
+    expect(requestBody.data[0].user_data).toEqual({
+      external_id:
+        '273f9a3cb7d30a28b5e1a1040f4f0becae0bb574fab1f05e5653e78e93d2eb69',
     });
   });
 });

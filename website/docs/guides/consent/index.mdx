@@ -10,8 +10,9 @@ sidebar_position: 2
 
 walkerOS checks consent before events leave a flow. You record the user's
 choices in the collector, and each source and destination declares which
-consent it needs. Events that lack consent are either held or dropped,
-depending on where you set the requirement.
+consent it needs. Events that lack consent either wait or are dropped,
+depending on where you set the requirement and, on a server, on the
+collector's `consentDenied` setting.
 
 :::warning
 
@@ -67,6 +68,7 @@ maps the CMP source's `analytics` group to Google's `analytics_storage`:
         "gtag": {
           "package": "@walkeros/web-destination-gtag",
           "config": {
+            "loadScript": true,
             "consent": { "analytics": true, "marketing": true },
             "settings": {
               "como": {
@@ -77,7 +79,10 @@ maps the CMP source's `analytics` group to Google's `analytics_storage`:
                 ],
                 "analytics": "analytics_storage"
               },
-              "ga4": { "measurementId": "G-XXXXXXXXXX" }
+              "ga4": {
+                "measurementId": "G-XXXXXXXXXX",
+                "pageview": false
+              }
             }
           }
         }
@@ -88,6 +93,10 @@ maps the CMP source's `analytics` group to Google's `analytics_storage`:
   language="json"
 />
 
+`"loadScript": true` makes the destination load gtag.js; leave it out when your
+page already loads it. `"pageview": false` stops gtag's `config` from sending
+a page view of its own next to the browser source's `page view`.
+
 ### Gate a destination with `consent`
 
 A destination's `config.consent` lists the consent keys it needs. The collector
@@ -96,8 +105,11 @@ checks every event against it before the destination sees the event:
 - One granted key is enough. With `{ "analytics": true, "marketing": true }`,
   the destination receives events if either `analytics` or `marketing` is
   granted.
-- Events without the required consent wait in the destination's queue. Once
-  consent is granted, they are delivered in their original order.
+- Events without the required consent wait in the destination's queue (the
+  push answers `queued` with the reason `consent`). Once consent is granted,
+  they are delivered in their original order. Server flows built by the CLI
+  skip these events instead (`consentDenied: 'skip'`), see
+  [consent-denied events on a server](/docs/collector#consent-denied-events-on-a-server).
 - The collector initializes the destination only after its required consent
   is granted: at the first event that passes the check or, for a destination
   with an `on()` handler, at the consent command that grants it.
@@ -109,16 +121,30 @@ checks every event against it before the destination sees the event:
 the events of the current run, so a destination added later still receives
 them. `"queue": false` skips only that replay for the destination.
 
-A destination receives the current consent state through its `on('consent')`
-handler before any event is sent to it. This holds when consent was set before
-or after `walker run`, when the destination waits for consent with `require`,
-and when it is added with `walker destination` while the flow is running. The
-collector waits for the handler to finish, up to the destination's
-`config.timeout` (10 seconds by default). If the handler does not finish in
-that time, or fails, the destination receives no events until a later delivery
-of the state finishes. Its events wait in its queue meanwhile and are discarded
-at the next `walker run`. The collector delivers the state again when it
-changes, and with the next event once the timeout has passed.
+Once a consent state is recorded, a destination receives it through its
+`on('consent')` handler before any later event is sent to it. This holds when
+consent was set before or after `walker run`, when the destination waits for
+consent with `require`, and when it is added with `walker destination` while
+the flow is running. The collector waits for the handler to finish, up to the
+destination's `config.timeout` (10 seconds by default), and delivers the state
+again when it changes. Events pushed meanwhile are held for the destination:
+their push answers `queued` with the reason `held`.
+
+If the handler fails or does not finish in that time, the collector writes an
+ERROR line (`consent not applied`) and holds the destination's events for one
+more `config.timeout`. The first push after that window retries a failed
+delivery before it sends, and a handler that finishes late receives the
+current state again right away. Once a delivery succeeds, the held events are
+delivered. If none has succeeded by the first push after the window, the held
+events and every later event with the required consent fail with the reason
+`blocked` until one does: the push answers `ok: false`, the events are counted
+in `status.destinations[id].failed` and kept in the destination's dead-letter
+queue, an ERROR `Push failed` line is written, and they are not sent when the
+destination recovers. Later pushes retry the delivery once per
+`config.timeout`. A handler that timed out gets no new delivery until it
+finishes, so one that never finishes keeps its destination blocked. A
+`walker run` discards events that are still held, with no counter and no log
+line. See the [failure codes](/docs/collector/logger#failure-codes).
 
 ### Gate a source with `consent`
 
@@ -138,7 +164,8 @@ later does not bring these events back:
 />
 
 Use source gating when events must not enter the flow at all without consent.
-Use destination gating when events should wait for a decision.
+Use destination gating when events should wait for a decision (in a server
+flow built by the CLI they are skipped, see above).
 
 ### Wait for the CMP with `require`
 
@@ -171,7 +198,8 @@ command (such as `walker consent`, `walker user`, or `walker globals`) reaches
 the destinations. Before the check, each queued event is updated:
 
 - `consent` is replaced with the current collector state. Once the event
-  passes, it carries only the granted keys.
+  passes, it carries only the granted keys. A held event keeps the consent it
+  was pushed with (see [Revoke consent](#revoke-consent)).
 - `user` is merged with the collector's user data. Values already on the event
   take precedence.
 - `globals` keeps the values the event was captured with.
@@ -194,15 +222,19 @@ To stop sending events to a destination, set its required keys to `false`:
 />
 
 Once none of a destination's required keys is granted, new events are queued
-for it instead of delivered. If consent is granted again during the same run,
-those queued events are delivered. Events that were already sent are not
-affected.
+for it instead of delivered (skipped in a server flow built by the CLI). If
+consent is granted again during the same run, those queued events are
+delivered. Events that were already sent are not affected. An event that is
+held for the destination when consent is revoked (while a consent delivery to
+it runs, or within the window after one failed, see
+[Gate a destination](#gate-a-destination-with-consent)) is still sent when the
+hold ends, after the revocation, with the consent it was pushed with.
 
 ## Opt-out
 
-An opt-out beats consent: when a user opts out, no event of theirs is sent,
-whatever consent they granted. Mark the user with `optout: true` and stop the
-event at the first step of the chain with a gated stop:
+An opt-out beats consent: when a user opts out, no event of theirs reaches a
+destination, whatever consent they granted. Mark the user with `optout: true`
+and stop the event at the first step of the chain with a gated stop:
 
 <CodeSnippet
   code={`{
@@ -212,15 +244,27 @@ event at the first step of the chain with a gated stop:
   language="json"
 />
 
-- **Web:** put the stop first in your bundle's `collector.next`. An opted-out
-  browser sends nothing. Sources still run, for example the session source keeps its ids in
-  storage.
+- **Web:** put the stop first in your bundle's `collector.next`. No event of
+  an opted-out browser reaches a destination. Sources still run, for example
+  the session source keeps its ids in storage.
 - **Server:** put the stop first in the source's `next`, before deduplication.
   An opted-out event leaves no dedup entry and no fingerprint hash, and reaches
   no destination.
 
 `eq` compares as strings, so a boolean `true` and the string `"true"` both
 match.
+
+The stop applies to events only. A destination with an `on()` handler still
+initializes: right away when it has no consent requirement, otherwise once that
+consent is granted. Its `on()` handler still receives consent and user changes,
+including the `optout` flag and the user's ids. A destination without an
+`on()` handler initializes with its first event, so for an opted-out user it
+does not initialize. A destination that loads a vendor script loads it for an
+opted-out user too: the gtag destination with `"loadScript": true` loads
+gtag.js and runs its `config` command, and gtag.js then sends what the Google
+tag collects by itself, such as Google's own page view (unless `pageview` is
+`false`) and the enhanced measurement events of the GA4 data stream.
+`"pageview": false` turns off only that page view, not the rest.
 
 Set the flag before the first event. A `walker user` command queued in
 `elbLayer` before your bundle loads applies before anything is sent:
@@ -261,7 +305,7 @@ this event, and the event's values win:
   language="javascript"
 />
 
-If the event is still queued, the next check replaces its `consent` with the
+If the event is still waiting for consent, the next check replaces its `consent` with the
 collector state, as described above.
 
 To send a single field only with consent, use
@@ -333,13 +377,14 @@ Pass an object to use your own keys:
   code={`"gtag": {
   "package": "@walkeros/web-destination-gtag",
   "config": {
+    "loadScript": true,
     "consent": { "analytics": true, "marketing": true },
     "settings": {
       "como": {
         "marketing": ["ad_storage", "ad_user_data", "ad_personalization"],
         "analytics": "analytics_storage"
       },
-      "ga4": { "measurementId": "G-XXXXXXXXXX" }
+      "ga4": { "measurementId": "G-XXXXXXXXXX", "pageview": false }
     }
   }
 }`}

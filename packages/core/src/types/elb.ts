@@ -66,7 +66,11 @@ export interface PushResult {
   dropped?: boolean;
   /** Event was rejected as invalid input: a client/producer fault, not a pipeline failure. */
   invalid?: boolean;
-  /** Human-readable failure reason when ok is false. */
+  /**
+   * Human-readable message when the event was rejected or a step before the
+   * destinations failed. A destination's own failure is in `failed`, under
+   * its id with a `reason`, and leaves this unset.
+   */
   error?: string;
   /**
    * Why the push failed when `ok` is false without a `failed` entry: a full

@@ -14,7 +14,7 @@ The bundler now uses [`@vercel/nft`](https://github.com/vercel/nft) to trace ser
 
 ## Remove `flow.<name>.config.bundle.external` entirely
 
-nft handles externalization automatically. Remove the field; it is no longer recognized.
+nft handles externalization automatically. Remove the field: `walkeros bundle` ignores it and prints a warning, and `walkeros validate` reports it as an error (`Unrecognized key: "external"`).
 
 ```diff
  "config": {
@@ -26,7 +26,7 @@ nft handles externalization automatically. Remove the field; it is no longer rec
  }
 ```
 
-The CLI prints a deprecation warning if it sees a v3-era `config.bundle.external` block. The same applies to step-package manifests carrying `walkerOS.bundle.external` (also no longer recognized).
+A step package whose `package.json` still declares `walkerOS.bundle.external` is treated the same way: `walkeros bundle` ignores the field and prints a warning naming the package.
 
 ## Update the Dockerfile
 
@@ -44,18 +44,18 @@ Server bundles are always a directory now: `dist/{flow.mjs, package.json, node_m
 -COPY --from=builder /build/dist/bundle.mjs /app/flow/bundle.mjs
 -ENV BUNDLE=/app/flow/bundle.mjs
 -ENV FILES_PATH=/app/flow
-+FROM walkeros/flow:4
++FROM walkeros/flow:<version>
 +WORKDIR /app/flow
 +COPY --from=builder /build/dist/ ./
  ENV PORT=8080
  EXPOSE 8080
 ```
 
-The `BUNDLE` and `FILES_PATH` env vars are no longer needed: the runtime image's defaults match `/app/flow/flow.mjs`.
+The `BUNDLE` and `FILES_PATH` env vars are no longer needed: the runtime image's defaults match `/app/flow/flow.mjs`. Use the same `<version>` as the `@walkeros/cli` that builds the flow; the [canonical Dockerfile](/docs/apps/runtime#canonical-dockerfile) pins both with one `WALKEROS_VERSION`.
 
 ## You no longer need `npm install` for step packages
 
-Pacote drives the install layer based on `flow.<name>.config.bundle.packages`. Your project's `package.json` only needs `@walkeros/cli` as a devDependency (plus any local code your project ships, of course). You can remove pinned `@walkeros/...` deps from `package.json` if you previously listed them just to satisfy the bundler.
+`walkeros bundle` installs the package of every step itself, together with `flow.<name>.config.bundle.packages`. Your project's `package.json` only needs `@walkeros/cli` as a devDependency (plus any local code your project ships). You can remove pinned `@walkeros/...` deps from `package.json` if you previously listed them just to satisfy the bundler.
 
 ## Escape hatch: `traceInclude`
 
@@ -77,8 +77,8 @@ If nft cannot statically reach a runtime asset (rare: `require(somePathFromEnv)`
 }
 ```
 
-Paths and globs both work. They resolve against the install root (where pacote put files), not your project directory.
+Paths and globs both work. They resolve against the install root (where the bundler installs the packages), not your project directory.
 
 ## Output filename change
 
-Default output filename is now `flow.mjs` (was `bundle.mjs`). The runtime image expects `/app/flow/flow.mjs`. If you have scripts that read `dist/bundle.mjs`, update them.
+A server bundle written to a directory (`-o dist/`) is named `flow.mjs` (was `bundle.mjs`). The runtime image expects `/app/flow/flow.mjs`. If you have scripts that read `dist/bundle.mjs`, update them.

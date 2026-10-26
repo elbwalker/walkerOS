@@ -48,7 +48,8 @@ The destination supports two tracking approaches:
 <Tabs groupId="tracker-mode">
   <TabItem value="spjs" label="JavaScript Tag (sp.js)" default>
 
-Loads the Snowplow tracker script automatically. Simple setup, works everywhere.
+With `loadScript: true`, the destination loads the Snowplow tracker script
+(sp.js).
 
 <Tabs groupId="mode">
   <TabItem value="integrated" label="Integrated" default>
@@ -101,18 +102,32 @@ const { elb } = await startFlow({
   </TabItem>
   <TabItem value="npm" label="NPM Packages (browser-tracker)">
 
-Uses imported functions directly. Smaller bundles, tree-shaking, type-safe.
+Uses imported functions directly: smaller bundles through tree-shaking, and
+type-safe calls.
 
-**Available packages and functions:**
+Available packages and functions:
 
 | Package | Functions | Purpose |
 |---------|-----------|---------|
 | `@snowplow/browser-tracker` | `newTracker`, `trackSelfDescribingEvent` | Core tracking (required) |
-| `@snowplow/browser-tracker` | `trackPageView`, `trackStructEvent`, `setUserId`, `enableActivityTracking`, `addPlugin`, `addGlobalContexts`, `clearUserData`, `enableAnonymousTracking`, `disableAnonymousTracking` | Optional features |
-| `@snowplow/browser-plugin-snowplow-ecommerce` | `SnowplowEcommercePlugin`, `setPageType` | Ecommerce tracking |
-| `@snowplow/browser-plugin-link-click-tracking` | `LinkClickTrackingPlugin` | Auto link tracking |
-| `@snowplow/browser-plugin-button-click-tracking` | `ButtonClickTrackingPlugin` | Auto button tracking |
-| `@snowplow/browser-plugin-enhanced-consent` | `trackConsentAllow`, `trackConsentDeny`, `trackConsentSelected` | Consent tracking |
+| `@snowplow/browser-tracker` | `trackPageView` | `trackPageView` and `pageViewEvent` |
+| `@snowplow/browser-tracker` | `trackStructEvent` | Rules with `struct` |
+| `@snowplow/browser-tracker` | `setUserId` | `userId` |
+| `@snowplow/browser-tracker` | `enableActivityTracking`, `disableActivityTracking` | `activityTracking`; without `disableActivityTracking` a consent revocation fails with `consent-not-applied` |
+| `@snowplow/browser-tracker` | `addPlugin`, `addGlobalContexts` | `plugins`, `globalContexts` |
+| `@snowplow/browser-plugin-snowplow-ecommerce` | `SnowplowEcommercePlugin`, `setPageType` | Ecommerce tracking, `page` |
+
+Pass every function your settings and rules use: a call whose function is
+missing is skipped and the event still counts as delivered (a `struct` rule
+without `trackStructEvent` sends nothing). A plugin in
+`plugins` is added with `addPlugin`; give a plugin factory a `config` (an empty
+object when it takes none), because without one the destination adds the
+factory itself and the plugin never starts. The destination cannot call a
+plugin's enable function, such as `enableLinkClickTracking`, in this mode:
+call it yourself, or use sp.js with a URL plugin. A plugin you enable yourself
+keeps sending after a consent revocation until you disable it. Consent tracking
+(`settings.consent`) and the runtime privacy controls below work only with
+sp.js.
 
 <Tabs groupId="mode">
   <TabItem value="integrated" label="Integrated" default>
@@ -132,7 +147,6 @@ import {
   SnowplowEcommercePlugin,
   setPageType,
 } from '@snowplow/browser-plugin-snowplow-ecommerce';
-import { LinkClickTrackingPlugin } from '@snowplow/browser-plugin-link-click-tracking';
 
 const { elb } = await startFlow({
   destinations: {
@@ -151,10 +165,7 @@ const { elb } = await startFlow({
           },
           collectorUrl: 'https://collector.example.com',
           appId: 'my-app',
-          plugins: [
-            { code: SnowplowEcommercePlugin },
-            { code: LinkClickTrackingPlugin, config: { trackContent: true } },
-          ],
+          plugins: [{ code: SnowplowEcommercePlugin, config: {} }],
         },
       },
     },
@@ -168,49 +179,52 @@ const { elb } = await startFlow({
 
 <CodeSnippet
   code={`{
-  "bundle": {
-    "packages": {
-      "@snowplow/browser-tracker": {
-        "imports": [
-          "newTracker",
-          "trackSelfDescribingEvent",
-          "trackPageView",
-          "enableActivityTracking",
-          "addPlugin",
-          "addGlobalContexts"
-        ]
-      },
-      "@snowplow/browser-plugin-snowplow-ecommerce": {
-        "imports": ["SnowplowEcommercePlugin", "setPageType"]
-      },
-      "@snowplow/browser-plugin-link-click-tracking": {
-        "imports": ["LinkClickTrackingPlugin"]
-      }
-    }
-  },
-  "destinations": {
-    "snowplow": {
-      "package": "@walkeros/web-destination-snowplow",
+  "version": 4,
+  "flows": {
+    "default": {
       "config": {
-        "settings": {
-          "tracker": {
-            "newTracker": "$code:newTracker",
-            "trackSelfDescribingEvent": "$code:trackSelfDescribingEvent",
-            "trackPageView": "$code:trackPageView",
-            "enableActivityTracking": "$code:enableActivityTracking",
-            "addPlugin": "$code:addPlugin",
-            "addGlobalContexts": "$code:addGlobalContexts",
-            "setPageType": "$code:setPageType"
-          },
-          "collectorUrl": "https://collector.example.com",
-          "appId": "my-app",
-          "plugins": [
-            { "code": "$code:SnowplowEcommercePlugin" },
-            {
-              "code": "$code:LinkClickTrackingPlugin",
-              "config": { "trackContent": true }
+        "platform": "web",
+        "bundle": {
+          "packages": {
+            "@snowplow/browser-tracker": {
+              "version": "^4",
+              "imports": [
+                "newTracker",
+                "trackSelfDescribingEvent",
+                "trackPageView",
+                "enableActivityTracking",
+                "addPlugin",
+                "addGlobalContexts"
+              ]
+            },
+            "@snowplow/browser-plugin-snowplow-ecommerce": {
+              "version": "^4",
+              "imports": ["SnowplowEcommercePlugin", "setPageType"]
             }
-          ]
+          }
+        }
+      },
+      "destinations": {
+        "snowplow": {
+          "package": "@walkeros/web-destination-snowplow",
+          "config": {
+            "settings": {
+              "tracker": {
+                "newTracker": "$code:newTracker",
+                "trackSelfDescribingEvent": "$code:trackSelfDescribingEvent",
+                "trackPageView": "$code:trackPageView",
+                "enableActivityTracking": "$code:enableActivityTracking",
+                "addPlugin": "$code:addPlugin",
+                "addGlobalContexts": "$code:addGlobalContexts",
+                "setPageType": "$code:setPageType"
+              },
+              "collectorUrl": "https://collector.example.com",
+              "appId": "my-app",
+              "plugins": [
+                { "code": "$code:SnowplowEcommercePlugin", "config": {} }
+              ]
+            }
+          }
         }
       }
     }
@@ -229,7 +243,12 @@ const { elb } = await startFlow({
 
 <Configuration type="destination" data={data} />
 
-`settings.collectorUrl` is required and the settings schema is closed, so `walkeros validate` rejects a key Snowplow does not read. The Snowplow script is injected once per script URL; if it fails to load, later events fail visibly.
+`settings.collectorUrl` is required and the settings schema is closed, so `walkeros validate` rejects a key Snowplow does not read. The Snowplow script is injected once per script URL; if it fails to load, later events fail visibly. If your page already loads sp.js, leave `loadScript` off, or the script loads twice.
+
+Every event needs a rule: its `name` is the action type of the self-describing
+event (like `add_to_cart` for the ecommerce action schema). An event that no
+rule maps, and that is not the `pageViewEvent`, fails with `missing-input`; add
+an `ignore: true` rule for events you do not send.
 
 ## User identity and privacy
 
@@ -268,7 +287,9 @@ Enable anonymous tracking for privacy-focused collection or before consent:
 
 ### Runtime privacy controls
 
-Control tracking modes at runtime using exported utility functions:
+Control tracking modes at runtime using exported utility functions. They call
+the sp.js tracker (`window.snowplow`) and do nothing with `settings.tracker`;
+there, call the browser tracker's own functions of the same name:
 
 <CodeSnippet
   code={`import {
@@ -283,19 +304,22 @@ disableAnonymousTracking();`}
   language="typescript"
 />
 
+### Consent revocation
+
+On a revocation of the destination's required consent (`config.consent`),
+activity tracking and the sp.js URL plugins for link, form, button and YouTube
+tracking are switched off, and a grant switches them back on. The error
+tracking and FocalMeter URL plugins have no off switch, so a revocation with
+them enabled fails visibly (`consent-not-applied`). With `settings.tracker`,
+only `activityTracking` follows consent: a plugin you enable yourself keeps
+sending after a revocation until you disable it.
+
 ### Consent tracking
 
 Track GDPR/CCPA consent events using Snowplow's [Enhanced Consent plugin](https://docs.snowplow.io/docs/collecting-data/collecting-from-own-applications/javascript-trackers/web-tracker/tracking-events/consent-gdpr/).
-The destination automatically reacts to walkerOS consent events and calls the
-appropriate Snowplow consent methods.
-
-On a revocation of the destination's required consent, activity tracking and
-the link, form, button and YouTube plugins are switched off, and a grant
-switches them back on. Error tracking and FocalMeter have no off switch, so a
-revocation with them enabled fails visibly (`consent-not-applied`). With
-`settings.tracker`, plugins that need a URL fail at `init` with a `config`
-error. An event that no rule maps fails with `missing-input`; add an
-`ignore: true` rule for events you do not send.
+With `settings.consent`, the destination reacts to walkerOS consent commands and
+calls the matching Snowplow consent method. This works with sp.js only: with
+`settings.tracker`, no consent event is sent.
 
 **Prerequisites:** load the Enhanced Consent plugin via the `plugins` setting
 or include it in your Snowplow script bundle.
@@ -324,18 +348,22 @@ or include it in your Snowplow script bundle.
 | `domainsApplied` | `string[]` | Domains where consent applies |
 | `gdprApplies` | `boolean` | Whether GDPR applies |
 
-The destination maps walkerOS consent state to Snowplow methods:
+The destination decides on the keys of each consent command. A required scope
+the command does not name counts as not granted, so a command that only revokes
+`marketing` sends `trackConsentDeny` for `analytics` too:
 
-| walkerOS consent state | Snowplow method |
+| Required scopes in the consent command | Snowplow method |
 |------------------------|-----------------|
-| All required scopes granted | `trackConsentAllow` |
-| All required scopes denied | `trackConsentDeny` |
-| Partial consent (mixed) | `trackConsentSelected` |
+| All granted | `trackConsentAllow` |
+| None granted | `trackConsentDeny` |
+| Some granted | `trackConsentSelected` |
 
 ## Media tracking
 
 Track video and audio playback events using Snowplow's [media tracking schemas](https://docs.snowplow.io/docs/collecting-data/collecting-from-own-applications/javascript-trackers/web-tracker/tracking-events/media/).
-The destination supports all media events and contexts.
+Each media event is a self-describing event with the media schema as its
+`actionSchema`. Like every other event, it needs a rule with a `name`; the
+event data comes from the rule's `settings.data`.
 
 ### Basic usage
 
@@ -344,6 +372,7 @@ The destination supports all media events and contexts.
   name: 'video play',
   data: {
     id: 'video-123',
+    playbackId: 'playback-1',
     title: 'Product Demo',
     currentTime: 0,
     duration: 120,
@@ -352,24 +381,32 @@ The destination supports all media events and contexts.
 
 await elb({
   name: 'video progress',
-  data: { id: 'video-123', percentProgress: 25 },
+  data: { id: 'video-123', playbackId: 'playback-1', percentProgress: 25 },
 });
 
 await elb({
   name: 'video pause',
-  data: { id: 'video-123', currentTime: 45 },
+  data: { id: 'video-123', playbackId: 'playback-1', currentTime: 45 },
 });
 
 await elb({
   name: 'video end',
-  data: { id: 'video-123', duration: 120 },
+  data: { id: 'video-123', playbackId: 'playback-1', duration: 120 },
 });`}
   language="typescript"
 />
 
 ### Media mapping configuration
 
-Configure media event mappings with the `MEDIA_SCHEMAS` constants:
+Configure media event mappings with the `MEDIA_SCHEMAS` constants. Give every
+media rule the `SESSION` entity with one `mediaSessionId` per playback:
+Snowplow's media data model groups the events of a playback by this ID, and the
+destination attaches only the entities a rule lists. Every event of the playback
+must carry the ID (`playbackId` in the events above): an event without it is
+still sent, with an empty `SESSION` entity that fails Snowplow's schema
+validation. The `MEDIA_PLAYER` entity (`media_player` 1-0-0) requires
+`currentTime`, `duration`, `ended`, `loop`, `muted`, `paused`, `playbackRate`
+and `volume`:
 
 <CodeSnippet
   code={`import { MEDIA_SCHEMAS } from '@walkeros/web-destination-snowplow';
@@ -377,25 +414,57 @@ Configure media event mappings with the `MEDIA_SCHEMAS` constants:
 {
   video: {
     play: {
+      name: 'play',
       settings: {
         snowplow: { actionSchema: MEDIA_SCHEMAS.PLAY },
         context: [{
+          schema: MEDIA_SCHEMAS.SESSION,
+          data: { mediaSessionId: 'data.playbackId' },
+        }, {
           schema: MEDIA_SCHEMAS.MEDIA_PLAYER,
           data: {
             currentTime: 'data.currentTime',
             duration: 'data.duration',
+            ended: { value: false },
+            loop: { value: false },
+            muted: { key: 'data.muted', value: false },
             paused: { value: false },
-            muted: 'data.muted',
-            volume: 'data.volume',
+            playbackRate: { key: 'data.playbackRate', value: 1 },
+            volume: { key: 'data.volume', value: 100 },
           },
         }],
       },
     },
     progress: {
+      name: 'percent_progress',
       settings: {
         snowplow: { actionSchema: MEDIA_SCHEMAS.PERCENT_PROGRESS },
+        data: { map: { percentProgress: 'data.percentProgress' } },
+        context: [{
+          schema: MEDIA_SCHEMAS.SESSION,
+          data: { mediaSessionId: 'data.playbackId' },
+        }],
       },
-      data: { map: { percentProgress: 'data.percent' } },
+    },
+    pause: {
+      name: 'pause',
+      settings: {
+        snowplow: { actionSchema: MEDIA_SCHEMAS.PAUSE },
+        context: [{
+          schema: MEDIA_SCHEMAS.SESSION,
+          data: { mediaSessionId: 'data.playbackId' },
+        }],
+      },
+    },
+    end: {
+      name: 'end',
+      settings: {
+        snowplow: { actionSchema: MEDIA_SCHEMAS.END },
+        context: [{
+          schema: MEDIA_SCHEMAS.SESSION,
+          data: { mediaSessionId: 'data.playbackId' },
+        }],
+      },
     },
   },
 }`}
@@ -404,7 +473,8 @@ Configure media event mappings with the `MEDIA_SCHEMAS` constants:
 
 ### Ad tracking
 
-Track video advertisements with pre-roll, mid-roll, and post-roll events:
+Track video advertisements with pre-roll, mid-roll, and post-roll events. Ads
+belong to the playback, so their rules carry the same `SESSION` entity:
 
 <CodeSnippet
   code={`import { MEDIA_SCHEMAS } from '@walkeros/web-destination-snowplow';
@@ -412,21 +482,30 @@ Track video advertisements with pre-roll, mid-roll, and post-roll events:
 {
   ad: {
     break_start: {
+      name: 'ad_break_start',
       settings: {
         snowplow: { actionSchema: MEDIA_SCHEMAS.AD_BREAK_START },
         context: [{
+          schema: MEDIA_SCHEMAS.SESSION,
+          data: { mediaSessionId: 'data.playbackId' },
+        }, {
           schema: MEDIA_SCHEMAS.AD_BREAK,
           data: {
             breakId: 'data.breakId',
             breakType: 'data.breakType',
+            startTime: 'data.startTime',
           },
         }],
       },
     },
     start: {
+      name: 'ad_start',
       settings: {
         snowplow: { actionSchema: MEDIA_SCHEMAS.AD_START },
         context: [{
+          schema: MEDIA_SCHEMAS.SESSION,
+          data: { mediaSessionId: 'data.playbackId' },
+        }, {
           schema: MEDIA_SCHEMAS.AD,
           data: {
             adId: 'data.adId',
@@ -501,8 +580,7 @@ CONSENT_SCHEMAS.GDPR;`}
   contexts: {
     webPage: true,
     session: true,
-    performanceTiming: true,
-    geolocation: false,
+    browser: true,
   },
 }`}
   language="typescript"
@@ -546,8 +624,10 @@ occurs.
 
 ### Plugins
 
-Load Snowplow plugins for automatic tracking. Supports both URL-based plugins
-(sp.js) and npm BrowserPlugin instances:
+Load Snowplow plugins for automatic tracking. The destination supports both
+URL-based plugins (sp.js) and npm BrowserPlugin instances. URL plugins need
+sp.js: with `settings.tracker`, a URL plugin fails `init` with a `config`
+error.
 
 <CodeSnippet
   code={`{

@@ -201,7 +201,7 @@ export const consentRevokeStopTracking: HeapStepExample = {
 
 /**
  * Consent granted - on('consent') handler calls heap.startTracking()
- * when all required consent keys are true.
+ * when one of the required consent keys is granted.
  */
 export const consentGrantStartTracking: HeapStepExample = {
   title: 'Consent granted',

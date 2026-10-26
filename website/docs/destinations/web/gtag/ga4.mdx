@@ -103,6 +103,22 @@ name automatically, so `page view` arrives in GA4 as `page_view` with no mapping
 at all. An unmapped `product add` would arrive as `product_add` carrying only
 `send_to`, which is why the ecommerce event below needs an explicit mapping.
 
+gtag also sends a `page_view` of its own when `config` runs. With the default
+settings a pushed `page view` therefore reaches GA4 in addition to that
+automatic one, and the page is counted twice. Set `pageview: false` on the
+`ga4` settings to keep only the walkerOS event; gtag still adds the page
+location and title to it.
+
+<CodeSnippet
+  code={`settings: {
+  ga4: {
+    measurementId: 'G-XXXXXXXXXX',
+    pageview: false,
+  },
+}`}
+  language="typescript"
+/>
+
 ## Add the ecommerce mapping
 
 Nest the mapping under the gtag destination to turn a `product add` event into

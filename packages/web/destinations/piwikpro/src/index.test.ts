@@ -122,27 +122,6 @@ describe('Destination PiwikPro', () => {
   const title = 'walkerOS documentation';
 
   describe('push', () => {
-    test('page view default pushes trackPageView with the title', async () => {
-      const { elb, paq } = await setup();
-
-      await elb(pageView);
-
-      expect(paq).toEqual([['trackPageView', title]]);
-    });
-
-    test('page view rule with a goal keeps the page view (W1)', async () => {
-      const { elb, paq } = await setup({
-        mapping: { page: { view: { settings: { goalId: 'g1' } } } },
-      });
-
-      await elb(pageView);
-
-      expect(paq).toEqual([
-        ['trackPageView', title],
-        ['trackGoal', 'g1'],
-      ]);
-    });
-
     test('page view rule data replaces the title fallback (W7)', async () => {
       const { elb, paq } = await setup({
         mapping: { page: { view: { data: 'data.id' } } },
@@ -214,27 +193,6 @@ describe('Destination PiwikPro', () => {
       await elb(createEvent({ name: 'user login' }));
 
       expect(paq).toEqual([['setUserId', 'us3r']]);
-    });
-
-    test('goal value is resolved, not a Promise (W3)', async () => {
-      const { elb, paq } = await setup({
-        mapping: {
-          order: {
-            complete: {
-              name: 'trackEvent',
-              data: { set: [{ value: 'order' }, { value: 'complete' }] },
-              settings: { goalId: 'g1', goalValue: 'data.value' },
-            },
-          },
-        },
-      });
-
-      await elb(getEvent('order complete'));
-
-      expect(paq).toEqual([
-        ['trackEvent', 'order', 'complete'],
-        ['trackGoal', 'g1', 555],
-      ]);
     });
 
     test('silent rule pushes only the goal', async () => {

@@ -91,24 +91,35 @@ Add to your `flow.json` destinations:
 
 <Configuration type="destination" data={data} />
 
+## User ID
+
+Every event needs a user ID: an event where `settings.userId` resolves to
+nothing fails with `missing-input` (the push result lists the destination under
+`failed` and the collector writes an ERROR line). With `userId: 'user.id'`,
+that is every event of an anonymous visitor. To send those events too, give a
+fallback chain such as `userId: ['user.id', 'user.device']`; the
+[session source](/docs/sources/web/session) sets `user.device` in storage mode.
+
+## Event key
+
+The event key sent to Optimizely is the walkerOS event name, or the rule's
+`name` (see the **Mapped event key** example). The rule setting `eventKey` has
+no effect: use `name`.
+
 ## Revenue
 
 Optimizely expects revenue as an **integer in cents** (e.g. `7281` =
 `$72.81`). The destination passes the resolved value through without
-conversion. The caller must provide cents.
+conversion. The caller must provide cents. A `revenue` or `value` that does not
+resolve to a number, such as the string `"7281"`, is left out.
 
 ## Consent
 
-Two layers protect event delivery:
-
-1. **`config.consent`**: walkerOS gates delivery. Events are queued
-   until required consent keys resolve to `true`.
-2. **`on('consent')`**: the destination decides on the whole consent state
-   against its own `config.consent` and acts only when a change touches a
-   required key. It keeps its client across a revoke and a grant.
-
-An event from a visitor without the configured `userId` fails with
-`missing-input`.
+With `config.consent`, the collector holds the destination's events in a queue
+until a required consent key is granted, see
+[consent management](/docs/guides/consent). The destination's Optimizely client
+sends only the events walkerOS tracks, so a revocation needs no vendor call: the
+client keeps running, and new events wait for the next grant.
 
 <CodeSnippet
   code={`destinations: {
@@ -128,6 +139,6 @@ An event from a visitor without the configured `userId` fails with
 
 ## Feature flags / decide()
 
-This destination intentionally does **not** expose `decide()`. Experiment
-decisions belong in application code where UI branching happens. This
-package covers the outbound conversion-tracking use case.
+This destination does not expose `decide()`, by design. Experiment decisions
+belong in application code, where the UI branches; this package covers
+outbound conversion tracking.

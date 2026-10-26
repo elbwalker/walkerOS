@@ -135,6 +135,14 @@ call. The `profile` states what the step talks to: for destinations `http`,
 `@walkeros/web-core/dev`, the browser it runs on; the browser profiles fail
 without it. `runExamples` runs the examples alone.
 
+**Examples are the tests.** A destination's public examples (one per standard
+event it maps, from `getEvent(name)`) are asserted by `runExamples` with
+`claims` and `published: true`; do not restate an example's input and assertion
+in a second test. Keep the tests for boundaries, failures and ordering. An
+example's `out` is a literal taken from the vendor's documented request, never
+the output of the code under test, otherwise the test passes by construction.
+See [using-step-examples](../walkeros-using-step-examples/SKILL.md).
+
 ### Rule 4: Test First, Watch It Fail
 
 If you didn't see the test fail, you don't know it tests the right thing.
@@ -416,11 +424,10 @@ approach destinations use — see
 
 ## Commands
 
-Verification tier (per `/workspaces/developer/AGENT.md` rule 11):
+Verification tiers (run from the repository root):
 
 ```bash
 # L1, the default during a task: typecheck, lint, test for the touched package
-cd /workspaces/developer/walkerOS
 npm run verify:touched -- core
 npm run verify:touched -- web-destination-gtag
 

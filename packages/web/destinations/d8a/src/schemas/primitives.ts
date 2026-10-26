@@ -28,7 +28,9 @@ export const SettingsSchema = z
       .optional(),
     send_page_view: z
       .boolean()
-      .describe('Enable automatic pageview tracking')
+      .describe(
+        'd8a sends a page_view when the tracker starts. Default true; set false when the flow sends its own page view events',
+      )
       .optional(),
     snakeCase: z
       .boolean()

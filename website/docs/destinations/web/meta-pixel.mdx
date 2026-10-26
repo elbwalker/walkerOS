@@ -91,6 +91,12 @@ Add to your `flow.json` destinations:
 
 <Configuration type="destination" data={data} />
 
+## Custom events
+
+Set `trackCustom` in a rule's `settings` to send an event that is not one of Meta's standard events. The destination then calls `fbq('trackCustom', name, params, { eventID })` instead of `fbq('track', ...)`; the `eventID` is the walkerOS event ID, which the Conversions API can use for deduplication.
+
+<StepExample example={data.examples.step.customEventWithTrackCustom} />
+
 A destination with `config.consent` calls `fbq('consent', 'revoke')` when the
 required consent is revoked and `fbq('consent', 'grant')` when it is granted. A
 blocked `fbevents.js` fails later events visibly, and a missing `pixelId` is a

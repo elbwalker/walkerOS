@@ -83,7 +83,7 @@ The source must extract `ip` and `userAgent` into `ingest`:
   code={`"config": {
   "ingest": {
     "map": {
-      "ip": { "key": "ip" },
+      "ip": { "key": "headers.x-client-ip" },
       "userAgent": { "key": "headers.user-agent" }
     }
   }
@@ -91,7 +91,7 @@ The source must extract `ip` and `userAgent` into `ingest`:
   language="json"
 />
 
-Behind a load balancer, `ip` is the balancer's address; extract the client from `headers.x-forwarded-for` instead. An IPv4 client on a dual-stack server (`::ffff:203.0.113.7`) is treated as its IPv4 address.
+Replace `x-client-ip` with the single-address header your proxy sets or overwrites with the visitor's address; [Client IP behind a proxy](/docs/sources/server/express#client-ip-behind-a-proxy) lists the common ones and the pattern for proxies that only append to `X-Forwarded-For`. An `ip` that is not one address, for example a forwarded chain, is reported as an error and left out of the hash. An IPv4 client on a dual-stack server (`::ffff:203.0.113.7`) is treated as its IPv4 address.
 
 Set an input to another [mapping value](/docs/mapping/value) to read it from elsewhere, or to `false` to leave it out. When one input resolves empty, the transformer hashes without it; when the IP, the user agent and every field resolve empty (the site does not count), the event fails with `missing-input`.
 
