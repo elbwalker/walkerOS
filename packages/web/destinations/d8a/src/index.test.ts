@@ -169,6 +169,40 @@ describe('d8a web destination -- step examples', () => {
     expect(actual).toEqual(example.out);
   });
 
+  it('decides a field mapped from two groups from the whole consent state', async () => {
+    const { env, calls } = makeTestEnv();
+    const dest = jest.requireActual('./').default;
+    const { elb } = await startFlow();
+
+    elb('walker destination', {
+      code: { ...dest, env },
+      config: {
+        ...initIn,
+        settings: {
+          ...(isObject(initIn.settings) ? initIn.settings : {}),
+          como: {
+            analytics: 'analytics_storage',
+            functional: 'analytics_storage',
+          },
+        },
+      },
+    });
+
+    await elb('walker consent', { analytics: true });
+    // The second command changes only functional; analytics stays granted
+    await elb('walker consent', { functional: true });
+
+    const updates = calls.filter(
+      ([, command, target]) => command === 'consent' && target === 'update',
+    );
+    expect(updates[updates.length - 1]).toEqual([
+      'd8a',
+      'consent',
+      'update',
+      { analytics_storage: 'granted' },
+    ]);
+  });
+
   it.each(stepEntries.filter(([, example]) => !example.command))(
     '%s as published',
     async (_name, example) => {

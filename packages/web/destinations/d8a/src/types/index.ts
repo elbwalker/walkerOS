@@ -2,7 +2,7 @@ import type {
   Destination as CoreDestination,
   Mapping as WalkerOSMapping,
 } from '@walkeros/core';
-import type { DestinationWeb } from '@walkeros/web-core';
+import type { ConsentMapping, DestinationWeb } from '@walkeros/web-core';
 import type {
   D8aConfigParams,
   D8aEventParams,
@@ -22,9 +22,7 @@ declare global {
 
 export type ConsentMode = false | true | ConsentMapping;
 
-export interface ConsentMapping {
-  [walkerOSConsentGroup: string]: string | string[];
-}
+export type { ConsentMapping };
 
 export interface Settings extends D8aConfigParams {
   property_id: string;

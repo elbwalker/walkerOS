@@ -43,7 +43,11 @@
   },
   "devDependencies": {
     "@types/gtag.js": "^0.0.20",
-    "@walkeros/collector": "4.8.2"
+    "@walkeros/collector": "4.8.2",
+    "@walkeros/web-source-cmp-cookiebot": "4.8.2",
+    "@walkeros/web-source-cmp-cookiefirst": "4.8.2",
+    "@walkeros/web-source-cmp-cookiepro": "4.8.2",
+    "@walkeros/web-source-cmp-usercentrics": "4.8.2"
   },
   "repository": {
     "url": "git+https://github.com/elbwalker/walkerOS.git",

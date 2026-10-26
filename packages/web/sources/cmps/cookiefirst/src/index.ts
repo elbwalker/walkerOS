@@ -13,12 +13,14 @@ export * as SourceCookieFirst from './types';
  * Default category mapping from CookieFirst to walkerOS consent groups.
  *
  * Maps CookieFirst's standard categories to walkerOS convention:
- * - necessary/functional → functional (essential)
+ * - functional → functional
  * - performance → analytics (measurement)
  * - advertising → marketing (ads)
+ *
+ * `necessary` has no entry and keeps its own name: strictly necessary
+ * cookies need no consent, so they grant no consent group.
  */
 export const DEFAULT_CATEGORY_MAP: Record<string, string> = {
-  necessary: 'functional',
   functional: 'functional',
   performance: 'analytics',
   advertising: 'marketing',
@@ -67,6 +69,13 @@ export const sourceCookieFirst: Source.Init<Types> = async (context) => {
 
   const fullConfig: Source.Config<Types> = { settings };
 
+  // Normalized (lowercase) lookup for case-insensitive category matching;
+  // the config keeps the keys as the user wrote them
+  const normalizedMap: Record<string, string> = {};
+  Object.entries(settings.categoryMap ?? {}).forEach(([key, value]) => {
+    normalizedMap[key.toLowerCase()] = value;
+  });
+
   // Track listener references for cleanup
   let initListener: (() => void) | undefined;
   let consentListener: ((e: Event) => void) | undefined;
@@ -83,20 +92,20 @@ export const sourceCookieFirst: Source.Init<Types> = async (context) => {
      * Maps CookieFirst categories to walkerOS consent groups and calls elb.
      *
      * When multiple CookieFirst categories map to the same walkerOS group,
-     * uses OR logic: if ANY category is true, the group is true.
+     * any deny denies: the group is true only if every one of them is true.
      */
     const handleConsent = (consent: CookieFirstConsent | null) => {
       // A null consent means no choice yet
       if (!consent) return;
 
       // Map CookieFirst categories to walkerOS consent groups
-      // Use OR logic: if ANY source category is true, the target group is true
       const state: WalkerOS.Consent = {};
       Object.entries(consent).forEach(([category, value]) => {
         if (typeof value !== 'boolean') return;
-        const mapped = settings.categoryMap?.[category] ?? category;
-        // OR logic: once true, stays true
-        state[mapped] = state[mapped] || value;
+        const mapped = normalizedMap[category.toLowerCase()] ?? category;
+        // Any deny denies: once false, stays false
+        state[mapped] =
+          state[mapped] === undefined ? value : state[mapped] && value;
       });
 
       // Only call if we have consent state to report

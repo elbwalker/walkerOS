@@ -20,6 +20,7 @@ Platforms. Each source listens for CMP events and automatically calls
 
 | CMP | Package |
 | --- | ------- |
+| [Cookiebot](/docs/sources/web/cmps/cookiebot/) | `@walkeros/web-source-cmp-cookiebot` |
 | [CookieFirst](/docs/sources/web/cmps/cookiefirst/) | `@walkeros/web-source-cmp-cookiefirst` |
 | [CookiePro / OneTrust](/docs/sources/web/cmps/cookiepro/) | `@walkeros/web-source-cmp-cookiepro` |
 | [Usercentrics](/docs/sources/web/cmps/usercentrics/) | `@walkeros/web-source-cmp-usercentrics` |
@@ -106,14 +107,19 @@ once the collector runs the source's `init()`. Combined with the current-state
 `require` matching above, a `require: ["consent"]` step activates whichever
 source recorded the consent, and whenever it did.
 
-When several CMP categories map to the same walkerOS group, the CookieFirst
-and CookiePro sources grant the group if any of them is granted, and the
-Usercentrics source grants it only if all of them are.
+When several CMP categories map to the same walkerOS group, every CMP source
+grants the group only if all of them are granted: any deny denies. The default
+mappings map each category to its own group.
 
-The CookiePro and Usercentrics sources support `explicitOnly` (default:
-`true`) to skip implicit or default consent and report only active user
-choices. The CookieFirst source reports nothing until the visitor has made a
-choice.
+By default every CMP source waits for the visitor's decision: the Cookiebot,
+CookiePro and Usercentrics sources support `explicitOnly` (default: `true`) to
+skip implicit or default consent and report only active user choices, and the
+CookieFirst source reports nothing until the visitor has made a choice.
+
+Strictly necessary cookies need no consent, so no CMP source maps them to a
+consent group: the Cookiebot, CookieFirst and CookiePro sources report them as
+`necessary`, and the Usercentrics source reports your essential category under
+its own name.
 
 For more details on how consent works in walkerOS, see the
 [consent management guide](/docs/guides/consent).

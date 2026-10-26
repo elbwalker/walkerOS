@@ -2,7 +2,7 @@ import type {
   Mapping as WalkerOSMapping,
   Destination as CoreDestination,
 } from '@walkeros/core';
-import type { DestinationWeb } from '@walkeros/web-core';
+import type { ConsentMapping, DestinationWeb } from '@walkeros/web-core';
 
 // Extend Window interface with specific dataLayer typing
 export interface WindowWithDataLayer extends Window {
@@ -33,9 +33,7 @@ export type ConsentMode =
   | true // Use default mapping
   | ConsentMapping; // Custom mapping
 
-export interface ConsentMapping {
-  [walkerOSConsentGroup: string]: string | string[];
-}
+export type { ConsentMapping };
 
 // Type bundle
 export type Types = CoreDestination.Types<Settings, Mapping, Env, InitSettings>;

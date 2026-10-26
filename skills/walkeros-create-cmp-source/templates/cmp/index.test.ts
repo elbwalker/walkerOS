@@ -118,6 +118,17 @@ describe('[CmpName] Source', () => {
       expect(consentCalls[0].consent).toEqual(outputs.minimalConsentMapped);
     });
 
+    test('grants no consent group for strictly necessary cookies alone', async () => {
+      const mockWindow = createMockWindow(inputs.minimalConsent);
+
+      await createCmpSource(mockWindow, mockElb);
+
+      // Mandatory check 11
+      const { necessary, ...groups } = consentCalls[0].consent;
+      expect(necessary).toBe(true);
+      expect(Object.values(groups).every((granted) => !granted)).toBe(true);
+    });
+
     test('maps analytics only consent correctly', async () => {
       const mockWindow = createMockWindow(inputs.analyticsOnly);
 
@@ -164,7 +175,7 @@ describe('[CmpName] Source', () => {
       await createCmpSource(mockWindow, mockElb);
 
       expect(consentCalls[0].consent).toEqual({
-        functional: true,
+        necessary: true,
         custom_category: true,
       });
     });

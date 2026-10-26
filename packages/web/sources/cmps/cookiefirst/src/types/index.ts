@@ -45,8 +45,7 @@ export interface Settings {
    * Keys: CookieFirst category names
    * Values: walkerOS consent group names
    *
-   * Default maps to standard walkerOS groups:
-   * - necessary → functional
+   * Default maps to standard walkerOS groups (`necessary` keeps its own name):
    * - functional → functional
    * - performance → analytics
    * - advertising → marketing

@@ -10,9 +10,10 @@ export * as SourceCmpName from './types';
  * TODO: Populate with your CMP's standard categories.
  * Use a populated map when the CMP uses opaque or non-standard category names.
  * Use an empty map when the CMP uses human-readable, admin-configured names.
+ * Never map strictly necessary cookies to a consent group (mandatory check 11):
+ * `necessary` has no entry and keeps its own name.
  */
 export const DEFAULT_CATEGORY_MAP: Record<string, string> = {
-  necessary: 'functional',
   functional: 'functional',
   performance: 'analytics',
   advertising: 'marketing',
@@ -44,6 +45,13 @@ export const sourceCmpName: Source.Init<Types> = async (context) => {
 
   const fullConfig: Source.Config<Types> = { settings };
 
+  // Normalized (lowercase) lookup for case-insensitive category matching
+  // (mandatory check 2); the config keeps the keys as the user wrote them
+  const normalizedMap: Record<string, string> = {};
+  Object.entries(settings.categoryMap ?? {}).forEach(([key, value]) => {
+    normalizedMap[key.toLowerCase()] = value;
+  });
+
   // 3. Track listener references for cleanup. Typing consentListener against
   // the augmented WindowEventMap event (CustomEvent<CmpConsent>) removes the
   // need to cast the event inside the handler.
@@ -63,13 +71,14 @@ export const sourceCmpName: Source.Init<Types> = async (context) => {
       if (settings.explicitOnly && !consent) return;
       if (!consent) return;
 
-      // Map categories using OR logic: if ANY source category is true,
-      // the target group is true
+      // Map categories; any deny denies: a group is true only if every
+      // category mapped to it is true
       const state: WalkerOS.Consent = {};
       Object.entries(consent).forEach(([category, value]) => {
         if (typeof value !== 'boolean') return;
-        const mapped = settings.categoryMap?.[category] ?? category;
-        state[mapped] = state[mapped] || value;
+        const mapped = normalizedMap[category.toLowerCase()] ?? category;
+        state[mapped] =
+          state[mapped] === undefined ? value : state[mapped] && value;
       });
 
       if (Object.keys(state).length > 0) {

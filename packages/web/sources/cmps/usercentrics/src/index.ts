@@ -25,9 +25,8 @@ export * as SourceUsercentrics from './types';
  *       config: {
  *         settings: {
  *           categoryMap: {
- *             essential: 'functional',
- *             functional: 'functional',
- *             marketing: 'marketing',
+ *             statistics: 'analytics',
+ *             advertising: 'marketing',
  *           },
  *         },
  *       },

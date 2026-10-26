@@ -1,5 +1,6 @@
 export * from './attributes';
 export * from './browser';
+export * from './consentMode';
 export * from './elb';
 export * from './environment';
 export * from './getHashWeb';

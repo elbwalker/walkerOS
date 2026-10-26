@@ -50,11 +50,11 @@ export interface Settings {
    * Comparison is case-insensitive (keys are normalized to lowercase during init).
    *
    * Default provides sensible mapping for standard OneTrust categories:
-   * - C0001 (Strictly Necessary) -> functional
+   * - C0001 (Strictly Necessary) -> necessary
    * - C0002 (Performance) -> analytics
    * - C0003 (Functional) -> functional
    * - C0004 (Targeting) -> marketing
-   * - C0005 (Social Media) -> marketing
+   * - C0005 (Social Media) -> social
    */
   categoryMap?: Record<string, string>;
 

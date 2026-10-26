@@ -33,6 +33,17 @@ function mergeConsent(
 }
 
 /**
+ * Look a category up in categoryMap case-insensitively; a category without an
+ * entry keeps its own name.
+ */
+function mapCategory(settings: Settings, category: string): string {
+  const map = settings.categoryMap ?? {};
+  const lower = category.toLowerCase();
+  const key = Object.keys(map).find((entry) => entry.toLowerCase() === lower);
+  return key === undefined ? category : map[key];
+}
+
+/**
  * Parse consent from Usercentrics event detail.
  *
  * Group-level: ucCategory values are all booleans → use them directly.
@@ -52,14 +63,14 @@ export function parseConsent(
   if (detail.ucCategory && isGroupLevel(detail.ucCategory)) {
     Object.entries(detail.ucCategory).forEach(([category, value]) => {
       if (typeof value !== 'boolean') return;
-      const mapped = settings.categoryMap?.[category] ?? category;
+      const mapped = mapCategory(settings, category);
       mergeConsent(state, mapped, value);
     });
   } else {
     if (detail.ucCategory) {
       Object.entries(detail.ucCategory).forEach(([key, value]) => {
         if (typeof value === 'boolean') {
-          const mapped = settings.categoryMap?.[key] ?? key;
+          const mapped = mapCategory(settings, key);
           mergeConsent(state, mapped, value);
         }
       });

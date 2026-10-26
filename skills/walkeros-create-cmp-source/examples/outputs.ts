@@ -6,6 +6,9 @@ import type { WalkerOS } from '@walkeros/core';
  *
  * Create this file BEFORE implementation (Phase 2).
  *
+ * `necessary` has no entry in the default map and keeps its own name, so
+ * strictly necessary cookies grant no consent group (mandatory check 11).
+ *
  * Key rule: denied groups MUST have explicit `false`, not be omitted.
  * The collector uses merge semantics (assign()), so omitting a key means
  * "no change," NOT "denied" (see mandatory check #1).
@@ -13,6 +16,7 @@ import type { WalkerOS } from '@walkeros/core';
 
 /** Full consent mapped to walkerOS groups */
 export const fullConsentMapped: WalkerOS.Consent = {
+  necessary: true,
   functional: true,
   analytics: true,
   marketing: true,
@@ -23,6 +27,7 @@ export const fullConsentMapped: WalkerOS.Consent = {
  * Denied groups have explicit false, not omitted.
  */
 export const partialConsentMapped: WalkerOS.Consent = {
+  necessary: true,
   functional: true,
   analytics: false,
   marketing: false,
@@ -30,32 +35,30 @@ export const partialConsentMapped: WalkerOS.Consent = {
 
 /**
  * Minimal consent mapped to walkerOS groups.
- * Note: functional is true because necessary=true maps to functional.
  */
 export const minimalConsentMapped: WalkerOS.Consent = {
-  functional: true,
+  necessary: true,
+  functional: false,
   analytics: false,
   marketing: false,
 };
 
 /**
  * Analytics only consent mapped to walkerOS groups.
- * Note: functional is true because necessary=true maps to functional
- * (OR logic: if ANY source category is true, target group is true).
  */
 export const analyticsOnlyMapped: WalkerOS.Consent = {
-  functional: true,
+  necessary: true,
+  functional: false,
   analytics: true,
   marketing: false,
 };
 
 /**
  * Marketing only consent mapped to walkerOS groups.
- * Note: functional is true because necessary=true maps to functional
- * (OR logic: if ANY source category is true, target group is true).
  */
 export const marketingOnlyMapped: WalkerOS.Consent = {
-  functional: true,
+  necessary: true,
+  functional: false,
   analytics: false,
   marketing: true,
 };

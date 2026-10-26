@@ -211,7 +211,7 @@ describe('web source simulate', () => {
       [
         'elb',
         'walker consent',
-        { functional: true, analytics: true, marketing: true },
+        { necessary: true, functional: true, analytics: true, marketing: true },
       ],
     ]);
   });

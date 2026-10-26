@@ -16,6 +16,7 @@ export const fullConsent: Flow.StepExample = {
       'elb',
       'walker consent',
       {
+        necessary: true,
         functional: true,
         analytics: true,
         marketing: true,
@@ -40,6 +41,7 @@ export const partialConsent: Flow.StepExample = {
       'elb',
       'walker consent',
       {
+        necessary: true,
         functional: true,
         analytics: false,
         marketing: false,
@@ -71,7 +73,8 @@ export const categoryMapOverride: Flow.StepExample = {
       'elb',
       'walker consent',
       {
-        functional: true,
+        necessary: true,
+        functional: false,
         statistics: true,
         marketing: false,
       },
@@ -94,7 +97,8 @@ export const cfInitDetection: Flow.StepExample = {
       'elb',
       'walker consent',
       {
-        functional: true,
+        necessary: true,
+        functional: false,
         analytics: false,
         marketing: true,
       },

@@ -81,12 +81,12 @@ export const consentChange: Flow.StepExample = {
 export const categoryMapOverride: Flow.StepExample = {
   title: 'Category map override',
   description:
-    'A custom categoryMap remaps essential to functional and functional to analytics before emitting the walker consent command.',
+    'A custom categoryMap reports the functional category as the analytics group before emitting the walker consent command; essential keeps its own name.',
   trigger: { type: 'consent', options: { dispatch: 'init' } },
   in: servicesFullExplicit,
   mapping: {
     settings: {
-      categoryMap: { essential: 'functional', functional: 'analytics' },
+      categoryMap: { functional: 'analytics' },
     },
   },
   out: [['elb', 'walker consent', fullConsentCustomMapped]],
