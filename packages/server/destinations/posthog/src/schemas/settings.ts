@@ -17,28 +17,32 @@ export const SettingsSchema = z
     flushAt: z
       .number()
       .describe(
-        'Number of queued group identifies before auto-flush. Captures and identifies are sent at once, each push awaiting its own call. Default: 20.',
+        'Calls the SDK queues before it starts a send on its own. Each push and each config.batch batch flushes the SDK and waits for the answer either way. Default: 20.',
       )
       .optional(),
     flushInterval: z
       .number()
       .describe(
-        'Milliseconds between periodic flushes of queued group identifies. Default: 10000.',
+        'Milliseconds after which the SDK sends calls still queued on its own. Each push and each config.batch batch flushes the SDK either way. Default: 10000.',
       )
       .optional(),
     personalApiKey: z
       .string()
-      .describe('Personal API key (phx_...) for local feature flag evaluation.')
+      .describe(
+        'Personal API key (phx_...). With it the SDK polls feature flag definitions; this destination evaluates no flags and attaches none to its events.',
+      )
       .optional(),
     featureFlagsPollingInterval: z
       .number()
       .describe(
-        'Milliseconds between feature flag definition polls. Default: 30000.',
+        'Milliseconds between feature flag definition polls, with personalApiKey set. This destination evaluates no flags. Default: 30000.',
       )
       .optional(),
     disableGeoip: z
       .boolean()
-      .describe('Disable GeoIP lookups globally. Useful for GDPR compliance.')
+      .describe(
+        'Disable GeoIP lookups for every event. Default: true, the SDK default.',
+      )
       .optional(),
     disableCompression: z
       .boolean()

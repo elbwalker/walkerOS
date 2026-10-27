@@ -1,18 +1,19 @@
-import type { DestinationWeb } from '@walkeros/web-core';
+import { mockScriptDocument } from '@walkeros/web-core/dev';
+import type { Env } from '../types';
 
-/**
- * Mock environment for testing destinations.
- * Captures vendor SDK calls for verification.
- *
- * Test-only file - requires Jest.
- *
- * Create this file BEFORE implementation (Phase 2).
- */
-export const env: { push: DestinationWeb.Env } = {
-  push: {
-    window: {
-      vendorSdk: jest.fn(), // Captures all calls for verification
-    },
-    document: {},
-  },
+const noop = () => {};
+
+/** Before init: no SDK global yet, `init` installs the stub. */
+export const init: Env = {
+  window: {},
+  document: mockScriptDocument(),
 };
+
+/** After init: the SDK global the push calls. */
+export const push: Env = {
+  window: { vendorSdk: Object.assign(noop, { q: [] as IArguments[] }) },
+  document: mockScriptDocument(),
+};
+
+/** The calls a simulation records. */
+export const simulation = ['call:window.vendorSdk'];

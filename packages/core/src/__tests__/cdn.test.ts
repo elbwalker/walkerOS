@@ -54,7 +54,7 @@ describe('fetchPackageSchema', () => {
     expect(result.packageName).toBe('@walkeros/web-destination-snowplow');
     expect(result.version).toBe('0.0.12');
     expect(result.type).toBe('destination');
-    expect(result.platform).toBe('web');
+    expect(result.platform).toEqual(['web']);
     expect(result.schemas).toEqual(mockWalkerOSJson.schemas);
     expect(result.examples).toEqual(mockWalkerOSJson.examples);
   });
@@ -195,7 +195,7 @@ describe('fetchPackage', () => {
     expect(result.version).toBe('2.1.1');
     expect(result.description).toBe('Google gtag destination');
     expect(result.type).toBe('destination');
-    expect(result.platform).toBe('web');
+    expect(result.platform).toEqual(['web']);
     expect(result.schemas).toEqual({ settings: { type: 'object' } });
     expect(result.examples).toBeDefined();
     expect(result.hints).toBeDefined();

@@ -51,9 +51,9 @@ await startFlow({
         settings: {
           sqlite: {
             url: './events.db',
+            schema: 'auto',
           },
         },
-        setup: true,
       },
     },
   },
@@ -64,100 +64,134 @@ await startFlow({
   </TabItem>
   <TabItem value="bundled" label="Bundled">
 
-Add to your `flow.json` destinations:
+A complete `flow.json` with this destination:
 
 <CodeSnippet
-  code={`"destinations": {
-  "sqlite": {
-    "package": "@walkeros/server-destination-sqlite",
-    "config": {
-      "settings": {
+  code={`{
+  "version": 4,
+  "flows": {
+    "default": {
+      "config": { "platform": "server" },
+      "destinations": {
         "sqlite": {
-          "url": "./events.db"
+          "package": "@walkeros/server-destination-sqlite",
+          "config": {
+            "settings": {
+              "sqlite": { "url": "./events.db", "schema": "auto" }
+            }
+          }
         }
-      },
-      "setup": true
+      }
     }
   }
 }`}
   language="json"
 />
 
+The CLI does not install optional peer dependencies, so the bundle contains no
+SQLite driver. The destination loads `better-sqlite3` or `@libsql/client` with
+Node's module resolution from the bundle's folder, so install the driver there.
+Without a driver, init fails with `SQLite driver load failed`.
+
 [See bundled mode setup](/docs/getting-started/modes/bundled) | [CLI reference](/docs/apps/cli)
 
   </TabItem>
 </Tabs>
 
+`schema: "auto"` creates the table at the first push, with the columns listed in [Table columns](#table-columns). Without it, the table has to exist before the first event (see [Setup](#setup)).
+
 <Configuration type="destination" data={data} />
 
-The destination opens the connection during `init()`. The table check and the prepared INSERT run at the first push, so a flow starts without querying the database, and a missing table fails that push with the setup hint. A failed INSERT fails the push and lands in the dead-letter queue. Schema creation lives in the `setup` lifecycle (see below), not in `init()`. On `destroy()` the connection is closed cleanly. User-provided clients (wired via `env.client` or `settings.sqlite._client`) are left untouched.
+The destination opens the connection during `init()`. The table check and the prepared INSERT run at the first push, so a flow starts without querying the database. With `schema` unset, a missing table fails that push with a `config` error that names `walkeros setup destination.sqlite` (for a rule's `table`, it names the table); with `schema: "manual"` the check is skipped and the push fails with `SQLite prepare failed`. A failed INSERT fails the event with a `transport` error and the event goes to the dead-letter queue ([when delivery fails](/docs/destinations#when-delivery-fails)); a constraint violation (a duplicate under a unique index, a `NOT NULL` column) is marked not retryable. On `destroy()` the connection is closed cleanly. User-provided clients (wired via `env.client` or `settings.sqlite._client`) are left untouched.
+
+## Table columns
+
+Each event is one `INSERT` into these columns. The table that `schema: "auto"` creates has them, plus `id INTEGER PRIMARY KEY AUTOINCREMENT` and `created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP`.
+
+| Column         | Type      | Value                                   |
+| -------------- | --------- | --------------------------------------- |
+| `timestamp`    | `INTEGER` | `event.timestamp`, epoch milliseconds  |
+| `event_id`     | `TEXT`    | `event.id`                              |
+| `name`         | `TEXT`    | `event.name`                            |
+| `entity`       | `TEXT`    | `event.entity`                          |
+| `action`       | `TEXT`    | `event.action`                          |
+| `session_id`   | `TEXT`    | `event.user.session`                    |
+| `user_id`      | `TEXT`    | `event.user.id`                         |
+| `page_url`     | `TEXT`    | `event.source.url`                      |
+| `page_title`   | `TEXT`    | `event.data.title`                      |
+| `referrer_url` | `TEXT`    | `event.source.referrer`                 |
+| `data`         | `TEXT`    | `event.data` as JSON                    |
+| `globals`      | `TEXT`    | `event.globals` as JSON                 |
+| `consent`      | `TEXT`    | `event.consent` as JSON                 |
+
+A missing text value is an empty string, a missing `data`, `globals` or `consent` is `{}`, and a missing timestamp is the time of the insert. `context`, `custom`, `nested`, `trigger`, `timing`, the other `user` fields and the other `source` fields are not stored, and a mapping's `data` does not change the row.
 
 ## Setup
 
-Create the events table and apply pragmas with one command:
+`walkeros setup destination.sqlite` applies pragmas and creates the table and
+its indexes when `config.setup` is `true` or an object. When it is omitted or
+`false`, the command provisions nothing.
 
-<CodeSnippet code={`walkeros setup destination.sqlite`} language="bash" />
+:::caution The default setup table does not fit the insert
+By default setup creates one column per event field (`name`, `data`,
+`context`, `globals`, `custom`, `user`, `nested`, `consent`, `id`, `trigger`,
+`entity`, `action`, `timestamp`, `timing`, `source`), while each event is
+inserted into the columns in [Table columns](#table-columns). Every push into
+that table fails with `SQLite prepare failed` (the driver reports
+`table events has no column named event_id`). Use `schema: "auto"`, or declare
+the inserted columns in `setup.schema`.
+:::
 
-This runs `CREATE TABLE IF NOT EXISTS` with the canonical 15-column walkerOS Event v4 schema and applies four pragmas:
+<CodeSnippet
+  code={`"setup": {
+  "schema": [
+    { "name": "timestamp", "type": "INTEGER" },
+    { "name": "event_id", "type": "TEXT" },
+    { "name": "name", "type": "TEXT" },
+    { "name": "entity", "type": "TEXT" },
+    { "name": "action", "type": "TEXT" },
+    { "name": "session_id", "type": "TEXT" },
+    { "name": "user_id", "type": "TEXT" },
+    { "name": "page_url", "type": "TEXT" },
+    { "name": "page_title", "type": "TEXT" },
+    { "name": "referrer_url", "type": "TEXT" },
+    { "name": "data", "type": "TEXT" },
+    { "name": "globals", "type": "TEXT" },
+    { "name": "consent", "type": "TEXT" }
+  ],
+  "indexes": [{ "name": "idx_events_name", "columns": ["name"] }]
+}`}
+  language="json"
+/>
+
+Setup applies four pragmas before it creates the table, each overridable in
+`setup.pragmas` (for example `{ "journal_mode": "DELETE" }`):
 
 - `journal_mode = WAL` (better concurrent reads)
 - `synchronous = NORMAL` (good durability vs. perf balance)
 - `foreign_keys = ON`
 - `temp_store = MEMORY`
 
-Setup is idempotent. Re-running against a populated database is a safe no-op. Drift between the declared schema and the actual table is logged as `WARN setup.drift {field, declared, actual}`. Setup never auto-mutates an existing table, no `ALTER TABLE`, no destructive recreates. A constraint error on insert is final and is not retried, and a missing table named by a rule's `table` setting is a `config` error. The legacy `schema: 'auto'` also creates the rule tables.
+Setup is idempotent: it runs `CREATE TABLE IF NOT EXISTS` and
+`CREATE INDEX IF NOT EXISTS`, so re-running it against a populated database
+changes nothing. A column that is missing or has another type than declared is
+logged as a `setup.drift` warning with the field, the declared and the actual
+type. Setup never runs `ALTER TABLE` and never recreates a table.
 
-The default 15-column schema mirrors the canonical walkerOS Event v4 layout. Only `name` is `NOT NULL`. See [Event Model](/docs/getting-started/event-model) for the full field reference.
+Use `mapping.settings.table` to route specific events to a dedicated table (for
+example orders to `orders`, identities to `identities`). Setup creates only
+`settings.sqlite.table`; a rule's table has to exist, or `schema: "auto"`
+creates it at its first push. A missing rule table fails its events with a
+`config` error.
 
-```sql
-CREATE TABLE IF NOT EXISTS events (
-  name      TEXT NOT NULL,
-  data      TEXT,
-  context   TEXT,
-  globals   TEXT,
-  custom    TEXT,
-  user      TEXT,
-  nested    TEXT,
-  consent   TEXT,
-  id        TEXT,
-  trigger   TEXT,
-  entity    TEXT,
-  action    TEXT,
-  timestamp TEXT,
-  timing    INTEGER,
-  source    TEXT
-)
-```
+### `settings.sqlite.schema`
 
-Nested objects (`data`, `context`, `globals`, `custom`, `user`, `nested`, `consent`, `source`) are stored as JSON strings.
+- `"auto"` creates the table, and each rule table, at its first push with the
+  columns in [Table columns](#table-columns).
+- `"manual"` skips the table check: the table is yours, and init fails with a
+  `config` error when `config.mapping` is not set.
 
-Override defaults in `config.setup`:
-
-<CodeSnippet
-  code={`"setup": {
-  "pragmas": { "journal_mode": "DELETE" },
-  "indexes": [{ "name": "idx_events_name", "columns": ["name"] }]
-}`}
-  language="json"
-/>
-
-`setup: true` accepts all defaults. `setup: false` (or omitted) means `walkeros setup destination.sqlite` is a no-op for this destination.
-
-Use `mapping.settings.table` to route specific events to a dedicated table (for example orders to `orders`, identities to `identities`).
-
-### Migration from `schema`
-
-:::warning Deprecated
-The package-local `settings.sqlite.schema` setting is deprecated. The framework now owns the setup lifecycle through `config.setup`. The deprecated form still works and emits a one-time WARN through the destination logger.
-:::
-
-| Old (`settings.sqlite.schema`) | New (`config.setup`) | Effect                                              |
-| ------------------------------ | -------------------- | --------------------------------------------------- |
-| `'auto'`                       | `true`               | `walkeros setup destination.sqlite` creates table.  |
-| `'manual'`                     | `false`              | Setup is a no-op. Bring your own schema + mapping.  |
-| omitted                        | omitted              | No-op until `setup` is set explicitly.              |
-
-Remove the `schema` field from `settings.sqlite` and add `setup: true` (or `false`) at the `config` level.
+Either value logs a WARN at init that points to `config.setup`.
 
 ## Drivers
 
@@ -182,7 +216,7 @@ Async HTTP/WSS driver for [Turso](https://turso.tech/), self-hosted [sqld](https
   code={`{
   "sqlite": {
     "url": "libsql://my-db.turso.io",
-    "authToken": "$env.TURSO_TOKEN"
+    "authToken": "$secret.TURSO_TOKEN"
   }
 }`}
   language="json"
@@ -192,5 +226,5 @@ URL prefixes `libsql://`, `http://`, `https://`, `ws://`, `wss://` route to the 
 
 ## Limitations
 
-- v1 issues one `INSERT` per event. A `pushBatch` path is planned for v2.
-- Connection death is not auto-retried; a fatal driver error logs and drops events until the flow restarts.
+- Each event is one `INSERT`. The destination has no `pushBatch`, so a `batch` setting has no effect, and the collector logs an ERROR line that names it.
+- Nothing resends a failed `INSERT`: the event fails and goes to the dead-letter queue. A failed table check or prepare is tried again at the next push.

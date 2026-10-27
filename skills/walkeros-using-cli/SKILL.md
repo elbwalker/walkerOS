@@ -25,30 +25,37 @@ collection flows. It does not run them: a built server flow runs with
 ## Quick Start
 
 ```bash
-# Install
+# Install (Node.js 22.12 or later)
 npm install -g @walkeros/cli
 
-# Bundle a flow
-walkeros bundle flow.json
+# Bundle a flow into dist/
+walkeros bundle flow.json -o dist/
 
 # Test with simulated event
-walkeros push flow.json -e '{"entity":"page","action":"view"}' --simulate destination.demo
+walkeros push flow.json -e '{"name":"page view"}' --simulate destination.demo
 
 # Push real event
-walkeros push flow.json -e '{"entity":"page","action":"view"}'
+walkeros push flow.json -e '{"name":"page view"}'
 ```
+
+An event needs `name` (`"entity action"`). One written as `entity` and `action`
+only is rejected as invalid: a simulation prints
+`mapping: none (skipped before mapping)` and `no calls`, a real push sends
+nothing, and both still print `success: true`.
 
 ## Commands Overview
 
-| Command    | Purpose                                                     | Safe? |
-| ---------- | ----------------------------------------------------------- | ----- |
-| `bundle`   | Generate JS bundle from config                              | ✅    |
-| `push`     | Execute with real API calls (or `--simulate` for mocked)    | ⚠️    |
-| `setup`    | Run a component's `setup()` to provision external resources | ⚠️    |
-| `validate` | Validate configs/events                                     | ✅    |
-| `cache`    | Manage caching                                              | ✅    |
-| `auth`     | Check who the token in `WALKEROS_TOKEN` belongs to          | ✅    |
-| `api`      | Call the walkerOS app API, or list its operations           | ⚠️    |
+| Command       | Purpose                                                                                          | Safe? |
+| ------------- | ------------------------------------------------------------------------------------------------ | ----- |
+| `bundle`      | Generate JS bundle from config                                                                   | ✅    |
+| `push`        | Push an event: real API calls on a server flow, recorded on a web flow; `--simulate` mocks steps | ⚠️    |
+| `setup`       | Run a component's `setup()` to provision external resources                                      | ⚠️    |
+| `validate`    | Validate configs/events                                                                          | ✅    |
+| `cache`       | Manage caching                                                                                   | ✅    |
+| `auth`        | Check who the token in `WALKEROS_TOKEN` belongs to                                               | ✅    |
+| `api`         | Call the walkerOS app API, or list its operations                                                | ⚠️    |
+| `diagnostics` | Show the CLI version, the app URL, and whether the app answers                                   | ✅    |
+| `telemetry`   | Show, enable or disable anonymous usage telemetry                                                | ✅    |
 
 For detailed command reference, see
 [commands-reference.md](commands-reference.md).
@@ -76,8 +83,8 @@ For detailed command reference, see
 # Bundle specific flow
 walkeros bundle flow.json --flow myFlow
 
-# Bundle all flows
-walkeros bundle flow.json --all
+# Bundle all flows (--all needs an output directory)
+walkeros bundle flow.json --all -o dist/
 
 # Test specific flow
 walkeros push flow.json --flow myFlow -e event.json --simulate destination.demo
@@ -111,20 +118,26 @@ not used there.
         "platform": "web",
         "bundle": {
           "packages": {
-            "@walkeros/web-destination-gtag": {}
+            "@walkeros/web-destination-gtag": { "version": "^4" }
           }
         }
       },
       "destinations": {
         "gtag": {
           "package": "@walkeros/web-destination-gtag",
-          "config": { "settings": { "ga4": { "measurementId": "G-XXXXXX" } } }
+          "config": {
+            "loadScript": true,
+            "settings": { "ga4": { "measurementId": "G-XXXXXX" } }
+          }
         }
       }
     }
   }
 }
 ```
+
+Without `"loadScript": true` walkerOS does not load gtag.js: unless the page
+loads it itself, events go nowhere while the push still reports them as done.
 
 ### Config Structure
 
@@ -135,6 +148,7 @@ not used there.
     "<flowName>": {
       "config": {
         "platform": "web" | "server",  // Platform (required)
+        "url": "",                      // Optional: public URL, read by $flow.<name>.url
         "settings": {},                 // Platform-specific settings (optional)
         "bundle": {
           "packages": {},               // NPM packages pacote will install
@@ -144,10 +158,11 @@ not used there.
         "observe": {}                   // Optional: public observe connect pair (url + binding)
       },
       "sources": {},                    // Event sources
-      "destinations": {},               // Event destinations
+      "destinations": {},               // Event destinations (each with its own mapping)
       "transformers": {},               // Transformer chain (optional)
-      "mappings": {},                   // Event transformation rules
-      "collector": {}                   // Collector configuration
+      "stores": {},                     // Key-value stores (optional)
+      "collector": {},                  // Collector configuration
+      "variables": {}                   // Flow-level $var values (optional)
     }
   }
 }
@@ -165,9 +180,9 @@ exact version everywhere in the install graph. Direct `packages` specs always
 win over overrides; overrides only substitute transitive resolution.
 
 **Schema version stays at 4.** Build-time fields live under
-`flow.<name>.config.bundle.{packages, overrides, traceInclude}`. The
-`flow.<name>.config.bundle.external` sub-field is no longer supported in
-@walkeros/cli@4.x.
+`flow.<name>.config.bundle.{packages, overrides, traceInclude, env}`. A
+`config.bundle.external` field fails `walkeros validate` (`Unrecognized key`);
+the bundle only warns and builds, so remove it.
 
 **`config.observe` bakes only public values.** For web flows, `walkeros bundle`
 emits the `url` + `binding` connect pair statically into the bundle; the
@@ -188,22 +203,26 @@ Target a specific step and provide input as `SourceInput`
 (`{ content, trigger? }`):
 
 ```bash
-# Simulate a source step with trigger metadata
-walkeros push flow.json --simulate source.browser --event '{"content":"<html>...","trigger":{"type":"click"}}'
+# Simulate a source step with trigger metadata (a click needs its selector)
+walkeros push flow.json --simulate source.browser --event '{"content":"<button data-elb=\"cta\" data-elbaction=\"click\">Sign up</button>","trigger":{"type":"click","options":"button"}}'
 
 # Simulate a destination step with an event
-walkeros push flow.json --simulate destination.gtag -e '{"entity":"order","action":"complete","data":{"value":149.97}}'
+walkeros push flow.json --simulate destination.gtag -e '{"name":"order complete","data":{"value":149.97}}'
 ```
 
-Example output (a destination step prints its matched mapping key and every
-recorded vendor call, arguments as compact JSON cut at 300 chars):
+A click trigger without `options` finds no element
+(`Trigger: element not found for selector "undefined"`) and the source emits
+`no events`. Example output of the destination command (a destination step
+prints its matched mapping key and every recorded vendor call, arguments as
+compact JSON cut at 300 chars):
 
 ```
 success: true
-  destination.pubsub
+  destination.gtag
     mapping: none
-    call PubSub.topic.publishMessage({"data":"{\"name\":\"order complete\",...}"})
-  Duration: 44779ms
+    call window.gtag("config","G-XXXXXX",{})
+    call window.gtag("event","order_complete",{"send_to":"G-XXXXXX"})
+  Duration: 467ms
 ```
 
 - `mapping: <key>` when a rule matched, `mapping: none` when the destination
@@ -236,10 +255,10 @@ success: true
   and URL-encoded. The step still receives the real values. With `--json`, a
   number whose printed form contains a known value becomes `"***"`, so the JSON
   still parses. Simulate and a real push of a flow config route the flow's own
-  logs through the masking CLI logger, so flow DEBUG lines need `--verbose` (a
-  prebuilt bundle keeps its logger unless `--json`); the run's own CLI lines
-  mask the known values too. The runner masks the secret values it fetches;
-  values from `--env-file` or the container env get the pattern rules only.
+  logs through the masking CLI logger, so flow DEBUG lines need `--verbose`; the
+  run's own CLI lines mask the known values too. The runner masks the secret
+  values it fetches; values from `--env-file` or the container env get the
+  pattern rules only.
 - **Only the target starts.** Destination simulate keeps only the target
   destination (no source, no other destination initializes); the flow's
   transformers still start, and a store without a mock env runs for real. Source
@@ -324,25 +343,24 @@ From an AI assistant the equivalent tool is `flow_simulate`. A few specifics:
   scrubbed of credentials like the CLI output.
 - **Sources are simulatable as a step**, including the `@walkeros/source-demo`
   demo source.
-- **`configPath` is a file path, an http(s) URL or inline JSON.** Repeated
-  simulations of the same inline configuration reuse a prebuilt bundle for
-  faster runs; a file path or URL always rebuilds.
+- **`configPath` is a file path, an http(s) URL or inline JSON.**
 - **A flow saved in the walkerOS app** runs locally through a config link: the
   hosted walkerOS MCP server's `flow_manage` (`action: "config_url"`) returns a
   URL that lasts about ten minutes, and `flow_simulate`, `flow_bundle`,
   `flow_push` and `flow_load` take it as their config input.
 
-`flow_load` loads a flow from a local path, URL or inline JSON. Configs returned
-by `flow_load` are round-trip safe: structural values (package names, platform,
-IDs) come back literally, so a returned config can be edited and written back
-unchanged.
+`flow_load` loads a flow from a local path, URL or inline JSON. In a returned
+config, package names, `platform`, versions and IDs come back literally; every
+other string value comes back wrapped, for example
+`"title": "<user_data>Home</user_data>"`. Remove the wrapper from each value
+before writing the config back, or it becomes part of the value.
 
 From a terminal, `walkeros diagnostics` (or `--json`) reports the CLI version,
 the app URL and where it comes from, and whether the app answers its health
 route:
 
 ```text
-cli 4.8.0
+cli 4.x.y
 app https://app.walkeros.io (default)
 health reachable, status ok, app 3f2a91c
 ```
@@ -362,15 +380,18 @@ What validate guarantees:
   or a cycle is an error), routes, the root `contract`, the bundle preflight,
   cross-step example compatibility, the examples of
   `@walkeros/transformer-validate` steps against their linked contract, and each
-  step's settings against its package schema (warnings for one minor;
-  `--offline` skips the fetch).
+  step's settings against its package schema (an unknown key is an error where
+  the package closes its schema, other findings are warnings; `--offline` skips
+  the fetch).
 - **Narrowing is explicit:** `--flow <name>` narrows per-flow checks (file-level
   checks still run); `--path <section.key>` checks one entry in every flow that
   has it, or only in `--flow`.
 - **Every skip is reported** in `details.skipped` and the text output, with a
   code. A step that imports a named export (step `import`, else
   `bundle.packages[pkg].imports[0]`) is checked against that export's entry in
-  the package's `exportSchemas`; a single-export package uses `settings`. A
+  the package's `exportSchemas`; a single-export package uses `settings`. The
+  bundler runs the step's `import`, else the default export, never an `imports`
+  entry, so set `import` on the step to check and run the same export. A
   multi-export package version without `exportSchemas`, or one that does not
   list its exports, is a skip (`NO_SETTINGS_SCHEMA`).
 - **The result states its scope:** a `Scope:` line and `details.scope`.
@@ -379,6 +400,10 @@ What validate guarantees:
   disagreements errors (exit 1). It never changes what runs.
 - **Stable codes:** every error and warning has a `code`; branch on it, never on
   the message.
+- **Not checked, also under `--strict`:** an unknown key at the file root, on a
+  flow or in its `config` is dropped without a message (a misspelt
+  `"destinaitons"` passes), and a mapping rule's `settings` are not checked. A
+  passing validate is a first filter; simulate before you bundle.
 
 For full details on writing and testing with step examples, see
 [using-step-examples](../walkeros-using-step-examples/SKILL.md).
@@ -412,13 +437,16 @@ For mapping patterns, see
 walkeros bundle <config> [options]
 
 Options:
-  --flow <name>     Bundle specific flow (default: "default")
-  --all             Bundle all flows
-  --stats           Show bundle statistics
-  --json            JSON output
-  --no-cache        Skip build cache
-  -v, --verbose     Verbose output
-  -s, --silent      Silent mode
+  -o, --output <path>  Write to a file or directory (a server flow also to a .tar.gz/.tgz archive)
+  -f, --flow <name>    Bundle one flow of a multi-flow config
+  --all                Bundle all flows (needs -o)
+  --stats              Show bundle statistics
+  --json               JSON statistics (implies --stats); with -o the JSON replaces the bundle at that path
+  --no-cache           Disable the package and build caches
+  --release <id>       Stamp a config release id on event.source.release
+  --manifest [source]  Build from a manifest (see "Manifest builds")
+  -v, --verbose        Verbose output
+  -s, --silent         Silent mode
 ```
 
 Output:
@@ -446,11 +474,11 @@ release; env and secret values are not inputs, only their names);
 ### Push Command
 
 ```bash
-walkeros push <config|bundle> [options]
+walkeros push <config> [options]
 
 Options:
-  -e, --event <json|file|url>   Event to process (required)
-  --flow <name>                  Flow to use
+  -e, --event <json|file|url>   Event to process (required; a mistyped file path is read as an event name)
+  -f, --flow <name>              Flow to use
   -p, --platform <web|server>   Platform override
   --simulate <step>              Simulate a step (repeatable for destination.*). Format: source.NAME | destination.NAME | transformer.NAME | collector.NAME
   --mock <step=value>            Mock a step with a specific return value (repeatable); chain members via destination.NAME.before.ID or collector.next.ID
@@ -459,8 +487,17 @@ Options:
   --command <name>               Destination simulate runs this command (config|consent|user|run) instead of a push
   --page-url <url>               Page URL of a simulated web source (http/https)
   --snapshot <source>            JS file to eval before execution (sets global state)
-  --json                         Pure JSON on stdout (incl. simulations); logs to stderr
+  -o, --output <path>            Write the result to a file
+  --json                         JSON on stdout (incl. simulations); logs to stderr
+  -v, --verbose / -s, --silent   Verbose or silent output
 ```
+
+On a real push, a destination that writes to the console still prints there:
+with `@walkeros/destination-demo`, `push --json` puts the demo's lines on stdout
+before the JSON, so the output does not parse with `jq`.
+
+Push takes a flow config. A file `walkeros bundle` wrote fails as push input
+(see the CLI docs, "Input types").
 
 ### Validate Command
 
@@ -468,12 +505,13 @@ Options:
 walkeros validate <input> [options]
 
 Options:
-  --type <type>     Validation type (default: flow). Also: event, mapping, contract
-  --path <path>     Check one entry in every flow that has it (e.g. destinations.snowplow, stores.cache)
-  --flow <name>     Narrow per-flow checks to one flow
-  --strict          Fail on warnings and skipped checks
-  --offline         Do not fetch package schemas (settings not checked)
-  --json            JSON output
+  -t, --type <type>    Validation type (default: flow). Also: event, mapping, contract
+  --path <path>        Check one entry in every flow that has it (e.g. destinations.snowplow, stores.cache)
+  -f, --flow <name>    Narrow per-flow checks to one flow
+  --strict             Fail on warnings and skipped checks
+  --offline            Do not fetch package schemas (settings not checked)
+  --json               JSON output
+  -o, --output <path>  Write the result to a file
 
 Exit codes:
   0 = Valid (skips alone do not change it)
@@ -492,9 +530,9 @@ runneros start [artifact] [options]
 
 Options:
   --flow-id <id>        App flow ID (enables heartbeat and secrets)
-  --project <id>        Project ID (required with --flow-id)
+  --project <id>        Project ID (default WALKEROS_PROJECT_ID; required with --flow-id)
   -p, --port <number>   Port (default: 8080)
-  --env-file <path>     Load a dotenv file first (existing env wins)
+  --env-file <path>     Load a dotenv file first (existing env wins; a group- or other-readable file is refused)
   --json                JSON output
   -v, --verbose         Verbose output
   -s, --silent          Silent mode
@@ -511,7 +549,7 @@ runtime; bundle first. The full reference is "Deploying a server flow" below.
 
 ```bash
 # Provision external resources for one component (explicit only, never
-# triggered by push, simulate, deploy, or the runtime)
+# triggered by push, real or simulated, a deployment, or the runtime)
 walkeros setup <kind>.<name> [-c ./flow.json] [-f <flow>] [--json] [--verbose] [--silent]
 ```
 
@@ -521,7 +559,9 @@ pins exactly like `bundle`: the version from `config.bundle.packages` (or inline
 `@scope/pkg@x.y.z`, bundle pin wins) is downloaded through the shared pacote
 pipeline and cache, then imported from the extracted tree. Setup works via npx
 without a local install; `path:` entries in `config.bundle.packages` support
-local development with a built package directory.
+local development with a built package directory. Today it cannot load the AWS
+(SQS) or GCP (Pub/Sub) source, nor the GCS or Sheets store: it exits 1 and
+creates nothing (see the CLI docs, "Setup command").
 
 ---
 
@@ -551,8 +591,8 @@ local development with a built package directory.
 - **Runtime paths:** `runneros` sets CWD to the bundle directory. File paths in
   `settings` resolve relative to the bundle, not the project root.
 - **Component names:** Source, transformer, destination, and store names must be
-  valid JavaScript identifiers (camelCase). Hyphens like `gtag-wrapper` cause
-  syntax errors — use `gtagWrapper` instead.
+  valid JavaScript identifiers (camelCase). Validate refuses a hyphenated name
+  such as `gtag-wrapper` (`INVALID_COMPONENT_NAME`); use `gtagWrapper`.
 - **Range conflicts:** When two transitive consumers declare incompatible ranges
   for the same dep (e.g., `arrify@^3.0.0` vs `arrify@^2.0.0`), the bundler
   resolves the chosen range to a concrete version and nests non-satisfying specs
@@ -673,8 +713,8 @@ The bundler caches pacote downloads under `process.env.NPM_CACHE_DIR` (default
 
 **CI smoke check:**
 `cd dist && node -e "import('./flow.mjs').then(()=>console.log('ok'))"` plus
-`du -sh node_modules` (typical: 30-50MB for GCP destination, 10k+ files; use
-`.dockerignore`).
+`du -sh node_modules` (a server flow with the BigQuery destination holds about
+20 MB in about 1,300 files; use `.dockerignore`).
 
 ---
 
@@ -703,19 +743,19 @@ flag forbids it. Generate two steps (bundle, then start), never one.
 
 ### Runtime environment
 
-| Variable                                   | Meaning                                                              |
-| ------------------------------------------ | -------------------------------------------------------------------- |
-| `BUNDLE`                                   | Artifact path or URL (image default `/app/flow/flow.mjs`)            |
-| `PORT`                                     | Port (default 8080)                                                  |
-| `WALKEROS_FLOW_ID`, `WALKEROS_PROJECT_ID`  | App flow and project; together with a token enable heartbeat+secrets |
-| `WALKEROS_DEPLOYMENT_ID`                   | Deployment ID sent with every heartbeat                              |
-| `WALKEROS_FLOW_RELEASE`                    | Release the loaded flow must carry, or the boot fails                |
-| `WALKEROS_FLOW_NAME`                       | Flow name it must carry; checked only with `WALKEROS_FLOW_RELEASE`   |
-| `WALKEROS_DEPLOY_TOKEN` / `WALKEROS_TOKEN` | Token, deploy token first. Env only, never a config file             |
-| `WALKEROS_APP_URL`                         | App base URL (default `https://app.walkeros.io`)                     |
-| `WALKEROS_HEARTBEAT_INTERVAL`              | Seconds (default 60, minimum 10)                                     |
-| `WALKEROS_CACHE_DIR`                       | Error cache dir (then `CACHE_DIR`, then XDG `~/.cache/walkeros`)     |
-| `WALKEROS_OBSERVE_LEVEL`                   | `off`, `standard` or `trace`                                         |
+| Variable                                   | Meaning                                                                                                                                                                            |
+| ------------------------------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `BUNDLE`                                   | Artifact path or URL (image default `/app/flow/flow.mjs`)                                                                                                                          |
+| `PORT`                                     | Port (default 8080)                                                                                                                                                                |
+| `WALKEROS_FLOW_ID`, `WALKEROS_PROJECT_ID`  | App flow and project; with a runner token they enable secrets and the heartbeat                                                                                                    |
+| `WALKEROS_DEPLOYMENT_ID`                   | Deployment ID sent with every heartbeat; the app accepts a heartbeat only with the deployment the runner token belongs to, else every beat logs `Heartbeat rejected (404)` at WARN |
+| `WALKEROS_FLOW_RELEASE`                    | Release the loaded flow must carry, or the boot fails                                                                                                                              |
+| `WALKEROS_FLOW_NAME`                       | Flow name it must carry; checked only with `WALKEROS_FLOW_RELEASE`                                                                                                                 |
+| `WALKEROS_DEPLOY_TOKEN` / `WALKEROS_TOKEN` | Runner token (`wos_run_...`), deploy token first; a person's automation token is refused. Env only, never a config file                                                            |
+| `WALKEROS_APP_URL`                         | App base URL (default `https://app.walkeros.io`)                                                                                                                                   |
+| `WALKEROS_HEARTBEAT_INTERVAL`              | Seconds (default 60, minimum 10)                                                                                                                                                   |
+| `WALKEROS_CACHE_DIR`                       | Error cache dir (then `CACHE_DIR`, then XDG `~/.cache/walkeros`)                                                                                                                   |
+| `WALKEROS_OBSERVE_LEVEL`                   | `off`, `standard` or `trace`                                                                                                                                                       |
 
 Secrets are fetched ONCE at boot when connected (401/403 is fatal). There is no
 config polling and no hot-swap: a new flow version is a rebuild and a redeploy.
@@ -804,9 +844,10 @@ Read the line under `mapping:`:
 
 ### Web Simulation Transport
 
-Web simulations run in JSDOM. `fetch` and `navigator.sendBeacon` are polyfilled
-as tracked no-ops -- no real HTTP requests are made. Captured network calls are
-included in `PushResult.networkCalls` when present.
+Web flows run in JSDOM. `fetch`, `navigator.sendBeacon` and `XMLHttpRequest` are
+polyfilled as tracked no-ops, so the flow's own requests are recorded, not sent;
+scripts, iframes and stylesheets the page loads are still fetched. Captured
+network calls are included in `PushResult.networkCalls` when present.
 
 ### Local Packages Not Found
 
@@ -849,7 +890,7 @@ the upgrade checklist.
 | `packages/cli/`              | CLI source code         |
 | `packages/cli/src/commands/` | Command implementations |
 | `packages/cli/examples/`     | Example flow configs    |
-| `packages/cli/README.md`     | Full CLI documentation  |
+| `website/docs/apps/cli.mdx`  | Full CLI documentation  |
 
 ---
 
@@ -894,7 +935,7 @@ before consent.
 
 **Detailed References:**
 
-- [commands-reference.md](commands-reference.md) - All commands with full
-  options
+- [commands-reference.md](commands-reference.md) - bundle, push, runneros, api,
+  auth, validate and cache with their options
 - [flow-configuration.md](flow-configuration.md) - Complete Flow.Json reference
 - [server-deployment.md](server-deployment.md) - Server flow deployment guide

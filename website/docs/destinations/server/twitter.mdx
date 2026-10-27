@@ -7,6 +7,7 @@ package: '@walkeros/server-destination-twitter'
 ---
 import data from '@walkeros/server-destination-twitter/walkerOS.json';
 import Configuration from '@site/src/components/snippets/_configuration.mdx';
+import Quickstart from '@site/src/components/snippets/_quickstart.mdx';
 
 import WhereThisFits from '@site/src/components/snippets/_where-this-fits.mdx';
 
@@ -26,67 +27,7 @@ Server-side event delivery to X's (Twitter's) Conversions API for enhanced ad at
 
 ## Installation
 
-<CodeSnippet
-  code={`npm install @walkeros/server-destination-twitter`}
-  language="bash"
-/>
-
-<Tabs groupId="mode">
-  <TabItem value="integrated" label="Integrated" default>
-
-<CodeSnippet
-  code={`import { startFlow } from '@walkeros/collector';
-import { destinationTwitter } from '@walkeros/server-destination-twitter';
-
-await startFlow({
-  destinations: {
-    twitter: {
-      code: destinationTwitter,
-      config: {
-        settings: {
-          pixelId: 'YOUR_PIXEL_ID',
-          eventId: 'tw-xxxxx-xxxxx',
-          consumerKey: 'YOUR_CONSUMER_KEY',
-          consumerSecret: 'YOUR_CONSUMER_SECRET',
-          accessToken: 'YOUR_ACCESS_TOKEN',
-          accessTokenSecret: 'YOUR_ACCESS_TOKEN_SECRET',
-        },
-      },
-    },
-  },
-});`}
-  language="typescript"
-/>
-
-  </TabItem>
-  <TabItem value="bundled" label="Bundled">
-
-Add to your `flow.json` destinations:
-
-<CodeSnippet
-  code={`"destinations": {
-  "twitter": {
-    "package": "@walkeros/server-destination-twitter",
-    "import": "destinationTwitter",
-    "config": {
-      "settings": {
-        "pixelId": "YOUR_PIXEL_ID",
-        "eventId": "tw-xxxxx-xxxxx",
-        "consumerKey": "YOUR_CONSUMER_KEY",
-        "consumerSecret": "YOUR_CONSUMER_SECRET",
-        "accessToken": "YOUR_ACCESS_TOKEN",
-        "accessTokenSecret": "YOUR_ACCESS_TOKEN_SECRET"
-      }
-    }
-  }
-}`}
-  language="json"
-/>
-
-[See bundled mode setup](/docs/getting-started/modes/bundled) | [CLI reference](/docs/apps/cli)
-
-  </TabItem>
-</Tabs>
+<Quickstart data={data} />
 
 <Configuration type="destination" data={data} />
 

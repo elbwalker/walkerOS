@@ -30,7 +30,7 @@ export const defaultTrack: RudderStackStepExample = {
     'A walker event becomes a RudderStack analytics.track call with userId and anonymousId resolved from the event.',
   in: getEvent('product view', {
     id: 'ev1700000100',
-    timestamp: 1700000100,
+    timestamp: 1700000100000,
     user: { id: 'us3r', session: 's3ss10n' },
   }),
   out: [
@@ -42,7 +42,7 @@ export const defaultTrack: RudderStackStepExample = {
         anonymousId: 's3ss10n',
         event: 'product view',
         properties: {},
-        timestamp: new Date(1700000100),
+        timestamp: new Date(1700000100000),
       },
     ],
   ],
@@ -57,7 +57,7 @@ export const mappedEventName: RudderStackStepExample = {
     'A mapping renames the event so the RudderStack track call uses a canonical name such as Order Completed.',
   in: getEvent('order complete', {
     id: 'ev1700000101',
-    timestamp: 1700000101,
+    timestamp: 1700000101000,
     user: { id: 'us3r', session: 's3ss10n' },
   }),
   mapping: {
@@ -72,7 +72,7 @@ export const mappedEventName: RudderStackStepExample = {
         anonymousId: 's3ss10n',
         event: 'Order Completed',
         properties: {},
-        timestamp: new Date(1700000101),
+        timestamp: new Date(1700000101000),
       },
     ],
   ],
@@ -85,10 +85,10 @@ export const mappedEventName: RudderStackStepExample = {
 export const destinationIdentify: RudderStackStepExample = {
   title: 'Destination identify',
   description:
-    'Destination-level identify fires analytics.identify with traits on the first push only, then the track call follows.',
+    "With settings.identify mapping the email trait to 'user.email', the first push fires analytics.identify with the traits before the track call. Later pushes repeat it only when the userId or traits differ.",
   in: getEvent('page view', {
     id: 'ev1700000102',
-    timestamp: 1700000102,
+    timestamp: 1700000102000,
     user: { id: 'us3r', session: 's3ss10n', email: 'user@example.com' },
   }),
   settings: {
@@ -110,7 +110,7 @@ export const destinationIdentify: RudderStackStepExample = {
         userId: 'us3r',
         anonymousId: 's3ss10n',
         traits: { email: 'user@example.com' },
-        timestamp: new Date(1700000102),
+        timestamp: new Date(1700000102000),
       },
     ],
     [
@@ -121,7 +121,7 @@ export const destinationIdentify: RudderStackStepExample = {
         anonymousId: 's3ss10n',
         event: 'page view',
         properties: {},
-        timestamp: new Date(1700000102),
+        timestamp: new Date(1700000102000),
       },
     ],
   ],
@@ -137,7 +137,7 @@ export const userLoginIdentify: RudderStackStepExample = {
   in: createEvent({
     name: 'user login',
     id: 'ev1700000103',
-    timestamp: 1700000103,
+    timestamp: 1700000103000,
     user: { id: 'us3r', session: 's3ss10n' },
     data: {
       user_id: 'new-user-123',
@@ -171,7 +171,7 @@ export const userLoginIdentify: RudderStackStepExample = {
         userId: 'new-user-123',
         anonymousId: 's3ss10n',
         traits: { email: 'user@acme.com', name: 'Jane Doe', plan: 'premium' },
-        timestamp: new Date(1700000103),
+        timestamp: new Date(1700000103000),
       },
     ],
   ],
@@ -187,7 +187,7 @@ export const companyGroup: RudderStackStepExample = {
   in: createEvent({
     name: 'company update',
     id: 'ev1700000104',
-    timestamp: 1700000104,
+    timestamp: 1700000104000,
     user: { id: 'us3r', session: 's3ss10n' },
     data: {
       company_id: 'comp-456',
@@ -222,7 +222,7 @@ export const companyGroup: RudderStackStepExample = {
         anonymousId: 's3ss10n',
         groupId: 'comp-456',
         traits: { name: 'Acme', industry: 'tech', employees: 50 },
-        timestamp: new Date(1700000104),
+        timestamp: new Date(1700000104000),
       },
     ],
   ],
@@ -238,7 +238,7 @@ export const pageView: RudderStackStepExample = {
     'A page view fires analytics.page with a resolved page name and properties instead of a generic track.',
   in: getEvent('page view', {
     id: 'ev1700000105',
-    timestamp: 1700000105,
+    timestamp: 1700000105000,
     user: { id: 'us3r', session: 's3ss10n' },
     data: {
       title: 'Getting Started',
@@ -269,7 +269,7 @@ export const pageView: RudderStackStepExample = {
         anonymousId: 's3ss10n',
         name: 'Getting Started',
         properties: { section: 'tutorials' },
-        timestamp: new Date(1700000105),
+        timestamp: new Date(1700000105000),
       },
     ],
   ],
@@ -286,7 +286,7 @@ export const screenView: RudderStackStepExample = {
   in: createEvent({
     name: 'screen view',
     id: 'ev1700000106',
-    timestamp: 1700000106,
+    timestamp: 1700000106000,
     user: { id: 'us3r', session: 's3ss10n' },
     data: {
       screen_name: 'Welcome',
@@ -318,7 +318,7 @@ export const screenView: RudderStackStepExample = {
         anonymousId: 's3ss10n',
         name: 'Welcome',
         properties: { build: '1.2.3' },
-        timestamp: new Date(1700000106),
+        timestamp: new Date(1700000106000),
       },
     ],
   ],
@@ -335,7 +335,7 @@ export const aliasUser: RudderStackStepExample = {
   in: createEvent({
     name: 'identity merge',
     id: 'ev1700000107',
-    timestamp: 1700000107,
+    timestamp: 1700000107000,
     user: { id: 'registered-456', session: 's3ss10n' },
     data: {
       anonymous_id: 'anonymous-123',
@@ -358,7 +358,7 @@ export const aliasUser: RudderStackStepExample = {
         messageId: 'ev1700000107-alias',
         userId: 'registered-456',
         previousId: 'anonymous-123',
-        timestamp: new Date(1700000107),
+        timestamp: new Date(1700000107000),
       },
     ],
   ],
@@ -373,7 +373,7 @@ export const anonymousOnly: RudderStackStepExample = {
     'When no userId is resolved RudderStack accepts the track call keyed solely by anonymousId.',
   in: getEvent('product view', {
     id: 'ev1700000108',
-    timestamp: 1700000108,
+    timestamp: 1700000108000,
     user: { session: 's3ss10n' },
   }),
   settings: {
@@ -387,7 +387,7 @@ export const anonymousOnly: RudderStackStepExample = {
         anonymousId: 's3ss10n',
         event: 'product view',
         properties: {},
-        timestamp: new Date(1700000108),
+        timestamp: new Date(1700000108000),
       },
     ],
   ],
@@ -427,7 +427,7 @@ export const silentRule: RudderStackStepExample = {
   description:
     'A rule with silent: true and no identify, group, page, screen or alias mapping sends nothing to RudderStack.',
   in: getEvent('page view', {
-    timestamp: 1700000117,
+    timestamp: 1700000117000,
     user: { id: 'us3r', session: 's3ss10n' },
   }),
   mapping: { silent: true },
@@ -442,7 +442,7 @@ export const wildcardIgnored: RudderStackStepExample = {
   public: false,
   in: createEvent({
     name: 'debug noise',
-    timestamp: 1700000109,
+    timestamp: 1700000109000,
     user: { id: 'us3r', session: 's3ss10n' },
   }),
   mapping: { ignore: true },
@@ -461,7 +461,7 @@ export const companyGroupWithoutData: RudderStackStepExample = {
     name: 'company update',
     entity: 'company',
     action: 'update',
-    timestamp: 1700000120,
+    timestamp: 1700000120000,
     user: { id: 'us3r', session: 's3ss10n' },
   },
   mapping: companyGroup.mapping,

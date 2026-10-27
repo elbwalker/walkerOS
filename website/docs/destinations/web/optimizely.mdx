@@ -8,6 +8,7 @@ package: '@walkeros/web-destination-optimizely'
 
 import data from '@walkeros/web-destination-optimizely/walkerOS.json';
 import Configuration from '@site/src/components/snippets/_configuration.mdx';
+import Quickstart from '@site/src/components/snippets/_quickstart.mdx';
 
 import WhereThisFits from '@site/src/components/snippets/_where-this-fits.mdx';
 
@@ -36,65 +37,15 @@ optional revenue/value tags and user attributes.
 
 ## Installation
 
-<CodeSnippet
-  code={`npm install @walkeros/web-destination-optimizely`}
-  language="bash"
-/>
-
-<Tabs groupId="mode">
-  <TabItem value="integrated" label="Integrated" default>
-
-<CodeSnippet
-  code={`import { startFlow } from '@walkeros/collector';
-import { destinationOptimizely } from '@walkeros/web-destination-optimizely';
-
-await startFlow({
-  destinations: {
-    optimizely: {
-      code: destinationOptimizely,
-      config: {
-        settings: {
-          sdkKey: 'YOUR_SDK_KEY',
-          userId: 'user.id',
-        },
-      },
-    },
-  },
-});`}
-  language="typescript"
-/>
-
-  </TabItem>
-  <TabItem value="bundled" label="Bundled">
-
-Add to your `flow.json` destinations:
-
-<CodeSnippet
-  code={`"destinations": {
-  "optimizely": {
-    "package": "@walkeros/web-destination-optimizely",
-    "config": {
-      "settings": {
-        "sdkKey": "YOUR_SDK_KEY",
-        "userId": "user.id"
-      }
-    }
-  }
-}`}
-  language="json"
-/>
-
-[See bundled mode setup](/docs/getting-started/modes/bundled) | [CLI reference](/docs/apps/cli)
-
-  </TabItem>
-</Tabs>
+<Quickstart data={data} />
 
 <Configuration type="destination" data={data} />
 
 ## User ID
 
-Every event needs a user ID: an event where `settings.userId` resolves to
-nothing fails with `missing-input` (the push result lists the destination under
+Every event needs a user ID, so `settings.userId` is required: without it the
+destination does not start and fails with a `config` error. An event where
+`settings.userId` resolves to nothing fails with `missing-input` (the push result lists the destination under
 `failed` and the collector writes an ERROR line). With `userId: 'user.id'`,
 that is every event of an anonymous visitor. To send those events too, give a
 fallback chain such as `userId: ['user.id', 'user.device']`; the

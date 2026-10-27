@@ -12,7 +12,7 @@ import WhereThisFits from '@site/src/components/snippets/_where-this-fits.mdx';
 
 <PackageLink env="server" github="packages/server/sources/gcp" npm="@walkeros/server-source-gcp" />
 
-Subscribes to a [Google Cloud Pub/Sub](https://cloud.google.com/pubsub) topic and forwards each delivered message to the walkerOS collector. Ships two delivery models from the same package: a long-running streaming pull subscriber for container deployments, and an HTTP push webhook handler for serverless. Decoders for JSON, text, and raw payloads. Idempotent subscription provisioning with optional dead-letter wiring. Optional OIDC verification on the push handler.
+Subscribes to a [Google Cloud Pub/Sub](https://cloud.google.com/pubsub) topic and forwards each delivered message to the walkerOS collector. The package ships two delivery models: a long-running streaming pull subscriber for container deployments, and an HTTP push webhook handler for serverless. It has decoders for JSON, text, and raw payloads, idempotent subscription provisioning with optional dead-letter wiring, and optional OIDC verification on the push handler.
 
 The source ships inside `@walkeros/server-source-gcp` alongside the Cloud Functions handler; install the package once and import `sourcePubSubPull` or `sourcePubSubPush`.
 
@@ -44,7 +44,7 @@ The source ships inside `@walkeros/server-source-gcp` alongside the Cloud Functi
 | Subscription type  | `subscription.type = "pull"`                           | `subscription.type = "push"` with `pushConfig.pushEndpoint` |
 | Best fit           | Long-running collector services, high-volume streams   | Serverless walkerOS endpoints, hybrid setups              |
 
-Both modes share the same `@walkeros/server-source-gcp` package, the same auth resolution, the same decoders, and the same setup command. Pick the one that matches your hosting model.
+Both modes share the `@walkeros/server-source-gcp` package and the decoders; only pull has a setup command and SDK authentication. Pick the one that matches your hosting model.
 
 ## Pull subscriber
 
@@ -71,7 +71,7 @@ await startFlow({
   language="typescript"
 />
 
-The pull source is event-driven: `init()` opens the streaming subscription and forwards each delivered message to the collector via `env.push`. The source's `push` method is a deliberate no-op stub. There is no external invocation; the subscriber pushes events autonomously. `destroy()` closes the subscriber gracefully, honoring `shutdownTimeoutMs` (default 30000).
+The pull source is event-driven: consumption starts when the collector runs, and the source then opens the streaming subscription and forwards each delivered message to the collector via `env.push`. The source's `push()` called without arguments does nothing; called with a synthetic message it runs the same handler (tests, simulation). `destroy()` closes the subscriber gracefully, honoring `shutdownTimeoutMs` (default 30000).
 
 ### Pull settings
 
@@ -79,7 +79,7 @@ The pull source is event-driven: `init()` opens the streaming subscription and f
 | -------------------- | --------------------------------- | ------------------------------- | ------------------------------------------------------------------------ |
 | `projectId`          | `string`                          | (required)                      | GCP project id.                                                          |
 | `subscription`       | `string`                          | (required)                      | Subscription short name.                                                 |
-| `topic`              | `string`                          | (optional)                      | Topic short name. Used by setup auto-create when `setup.createTopic` is on. |
+| `topic`              | `string`                          | (optional)                      | Topic short name. Setup needs it to create the subscription (and `setup.createTopic` to create the topic). |
 | `credentials`        | `string \| ServiceAccountCredentials` | (ADC fallback)              | Service account JSON (parsed object or JSON string). Set on `config.credentials` (sibling of `settings`). |
 | `apiEndpoint`        | `string`                          | (SDK default)                   | Override for the emulator (e.g. `localhost:8085`).                       |
 | `decoder`            | `'json' \| 'text' \| 'raw'`       | `'json'`                        | How the subscriber decodes message bodies before forwarding.             |
@@ -124,6 +124,7 @@ app.listen(8080);`}
 Pub/Sub posts each message envelope to the configured endpoint as a JSON body matching the [Pub/Sub push spec](https://cloud.google.com/pubsub/docs/push). The handler decodes the envelope, base64-decodes the `data` field, runs the configured decoder, and forwards to the collector. Status codes:
 
 - `200`: forwarded successfully, or failed for a reason a redelivery cannot fix (it is in the destination's dead-letter queue and in the collector's ERROR line).
+- `200` with `dropped: true`: the payload decoded to `null`; nothing is forwarded and nothing is logged.
 - `400`: the message is permanently invalid, either a malformed envelope
   (missing `message.data`, invalid base64) or an event the pipeline rejected.
   A retry cannot fix either, so the answer is a nack.
@@ -138,7 +139,7 @@ the subscription: that policy, not the source, is the poison-message guard.
 
 ### Push settings
 
-In addition to the shared base (`projectId`, `apiEndpoint`, `decoder` in `settings`, plus `config.credentials`):
+Push settings: `projectId` (optional, not used by the handler), `decoder`, and:
 
 | Field         | Type      | Default | Description                                                                |
 | ------------- | --------- | ------- | -------------------------------------------------------------------------- |
@@ -150,26 +151,45 @@ In addition to the shared base (`projectId`, `apiEndpoint`, `decoder` in `settin
 Three modes for the pull subscriber, evaluated in order:
 
 1. **Application Default Credentials (ADC).** Default. Works on GCP-native runtimes (Cloud Run, Cloud Functions, GKE) and locally with `gcloud auth application-default login`.
-2. **Service account JSON.** Pass `config.credentials`, either parsed or as JSON string (the source JSON-parses strings). Combine with `$env.NAME` to inject from an environment variable. (The package-specific `settings.credentials` still works but is deprecated.)
+2. **Service account JSON.** Pass `config.credentials`, either parsed or as JSON string (the source JSON-parses strings). Combine with `$env.NAME` to inject from an environment variable.
 3. **Pre-configured client.** Pass an existing `PubSub` SDK instance as `settings.client`.
 
-For the push handler, auth is reversed: Pub/Sub holds the identity and signs requests with an OIDC token. The handler verifies the token against GCP public keys when `verifyOidc: true` and `audience` is set. Off by default because misconfigured OIDC silently rejects all messages, so opt in once your endpoint is publicly reachable.
+For the push handler, auth is reversed: Pub/Sub holds the identity and signs requests with an OIDC token. The handler verifies the token against GCP public keys when `verifyOidc: true` and `audience` is set. Off by default because a misconfigured OIDC answers every message with 401, so opt in once your endpoint is publicly reachable.
 
 ## Setup
 
-Provision the subscription once per environment:
+In a flow file the step names the pull export with `"import"`, because the package has no default export, and the topic the subscription is created on:
 
 <CodeSnippet
-  code={`walkeros setup source.pubsub`}
-  language="bash"
+  code={`"sources": {
+  "pubsub": {
+    "package": "@walkeros/server-source-gcp",
+    "import": "sourcePubSubPull",
+    "config": {
+      "settings": {
+        "projectId": "YOUR_PROJECT_ID",
+        "subscription": "YOUR_SUBSCRIPTION_NAME",
+        "topic": "YOUR_TOPIC_NAME"
+      },
+      "setup": true
+    }
+  }
+}`}
+  language="json"
 />
 
-Idempotent. Defaults: 60-second ack deadline, project-default retention, no filter, no dead-letter policy. Drift on `ackDeadlineSeconds`, `messageRetentionDuration`, `deadLetterPolicy`, or `filter` emits `WARN setup.drift {...}` and never auto-mutates.
+`walkeros setup source.pubsub` would provision the subscription once per environment; today it cannot load the source:
+
+:::caution walkeros setup cannot load this source today
+`walkeros setup source.pubsub` stops with `Package @walkeros/server-source-gcp has no export "sourcePubSubPull"` (or `has no default export` without `"import"`) and creates nothing. Create the subscription with `gcloud pubsub subscriptions create` or your infrastructure code. The rest of this section describes the source's own setup function.
+:::
+
+Idempotent. Defaults: Pub/Sub's own (10-second ack deadline), project-default retention, no filter, no dead-letter policy. Drift on `ackDeadlineSeconds`, `messageRetentionDuration`, `deadLetterPolicy`, or `filter` emits `WARN setup.drift {...}` and never auto-mutates.
 
 `config.setup`:
 
 - `false` (default): no provisioning.
-- `true`: provisions the subscription against an existing topic with safe defaults.
+- `true`: provisions the subscription on `settings.topic` (an existing topic) with safe defaults. Without `settings.topic` setup creates nothing, and `walkeros setup` still reports `setup: ok`.
 - `{ ackDeadlineSeconds, messageRetentionDuration, filter, deadLetterPolicy, retryPolicy, ... }`: object form for explicit overrides.
 
 Optional one-shot helpers:
@@ -186,14 +206,16 @@ Topic provisioning is owned by the [Pub/Sub destination](/docs/destinations/serv
 | Decoder          | Behavior                                  |
 | ---------------- | ----------------------------------------- |
 | `json` (default) | `JSON.parse(data.toString('utf8'))`       |
-| `text`           | `data.toString('utf8')` (forwarded as-is) |
-| `raw`            | The raw `Buffer` is forwarded unchanged   |
+| `text`           | The UTF-8 string, forwarded as `data.payload` (pull) or as the push value (push) |
+| `raw`            | The bytes, as a base64 string in `data.payload` (pull) or the `Buffer` (push) |
 
-A decoder that throws on malformed payloads triggers `onPushError` (pull mode): `nack` redelivers, `ack` drops with a debug log. In pull mode a failure a redelivery cannot fix (a missing setting, a `4xx` from the vendor, a destination that is not ready) and invalid input are acknowledged: the failure is in the destination's dead-letter queue and in one ERROR line from the collector, and invalid input is counted as `rejected`. Only a retryable failure (a timeout, an unavailable vendor) and a thrown push follow `onPushError`.
+Neither `text` nor `raw` carries an event name: without a `source.before` transformer that builds the event, the collector rejects it as invalid, so pull acknowledges and drops the message and push answers 400. A JSON payload of `null` is acknowledged and dropped with a DEBUG line only (push: `200` with `dropped: true`, no log line).
+
+A decoder that throws on malformed payloads triggers `onPushError` (pull mode): `nack` redelivers, `ack` drops it; the decode failure is an ERROR line. In pull mode a failure a redelivery cannot fix (a missing setting, a `4xx` from the vendor, a destination that is not ready) and invalid input are acknowledged: the failure is in the destination's dead-letter queue and in one ERROR line from the collector, and invalid input is counted as `rejected`. Only a retryable failure (a timeout, an unavailable vendor) and a thrown push follow `onPushError`.
 
 ## Emulator
 
-Both pull and push honor `PUBSUB_EMULATOR_HOST`. For explicit configuration, set `settings.apiEndpoint` (e.g. `localhost:8085`).
+The pull subscriber honors `PUBSUB_EMULATOR_HOST`. For explicit configuration, set `settings.apiEndpoint` (e.g. `localhost:8085`).
 
 <CodeSnippet
   code={`gcloud beta emulators pubsub start --host-port=localhost:8085
@@ -203,18 +225,18 @@ export PUBSUB_EMULATOR_HOST=localhost:8085`}
 
 ## Lifecycle
 
-The pull source is the canonical long-running listener pattern in walkerOS. Existing server sources (express, lambda, cloudfunction, fetch) are request-handlers; pull is fundamentally different:
+The pull source is a long-running listener. The other server sources (express, lambda, cloudfunction, fetch) are request handlers; pull works like this:
 
-1. `init()` starts the streaming subscriber. It returns the `Source.Instance` and the subscriber runs in the background.
-2. The instance's `push` method is a no-op stub. The framework never calls it; the subscriber forwards events autonomously.
+1. `init()` returns the `Source.Instance`. When the collector runs, the source opens the streaming subscriber, which runs in the background.
+2. The instance's `push()` called without arguments does nothing; called with a synthetic message it runs the same handler (tests, simulation).
 3. `destroy()` closes the subscriber. On shutdown the source stops accepting new messages, drains in-flight ack/nacks, and force-closes after `shutdownTimeoutMs`.
 
 ## Troubleshooting
 
-- **`NOT_FOUND` on the subscription**: the subscription does not exist. Run `walkeros setup source.<id>` once or create it via `gcloud pubsub subscriptions create`.
+- **`NOT_FOUND` on the subscription**: the subscription does not exist. Create it via `gcloud pubsub subscriptions create` (`walkeros setup` cannot load this source today, see [Setup](#setup)).
 - **`PERMISSION_DENIED` / `UNAUTHENTICATED`** on the pull subscriber: the runtime service account lacks `roles/pubsub.subscriber` on the subscription.
 - **Push handler returns 401 for every message**: OIDC misconfiguration. Verify `settings.audience` matches your endpoint URL exactly, including scheme and path.
-- **Messages decoded incorrectly**: switch the decoder. JSON is the default; use `text` for plain-text payloads, `raw` for binary.
+- **Messages decoded incorrectly**: JSON is the default. For plain-text or binary payloads, switch the decoder to `text` or `raw` and add a `source.before` transformer that turns the payload into an event.
 
 ## Next steps
 

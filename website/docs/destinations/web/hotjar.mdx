@@ -8,6 +8,7 @@ package: '@walkeros/web-destination-hotjar'
 
 import data from '@walkeros/web-destination-hotjar/walkerOS.json';
 import Configuration from '@site/src/components/snippets/_configuration.mdx';
+import Quickstart from '@site/src/components/snippets/_quickstart.mdx';
 
 import WhereThisFits from '@site/src/components/snippets/_where-this-fits.mdx';
 
@@ -36,56 +37,7 @@ SPA state changes.
 
 ## Installation
 
-<CodeSnippet
-  code={`npm install @walkeros/web-destination-hotjar`}
-  language="bash"
-/>
-
-<Tabs groupId="mode">
-  <TabItem value="integrated" label="Integrated" default>
-
-<CodeSnippet
-  code={`import { startFlow } from '@walkeros/collector';
-import { destinationHotjar } from '@walkeros/web-destination-hotjar';
-
-await startFlow({
-  destinations: {
-    hotjar: {
-      code: destinationHotjar,
-      config: {
-        settings: {
-          siteId: 1234567,
-        },
-      },
-    },
-  },
-});`}
-  language="typescript"
-/>
-
-  </TabItem>
-  <TabItem value="bundled" label="Bundled">
-
-Add to your `flow.json` destinations:
-
-<CodeSnippet
-  code={`"destinations": {
-  "hotjar": {
-    "package": "@walkeros/web-destination-hotjar",
-    "config": {
-      "settings": {
-        "siteId": 1234567
-      }
-    }
-  }
-}`}
-  language="json"
-/>
-
-[See bundled mode setup](/docs/getting-started/modes/bundled) | [CLI reference](/docs/apps/cli)
-
-  </TabItem>
-</Tabs>
+<Quickstart data={data} />
 
 <Configuration type="destination" data={data} />
 

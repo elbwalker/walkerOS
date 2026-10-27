@@ -110,6 +110,7 @@ export const destinationLevelInclude: TikTokStepExample = {
         data_color: 'black',
         data_size: 'l',
         data_price: 420,
+        data_currency: 'EUR',
       },
       { event_id: '22222222bbbbbbbb' },
     ],
@@ -292,7 +293,7 @@ export const orderCompleteCompletePayment: TikTokStepExample = {
       'CompletePayment',
       {
         content_type: 'product',
-        value: 555,
+        value: 462,
         currency: 'EUR',
         order_id: '0rd3r1d',
         contents: [

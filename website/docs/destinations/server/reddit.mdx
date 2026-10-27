@@ -7,6 +7,7 @@ package: '@walkeros/server-destination-reddit'
 ---
 import data from '@walkeros/server-destination-reddit/walkerOS.json';
 import Configuration from '@site/src/components/snippets/_configuration.mdx';
+import Quickstart from '@site/src/components/snippets/_quickstart.mdx';
 
 import WhereThisFits from '@site/src/components/snippets/_where-this-fits.mdx';
 
@@ -21,70 +22,26 @@ Server-side event delivery to Reddit's Conversions API v2.0 for enhanced convers
   flowMap={{
     destinations: { default: { label: 'Destination', text: 'Reddit CAPI', highlight: true } },
   }}
-  post={<>Sends events server-side to Reddit's Conversions API using raw HTTP (no SDK). Identity fields (`email`, `external_id`, `ip_address`, `user_agent`, `idfa`, `aaid`) are SHA-256 hashed before sending. Events include a stable `event_metadata.conversion_id` for deduplication with the Reddit Pixel.</>}
+  post={<>Sends events server-side to Reddit's Conversions API using raw HTTP (no SDK). Identity fields (`email`, `external_id`, `ip_address`, `user_agent`, `idfa`, `aaid`) are SHA-256 hashed, as mapped, before sending. Events include a stable `event_metadata.conversion_id` for deduplication with the Reddit Pixel.</>}
 />
 
 ## Installation
 
-<CodeSnippet
-  code={`npm install @walkeros/server-destination-reddit`}
-  language="bash"
-/>
-
-<Tabs groupId="mode">
-  <TabItem value="integrated" label="Integrated" default>
-
-<CodeSnippet
-  code={`import { startFlow } from '@walkeros/collector';
-import { destinationReddit } from '@walkeros/server-destination-reddit';
-
-await startFlow({
-  destinations: {
-    reddit: {
-      code: destinationReddit,
-      config: {
-        settings: {
-          accessToken: 'YOUR_ACCESS_TOKEN',
-          pixelId: 'YOUR_PIXEL_ID',
-        },
-      },
-    },
-  },
-});`}
-  language="typescript"
-/>
-
-  </TabItem>
-  <TabItem value="bundled" label="Bundled">
-
-Add to your `flow.json` destinations:
-
-<CodeSnippet
-  code={`"destinations": {
-  "reddit": {
-    "package": "@walkeros/server-destination-reddit",
-    "import": "destinationReddit",
-    "config": {
-      "settings": {
-        "accessToken": "YOUR_ACCESS_TOKEN",
-        "pixelId": "YOUR_PIXEL_ID"
-      }
-    }
-  }
-}`}
-  language="json"
-/>
-
-[See bundled mode setup](/docs/getting-started/modes/bundled) | [CLI reference](/docs/apps/cli)
-
-  </TabItem>
-</Tabs>
+<Quickstart data={data} />
 
 <Configuration type="destination" data={data} />
+
+## Failures
+
+A response outside the 2xx range, a network error, or no answer within 5 seconds fails the event: the push answers `failed` with the code `transport` (with the HTTP status) or `timeout`, the event goes to the dead-letter queue, and the collector logs one ERROR line. Any 2xx answer counts as delivered: the destination does not read the response body. Without `accessToken` or `pixelId` the destination does not start: every push answers `failed` with the code `config`, and the collector logs `destination init failed`. A rule with `silent: true` sends nothing.
 
 ## Client IP and user agent
 
 The destination sends the client IP as `user.ip_address` and the user agent as `user.user_agent` by default. The `ip` and `userAgent` settings resolve against `{ ingest, event }` and default to `["ingest.ip", "event.user.ip"]` and `["ingest.userAgent", "event.user.userAgent"]`, so they fill in whenever the source provides them (see the `config.ingest` recipe on the [Express source](/docs/sources/server/express#ingest-metadata)). Both are SHA-256 hashed like the other identity fields. A value your mapping sets for `user.ip_address` or `user.user_agent` wins. A value that resolves to nothing is not sent. Set either setting to `false` to turn it off, or to another mapping value to read it elsewhere.
+
+## Consent
+
+The quickstart sets no `config.consent`, so Reddit receives every event, whatever consent the event carries. To send only events with consent, add `consent: { marketing: true }` to `config`, next to `settings` (with several keys listed, one granted key is enough). An event without that consent is skipped or queued, depending on the collector's `consentDenied`. Server flows built by the CLI skip it and count it in `skipped`. With `startFlow` it waits in the destination's queue by default: a later event that carries consent does not release it, and only a `walker consent` command does, which then sends the waiting events of every user at once. Pass `consentDenied: 'skip'` to `startFlow` to skip such events instead (see [Gate a destination with consent](/docs/guides/consent#gate-a-destination-with-consent) and [consent-denied events on a server](/docs/collector#consent-denied-events-on-a-server)).
 
 ## Event mapping
 
@@ -94,14 +51,14 @@ Reddit uses a **rigid taxonomy**. Map walkerOS events to a standard `tracking_ty
 | ------------------ | ---------------------- |
 | `page view`        | `PageVisit`            |
 | `product view`     | `ViewContent`          |
-| `site search`      | `Search`               |
+| `search submit`    | `Search`               |
 | `product add`      | `AddToCart`            |
 | `product wishlist` | `AddToWishlist`        |
 | `order complete`   | `Purchase`             |
 | `form submit`      | `Lead`                 |
 | `user signup`      | `SignUp`               |
 
-Any non-standard name becomes `{ tracking_type: 'Custom', custom_event_name: '<name>' }` automatically. Reddit's AI optimization is trained on the standard events, so prefer them when possible.
+Any non-standard name becomes `{ tracking_type: 'Custom', custom_event_name: '<name>' }` automatically. Prefer a standard type where one fits.
 
 <CodeSnippet
   code={`"mapping": {
@@ -127,27 +84,25 @@ Any non-standard name becomes `{ tracking_type: 'Custom', custom_event_name: '<n
 
 ### event_metadata structure
 
-Unlike Meta's CAPI (which uses `custom_data`) and Pinterest (which also uses `custom_data`), Reddit places conversion details under `event_metadata`. Always map into `event_metadata.map`. Products belong in `event_metadata.products[]` with `{ id, name?, category }`.
-
-### Payload envelope
-
-Reddit wraps events inside `{ data: { events: [...] } }` (nested), unlike Meta/Pinterest's flat `{ data: [...] }`. The destination handles this automatically.
+Reddit takes conversion details under `event_metadata`: map them into `event_metadata.map`. A key mapped at the top level of the data is sent at the top level of the event. Products belong in `event_metadata.products[]` with `{ id, name?, category }`.
 
 ## Hashing
 
-The destination automatically SHA-256 hashes the 6 standard identity fields before sending: `email`, `external_id`, `ip_address`, `user_agent`, `idfa`, `aaid`. Pass raw values and hashing is handled for you.
+The destination SHA-256 hashes these keys of the user object before sending: `email`, `external_id`, `ip_address`, `user_agent`, `idfa`, `aaid`. In a rule's `data` or the destination's `config.data`, map them under `user`; the setting that applies to every event is `settings.user_data`. Map personal data only to these keys.
+
+- **Every other key is sent in clear text.** `uuid`, `opt_out`, `screen_dimensions` and `data_processing_options` are sent as mapped, and so is any other key under `user`: nothing checks the names, so `phone_number` or `em` reaches Reddit unhashed.
+- **`user_data` in `data` (a rule's or `config.data`) is not the user object.** Other conversion API destinations use that name; this one sends it unhashed at the top level of the event, like any other key mapped outside `user`.
+- **Values are hashed exactly as mapped**, without normalization. Normalize them upstream in the format Reddit expects, for example the email trimmed and lowercased.
 
 :::note Different from Meta/Pinterest
 Reddit hashes `ip_address` and `user_agent`, which Meta CAPI and Pinterest CAPI pass through as plaintext. Be sure to pass the raw values, not pre-hashed ones, unless you use `doNotHash`.
 :::
 
-Non-hashable fields pass through as-is: `uuid`, `opt_out`, `screen_dimensions`, `data_processing_options`.
-
 If a value is already hashed or you want to skip hashing for a specific field, use `doNotHash`:
 
 <CodeSnippet
   code={`"settings": {
-  "accessToken": "YOUR_ACCESS_TOKEN",
+  "accessToken": "$secret.REDDIT_ACCESS_TOKEN",
   "pixelId": "YOUR_PIXEL_ID",
   "doNotHash": ["email"]
 }`}
@@ -160,11 +115,11 @@ Each event is sent with `event_metadata.conversion_id` set to the walkerOS event
 
 ## Test mode
 
-Set `test_mode: true` in settings to send `"test_mode": true` as a **top-level boolean in the request body** (not a query parameter, unlike Pinterest). Useful during development.
+Set `test_mode: true` in settings to send `"test_mode": true` as a **top-level boolean in the request body**. Useful during development.
 
 <CodeSnippet
   code={`"settings": {
-  "accessToken": "YOUR_ACCESS_TOKEN",
+  "accessToken": "$secret.REDDIT_ACCESS_TOKEN",
   "pixelId": "YOUR_PIXEL_ID",
   "test_mode": true
 }`}

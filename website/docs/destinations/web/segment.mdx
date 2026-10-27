@@ -8,6 +8,7 @@ package: '@walkeros/web-destination-segment'
 
 import data from '@walkeros/web-destination-segment/walkerOS.json';
 import Configuration from '@site/src/components/snippets/_configuration.mdx';
+import Quickstart from '@site/src/components/snippets/_quickstart.mdx';
 
 import WhereThisFits from '@site/src/components/snippets/_where-this-fits.mdx';
 
@@ -36,56 +37,7 @@ context on every call.
 
 ## Installation
 
-<CodeSnippet
-  code={`npm install @walkeros/web-destination-segment`}
-  language="bash"
-/>
-
-<Tabs groupId="mode">
-  <TabItem value="integrated" label="Integrated" default>
-
-<CodeSnippet
-  code={`import { startFlow } from '@walkeros/collector';
-import { destinationSegment } from '@walkeros/web-destination-segment';
-
-await startFlow({
-  destinations: {
-    segment: {
-      code: destinationSegment,
-      config: {
-        settings: {
-          apiKey: 'YOUR_SEGMENT_WRITE_KEY',
-        },
-      },
-    },
-  },
-});`}
-  language="typescript"
-/>
-
-  </TabItem>
-  <TabItem value="bundled" label="Bundled">
-
-Add to your `flow.json` destinations:
-
-<CodeSnippet
-  code={`"destinations": {
-  "segment": {
-    "package": "@walkeros/web-destination-segment",
-    "config": {
-      "settings": {
-        "apiKey": "YOUR_SEGMENT_WRITE_KEY"
-      }
-    }
-  }
-}`}
-  language="json"
-/>
-
-[See bundled mode setup](/docs/getting-started/modes/bundled) | [CLI reference](/docs/apps/cli)
-
-  </TabItem>
-</Tabs>
+<Quickstart data={data} />
 
 <Configuration type="destination" data={data} />
 

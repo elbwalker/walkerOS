@@ -7,6 +7,7 @@ package: '@walkeros/server-destination-gcp'
 ---
 import data from '@walkeros/server-destination-gcp/walkerOS.json';
 import Configuration from '@site/src/components/snippets/_configuration.mdx';
+import Quickstart from '@site/src/components/snippets/_quickstart.mdx';
 
 import WhereThisFits from '@site/src/components/snippets/_where-this-fits.mdx';
 
@@ -26,61 +27,7 @@ Server-side event streaming to [Google BigQuery](https://cloud.google.com/bigque
 
 ## Installation
 
-<CodeSnippet
-  code={`npm install @walkeros/server-destination-gcp`}
-  language="bash"
-/>
-
-<Tabs groupId="mode">
-  <TabItem value="integrated" label="Integrated" default>
-
-<CodeSnippet
-  code={`import { startFlow } from '@walkeros/collector';
-import { destinationBigQuery } from '@walkeros/server-destination-gcp';
-
-await startFlow({
-  destinations: {
-    bigquery: {
-      code: destinationBigQuery,
-      config: {
-        settings: {
-          projectId: 'YOUR_PROJECT_ID',
-          datasetId: 'YOUR_DATASET_ID',
-          tableId: 'YOUR_TABLE_ID',
-        },
-      },
-    },
-  },
-});`}
-  language="typescript"
-/>
-
-  </TabItem>
-  <TabItem value="bundled" label="Bundled">
-
-Add to your `flow.json` destinations:
-
-<CodeSnippet
-  code={`"destinations": {
-  "bigquery": {
-    "package": "@walkeros/server-destination-gcp",
-    "import": "destinationBigQuery",
-    "config": {
-      "settings": {
-        "projectId": "YOUR_PROJECT_ID",
-        "datasetId": "YOUR_DATASET_ID",
-        "tableId": "YOUR_TABLE_ID"
-      }
-    }
-  }
-}`}
-  language="json"
-/>
-
-[CLI reference](/docs/apps/cli)
-
-  </TabItem>
-</Tabs>
+<Quickstart data={data} export="destinationBigQuery" />
 
 <Configuration type="destination" data={data} />
 
@@ -91,25 +38,38 @@ Add to your `flow.json` destinations:
 
 ## Setup lifecycle
 
-Provision the dataset and table once per environment with the CLI:
+The destination writes to an existing table and never creates one while it
+runs. Provision the dataset and table once per environment: set `config.setup`
+on the destination, then run the CLI.
+
+```json
+"bigquery": {
+  "package": "@walkeros/server-destination-gcp",
+  "import": "destinationBigQuery",
+  "config": {
+    "setup": true,
+    "settings": { "projectId": "YOUR_PROJECT_ID" }
+  }
+}
+```
 
 <CodeSnippet
   code={`walkeros setup destination.bigquery`}
   language="bash"
 />
 
-Output: a narrated `setup: ok destination.bigquery` line. Add `--json` to also
-emit a structured envelope reporting `{ datasetCreated, tableCreated }` for `jq`
-piping. The command is idempotent, safe to re-run.
+Output: a narrated `setup: ok destination.bigquery` line. With `--json` the
+command prints a JSON envelope instead, with the result under `data.result`:
+`{ datasetCreated, tableCreated }`. The command is idempotent, safe to re-run.
 
 `config.setup` controls provisioning:
 
-- omitted or `false`: narrated skip, no provisioning. Operator runs setup
-  explicitly to provision.
+- omitted or `false`: the command provisions nothing and prints
+  `setup: skipped destination.bigquery (config.setup is unset)` (or `is false`).
 - `true`: provision with the defaults below.
-- object matching the `Setup` interface: provision with the declared overrides.
-
-See the `Setup` interface in the package for the full shape.
+- an object with the `Setup` fields `location`, `storageBillingModel`,
+  `partitioning`, `clustering` and `schema`: provision with these overrides;
+  fields you leave out keep the defaults.
 
 ### Defaults
 
@@ -121,6 +81,10 @@ See the `Setup` interface in the package for the full shape.
 | `storageBillingModel` | `PHYSICAL` (cheaper for compressible JSON)   |
 | Partitioning          | Day partitioning on `timestamp`              |
 | Clustering            | `(name, entity, action)`                     |
+
+`datasetId` and `tableId` come from `settings`. The dataset location comes only
+from `config.setup`: `settings.location` is not read, so a dataset in another
+region needs `"setup": { "location": "US" }`.
 
 :::tip Cost optimization
 Physical storage billing charges based on compressed size. Day partitioning and
@@ -152,8 +116,8 @@ permissions. We recommend separating them.
 
 - `bigquery.datasets.create`
 - `bigquery.tables.create`
-- `bigquery.datasets.get` (for drift detection)
-- `bigquery.tables.get`
+- `bigquery.datasets.get` (existence check)
+- `bigquery.tables.get` (existence check and drift detection)
 
 **Runtime service account**, used by the running flow:
 
@@ -214,10 +178,16 @@ See [Workload Identity documentation](https://cloud.google.com/iam/docs/workload
 </Tabs>
 
 :::tip Inline credentials
-Instead of relying on `GOOGLE_APPLICATION_CREDENTIALS`, set service account
-credentials on `config.credentials` (a JSON string or parsed object, `$env`
--resolvable). These merge into the BigQuery client and apply to both the control
-plane (setup, metadata) and the data plane (Storage Write API ingestion).
+Instead of relying on `GOOGLE_APPLICATION_CREDENTIALS`, put the service account
+key on `config.credentials`, next to `settings`, as a `$secret` whose value is
+the key file's JSON: `"credentials": "$secret.BIGQUERY_SA_KEY"`. The destination
+parses the JSON and uses the key for both the control plane (setup, metadata)
+and the data plane (Storage Write API ingestion). If the secret is unset, the
+flow stops at startup; if the value is not a service account key's JSON, the
+destination fails to start with `Invalid credentials JSON`. An unset `$env`
+reference without a default leaves `config.credentials` empty instead: the
+destination then authenticates with Application Default Credentials, possibly as
+another identity, and nothing reports it.
 
 For lower-level control you can still pass auth options through the raw
 `settings.bigquery` passthrough (for example `keyFilename` or `credentials`). A
@@ -228,30 +198,47 @@ credentials.
 
 ## Environment variables
 
-| Variable | Description | Default |
-|----------|-------------|---------|
-| `GCP_PROJECT_ID` | Your GCP project ID | Required |
-| `BQ_DATASET` | BigQuery dataset name | `walkerOS` |
-| `BQ_TABLE` | BigQuery table name | `events` |
-| `BQ_LOCATION` | BigQuery dataset location | `EU` |
-| `GOOGLE_APPLICATION_CREDENTIALS` | Path to service account key | Required (unless using Workload Identity) |
+The destination itself reads no environment variables. The Google client
+libraries read `GOOGLE_APPLICATION_CREDENTIALS` (the path to a service account
+key) when no credentials are configured. To take the project, dataset, table or
+location from the environment, reference the variables in the flow with
+[`$env`](/docs/guides/reference-syntax), as the example flow of the
+[Cloud Run guide](/docs/guides/deploy-gcp-cloudrun) does:
+
+```json
+"config": {
+  "setup": { "location": "$env.BQ_LOCATION:EU" },
+  "settings": {
+    "projectId": "$env.GCP_PROJECT_ID",
+    "datasetId": "$env.BQ_DATASET:walkerOS",
+    "tableId": "$env.BQ_TABLE:events"
+  }
+}
+```
 
 ## Storage Write API (data plane)
 
 The destination uses BigQuery's
 [Storage Write API](https://cloud.google.com/bigquery/docs/write-api) for data
-ingestion. This replaces the legacy `tabledata.insertAll` path.
+ingestion.
 
-- **Cost**: $25/TB after the 2 TiB/month free tier (vs ~$50/TB for the legacy
-  path). Most low-volume deployments fit entirely in the free tier.
-- **Rejected appends**: an append the server rejects (quota, permission, a dropped table) fails the push. Pub/Sub retries only the error codes its SDK retries.
-- **First use**: the writer opens at the first push, not at startup; a missing dataset or table fails that push with the setup hint. BigQuery and Pub/Sub failures are reported once by the collector, and the messages name codes, not row data.
+- **Cost**: Storage Write API ingestion is billed per byte with a monthly free
+  tier; see [BigQuery pricing](https://cloud.google.com/bigquery/pricing).
+- **Rejected appends**: an append the server rejects (quota, permission, a
+  dropped table) fails the push. The failure is marked retryable only for the
+  statuses the Storage Write SDK retries itself.
+- **First use**: the writer opens at the first push, not at startup; a missing
+  dataset or table fails that push with a message to run `walkeros setup` (set
+  `config.setup` first, see [Setup lifecycle](#setup-lifecycle)). The collector
+  logs the first failure of each cause as an ERROR line and counts repeats
+  within a minute in `status.destinations.<id>.failed`; the messages name
+  codes, not row data.
 - **Batching**: `pushBatch` is implemented. Set `config.batch` on the
   destination (a bare number is the debounce `wait` in ms) to flush all events
   in a window as a single `appendRows` call. No `'* *'` wildcard mapping rule is
-  needed. The batch path awaits the write and surfaces row errors: a failed
-  append fails the batch, which routes the events to the dead-letter buffer and
-  the `failed` count rather than being logged and ignored.
+  needed. A failed append fails the whole batch; rows the server rejects inside
+  an accepted append fail on their own. The collector counts every failed event
+  as `failed` and keeps it in its dead-letter buffer.
 
 `walkeros push --simulate destination.<id>` runs offline: the package's mock
 env replaces the Storage Write API client, so nothing reaches BigQuery, and the
@@ -290,15 +277,11 @@ other columns are `NULLABLE` for resilience against partial events.
 There is no `createdAt` column. Use `timestamp` (event time) for partition
 filters.
 
-:::tip Query optimization
-Partitioning by day on `timestamp` and clustering on `(name, entity, action)` reduces
-scan costs for typical analytics queries. Always include a `timestamp` filter.
-:::
-
 ## Custom schema mapping
 
 You can send a custom schema by using the `data` configuration to map specific
-fields. This is useful when you only need a subset of the event data.
+fields. This is useful when you only need a subset of the event data. The
+mapped object is the row, so its keys must match the table's columns.
 
 ### Example: simple schema
 
@@ -325,7 +308,7 @@ await startFlow({
           map: {
             name: 'name',
             id: 'id',
-            data: 'data',
+            data: { fn: (event) => JSON.stringify(event.data) },
             timestamp: 'timestamp',
           },
         },
@@ -355,7 +338,7 @@ await startFlow({
           "map": {
             "name": "name",
             "id": "id",
-            "data": "data",
+            "data": { "fn": "$code:(event) => JSON.stringify(event.data)" },
             "timestamp": "timestamp"
           }
         }
@@ -372,7 +355,7 @@ await startFlow({
 With the corresponding simpler table:
 
 <CodeSnippet
-  code={`CREATE TABLE IF NOT EXISTS \`YOUR_PROJECT.walkeros.events_simple\` (
+  code={`CREATE TABLE IF NOT EXISTS \`YOUR_PROJECT_ID.YOUR_DATASET_ID.events_simple\` (
   name STRING,
   id STRING,
   data STRING,
@@ -380,6 +363,13 @@ With the corresponding simpler table:
 );`}
   language="sql"
 />
+
+The Storage Write API encodes each value for its column type. A `STRING` or
+`JSON` column takes text, so `fn` serializes the object in `data`; an object
+value would fail the push. A `TIMESTAMP` column takes microseconds while the
+event `timestamp` is in milliseconds, so this table keeps it as `INT64`
+milliseconds. A millisecond value mapped into a `TIMESTAMP` column is stored as
+a date in January 1970, and the push still succeeds.
 
 ## Cleanup
 
@@ -389,7 +379,3 @@ To remove BigQuery resources:
 - Remove service account IAM bindings from the dataset
 - Delete the service account
 - Remove any downloaded key files
-
-## Pub/Sub
-
-The same `@walkeros/server-destination-gcp` package also exports `destinationPubSub` for publishing events to a Pub/Sub topic. See the [Pub/Sub destination page](/docs/destinations/server/pubsub) for full settings, mapping, ordering, attributes, setup, and authentication reference.

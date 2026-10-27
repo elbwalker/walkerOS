@@ -8,6 +8,7 @@ package: '@walkeros/web-destination-clarity'
 
 import data from '@walkeros/web-destination-clarity/walkerOS.json';
 import Configuration from '@site/src/components/snippets/_configuration.mdx';
+import Quickstart from '@site/src/components/snippets/_quickstart.mdx';
 
 import WhereThisFits from '@site/src/components/snippets/_where-this-fits.mdx';
 
@@ -35,64 +36,7 @@ identities, session priority, and consent state.
 
 ## Installation
 
-<CodeSnippet
-  code={`npm install @walkeros/web-destination-clarity`}
-  language="bash"
-/>
-
-<Tabs groupId="mode">
-  <TabItem value="integrated" label="Integrated" default>
-
-<CodeSnippet
-  code={`import { startFlow } from '@walkeros/collector';
-import { destinationClarity } from '@walkeros/web-destination-clarity';
-
-await startFlow({
-  destinations: {
-    clarity: {
-      code: destinationClarity,
-      config: {
-        settings: {
-          apiKey: '3t0wlogvdz',
-          consent: {
-            analytics: 'analytics_Storage',
-            marketing: 'ad_Storage',
-          },
-        },
-      },
-    },
-  },
-});`}
-  language="typescript"
-/>
-
-  </TabItem>
-  <TabItem value="bundled" label="Bundled">
-
-Add to your `flow.json` destinations:
-
-<CodeSnippet
-  code={`"destinations": {
-  "clarity": {
-    "package": "@walkeros/web-destination-clarity",
-    "config": {
-      "settings": {
-        "apiKey": "3t0wlogvdz",
-        "consent": {
-          "analytics": "analytics_Storage",
-          "marketing": "ad_Storage"
-        }
-      }
-    }
-  }
-}`}
-  language="json"
-/>
-
-[See bundled mode setup](/docs/getting-started/modes/bundled) | [CLI reference](/docs/apps/cli)
-
-  </TabItem>
-</Tabs>
+<Quickstart data={data} />
 
 <Configuration type="destination" data={data} />
 

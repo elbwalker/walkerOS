@@ -187,8 +187,8 @@ export const ecommerceOrder: Flow.StepExample = {
         {
           map: {
             orderId: 'data.id',
-            grandTotal: 'data.value',
-            tax: 'data.taxes',
+            grandTotal: ['data.total', 'data.value'],
+            tax: 'data.tax',
             shipping: 'data.shipping',
           },
         },
@@ -220,7 +220,7 @@ export const ecommerceOrder: Flow.StepExample = {
         ],
         {
           orderId: '0rd3r1d',
-          grandTotal: 555,
+          grandTotal: 467.22,
           tax: 73.76,
           shipping: 5.22,
         },
@@ -313,7 +313,7 @@ export const customEvent: Flow.StepExample = {
       goalId: 'goal_1',
     },
     data: {
-      set: ['data.name', 'data.position'],
+      set: ['data.name', 'data.slot'],
     },
   },
   out: [
@@ -369,7 +369,7 @@ export const eventWithGoalValue: Flow.StepExample = {
   },
   out: [
     ['window._paq.push', ['trackEvent', 'order', 'complete', '0rd3r1d']],
-    ['window._paq.push', ['trackGoal', 'goal_1', 555]],
+    ['window._paq.push', ['trackGoal', 'goal_1', 462]],
   ],
 };
 
@@ -438,12 +438,12 @@ export const siteSearch: Flow.StepExample = {
   in: createEvent({
     name: 'search submit',
     timestamp: 1700000309,
-    data: { query: 'rucksack', category: 'bags', results: 12 },
+    data: { term: 'rucksack', category: 'bags', results: 12 },
   }),
   mapping: {
     name: 'trackSiteSearch',
     data: {
-      set: ['data.query', 'data.category', 'data.results'],
+      set: ['data.term', 'data.category', 'data.results'],
     },
   },
   out: [['window._paq.push', ['trackSiteSearch', 'rucksack', 'bags', 12]]],

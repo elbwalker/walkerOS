@@ -1,22 +1,11 @@
-import { z } from 'zod';
+import { z, zodToSchema } from '@walkeros/core/dev';
 
 /**
- * Zod schemas for source validation.
- * Use these to validate settings and input.
+ * Settings schema: describes the settings for `walkeros validate`,
+ * walkerOS.json and the docs. Add a key for every setting the source reads;
+ * the source applies the defaults inline.
  */
+export const SettingsSchema = z.object({});
 
-export const SettingsSchema = z.object({
-  validateSignature: z.boolean().optional().default(false),
-  apiKeyHeader: z.string().optional().default('x-api-key'),
-});
-
-export const InputSchema = z.object({
-  event: z.string(),
-  properties: z.record(z.unknown()).optional(),
-  userId: z.string().optional(),
-  timestamp: z.number().optional(),
-});
-
-export const BatchInputSchema = z.object({
-  batch: z.array(InputSchema),
-});
+// JSON Schema for walkerOS.json (`dev.ts` exports `schemas.settings`)
+export const settings = zodToSchema(SettingsSchema);

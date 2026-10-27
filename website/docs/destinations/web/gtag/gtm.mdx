@@ -20,8 +20,9 @@ import Configuration from '@site/src/components/snippets/_configuration.mdx';
 and add third-party integrations to your website, configured within the
 unified gtag destination.
 
-Just want events in GTM without a flow? [walker.js](/docs/getting-started/quickstart/walkerjs) is one
-script tag that pushes every tagged event to the dataLayer, with a complete
+To get events into GTM without a flow, use
+[walker.js](/docs/getting-started/quickstart/walkerjs): one script tag that
+pushes every tagged event to the dataLayer, with a complete
 [GTM setup](/docs/getting-started/quickstart/walkerjs#use-it-in-gtm).
 
 ## Installation
@@ -74,12 +75,29 @@ it is.
 on it. On a destination that also configures `ga4` or `ads`, the same flag
 governs whether those scripts are loaded too.
 
+Consent Mode reaches the container only when the destination declares a consent
+signal. With `loadScript: true`:
+
+- With `consent: { marketing: true }` in `config`, walkerOS pushes the denied
+  `consent default` before `gtm.js`, loads the container once that consent is
+  granted and pushes a `consent update` on every change.
+- With `como_advanced` instead, the denied default goes out before `gtm.js` as
+  the flow starts, the container and the events go out without waiting, and a
+  `consent update` follows every change.
+- With neither, consent commands push nothing into the dataLayer and the
+  container loads as the flow starts.
+
+A container that is already on the page loads before walkerOS starts, so its
+Consent Mode default has to come from the page, set by your CMP or inside the
+container. walkerOS's own default, when it sends one, arrives after the
+container has started.
+
 <Configuration type="destination" data={data} />
 
 ## dataLayer example
 
 A mapped event is pushed to the dataLayer with `event` set to the mapped name
-and the mapped values beside it. The rule selects GTM with an empty `gtm`
-setting.
+and the mapped values beside it. When `settings` configures GA4 and GTM, both
+receive every event the destination gets; a rule cannot leave one of them out.
 
 <StepExample example={data.examples.step.gtmDataLayerPush} />

@@ -27,7 +27,7 @@ export interface Response {
 }
 
 export interface Settings {
-  /** GCP project id. Optional; informational, used in error messages. */
+  /** GCP project id. Optional; the push handler does not read it. */
   projectId?: string;
   /** Decoder for the message data field. Default: 'json'. */
   decoder?: Decoder;

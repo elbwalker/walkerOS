@@ -178,10 +178,54 @@ destination that calls `fetch`, `sdk-env` for a server SDK, `web-sdk` for a web
 SDK started in `init`, `vendor-global` for a vendor script that defines a
 global, or `socket`. A browser profile (`web-sdk`, `vendor-global`) also needs
 the `page` option, imported from `@walkeros/web-core/dev`; without it the test
-fails and names that import. The
+fails and names that import.
+
+Every destination test also passes `minimal`: the package's `examples.minimal`
+(`{ settings: { ... } }`), exported from `src/examples/minimal.ts` (per export:
+`src/<export>/examples/minimal.ts`), with only the settings the schema requires,
+plus any that `init` refuses to start without under the example's `config`. A
+server destination's minimal example maps credential settings to secret names
+in `secrets`, and a web destination that
+loads its script only on request also sets `config: { loadScript: true }`. The
+kit composes the minimal example into the integrated code and the flow file a
+quickstart shows, and requires it to deliver one public example. A package with
+several exports passes `exportName` and `exportExamples` instead; a package
+without a minimal example passes `withoutMinimal: '<reason>'`. A test with
+neither option fails, and so does one whose option disagrees with the published
+file. The
 [conformance test template](https://github.com/elbwalker/walkerOS/blob/main/skills/walkeros-create-destination/templates/simple/conformance.test.ts)
 shows the call. A "one of these settings" rule is stated as `anyOf` in the
 settings schema.
+
+Each failure the destination reports also ships as a step example:
+`public: false`, the `outcome` the push result reports (such as
+`{ status: 'failed', code: 'missing-input' }`) and a `description` of when it
+happens. The package's docs page lists it under "When it fails" with that
+description; a failure example without one fails the docs build. See
+[step examples](/docs/getting-started/flow/step-examples#what-a-package-page-shows-from-its-examples).
+
+Run the failure examples through `runExamples` from `@walkeros/collector/dev`
+in one of the package's tests, for example next to the `conformance` call: it
+compares each example's outcome with the push result. `conformance` does not
+do that for every profile, and never for `http`, so without such a test a
+wrong outcome still passes and is published:
+
+<CodeSnippet
+  code={`import { runExamples } from '@walkeros/collector/dev';
+import { destinationWebhook } from '..';
+import { examples } from '../dev';
+
+it('reports a rejected event', async () => {
+  const { rejectedEvent } = examples.step;
+  await runExamples(
+    'destination',
+    destinationWebhook,
+    { rejectedEvent },
+    { settings: examples.minimal.settings },
+  );
+});`}
+  language="typescript"
+/>
 
 ## The `pushBatch` function (optional)
 
@@ -545,5 +589,8 @@ Packages can export a `hints` record from `src/dev.ts` with short notes that sch
 - [ ] `buildDev()` in tsup.config.ts
 - [ ] `schemas.settings` exported from `src/dev.ts` (per export for multi-export packages)
 - [ ] `dist/walkerOS.json` generated on build
+- [ ] `src/examples/minimal.ts` exported as `examples.minimal` (or `withoutMinimal` with a reason in the conformance test)
+- [ ] A failure example (`public: false`, `outcome`, `description`) for each failure the destination reports
+- [ ] A test that runs the failure examples through `runExamples`
 - [ ] `npm run test` passes
 - [ ] `npm run lint` passes

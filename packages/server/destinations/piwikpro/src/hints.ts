@@ -43,7 +43,7 @@ export const hints: Hint.Hints = {
     ],
   },
   'batch-size': {
-    text: 'Set batch: { size: 100, wait: 1000 } so each flushed batch becomes one bulk request to ppms.php, goal hits included. A bare number such as batch: 500 sets only wait, and the default size cap is 1000 entries. Skipped entries are dropped from the request; a transport failure fails the whole batch.',
+    text: 'Set batch: { size: 100, wait: 1000 } so each flushed batch becomes one bulk request to ppms.php, goal hits included. A bare number such as batch: 500 sets only wait, and the default size cap is 1000 entries. An entry the rule cannot send fails on its own with missing-input and is left out of the request, a silent rule without a goal that names one of the portable methods, or has no name and matches a page view, is left out and counts as delivered, and a transport failure fails the whole batch.',
   },
   'identified-consent': {
     text: 'identified controls identified versus anonymous hits. Absent or true identifies every hit. false makes every hit anonymous: uia=1 and dda=1 are sent, _id and uid are dropped, cip is kept for country-level geolocation. A consent object like { marketing: true } identifies a hit when any listed state is granted, e.g. config.consent: { analytics: true } gates tracking and identified: { marketing: true } gates identification. Do not repeat the identified states in config.consent: a destination needs only one of its config.consent states granted, so next to another state the repeated one lets events through on its own, and as the only state it keeps events without it in the queue, so no anonymous hit is sent.',

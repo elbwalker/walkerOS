@@ -138,12 +138,11 @@ Add the BigQuery destination to `server.json`:
           "package": "@walkeros/server-destination-gcp",
           "import": "destinationBigQuery",
           "config": {
-            "setup": true,
+            "setup": { "location": "EU" },
             "settings": {
               "projectId": "$env.PROJECT_ID",
               "datasetId": "$env.DATASET_ID",
-              "tableId": "$env.TABLE_ID",
-              "location": "EU"
+              "tableId": "$env.TABLE_ID"
             }
           }
         }
@@ -159,7 +158,8 @@ Add the BigQuery destination to `server.json`:
   your GCP project details
 - `$env.PROJECT_ID`, `$env.DATASET_ID` and `$env.TABLE_ID` are read from the
   environment when the flow runs
-- `"setup": true` lets `walkeros setup` create the dataset and table
+- `"setup"` lets `walkeros setup` create the table and the dataset, in the
+  region that `location` names (default `EU`)
 
 ### Deploy Step 2
 
@@ -181,6 +181,12 @@ gcloud run deploy walkeros-demo \
   --port 8080 \
   --set-env-vars PROJECT_ID=$PROJECT_ID,DATASET_ID=$DATASET_ID,TABLE_ID=$TABLE_ID
 ```
+
+The flow sets no `config.credentials`, so the service writes the rows with
+Application Default Credentials, which on Cloud Run are the service's runtime
+service account. Give that account the runtime role listed under
+[Create service accounts](https://www.walkeros.io/docs/destinations/server/gcp#create-service-accounts),
+or deploy with `--service-account`.
 
 ### Verify in BigQuery
 

@@ -48,7 +48,7 @@ export const SettingsSchema = z
       'Accept-Language value, sent as lang. Resolves against { ingest, event }. Default: ["ingest.language", "event.user.language"]. false switches it off.',
     ).optional(),
     pageUrl: InputSchema.describe(
-      'Page URL, sent as url (required by the Tracking API, a hit without it is skipped). Resolves against { ingest, event }. Default: "event.source.url". false switches it off.',
+      'Page URL, sent as url (required by the Tracking API, an event without it fails the push with missing-input). Resolves against { ingest, event }. Default: "event.source.url". false switches it off.',
     ).optional(),
     referrer: InputSchema.describe(
       'Referrer URL, sent as urlref. Resolves against { ingest, event }. Default: "event.source.referrer". false switches it off.',

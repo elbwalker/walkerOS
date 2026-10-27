@@ -14,14 +14,13 @@ import type { Ingest } from './ingest';
 import type { ObserveServer, ObserveSlot, ObserveWeb } from '../observeConnect';
 import type { ObserverFn } from './observer';
 import type { CauseLog } from '../causeLog';
+import type { STEP_TYPES } from '../packageMeta';
+
+/** The kind of a step package: one of `STEP_TYPES`. */
+export type StepType = (typeof STEP_TYPES)[number];
 
 /** Identifies which kind of step a stepId belongs to. */
-export type StepKind =
-  | 'collector'
-  | 'source'
-  | 'transformer'
-  | 'destination'
-  | 'store';
+export type StepKind = 'collector' | StepType;
 
 /**
  * Build a stepId for use as a key in `Status.dropped` /
@@ -33,10 +32,7 @@ export type StepKind =
  * log messages ("collector.queue overflow", "destination.dlq overflow").
  */
 export function stepId(kind: 'collector'): 'collector';
-export function stepId(
-  kind: 'source' | 'transformer' | 'destination' | 'store',
-  id: string,
-): string;
+export function stepId(kind: StepType, id: string): string;
 export function stepId(kind: StepKind, id?: string): string {
   if (kind === 'collector') return 'collector';
   if (!id) {

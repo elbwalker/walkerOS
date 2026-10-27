@@ -34,7 +34,7 @@ npm install @walkeros/server-destination-reddit
           "package": "@walkeros/server-destination-reddit",
           "config": {
             "settings": {
-              "accessToken": "YOUR_ACCESS_TOKEN",
+              "accessToken": "$secret.REDDIT_ACCESS_TOKEN",
               "pixelId": "YOUR_PIXEL_ID"
             }
           }
@@ -44,6 +44,9 @@ npm install @walkeros/server-destination-reddit
   }
 }
 ```
+
+This quick start sets no consent: add `consent: { marketing: true }` to `config`
+before you go live, see the docs.
 
 ## Documentation
 

@@ -125,7 +125,12 @@ export const SettingsSchema = z
       .describe(
         'Browser-tracker functions for bundled mode (newTracker, trackSelfDescribingEvent and the optional others), set with $code: references',
       ),
-    appId: z.string().optional().describe('Application identifier'),
+    appId: z
+      .string()
+      .optional()
+      .describe(
+        'Application identifier, sent as app_id with every event. Default: walkerOS.',
+      ),
     trackerName: z.string().optional().describe('Tracker instance name'),
     platform: z.string().optional().describe('Platform identifier'),
     snowplow: SnowplowSettingsSchema.optional().describe(

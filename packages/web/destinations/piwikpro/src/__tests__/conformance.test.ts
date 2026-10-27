@@ -35,7 +35,8 @@ describe('piwikpro conformance', () => {
       page,
       examples: examples.step,
       schema: schemas.settings,
-      settings,
+      settings: examples.minimal.settings,
+      minimal: examples.minimal,
       env,
       root: path.join(__dirname, '..', '..'),
     });
@@ -49,7 +50,6 @@ describe('piwikpro conformance', () => {
       env,
       page,
       claims: CLAIMS,
-      published: true,
     });
   });
 

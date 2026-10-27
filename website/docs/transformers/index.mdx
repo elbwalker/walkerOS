@@ -7,15 +7,17 @@ sidebar_position: 5
 import { schemas } from '@walkeros/core/dev';
 import { omitSchemaProperties } from '@site/src/utils/schema';
 
-export const transformerConfig = omitSchemaProperties(
-
-  schemas.TransformerSchemas.configJsonSchema,
-  ['settings', 'init', 'mock', 'chainMocks'],
-);
+export const transformerConfig = (({ definitions }) =>
+  omitSchemaProperties({ ...definitions.TransformerConfig, definitions }, [
+    'settings',
+    'init',
+    'mock',
+    'chainMocks',
+  ]))(schemas.TransformerSchemas.configJsonSchema);
 
 # Transformers
 
-Transformers are middleware for **validating**, **enriching**, and **redacting** events in the walkerOS pipeline. Together with [Mapping](/docs/mapping), they give you full control over how events are shaped before reaching destinations.
+Transformers are middleware that validate, enrich, and redact events in the walkerOS pipeline. Together with [Mapping](/docs/mapping), they shape events before they reach destinations.
 
 A transformer step can either run custom logic (via `code` or `package`) or
 act as a **pass-through step**: a step with no `code` and no `package`, where
@@ -60,8 +62,10 @@ for the full vocabulary.
 
 Add a transformer to the `transformers` block of your flow and wire it into the
 pipeline via a source's `next`, the collector's `next`, or a destination's
-`before`. A `stop` in `collector.next` drops the event for every destination; a
-`stop` in a destination's `before` drops it for that destination only. See
+`before`. A transformer that no chain names never runs, and neither
+`walkeros validate` nor the collector reports it. A `stop` in `collector.next`
+drops the event for every destination; a `stop` in a destination's `before`
+drops it for that destination only. See
 [Chain resolution](/docs/getting-started/flow/routing#chain-resolution) and
 [Dropping an event with `stop`](/docs/getting-started/flow/routing#dropping-an-event-with-stop).
 
@@ -70,13 +74,12 @@ pipeline via a source's `next`, the collector's `next`, or a destination's
 import { transformerFingerprint } from '@walkeros/server-transformer-fingerprint';
 
 await startFlow({
+  next: 'fingerprint',
   transformers: {
     fingerprint: {
       code: transformerFingerprint,
       config: {
-        settings: {
-          /* ... */
-        },
+        settings: { salt: process.env.FINGERPRINT_SALT },
       },
     },
   },
@@ -101,7 +104,7 @@ The `mapping` field uses the same `Mapping.Config` shape on destinations and
 transformer steps, but the semantic differs by position. On a destination,
 `mapping` shapes the vendor payload. On a transformer step, it mutates the
 event itself. Only `policy` and a rule's `condition`, `policy`, `name` and
-`ignore` apply there; every other field does nothing and is named in a
+`ignore` apply there; every other field does nothing and is named in
 one ERROR line at registration, and `walkeros validate` rejects them
 (`MAPPING_NO_OP`).
 :::
@@ -120,6 +123,6 @@ step (forgot the `cache:` wrapper).
 
 ## Next steps
 
-* **[Cache](../collector/cache)** - Cache pure handler results (integrated collector mode)
+* **[Cache](../collector/cache)** - Cache pure handler results
 * **[State](../collector/state)** - Declarative store get/set without `$code:`
 * **[Create your own](./create-your-own)** - Custom transformer guide

@@ -26,7 +26,9 @@ export const GA4SettingsSchema = z.object({
     .optional(),
   pageview: z
     .boolean()
-    .describe('Enable automatic pageview tracking (like true)')
+    .describe(
+      "Set to false to stop gtag's own page_view on config (sends send_page_view: false), so a pushed page view is not counted twice. Page views from the web stream's enhanced measurement of history changes still fire (default: true)",
+    )
     .optional(),
   scriptSrc: z
     .string()
@@ -115,7 +117,9 @@ export const AdsSettingsSchema = z.object({
   currency: z
     .string()
     .length(3)
-    .describe('Currency code (ISO 4217, e.g., USD, EUR)')
+    .describe(
+      'ISO 4217 currency of every conversion (like USD). A currency in the mapped data replaces it (default: EUR)',
+    )
     .optional(),
   data: z
     .any()
@@ -141,7 +145,9 @@ export const GTMSettingsSchema = z.object({
     .optional(),
   domain: z
     .string()
-    .describe('Custom GTM domain for script loading')
+    .describe(
+      'URL the container ID is appended to, up to and including ?id= (like https://gtm.example.com/gtm.js?id=; default: https://www.googletagmanager.com/gtm.js?id=)',
+    )
     .optional(),
   data: z
     .any()

@@ -16,7 +16,9 @@ export const SetupSchema = z.object({
     .optional(),
   ackDeadlineSeconds: z
     .number()
-    .describe('Subscription ack deadline in seconds. Default: 60.')
+    .describe(
+      "Subscription ack deadline in seconds. Unset: Pub/Sub's default (10).",
+    )
     .optional(),
   messageRetentionDuration: z
     .object({

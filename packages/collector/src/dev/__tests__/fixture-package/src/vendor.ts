@@ -46,6 +46,28 @@ export const vendorGlobal: Destination.Instance<Types> = {
   },
 };
 
+/** The page document of `scriptPage`: it records the scripts inserted. */
+export interface ScriptDocument {
+  insert(marked: boolean): void;
+}
+
+function isScriptDocument(value: unknown): value is ScriptDocument {
+  return isObject(value) && typeof value.insert === 'function';
+}
+
+/**
+ * Inserts its vendor script, marked as loadVendor marks it, into the page's
+ * document only with `config.loadScript`, as the linkedin destination does.
+ */
+export const scriptLoading: Destination.Instance<Types> = {
+  ...vendorGlobal,
+  type: 'script-loading',
+  init: ({ config, env }) => {
+    const document = 'document' in env ? env.document : undefined;
+    if (config.loadScript && isScriptDocument(document)) document.insert(true);
+  },
+};
+
 /**
  * Starts its vendor SDK in `init` and awaits it, as fullstory's `fs.init`;
  * a failed start throws `vendor-not-ready`. It requires marketing consent,

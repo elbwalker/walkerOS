@@ -58,6 +58,7 @@ export const destinationLevelInclude: MixpanelStepExample = {
         data_color: 'black',
         data_size: 'l',
         data_price: 420,
+        data_currency: 'EUR',
       },
     ],
   ],

@@ -2,7 +2,7 @@ import { z } from '@walkeros/core/dev';
 
 /**
  * Standard Snapchat Conversions API event names (UPPERCASE).
- * https://businesshelp.snapchat.com/s/article/capi-parameters
+ * https://developers.snap.com/api/marketing-api/Conversions-API/Parameters
  */
 export const StandardEventNameSchema = z.union([
   z.enum([

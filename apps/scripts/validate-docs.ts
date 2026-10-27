@@ -6,8 +6,13 @@
 
 import { existsSync, readFileSync } from 'fs';
 import { glob } from 'glob';
-import { join, relative } from 'path';
-import { schemas } from '@walkeros/core/dev';
+import { dirname, join, relative } from 'path';
+import { getUnknownStepKeys, type Flow, type StepType } from '@walkeros/core';
+import {
+  MINIMAL_EXAMPLE_FILE,
+  schemas,
+  validateFlowStructure,
+} from '@walkeros/core/dev';
 import {
   flowCompleteFeatures,
   resolvePointer,
@@ -188,21 +193,38 @@ function cookTemplateLiteral(raw: string): string {
 // flow.json block must be parsed on its own, and a `--simulate` finding wants
 // the line it sits on. Matches the same two forms extractCodeRegions does
 // (fenced ``` blocks and `<CodeSnippet code={`...`}/>` template literals) so the
-// two stay consistent about what counts as code.
-export type CodeBlock = { code: string; line: number };
+// two stay consistent about what counts as code. `language` is the fence's
+// info word or the CodeSnippet's `language` attribute.
+export type CodeBlock = { code: string; line: number; language?: string };
 
 export function extractCodeBlocks(content: string): CodeBlock[] {
   const blocks: CodeBlock[] = [];
-  const fenceRe = /```[\w-]*\n([\s\S]*?)```/g;
+  const lineOf = (index: number) => content.slice(0, index).split('\n').length;
+  const fenceRe = /```([\w-]*)\n([\s\S]*?)```/g;
+  let m: RegExpExecArray | null;
+  while ((m = fenceRe.exec(content)) !== null) {
+    blocks.push({
+      code: m[2],
+      line: lineOf(m.index),
+      ...(m[1] ? { language: m[1] } : {}),
+    });
+  }
   const snippetRe = /code=\{`([\s\S]*?)`\}/g;
-  for (const re of [fenceRe, snippetRe]) {
-    let m: RegExpExecArray | null;
-    while ((m = re.exec(content)) !== null) {
-      blocks.push({
-        code: re === snippetRe ? cookTemplateLiteral(m[1]) : m[1],
-        line: content.slice(0, m.index).split('\n').length,
-      });
-    }
+  while ((m = snippetRe.exec(content)) !== null) {
+    const after = m.index + m[0].length;
+    const start = content.lastIndexOf('<CodeSnippet', m.index);
+    const head = start === -1 ? '/>' : content.slice(start, m.index);
+    const end = content.indexOf('/>', after);
+    const attributes =
+      head.includes('/>') || end === -1
+        ? ''
+        : `${head}${content.slice(after, end)}`;
+    const language = /\blanguage="([\w-]+)"/.exec(attributes)?.[1];
+    blocks.push({
+      code: cookTemplateLiteral(m[1]),
+      line: lineOf(m.index),
+      ...(language ? { language } : {}),
+    });
   }
   return blocks;
 }
@@ -387,76 +409,299 @@ function checkRecipeProof(): void {
   }
 }
 
-// A flow.json shown in the docs must actually be a valid Flow.Config, otherwise
-// a copy-paste reader hits an error that never surfaced in review. We reuse the
-// canonical validator from core (schemas.validateFlowConfig, the same code path
-// the CLI and MCP use) rather than re-deriving the schema here, so the gate can
-// never drift from the real contract. Only ERRORS fail the build; the
-// validator's reference WARNINGS (unknown $var, $env casing, ...) are advisory
-// and expected in illustrative snippets.
+// A flow.json shown in the docs must be valid, fragments included, otherwise a
+// copy-paste reader hits an error that never surfaced in review. Every block
+// runs through core's own validators (schemas.validateFlowConfig, then
+// validateFlowStructure once the schema holds, the order `walkeros validate`
+// runs them in), so the gate cannot drift from the real contract. Only their
+// ERRORS fail; reference WARNINGS (unknown $var, $env casing, ...) are
+// advisory in illustrative snippets. Package settings are not checked here:
+// that needs the package's published settings schema, which `walkeros
+// validate` reads, so a snippet naming a package is counted as schema-level.
 //
-// Qualifying-block rule: a block is treated as a full flow config only when it
-// carries a top-level "version": 4 and a "flows" key. Such a block that fails
-// JSON.parse is a broken example (ERROR); fragments that lack those top-level
-// keys are skipped (they are partial illustrations, not runnable configs).
-//
-// Version scoping: the canonical validator governs v4 configs (its schema pins
-// version === 4), so this check only judges blocks that declare version 4. A
-// snippet declaring another version (e.g. the v3 "before" block in the
-// migrating/v3-to-v4 guide, immediately followed by its valid v4 "after" block)
-// is intentionally an older-schema config and is out of this validator's
-// jurisdiction; validating it against the v4 schema would be a category error.
-// This is a scope boundary, not a weakened check: genuinely broken or invalid
-// v4 configs still fail.
-type SchemaFinding = { line: number; path: string; message: string };
+// What counts as a flow snippet, read from a JSON object block (braces added
+// when the block starts at a key, the Bundled-tab shape):
+// - a flow file, or a part of its root (`contract`, `variables`): checked as
+//   a v4 file, with an empty `default` flow when it shows none;
+// - a part of one flow (`destinations`, `sources`, `config` with a
+//   `platform`, ...): checked inside a v4 flow skeleton on the platform the
+//   fragment or the page names;
+// - on a page whose frontmatter names a step package, that step under its
+//   name, a part of the step (`config`, `next`, ...) or of its config
+//   (`mapping`, `settings`, ...): checked as that package's step inside the
+//   skeleton.
+// A block declaring "version": 3 is an older-schema example (the "before"
+// side of the migration guide) and is counted, not checked. Any other JSON is
+// not a flow part and is counted as skipped. A `json` block that starts at a
+// flow or root key but does not parse is a broken example and fails; any
+// other `json` block that does not parse is counted as skipped.
+type SchemaFinding = {
+  line: number;
+  path: string;
+  message: string;
+  fragment: boolean;
+};
 
-export function findFlowJsonSchemaIssues(content: string): SchemaFinding[] {
-  const findings: SchemaFinding[] = [];
+export type FlowSnippetReport = {
+  findings: SchemaFinding[];
+  /** Blocks run through core's validators. */
+  checked: number;
+  /** Of them, fragments checked inside the skeleton. */
+  fragments: number;
+  /** Of them, blocks naming a package whose settings were not checked. */
+  schemaLevel: number;
+  skippedVersion3: number;
+  /** JSON blocks that are not a flow part, unparsed `json` blocks included. */
+  skipped: number;
+};
+
+const STEPS = {
+  source: {
+    section: 'sources',
+    kind: 'Source',
+    config: schemas.SourceSchemas.ConfigSchema,
+  },
+  transformer: {
+    section: 'transformers',
+    kind: 'Transformer',
+    config: schemas.TransformerSchemas.ConfigSchema,
+  },
+  destination: {
+    section: 'destinations',
+    kind: 'Destination',
+    config: schemas.DestinationSchemas.ConfigSchema,
+  },
+  store: {
+    section: 'stores',
+    kind: 'Store',
+    config: schemas.StoreSchemas.ConfigSchema,
+  },
+} as const satisfies Record<StepType, unknown>;
+
+function isStepType(value: unknown): value is StepType {
+  return (
+    typeof value === 'string' &&
+    Object.prototype.hasOwnProperty.call(STEPS, value)
+  );
+}
+
+/** The platform a page's path names, and the step its frontmatter names. */
+export type FlowSnippetPage = {
+  platform?: 'web' | 'server';
+  step?: { type: StepType; package: string };
+};
+
+/** A workspace package: its folder and its package.json `walkerOS.type`. */
+type WorkspacePackage = { dir: string; type?: string };
+
+function workspacePackages(): Map<string, WorkspacePackage> {
+  const packages = new Map<string, WorkspacePackage>();
+  for (const file of glob.sync('packages/**/package.json', {
+    cwd: ROOT,
+    ignore: ['**/node_modules/**', '**/dist/**', '**/__tests__/**'],
+    absolute: true,
+  })) {
+    const pkg: unknown = JSON.parse(readFileSync(file, 'utf-8'));
+    if (!isObject(pkg) || typeof pkg.name !== 'string') continue;
+    const type = isObject(pkg.walkerOS) ? pkg.walkerOS.type : undefined;
+    packages.set(pkg.name, {
+      dir: dirname(file),
+      ...(typeof type === 'string' ? { type } : {}),
+    });
+  }
+  return packages;
+}
+
+export function flowSnippetPage(
+  file: string,
+  content: string,
+  packages: Map<string, WorkspacePackage>,
+): FlowSnippetPage {
+  const platform = /\/(web|server)\//.exec(file)?.[1];
+  const name = frontmatterPackage(content);
+  const type = name ? packages.get(name)?.type : undefined;
+  return {
+    ...(platform === 'web' || platform === 'server' ? { platform } : {}),
+    ...(name && isStepType(type) ? { step: { type, package: name } } : {}),
+  };
+}
+
+const ROOT_KEYS = Object.keys(schemas.FlowJsonSchema.shape);
+const FLOW_KEYS = Object.keys(schemas.FlowSchema.shape);
+
+/** A parsed Flow.Json shape, for the structure checks after the schema held. */
+function isFlowJson(value: unknown): value is Flow.Json {
+  return isObject(value) && 'version' in value && isObject(value.flows);
+}
+
+/** A flow part inside a v4 skeleton, on the page's platform unless its own. */
+function inFlow(
+  flow: Record<string, unknown>,
+  page: FlowSnippetPage,
+): Record<string, unknown> {
+  const own = isObject(flow.config) ? flow.config : undefined;
+  const config =
+    own || page.platform
+      ? { ...(page.platform ? { platform: page.platform } : {}), ...own }
+      : undefined;
+  return {
+    version: 4,
+    flows: { default: config ? { ...flow, config } : flow },
+  };
+}
+
+type Snippet =
+  | { doc: Record<string, unknown>; fragment: boolean }
+  | { skip: 'version3' | 'other' };
+
+function flowSnippet(value: unknown, page: FlowSnippetPage): Snippet {
+  if (!isObject(value) || Object.keys(value).length === 0)
+    return { skip: 'other' };
+  const keys = Object.keys(value);
+  const within = (known: string[]) => keys.every((key) => known.includes(key));
+  if (value.version === 3) return { skip: 'version3' };
+  if (within(ROOT_KEYS))
+    return {
+      doc: { ...inFlow({}, page), ...value },
+      fragment: value.version !== 4 || !('flows' in value),
+    };
+  // A `config` alone is a flow's when it names the platform, else a step's.
+  const stepConfig =
+    keys.length === 1 && isObject(value.config) && !value.config.platform;
+  if (within(FLOW_KEYS) && !stepConfig)
+    return { doc: inFlow(value, page), fragment: true };
+  if (page.step) {
+    const { section, kind, config } = STEPS[page.step.type];
+    const [name] = keys;
+    const entry = keys.length === 1 ? value[name] : undefined;
+    if (isObject(entry) && entry.package === page.step.package)
+      return { doc: inFlow({ [section]: value }, page), fragment: true };
+    const step =
+      getUnknownStepKeys(value, kind).length === 0
+        ? value
+        : within(Object.keys(config.shape))
+          ? { config: value }
+          : undefined;
+    if (step)
+      return {
+        doc: inFlow(
+          { [section]: { step: { package: page.step.package, ...step } } },
+          page,
+        ),
+        fragment: true,
+      };
+  }
+  return { skip: 'other' };
+}
+
+/** Whether a checked flow names a package, whose settings are not checked. */
+function namesPackage(doc: Record<string, unknown>): boolean {
+  if (!isObject(doc.flows)) return false;
+  return Object.values(doc.flows).some(
+    (flow) =>
+      isObject(flow) &&
+      Object.values(STEPS).some(({ section }) => {
+        const steps = flow[section];
+        return (
+          isObject(steps) &&
+          Object.values(steps).some(
+            (step) => isObject(step) && typeof step.package === 'string',
+          )
+        );
+      }),
+  );
+}
+
+function flowIssues(doc: Record<string, unknown>): SchemaFinding[] {
+  const result = schemas.validateFlowConfig(JSON.stringify(doc, null, 2));
+  const issues = result.errors.map((e) => ({
+    path: e.path ?? 'root',
+    message: e.message,
+  }));
+  if (issues.length === 0 && isFlowJson(doc))
+    for (const e of validateFlowStructure(doc).errors)
+      issues.push({ path: e.path, message: e.message });
+  return issues.map((issue) => ({ ...issue, line: 0, fragment: false }));
+}
+
+export function findFlowJsonSchemaIssues(
+  content: string,
+  page: FlowSnippetPage = {},
+): FlowSnippetReport {
+  const report: FlowSnippetReport = {
+    findings: [],
+    checked: 0,
+    fragments: 0,
+    schemaLevel: 0,
+    skippedVersion3: 0,
+    skipped: 0,
+  };
   for (const block of extractCodeBlocks(content)) {
     const trimmed = block.code.trim();
-    // Cheap pre-filter: only object-shaped blocks that declare a top-level
-    // "version": 4 alongside "flows" can be a full v4 flow config. The
-    // refinement (version is genuinely the OWN top-level key) happens after
-    // parsing; non-v4 configs are dropped here.
-    if (!trimmed.startsWith('{')) continue;
-    if (!/"version"\s*:\s*4\b/.test(trimmed) || !trimmed.includes('"flows"'))
-      continue;
+    const braced = trimmed.startsWith('"') ? `{${trimmed}}` : trimmed;
+    if (!braced.startsWith('{')) continue;
 
     let parsed: unknown;
     try {
-      parsed = JSON.parse(trimmed);
+      parsed = JSON.parse(braced);
     } catch {
-      // Broken JSON in a block that reads as a full v4 flow config: run it
-      // through the canonical validator so the message locates the syntax error.
-      for (const e of schemas.validateFlowConfig(trimmed).errors) {
-        findings.push({
+      // Broken JSON in a block that reads as a full v4 config, or a json
+      // block that starts at a flow or root key: run it through the
+      // canonical validator so the message locates the syntax error.
+      const first = /^\{\s*"([^"]+)"\s*:/.exec(braced)?.[1] ?? '';
+      const fullConfig =
+        /"version"\s*:\s*4\b/.test(trimmed) && trimmed.includes('"flows"');
+      const flowPart =
+        block.language === 'json' &&
+        (FLOW_KEYS.includes(first) || ROOT_KEYS.includes(first));
+      if (!fullConfig && !flowPart) {
+        if (block.language === 'json') report.skipped++;
+        continue;
+      }
+      report.checked++;
+      if (!fullConfig) report.fragments++;
+      for (const e of schemas.validateFlowConfig(braced).errors)
+        report.findings.push({
           line: block.line,
           path: e.path ?? 'root',
           message: e.message,
+          fragment: !fullConfig,
         });
-      }
       continue;
     }
-    // Skip fragments (tokens nested, not top-level) and non-v4 configs (the
-    // pre-filter can match a nested "version": 4 inside a differently-versioned
-    // block).
-    if (!isObject(parsed) || parsed.version !== 4 || !('flows' in parsed))
+
+    const snippet = flowSnippet(parsed, page);
+    if ('skip' in snippet) {
+      if (snippet.skip === 'version3') report.skippedVersion3++;
+      else report.skipped++;
       continue;
-    for (const e of schemas.validateFlowConfig(trimmed).errors) {
-      findings.push({
+    }
+    report.checked++;
+    if (snippet.fragment) report.fragments++;
+    if (namesPackage(snippet.doc)) report.schemaLevel++;
+    for (const issue of flowIssues(snippet.doc))
+      report.findings.push({
+        ...issue,
         line: block.line,
-        path: e.path ?? 'root',
-        message: e.message,
+        fragment: snippet.fragment,
       });
-    }
   }
-  return findings;
+  return report;
 }
 
-// Schema validity is universal (unlike Task 2's page-local coherence), so this
-// runs over the whole docs tree. The Examples-group recipe pages each carry one
-// full flow.json and are validated here automatically.
-function checkFlowJsonSnippets(): void {
+// Schema validity is universal (unlike the page-local coherence checks), so
+// this runs over the whole docs tree.
+function checkFlowJsonSnippets(
+  packages: Map<string, WorkspacePackage>,
+): FlowSnippetReport {
+  const total: FlowSnippetReport = {
+    findings: [],
+    checked: 0,
+    fragments: 0,
+    schemaLevel: 0,
+    skippedVersion3: 0,
+    skipped: 0,
+  };
   const files = glob.sync('website/docs/**/*.mdx', {
     cwd: ROOT,
     ignore: ['**/node_modules/**', '**/dist/**'],
@@ -464,15 +709,28 @@ function checkFlowJsonSnippets(): void {
   });
   for (const abs of files) {
     const content = readFileSync(abs, 'utf-8');
-    for (const finding of findFlowJsonSchemaIssues(content)) {
+    const file = relative(ROOT, abs);
+    const report = findFlowJsonSchemaIssues(
+      content,
+      flowSnippetPage(file, content, packages),
+    );
+    total.checked += report.checked;
+    total.fragments += report.fragments;
+    total.schemaLevel += report.schemaLevel;
+    total.skippedVersion3 += report.skippedVersion3;
+    total.skipped += report.skipped;
+    for (const finding of report.findings) {
       issues.push({
-        file: relative(ROOT, abs),
+        file,
         line: finding.line,
         severity: 'error',
-        message: `flow.json snippet invalid (${finding.path}): ${finding.message}`,
+        message: finding.fragment
+          ? `flow.json fragment invalid, checked inside a v4 flow (${finding.path}): ${finding.message}`
+          : `flow.json snippet invalid (${finding.path}): ${finding.message}`,
       });
     }
   }
+  return total;
 }
 
 // The getting-started surface (plus the MCP app page) is the open/free
@@ -975,6 +1233,129 @@ export function findHandWrittenFlowSnippets(content: string): number[] {
     .map(({ line }) => line);
 }
 
+/** The `## Installation` section of a page: its heading line and last line. */
+function installationSection(
+  content: string,
+): { heading: number; last: number } | undefined {
+  const lines = blankCode(content).split('\n');
+  const heading = lines.findIndex((line) => /^##\s+Installation\b/.test(line));
+  if (heading === -1) return undefined;
+  const next = lines.findIndex(
+    (line, index) => index > heading && /^##\s/.test(line),
+  );
+  return { heading: heading + 1, last: next === -1 ? lines.length : next };
+}
+
+// A step page renders its install line, integrated code and flow under
+// `## Installation` from the package's tested minimal example
+// (<Quickstart data={data} />). Once the package has one, a hand-written copy
+// there drifts from the tested one: an install snippet, a `startFlow` snippet
+// or a Bundled tab. Feature examples under other headings stay hand-written.
+export function findHandWrittenQuickstart(
+  content: string,
+  hasMinimal: boolean,
+): number[] {
+  const section = installationSection(content);
+  if (!hasMinimal || !section) return [];
+  const inSection = (line: number) =>
+    line > section.heading && line <= section.last;
+  const lines = extractCodeBlocks(content)
+    .filter(
+      ({ code }) =>
+        /^\s*npm (?:install|i)\s/.test(code) || code.includes('startFlow('),
+    )
+    .map(({ line }) => line);
+  blankCode(content)
+    .split('\n')
+    .forEach((line, index) => {
+      if (/<TabItem\b[^>]*\bvalue="bundled"/.test(line)) lines.push(index + 1);
+    });
+  return [...new Set(lines.filter(inSection))].sort((a, b) => a - b);
+}
+
+// A page whose package has a minimal example renders it under
+// `## Installation`: the heading's line when the section renders no
+// <Quickstart>, line 1 when the page has no Installation section.
+export function findMissingQuickstart(
+  content: string,
+  hasMinimal: boolean,
+): number[] {
+  if (!hasMinimal) return [];
+  const section = installationSection(content);
+  if (!section) return [1];
+  const rendered = blankCode(content)
+    .split('\n')
+    .slice(section.heading, section.last)
+    .some((line) => /<Quickstart\b/.test(line));
+  return rendered ? [] : [section.heading];
+}
+
+/** The `package:` of a page's frontmatter. */
+function frontmatterPackage(content: string): string | undefined {
+  const block = /^---\n([\s\S]*?)\n---/.exec(content)?.[1];
+  return block
+    ? /^package:\s*['"]?([^'"\s]+)['"]?\s*$/m.exec(block)?.[1]
+    : undefined;
+}
+
+// The frontmatter `package:` and the walkerOS.json a page imports name the
+// same package, so a block rendered from that data shows the page's package.
+export function findPackageMismatch(content: string): number[] {
+  const name = frontmatterPackage(content);
+  if (!name) return [];
+  const lines: number[] = [];
+  blankCode(content)
+    .split('\n')
+    .forEach((line, index) => {
+      const imported =
+        /^\s*import\b.*\bfrom\s+['"](.+)\/walkerOS\.json['"]/.exec(line)?.[1];
+      if (imported && imported !== name) lines.push(index + 1);
+    });
+  return lines;
+}
+
+// A package has a minimal example when its examples hold one in
+// `examples/minimal.ts` (per export: `src/<export>/examples/minimal.ts`).
+// Read from the workspace sources, so the check needs no build.
+function checkQuickstartPages(packages: Map<string, WorkspacePackage>): void {
+  for (const abs of glob.sync(`${DOCS_DIR}/**/*.mdx`, {
+    cwd: ROOT,
+    ignore: ['**/node_modules/**'],
+    absolute: true,
+  })) {
+    const content = readFileSync(abs, 'utf-8');
+    const file = relative(ROOT, abs);
+    for (const line of findPackageMismatch(content))
+      issues.push({
+        file,
+        line,
+        severity: 'error',
+        message: `the imported walkerOS.json is not the frontmatter package ${frontmatterPackage(content)}, so rendered blocks would show another package`,
+      });
+    const name = frontmatterPackage(content);
+    const dir = name ? packages.get(name)?.dir : undefined;
+    const hasMinimal =
+      dir !== undefined &&
+      glob.sync(`src/**/${MINIMAL_EXAMPLE_FILE}`, { cwd: dir }).length > 0;
+    for (const line of findHandWrittenQuickstart(content, hasMinimal))
+      issues.push({
+        file,
+        line,
+        severity: 'error',
+        message:
+          'a hand-written setup snippet drifts from the tested minimal example: render <Quickstart data={data} /> under ## Installation instead',
+      });
+    for (const line of findMissingQuickstart(content, hasMinimal))
+      issues.push({
+        file,
+        line,
+        severity: 'error',
+        message:
+          'the package has a tested minimal example, but ## Installation does not render it: add <Quickstart data={data} />',
+      });
+  }
+}
+
 // FlowSlice and FlowExample are not components: the remark plugin
 // website/src/remark/flow-snippets.ts resolves them at build time, so a page
 // never imports them.
@@ -1183,9 +1564,15 @@ async function main() {
   checkGa4MappingSnippet();
   checkSimulateKeyResolution();
   checkRecipeProof();
-  checkFlowJsonSnippets();
+  const packages = workspacePackages();
+  const snippets = checkFlowJsonSnippets(packages);
   checkBoundaryRegister();
   checkFlowCompleteDocs();
+  checkQuickstartPages(packages);
+
+  console.log(
+    `Flow snippets: ${snippets.checked} checked (${snippets.fragments} fragments inside a v4 flow), ${snippets.schemaLevel} schema-level only (package settings are checked by walkeros validate, not here), ${snippets.skippedVersion3} version 3 skipped, ${snippets.skipped} JSON blocks that are not a flow part skipped\n`,
+  );
 
   const errors = issues.filter((i) => i.severity === 'error');
   const warnings = issues.filter((i) => i.severity === 'warning');

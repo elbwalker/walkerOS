@@ -134,7 +134,7 @@ export const setUserProperties: FullStoryStepExample = {
   out: [
     [
       'fullstory.setProperties',
-      { type: 'user', properties: { revenue: 555, currency: 'EUR' } },
+      { type: 'user', properties: { revenue: 462, currency: 'EUR' } },
     ],
     ['fullstory.trackEvent', { name: 'Purchase', properties: {} }],
   ],
@@ -326,11 +326,11 @@ export const silentRule: FullStoryStepExample = {
   out: [],
 };
 
-/** The FullStory SDK is unreachable: its init fails, so the push reports it. */
+/** The FullStory SDK throws while it starts, so the push reports it. */
 export const fullstoryUnreachable: FullStoryStepExample = {
   public: false,
   description:
-    'The FullStory SDK fails, so the destination does not start: the push fails with vendor-not-ready, retryable, and the event is in the DLQ.',
+    'The FullStory SDK throws while it starts, so the destination does not start and the push can be retried. A blocked or unreachable fs.js script throws nothing, so it is not reported.',
   in: getEvent('product view', { timestamp: 1700000121 }),
   respond: { error: 'network' },
   out: [],

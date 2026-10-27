@@ -1,5 +1,6 @@
-import type { WalkerOS, Elb, Collector, Source } from '@walkeros/core';
-import { createMockLogger } from '@walkeros/core';
+import type { WalkerOS, Elb, Source } from '@walkeros/core';
+import { createIngest, createMockLogger } from '@walkeros/core';
+import { startFlow } from '@walkeros/collector';
 import { sourceCmpName } from '../index';
 import type { Types, CmpConsent, CmpAPI, CmpWindow } from '../types';
 
@@ -91,19 +92,23 @@ export async function createCmpSource(
   mockElb: Elb.Fn,
   config?: Partial<Source.Config<Types>>,
 ): Promise<Source.Instance<Types>> {
+  // The source never reads its collector; a real one stands in for a stub.
+  const { collector } = await startFlow({ run: false });
+  const env: Types['env'] = {
+    push: mockElb,
+    command: mockElb,
+    elb: mockElb,
+    window: mockWindow, // MockWindow extends the narrowed CmpWindow: no cast
+    logger: createMockLogger(),
+  };
   const source = await sourceCmpName({
-    collector: {} as Collector.Instance,
+    collector,
     config: config || {},
-    env: {
-      push: mockElb,
-      command: mockElb,
-      elb: mockElb,
-      window: mockWindow, // MockWindow extends the narrowed CmpWindow — no cast
-      logger: createMockLogger(),
-    },
+    env,
     id: 'test-cmp-source',
     logger: createMockLogger(),
-    withScope: async (_r, _resp, body) => body({} as never),
+    withScope: async (_r, respond, body) =>
+      body({ ...env, ingest: createIngest('test-cmp-source'), respond }),
   });
   // Adapter setup (listeners + static read) runs in init(), not the factory.
   await source.init?.();

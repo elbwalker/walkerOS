@@ -2,7 +2,7 @@ import * as https from 'https';
 import { StepError } from '@walkeros/core';
 import type { Destination } from '@walkeros/core';
 
-type Settings = { url?: string };
+type Settings = { url?: string; siteId?: string };
 type Types = Destination.Types<Settings>;
 
 function requireUrl(config: Destination.Config<Types>): string {
@@ -32,6 +32,23 @@ export const good: Destination.Instance<Types> = {
   push: async (event, { config, rule }) => {
     if (rule?.silent) return;
     await post(requireUrl(config), JSON.stringify({ name: event.name }));
+  },
+};
+
+/**
+ * Needs settings siteId only to load its script, as matomo does: init
+ * refuses config.loadScript without it, and its schema keeps it optional
+ * (item 12).
+ */
+export const siteScript: Destination.Instance<Types> = {
+  ...good,
+  type: 'site-script',
+  init: ({ config }) => {
+    requireUrl(config);
+    if (config.loadScript && !config.settings?.siteId)
+      throw new StepError('Site script with loadScript needs settings siteId', {
+        code: 'config',
+      });
   },
 };
 

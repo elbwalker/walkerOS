@@ -8,6 +8,7 @@ package: '@walkeros/web-destination-linkedin'
 
 import data from '@walkeros/web-destination-linkedin/walkerOS.json';
 import Configuration from '@site/src/components/snippets/_configuration.mdx';
+import Quickstart from '@site/src/components/snippets/_quickstart.mdx';
 
 import WhereThisFits from '@site/src/components/snippets/_where-this-fits.mdx';
 
@@ -36,77 +37,12 @@ calls.
 
 ## Installation
 
-<CodeSnippet
-  code={`npm install @walkeros/web-destination-linkedin`}
-  language="bash"
-/>
+<Quickstart data={data} />
 
-<Tabs groupId="mode">
-  <TabItem value="integrated" label="Integrated" default>
-
-<CodeSnippet
-  code={`import { startFlow } from '@walkeros/collector';
-import { destinationLinkedIn } from '@walkeros/web-destination-linkedin';
-
-await startFlow({
-  consent: { marketing: false },
-  destinations: {
-    linkedin: {
-      code: destinationLinkedIn,
-      config: {
-        consent: { marketing: true },
-        loadScript: true,
-        settings: {
-          apiKey: '123456',
-        },
-        mapping: {
-          order: {
-            complete: {
-              settings: {
-                conversion: {
-                  map: {
-                    id: { value: 67890 },
-                    value: 'data.value',
-                    currency: { key: 'data.currency', value: 'EUR' },
-                    eventId: 'id',
-                  },
-                },
-              },
-            },
-          },
-        },
-      },
-    },
-  },
-});`}
-  language="typescript"
-/>
-
-  </TabItem>
-  <TabItem value="bundled" label="Bundled">
-
-Add to your `flow.json` destinations:
-
-<CodeSnippet
-  code={`"destinations": {
-  "linkedin": {
-    "package": "@walkeros/web-destination-linkedin",
-    "config": {
-      "consent": { "marketing": true },
-      "loadScript": true,
-      "settings": {
-        "apiKey": "123456"
-      }
-    }
-  }
-}`}
-  language="json"
-/>
-
-[See bundled mode setup](/docs/getting-started/modes/bundled) | [CLI reference](/docs/apps/cli)
-
-  </TabItem>
-</Tabs>
+The quickstart above sets no consent, so the Insight Tag loads and sets its
+cookies without `marketing` consent, every conversion you map is sent without it
+too, and a revocation changes nothing. Add `consent: { marketing: true }` to
+`config`, next to `settings`, before you go live (see [Consent](#consent)).
 
 <Configuration type="destination" data={data} />
 
@@ -149,8 +85,8 @@ LinkedIn is an advertising platform. The walkerOS consent key is **`marketing`**
   language="typescript"
 />
 
-Until `marketing` is granted, the collector holds the destination's events in
-a queue and sends them once consent is granted, see
+With this `config.consent`, until `marketing` is granted, the collector holds
+the destination's events in a queue and sends them once consent is granted, see
 [consent management](/docs/guides/consent). The Insight Tag itself has no
 vendor opt-out API: after a revocation, walkerOS holds new events again, but
 the loaded tag stays in the page.
@@ -185,7 +121,8 @@ and can forward `li_fat_id`. To
 conversions sent from both, LinkedIn needs a separate conversion rule for each
 data source: the Insight Tag rule's ID goes in `conversion.id` here, the
 Conversions API rule's ID in the server destination's `conversionRuleId`. Map
-`eventId: 'id'` here, as in the example above, so both send the same event ID.
+`eventId: 'id'` here, as the Ecommerce conversion example above does, so both
+send the same event ID.
 LinkedIn then counts a conversion it receives from both once, under the Insight
 Tag rule.
 

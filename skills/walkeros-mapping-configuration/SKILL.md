@@ -19,7 +19,7 @@ for core concepts.
 | Rename event                   | `{ name: 'new_name' }`                                |
 | Extract nested value           | `'data.nested.value'`                                 |
 | Set static value               | `{ value: 'USD' }`                                    |
-| Transform value                | `{ fn: (e) => transform(e) }`                         |
+| Transform value                | `{ fn: (value, { event }) => transform(event) }`      |
 | Build object                   | `{ map: { key: 'source' } }`                          |
 | Process array                  | `{ loop: ['source', { map: {...} }] }`                |
 | Gate by consent                | `{ key: 'data.email', consent: { marketing: true } }` |
@@ -39,18 +39,18 @@ product: {
     name: 'view_item',
     data: {
       map: {
-        currency: { value: 'USD' },
+        currency: { key: 'data.currency', value: 'EUR' },
         value: 'data.price',
         items: {
           loop: [
-            'nested',
+            'this', // the product is the event itself
             {
               map: {
                 item_id: 'data.id',
                 item_name: 'data.name',
                 item_category: 'data.category',
                 price: 'data.price',
-                quantity: { value: 1 },
+                quantity: { key: 'data.quantity', value: 1 },
               },
             },
           ],
@@ -69,18 +69,24 @@ order: {
     name: 'purchase',
     data: {
       map: {
-        transaction_id: 'data.orderId',
+        transaction_id: 'data.id',
         value: 'data.value',
-        currency: 'data.currency',
+        currency: { key: 'data.currency', value: 'EUR' },
         items: {
           loop: [
             'nested',
             {
+              // only the products, not other nested entities
+              condition: (entity) =>
+                typeof entity === 'object' &&
+                entity !== null &&
+                'entity' in entity &&
+                entity.entity === 'product',
               map: {
                 item_id: 'data.id',
                 item_name: 'data.name',
                 price: 'data.price',
-                quantity: 'data.quantity',
+                quantity: { key: 'data.quantity', value: 1 },
               },
             },
           ],
@@ -101,11 +107,11 @@ product: {
     name: 'ViewContent',
     data: {
       map: {
-        content_ids: { fn: (e) => [e.data.id] },
+        content_ids: { set: ['data.id'] },
         content_type: { value: 'product' },
         content_name: 'data.name',
         value: 'data.price',
-        currency: { value: 'USD' },
+        currency: { key: 'data.currency', value: 'EUR' },
       },
     },
   },
@@ -120,11 +126,27 @@ order: {
     name: 'Purchase',
     data: {
       map: {
-        content_ids: { fn: (e) => e.nested?.map((n) => n.data.id) ?? [] },
+        content_ids: {
+          loop: [
+            'nested',
+            {
+              condition: (entity) =>
+                typeof entity === 'object' &&
+                entity !== null &&
+                'entity' in entity &&
+                entity.entity === 'product',
+              key: 'data.id',
+            },
+          ],
+        },
         content_type: { value: 'product' },
         value: 'data.value',
-        currency: 'data.currency',
-        num_items: { fn: (e) => e.nested?.length ?? 0 },
+        currency: { key: 'data.currency', value: 'EUR' },
+        num_items: {
+          fn: (value, { event }) =>
+            event.nested?.filter((entity) => entity?.entity === 'product')
+              .length ?? 0,
+        },
       },
     },
   },
@@ -138,7 +160,10 @@ order: {
 ```typescript
 '*': {
   '*': {
-    name: { fn: (e) => `${e.entity}_${e.action}` }, // page_view
+    // A computed name goes in policy: a rule's name is a fixed string
+    policy: {
+      name: { fn: (value, { event }) => `${event.entity}_${event.action}` }, // page_view
+    },
     data: {
       map: {
         eventName: 'name',
@@ -167,7 +192,8 @@ order: {
   complete: [
     // High-value orders get extra tracking
     {
-      condition: (e) => (e.data?.value ?? 0) > 500,
+      condition: (value, { event }) =>
+        typeof event.data?.value === 'number' && event.data.value > 500,
       name: 'high_value_purchase',
       data: {
         map: {
@@ -188,35 +214,42 @@ order: {
 
 ### Patching Package-Shipped Rules (`extend` / `remove`)
 
-Some packages (such as `@walkeros/transformer-ga4`) ship default mapping rules.
-Normally a user rule at the same key replaces the default in full. Use `extend`
-or `remove` to patch instead.
+`@walkeros/transformer-ga4` ships default mapping rules in its
+`settings.mapping`. Normally a user rule at the same key replaces the default in
+full. Use `extend` or `remove` to patch instead.
 
 Two layers, two keywords:
 
 - **`extend`** runs at init (config layer): deep-merges a partial rule onto the
-  shipped default. A `null` value clears an inherited field.
+  shipped default. A `null` value clears an inherited field. Only a package that
+  ships defaults merges it; on any other rule `walkeros validate` and the bundle
+  reject it (`MAPPING_NO_OP`).
 - **`remove`** runs after evaluation (output layer): strips dotted paths from
-  the final data payload. Applied last, always wins.
+  the final data payload. Applied last, always wins. It also works in a
+  destination's own rules.
 
-A rule with neither keyword keeps the existing replace behavior.
+A rule with neither keyword replaces the default in full.
 
 ```json
 {
-  "purchase": {
-    "extend": {
-      "data": { "map": { "affiliation": "params.ep.affiliation" } }
-    },
-    "remove": ["currency"]
+  "settings": {
+    "mapping": {
+      "purchase": {
+        "extend": {
+          "data": { "map": { "affiliation": "params.ep.affiliation" } }
+        },
+        "remove": ["currency"]
+      }
+    }
   }
 }
 ```
 
-This keeps all fields the package ships for `purchase`, adds `affiliation`, and
-strips `currency` from the output.
+This keeps all fields the transformer ships for `purchase`, adds `affiliation`,
+and strips `currency` from the output.
 
 For the full reference and the two-layer model, see
-[Mapping.Rule docs](/docs/mapping/rule#patching-package-shipped-rules).
+[Mapping.Rule docs](https://www.walkeros.io/docs/mapping/rule#patching-package-shipped-rules).
 
 ### Value[] Fallback Chains
 
@@ -267,15 +300,16 @@ user: {
 **Catch-all for unmatched events:**
 
 ```typescript
-// Any product action
+// Any product action (a computed name goes in policy)
 product: {
   '*': {
-    name: { fn: (e) => `product_${e.action}` },
+    policy: { name: { fn: (value, { event }) => `product_${event.action}` } },
     data: 'data',
   },
 }
 
-// Any click on any entity
+// A click on any entity without its own rule for it: with the product rule
+// above, a product click matches product '*' instead
 '*': {
   click: {
     name: 'element_click',
@@ -291,21 +325,17 @@ product: {
 
 ## Source-Side Mapping
 
-**Transform HTTP input to walkerOS event:**
+A source's `mapping` uses the same entity-action rules on the events the source
+pushes, before they reach the collector, for example to rename, edit (`policy`)
+or drop them. Turning a raw request format into events is the source's own job
+(see [create-source](../walkeros-create-source/SKILL.md)).
 
 ```typescript
-// In source config
+// In a source's config
 {
   mapping: {
-    // Map incoming field names to walkerOS structure
-    name: { fn: (input) => `${input.entity} ${input.action}` },
-    data: 'payload',
-    user: {
-      map: {
-        id: 'userId',
-        session: 'sessionId',
-      },
-    },
+    product: { click: { name: 'product view' } }, // rename
+    test: { '*': { ignore: true } }, // drop every test event
   },
 }
 ```

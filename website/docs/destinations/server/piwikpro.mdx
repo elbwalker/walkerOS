@@ -7,6 +7,7 @@ package: '@walkeros/server-destination-piwikpro'
 ---
 import data from '@walkeros/server-destination-piwikpro/walkerOS.json';
 import Configuration from '@site/src/components/snippets/_configuration.mdx';
+import Quickstart from '@site/src/components/snippets/_quickstart.mdx';
 
 import WhereThisFits from '@site/src/components/snippets/_where-this-fits.mdx';
 
@@ -14,7 +15,7 @@ import WhereThisFits from '@site/src/components/snippets/_where-this-fits.mdx';
 
 <PackageLink env="server" github="packages/server/destinations/piwikpro" npm="@walkeros/server-destination-piwikpro" />
 
-Server-side event delivery to the [Piwik PRO](https://piwik.pro/) Tracking API. The destination uses the mapping of the [Piwik PRO web destination](/docs/destinations/web/piwikpro): `rule.name` is a Piwik PRO JavaScript method such as `trackEvent` or `ecommerceOrder`, and `data` resolves to its arguments. A web mapping that uses the 13 [portable methods](#copy-your-web-mapping) produces the same hits on the server. Browser-only commands, such as state setters like `setUserId`, are skipped. Each push, or each flushed batch, becomes one bulk request to your account. There is no API token to manage: the destination needs only your account URL and site id.
+Server-side event delivery to the [Piwik PRO](https://piwik.pro/) Tracking API. The destination uses the mapping of the [Piwik PRO web destination](/docs/destinations/web/piwikpro): `rule.name` is a Piwik PRO JavaScript method such as `trackEvent` or `ecommerceOrder`, and `data` resolves to its arguments. A web mapping that uses the 13 [portable methods](#copy-your-web-mapping) produces the same hits on the server. Browser-only commands, such as state setters like `setUserId`, fail with `missing-input`. Each push, or each flushed batch, becomes one bulk request to your account. There is no API token to manage: the destination needs only your account URL and site id.
 
 <WhereThisFits
   pre={<>Piwik PRO is a <strong>server destination</strong> in the walkerOS flow:</>}
@@ -26,61 +27,7 @@ Server-side event delivery to the [Piwik PRO](https://piwik.pro/) Tracking API. 
 
 ## Installation
 
-<CodeSnippet
-  code={`npm install @walkeros/server-destination-piwikpro`}
-  language="bash"
-/>
-
-<Tabs groupId="mode">
-  <TabItem value="integrated" label="Integrated" default>
-
-<CodeSnippet
-  code={`import { startFlow } from '@walkeros/collector';
-import { destinationPiwikPro } from '@walkeros/server-destination-piwikpro';
-
-await startFlow({
-  destinations: {
-    piwikpro: {
-      code: destinationPiwikPro,
-      config: {
-        settings: {
-          url: 'https://your_account_name.piwik.pro/',
-          appId: 'XXX-XXX-XXX-XXX-XXX',
-        },
-        batch: { size: 100, wait: 1000 },
-      },
-    },
-  },
-});`}
-  language="typescript"
-/>
-
-  </TabItem>
-  <TabItem value="bundled" label="Bundled">
-
-Add to your `flow.json` destinations:
-
-<CodeSnippet
-  code={`"destinations": {
-  "piwikpro": {
-    "package": "@walkeros/server-destination-piwikpro",
-    "import": "destinationPiwikPro",
-    "config": {
-      "settings": {
-        "url": "https://your_account_name.piwik.pro/",
-        "appId": "XXX-XXX-XXX-XXX-XXX"
-      },
-      "batch": { "size": 100, "wait": 1000 }
-    }
-  }
-}`}
-  language="json"
-/>
-
-[See bundled mode setup](/docs/getting-started/modes/bundled) | [CLI reference](/docs/apps/cli)
-
-  </TabItem>
-</Tabs>
+<Quickstart data={data} />
 
 Before the first event, fill the request context in your server source, as shown in the [ingest prerequisite](#ingest-prerequisite).
 
@@ -159,7 +106,7 @@ Numbers may also arrive as numeric strings. `products` is an array of 1 to 100 p
 
 The ecommerce methods take the currency as a trailing options object, `{ "currencyCode": "EUR" }`, the same argument the browser destination passes to `_paq`. It is sent as `cur`. A `currencyCode` that is not three uppercase letters, such as `eur`, makes the event invalid and it fails with `missing-input`; a missing one only leaves `cur` out.
 
-State setters such as `setUserId` exist only in the browser. The server keeps no tracker state, so it skips any method outside this table with a warning. The user id comes from the `userId` setting instead.
+State setters such as `setUserId` exist only in the browser. The server keeps no tracker state, so any method outside this table fails with `missing-input`. The user id comes from the `userId` setting instead.
 
 A page view, a custom event with a goal and an ecommerce order:
 
@@ -199,8 +146,8 @@ A page view, a custom event with a goal and an ecommerce order:
           {
             "map": {
               "orderId": "data.id",
-              "grandTotal": "data.value",
-              "tax": "data.taxes",
+              "grandTotal": ["data.total", "data.value"],
+              "tax": "data.tax",
               "shipping": "data.shipping"
             }
           },
@@ -296,9 +243,9 @@ The body of a bulk request holds one request string per hit. For a page view and
   language="json"
 />
 
-A goal adds its hit to the same list. Invalid events fail individually and are left out of the request; a `silent` rule without a goal is left out and counts as delivered. If every event of a batch is left out, no request is sent.
+A goal adds its hit to the same list. Events that fail with `missing-input` fail individually and are left out of the request. A `silent` rule without a goal leaves its event out of the request as delivered when the rule names a method from the table, or has no name and the event is a page view. If every event of a batch is left out, no request is sent.
 
-A failed request (a 4xx or 5xx status, a timeout or a network error) throws, so the whole batch goes to the destination's dead-letter queue. A 429 status is logged as rate limiting first. The destination does not retry.
+A failed request (a 4xx or 5xx status, a timeout or a network error) throws, so the whole batch goes to the destination's dead-letter queue. A 429 is handled like any other failed request, with `status: 429` on the error. The destination does not retry.
 
 ## Server-side vs browser
 
@@ -324,7 +271,7 @@ These events fail with `missing-input`:
 - An event whose rule names a method outside the table, such as `setUserId`.
 - An invalid event: a missing required argument, no page URL, a value that must be a number but is not (such as `e_v` or `revenue`), or more than 100 products.
 
-A `silent` rule without a goal sends nothing and counts as delivered. To keep unmapped events out of the destination without a failure, ignore everything with a wildcard and map what you need:
+A `silent` rule without a goal sends nothing and counts as delivered when it names a method from the table, or has no name and the event is a page view; otherwise one of the first two cases above applies. To keep unmapped events out of the destination without a failure, ignore everything with a wildcard and map what you need:
 
 <CodeSnippet
   code={`"mapping": {

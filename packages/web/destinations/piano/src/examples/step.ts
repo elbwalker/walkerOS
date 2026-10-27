@@ -68,7 +68,7 @@ export const purchase: Flow.StepExample = {
       'transaction.confirmation',
       {
         transaction_id: '0rd3r1d',
-        revenue: 555,
+        revenue: 462,
         currency: 'EUR',
       },
     ],

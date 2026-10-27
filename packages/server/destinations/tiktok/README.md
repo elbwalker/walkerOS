@@ -35,7 +35,7 @@ npm install @walkeros/server-destination-tiktok
           "config": {
             "settings": {
               "pixelCode": "YOUR_PIXEL_CODE",
-              "accessToken": "YOUR_ACCESS_TOKEN"
+              "accessToken": "$secret.TIKTOK_ACCESS_TOKEN"
             }
           }
         }
@@ -44,6 +44,9 @@ npm install @walkeros/server-destination-tiktok
   }
 }
 ```
+
+This quick start sets no consent: add `consent: { marketing: true }` to `config`
+before you go live, see the docs.
 
 ## Documentation
 

@@ -393,7 +393,7 @@ export const SourceSchema = z
           .union([z.boolean(), z.record(z.string(), z.unknown())])
           .optional()
           .describe(
-            'One-time setup options applied during source registration (boolean enables defaults, object configures specifics)',
+            'Provisioning options for `walkeros setup`, which runs only when invoked (boolean enables defaults, object configures specifics)',
           ),
         state: z
           .union([StateSchema, z.array(StateSchema)])
@@ -570,7 +570,7 @@ export const DestinationSchema = z
           .union([z.boolean(), z.record(z.string(), z.unknown())])
           .optional()
           .describe(
-            'One-time setup options applied during destination registration (boolean enables defaults, object configures specifics)',
+            'Provisioning options for `walkeros setup`, which runs only when invoked (boolean enables defaults, object configures specifics)',
           ),
       })
       .meta({
@@ -653,7 +653,7 @@ export const StoreSchema = z
           .union([z.boolean(), z.record(z.string(), z.unknown())])
           .optional()
           .describe(
-            'One-time setup options applied during store registration (boolean enables defaults, object configures specifics)',
+            'Provisioning options for `walkeros setup`, which runs only when invoked (boolean enables defaults, object configures specifics)',
           ),
       })
       .meta({

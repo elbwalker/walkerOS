@@ -32,7 +32,9 @@ export const SettingsSchema = z.object({
   pulse: z
     .boolean()
     .default(false)
-    .describe('Keep session alive on each event')
+    .describe(
+      'Refresh an existing stored session on each run without counting the run or starting a session',
+    )
     .optional(),
 
   sessionKey: z
@@ -79,6 +81,13 @@ export const SettingsSchema = z.object({
     .array(ClickIdEntrySchema)
     .describe(
       'Custom click-ID registry. Entries with a `param` matching a default override the platform name in place; new params append to the end of the priority list.',
+    )
+    .optional(),
+
+  parameters: z
+    .record(z.string(), z.string())
+    .describe(
+      'Additional URL parameters to capture: parameter name to the session data property it is stored as, e.g. { "ref": "referral" }',
     )
     .optional(),
 });

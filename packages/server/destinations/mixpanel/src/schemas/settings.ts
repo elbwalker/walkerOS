@@ -61,7 +61,7 @@ export const SettingsSchema = z
     include: z
       .unknown()
       .describe(
-        "Event data sections to flatten into track() properties. Example: ['data', 'globals']. Sections are prefixed (data_, globals_, etc.).",
+        "Has no effect: this destination does not read settings.include. To flatten event sections such as ['data', 'globals'] into prefixed track() properties, set include in the destination config.",
       )
       .optional(),
   })

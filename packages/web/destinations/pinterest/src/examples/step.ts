@@ -48,24 +48,24 @@ export const pageViewRename: Flow.StepExample = {
 };
 
 /**
- * Search - walkerOS site search → Pinterest "search" with search_query.
+ * Search - walkerOS search submit → Pinterest "search" with search_query.
  * Illustrates single-field mapping.data resolution.
  */
 export const siteSearch: Flow.StepExample = {
   title: 'Search',
   description:
-    'A site search fires Pinterest search with the search_query field resolved from event data.',
+    'A search submit fires Pinterest search with the search_query field resolved from event data.',
   in: createEvent({
-    name: 'site search',
+    name: 'search submit',
     timestamp: 1700000103,
     id: 'ev-1700000103',
-    data: { query: 'leather jacket' },
+    data: { term: 'leather jacket' },
   }),
   mapping: {
     name: 'search',
     data: {
       map: {
-        search_query: 'data.query',
+        search_query: 'data.term',
       },
     },
   },
@@ -238,7 +238,7 @@ export const orderCompleteCheckout: Flow.StepExample = {
       'track',
       'checkout',
       {
-        value: 555,
+        value: 462,
         order_id: '0rd3r1d',
         currency: 'EUR',
         line_items: [

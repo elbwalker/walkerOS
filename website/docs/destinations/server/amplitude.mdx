@@ -7,6 +7,7 @@ package: '@walkeros/server-destination-amplitude'
 ---
 import data from '@walkeros/server-destination-amplitude/walkerOS.json';
 import Configuration from '@site/src/components/snippets/_configuration.mdx';
+import Quickstart from '@site/src/components/snippets/_quickstart.mdx';
 
 import WhereThisFits from '@site/src/components/snippets/_where-this-fits.mdx';
 
@@ -26,64 +27,22 @@ Server-side event delivery to [Amplitude](https://amplitude.com/) for product an
 
 ## Installation
 
-<CodeSnippet
-  code={`npm install @walkeros/server-destination-amplitude`}
-  language="bash"
-/>
-
-<Tabs groupId="mode">
-  <TabItem value="integrated" label="Integrated" default>
-
-<CodeSnippet
-  code={`import { startFlow } from '@walkeros/collector';
-import { destinationAmplitude } from '@walkeros/server-destination-amplitude';
-
-await startFlow({
-  destinations: {
-    amplitude: {
-      code: destinationAmplitude,
-      config: {
-        settings: {
-          apiKey: 'YOUR_AMPLITUDE_API_KEY',
-        },
-      },
-    },
-  },
-});`}
-  language="typescript"
-/>
-
-  </TabItem>
-  <TabItem value="bundled" label="Bundled">
-
-Add to your `flow.json` destinations:
-
-<CodeSnippet
-  code={`"destinations": {
-  "amplitude": {
-    "package": "@walkeros/server-destination-amplitude",
-    "import": "destinationAmplitude",
-    "config": {
-      "settings": {
-        "apiKey": "YOUR_AMPLITUDE_API_KEY"
-      }
-    }
-  }
-}`}
-  language="json"
-/>
-
-[See bundled mode setup](/docs/getting-started/modes/bundled) | [CLI reference](/docs/apps/cli)
-
-  </TabItem>
-</Tabs>
+<Quickstart data={data} />
 
 <Configuration type="destination" data={data} />
 
+## Identity
+
+Without `settings.identify` the destination sends no `user_id` or `device_id`, so the quickstart's events carry neither. Map them from the event in `settings.identify`, as the Identify per event example above does, or per rule.
+
 ## Batching and delivery
 
-This destination batches by default: `config.batch` sends after 200 events or 10 seconds, and each event keeps its own outcome. Set `config.batch: { size: 1 }` to send each event at once. How batching, retries, deduplication and acknowledgement work for the server SDK destinations is described in [Server SDK destinations](/docs/destinations#server-sdk-destinations).
+This destination batches by default: `config.batch` sends a batch at 200 events, 10 seconds after the last event, or 30 seconds after the first, whichever comes first, and each event keeps its own outcome. Set `config.batch: { size: 1 }` to send each event at once. How batching, retries, deduplication and acknowledgement work for the server SDK destinations is described in [Server SDK destinations](/docs/destinations#server-sdk-destinations).
 
-A delivery that Amplitude does not answer with `2xx` fails with its status.
+A request that Amplitude refuses fails the event with its status, for example `400`. A `5xx` answer or no answer at all fails it with status `500` once the retries within `config.timeout` are used up.
 
 A group name list that holds a non-string is skipped with a DEBUG line, not sent.
+
+## Consent
+
+The quickstart sets no `config.consent`, so Amplitude receives every event and a `walker consent` command changes nothing. Add `consent: { analytics: true }` to `config`, next to `settings`, to send only with analytics consent ([consent management](/docs/guides/consent)): a revocation then calls `setOptOut(true)` and a grant `setOptOut(false)`. Events still waiting in the batch at a revocation are not sent: each fails with a `transport` error and goes to the dead-letter queue. `settings.optOut: true` does the same to every event.

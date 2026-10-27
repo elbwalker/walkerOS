@@ -41,7 +41,7 @@ const OPTIONS = {
 export const customEvent: Flow.StepExample = {
   title: 'Custom event',
   description:
-    'A walker event is sent to mParticle as a custom_event with user identities resolved from destination settings.',
+    'A walker event is sent to mParticle as a custom_event; with settings.userIdentities mapping customer_id to user.id, the batch carries the user id.',
   in: getEvent('product view', {
     id: 'ev-1700000100000',
     timestamp: 1700000100000,
@@ -84,7 +84,7 @@ export const customEvent: Flow.StepExample = {
 export const screenView: Flow.StepExample = {
   title: 'Screen view',
   description:
-    'A page view is mapped to an mParticle screen_view event with the event name as the screen name.',
+    'A page view is mapped to an mParticle screen_view event with the event name as the screen name. The user identities come from settings.userIdentities (customer_id: user.id).',
   in: getEvent('page view', {
     id: 'ev-1700000200000',
     timestamp: 1700000200000,
@@ -129,7 +129,7 @@ export const screenView: Flow.StepExample = {
 export const commercePurchase: Flow.StepExample = {
   title: 'Commerce purchase',
   description:
-    'A completed order becomes an mParticle commerce_event with a purchase product_action block.',
+    'A completed order becomes an mParticle commerce_event with a purchase product_action block. The user identities come from settings.userIdentities (customer_id: user.id).',
   in: getEvent('order complete', {
     id: 'ev-1700000300000',
     timestamp: 1700000300000,
@@ -192,7 +192,7 @@ export const commercePurchase: Flow.StepExample = {
 export const identityAndAttributes: Flow.StepExample = {
   title: 'User identities',
   description:
-    'A form submission sends a custom_event whose batch carries user_identities resolved from destination settings.',
+    'A form submission sends a custom_event whose batch carries user_identities resolved from settings.userIdentities (customer_id: user.id, email: user.email).',
   in: createEvent({
     name: 'form submit',
     id: 'ev-1700000400000',

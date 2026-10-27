@@ -17,8 +17,11 @@ better-sqlite3 for local files and @libsql/client for remote Turso / libSQL.
 ## Installation
 
 ```bash
-npm install @walkeros/server-destination-sqlite
+npm install @walkeros/server-destination-sqlite better-sqlite3
 ```
+
+For a remote libSQL or Turso database, install `@libsql/client` instead of
+`better-sqlite3`.
 
 ## Quick start
 
@@ -31,7 +34,9 @@ npm install @walkeros/server-destination-sqlite
       "destinations": {
         "sqlite": {
           "package": "@walkeros/server-destination-sqlite",
-          "config": { "settings": { "sqlite": { "url": "./events.db" } } }
+          "config": {
+            "settings": { "sqlite": { "url": "./events.db", "schema": "auto" } }
+          }
         }
       }
     }

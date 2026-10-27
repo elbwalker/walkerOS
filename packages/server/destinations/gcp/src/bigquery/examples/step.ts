@@ -17,7 +17,7 @@ function expectedRow(event: WalkerOS.Event) {
  * Captured as a single intent-level call: ['appendRows', [row]].
  */
 const pageViewEvent = getEvent('page view', {
-  timestamp: 1700001100,
+  timestamp: 1700001100000,
   data: { title: 'Documentation', url: 'https://example.com/docs' },
   source: { type: 'express', platform: 'server' },
 });
@@ -36,7 +36,7 @@ export const pageView: Flow.StepExample = {
  * data column of the appended row.
  */
 const purchaseEvent = getEvent('order complete', {
-  timestamp: 1700001101,
+  timestamp: 1700001101000,
   data: {
     id: 'ORD-500',
     value: 199.99,
@@ -73,12 +73,12 @@ export const appendFailed: Flow.StepExample = {
   public: false,
   description:
     'A failed Storage Write append fails the push, retryable, instead of counting as delivered.',
-  in: getEvent('page view', { timestamp: 1700001102 }),
+  in: getEvent('page view', { timestamp: 1700001102000 }),
   respond: { error: 'network' },
   out: [
     [
       'appendRows',
-      [expectedRow(getEvent('page view', { timestamp: 1700001102 }))],
+      [expectedRow(getEvent('page view', { timestamp: 1700001102000 }))],
     ],
   ],
   outcome: { status: 'failed', code: 'transport', retryable: true },

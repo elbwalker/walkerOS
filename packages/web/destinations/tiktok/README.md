@@ -32,13 +32,17 @@ npm install @walkeros/web-destination-tiktok
       "destinations": {
         "tiktok": {
           "package": "@walkeros/web-destination-tiktok",
-          "config": { "settings": { "apiKey": "YOUR_PIXEL_ID" } }
+          "config": { "settings": { "apiKey": "C4A1B2C3D4E5F6A7B8C9" } }
         }
       }
     }
   }
 }
 ```
+
+The destination starts only when `window.ttq` already provides `load`; whatever
+sets it up runs outside the consent gate, see the docs. This quick start sets no
+consent: add `consent: { marketing: true }` to `config` before you go live.
 
 ## Documentation
 

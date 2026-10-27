@@ -52,7 +52,7 @@ export const purchase: Flow.StepExample = {
       {
         revenue: {
           currency: 'EUR',
-          amount: 555,
+          amount: 462,
         },
       },
     ],

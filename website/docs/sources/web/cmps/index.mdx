@@ -14,9 +14,9 @@ description: Automate consent handling with walkerOS CMP source packages
   destinations={{ default: { highlight: false } }}
 />
 
-walkerOS provides ready-made source packages for popular Consent Management
-Platforms. Each source listens for CMP events and automatically calls
-`elb('walker consent', state)`, with no manual event listener code needed.
+walkerOS provides source packages for these Consent Management Platforms. Each
+source listens for CMP events and calls `elb('walker consent', state)` itself,
+so you need no event listener code of your own.
 
 | CMP | Package |
 | --- | ------- |
@@ -104,17 +104,25 @@ events without consent, set the source's `config.consent` (see the
 CMP sources perform their initial consent read during `init()`, not in the
 source factory. The factory stays side-effect free; the consent emit happens
 once the collector runs the source's `init()`. Combined with the current-state
-`require` matching above, a `require: ["consent"]` step activates whichever
-source recorded the consent, and whenever it did.
+`require` matching above, a `require: ["consent"]` step activates once any
+source has recorded a consent state, granted or denied, before or after the
+step registered.
 
 When several CMP categories map to the same walkerOS group, every CMP source
 grants the group only if all of them are granted: any deny denies. The default
 mappings map each category to its own group.
 
-By default every CMP source waits for the visitor's decision: the Cookiebot,
-CookiePro and Usercentrics sources support `explicitOnly` (default: `true`) to
-skip implicit or default consent and report only active user choices, and the
-CookieFirst source reports nothing until the visitor has made a choice.
+By default every CMP source reports only a choice the visitor made: the
+Cookiebot, CookiePro and Usercentrics sources support `explicitOnly` (default:
+`true`) to skip implicit or default consent and report only active user choices,
+and the CookieFirst source reports nothing until the visitor has made a choice.
+A visitor who never makes a choice, for example one Cookiebot never asks because
+they are outside the regions where your site asks for consent, sends no consent.
+Destinations gated with `config.consent` then keep that visitor's events queued
+and never send them (each push answers `queued` with the reason `consent`), a
+destination with `require: ["consent"]` never starts, and sources gated with
+`config.consent` drop the events. To follow the consent the CMP sets on its own, set
+`explicitOnly: false` on the Cookiebot, CookiePro or Usercentrics source.
 
 Strictly necessary cookies need no consent, so no CMP source maps them to a
 consent group: the Cookiebot, CookieFirst and CookiePro sources report them as

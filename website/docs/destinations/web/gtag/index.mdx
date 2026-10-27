@@ -20,9 +20,9 @@ import WhereThisFits from '@site/src/components/snippets/_where-this-fits.mdx';
 
 The Google Gtag destination provides a unified interface for sending events to
 Google Analytics 4 (GA4), Google Ads, and Google Tag Manager (GTM) through a
-single destination configuration. Loads gtag script dynamically, initializes
-the gtag function with your config, handles Consent Mode v2 commands
-automatically, and pushes mapped events to Google services.
+single destination configuration. It initializes the gtag function with your
+config, loads gtag.js when `loadScript` is `true`, handles Consent Mode v2
+commands automatically, and pushes mapped events to Google services.
 
 Consent Mode is on by default via `como` (set `como: false` to disable it). By default `analytics` consent sets `analytics_storage` and `marketing` consent sets `ad_storage`, `ad_user_data` and `ad_personalization` (see [Google Consent Mode](/docs/guides/consent#google-consent-mode)). When the destination declares a consent signal (`config.consent` or `como_advanced`), the denied `consent default` is emitted before `config`, as Consent Mode v2 requires. Set `como_advanced: true` (or a number of milliseconds) to opt into advanced mode, emitting the denied default at page load with `wait_for_update`, for non-EU setups. The `consent update` for the recorded consent state is sent before the first event, also when the destination is gated with `require` or added while the flow is running.
 
@@ -52,6 +52,7 @@ const { collector, elb } = await startFlow({
     gtag: {
       code: destinationGtag,
       config: {
+        loadScript: true,
         settings: {
           ga4: {
             measurementId: 'G-XXXXXXXXXX',
@@ -74,6 +75,7 @@ Add to your `flow.json` destinations:
   "gtag": {
     "package": "@walkeros/web-destination-gtag",
     "config": {
+      "loadScript": true,
       "settings": {
         "ga4": {
           "measurementId": "G-XXXXXXXXXX"
@@ -90,13 +92,34 @@ Add to your `flow.json` destinations:
   </TabItem>
 </Tabs>
 
+`loadScript: true` makes walkerOS add gtag.js to the page. Without it walkerOS
+injects no gtag.js and only queues its calls in `dataLayer`, so events reach
+Google only if your page loads gtag.js itself.
+
+The snippets above set no consent. As the flow starts, gtag.js loads and sends
+its `config`, and with it Google's own `page_view`, before any Consent Mode
+default; the denied default follows only with the first consent command. Add
+`consent: { analytics: true }` to `config`, next to `settings`, before you go
+live. The destination then waits for that consent: once it is granted, the
+denied default goes out before `config`, gtag.js loads and the waiting events
+follow (see [Google Consent Mode](/docs/guides/consent#google-consent-mode)).
+
+For Google Ads, use a destination of its own with
+`consent: { marketing: true }`. One granted key is enough for the gate (see
+[gate a destination](/docs/guides/consent#gate-a-destination-with-consent)), so
+a destination that runs GA4 and Ads with both keys sends conversions, and with
+enhanced conversions the customer's data, to gtag.js once `analytics` alone is
+granted.
+
 <Configuration type="destination" data={data} />
 
-gtag.js and a GTM container load through walkerOS, so a blocked script fails later events visibly. An empty GA4 parameter name, or two names that normalize to one, drops that parameter with one ERROR line per cause and still sends the event. A rule with `silent: true` sends nothing. Settings with a key gtag does not read fail `walkeros validate`.
+gtag.js and a GTM container load through walkerOS, so a blocked script fails later events visibly. An empty GA4 parameter name, or two names that normalize to one, drops that parameter and still sends the event. The first such drop writes an ERROR line naming the mapping key; further drops on this destination within a minute write none. A rule with `silent: true` sends nothing. Settings with a key gtag does not read fail `walkeros validate`.
 
 ## Next steps
 
 - [**Mapping**](/docs/mapping): transform events for Google's expected format
 - [**GA4 configuration**](/docs/destinations/web/gtag/ga4): detailed GA4 setup
 - [**Google Ads**](/docs/destinations/web/gtag/ads): conversion tracking
+- [**Google Tag Manager**](/docs/destinations/web/gtag/gtm): push events into a
+  GTM container
 - [**Consent management**](/docs/guides/consent): control when events are sent

@@ -13,7 +13,8 @@ describe('linkedin conformance', () => {
       profile: 'http',
       examples: examples.step,
       schema: schemas.settings,
-      settings: { accessToken: 's3cr3t', conversionRuleId: '12345678' },
+      settings: examples.minimal.settings,
+      minimal: examples.minimal,
       root: path.join(__dirname, '..', '..'),
     });
   });

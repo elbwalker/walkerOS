@@ -18,9 +18,9 @@ runneros start dist/flow.mjs`}
   language="bash"
 />
 
-The runtime has its own name because it is a different tool with a different
-capability set, not a variant of the CLI. It cannot bundle because the bundler
-is not installed in it: no esbuild, no package manager, no registry access.
+The runtime is a separate tool from the CLI, with its own name and
+capabilities. It cannot bundle, because it has no esbuild, no package manager
+and no registry access.
 Hand it a local flow config and it refuses with
 `BUNDLE must be a prebuilt artifact (.mjs, .js, .cjs, .tar.gz, .tgz), got flow.json`.
 
@@ -85,8 +85,8 @@ contains: `walkeros/flow:<version>` runs `@walkeros/runner@<version>`. Version
 tags are immutable. `latest`, `<major>` and `<major>.<minor>` move only on
 stable releases.
 
-Images published before `@walkeros/runner` existed run an older entrypoint.
-Pin a version that ships `runneros`, ideally the same version as the
+Tags before `4.7.0` run an older entrypoint without `runneros`. Pin a version
+that ships `runneros`, ideally the same version as the
 `@walkeros/cli` that built the artifact, and check it with:
 
 <CodeSnippet
@@ -140,12 +140,14 @@ neither.
 | Input | Example | Notes |
 |---|---|---|
 | Local file | `/app/flow/flow.mjs` (the image default) | `.mjs`, `.js` or `.cjs`. Imported in place, nothing is written |
-| Local archive | `/app/flow.tar.gz` | `.tar.gz` or `.tgz` holding `flow.mjs` at its root. Extracted next to the default write path |
-| URL | `https://cdn.example.com/flow.mjs` | A presigned URL works. Gzip content is extracted as an archive, anything else is written as `flow.mjs` |
-| Stdin | `cat dist/flow.mjs \| docker run -i ... walkeros/flow:<version>` | Read only when the given path does not exist. An empty stdin is ignored |
+| Local archive | `/app/flow.tar.gz` | `.tar.gz` or `.tgz` holding `flow.mjs` at its root |
+| URL | `https://cdn.example.com/flow.tar.gz` | A presigned URL works. Gzip content is extracted as an archive, anything else is written as `flow.mjs`, so point a server flow at its archive |
+| Stdin | `cat flow.mjs \| docker run -i ... walkeros/flow:<version>` | Read only when the given path does not exist. An empty stdin is ignored. Stdin carries one file and no `node_modules/`, so a server flow built by `walkeros bundle` fails to start with `Cannot find package '@walkeros/collector'` |
 
 A fetched, extracted or piped artifact is written to `/app/flow/` when that
-directory exists (in the image it does), otherwise to `/tmp/`. A local path
+directory exists (in the image it does), otherwise to `/tmp/`. Outside a
+container an archive is extracted into `/tmp/` itself, replacing any
+`flow.mjs`, `package.json` and `node_modules/` there. A local path
 with any other extension, a `.json` flow config above all, is refused before
 anything loads. Content from a URL or stdin is checked only by what it is
 written as: a flow config delivered that way is written as `flow.mjs` and then
@@ -169,10 +171,10 @@ fails to import with a syntax error. Either way nothing is bundled.
 | Variable | Default | Description |
 |---|---|---|
 | `BUNDLE` | `/app/flow/flow.mjs` in the image | Artifact path or URL |
-| `PORT` | `8080` | Port for the health server and the flow's HTTP handler |
+| `PORT` | `8080` | Port for the health server and the flow's HTTP handler. A source's own `port` setting has no effect under the runtime, and nothing logs that |
 | `WALKEROS_FLOW_ID` | none | Flow ID in the walkerOS app (same as `--flow-id`) |
 | `WALKEROS_PROJECT_ID` | none | Project ID (same as `--project`) |
-| `WALKEROS_DEPLOYMENT_ID` | none | Deployment ID, sent with every heartbeat and used for telemetry |
+| `WALKEROS_DEPLOYMENT_ID` | none | Deployment ID, sent with every heartbeat. The app accepts a heartbeat only with the deployment its runner token belongs to; without it, every beat logs `Heartbeat rejected (404)` at WARN. With the observer variables it also names where telemetry goes |
 | `WALKEROS_FLOW_RELEASE` | none | Release the loaded flow must carry, or the runtime refuses to start. The walkerOS app sets it when it deploys a flow |
 | `WALKEROS_FLOW_NAME` | none | Flow name the loaded flow must carry, checked only together with `WALKEROS_FLOW_RELEASE`. The walkerOS app sets it |
 | `WALKEROS_DEPLOY_TOKEN` | none | Runner token. Takes precedence over `WALKEROS_TOKEN` |
@@ -181,8 +183,8 @@ fails to import with a syntax error. Either way nothing is bundled.
 | `WALKEROS_HEARTBEAT_INTERVAL` | `60` | Seconds between heartbeats. Values below `10`, or not a number, are clamped to `10` |
 | `WALKEROS_CACHE_DIR` | `$XDG_CACHE_HOME/walkeros`, else `~/.cache/walkeros` | Where the runtime persists recent errors between restarts. `CACHE_DIR` is read as a fallback |
 | `WALKEROS_OBSERVE_LEVEL` | unset (`standard`) | Baseline telemetry level: `off`, `standard` or `trace`. See [Observe](/docs/getting-started/observe#server) |
-| `WALKEROS_OBSERVER_URL`, `WALKEROS_INGEST_TOKEN` | none | Observer connection. With `WALKEROS_DEPLOYMENT_ID`, all three enable telemetry |
-| `NODE_OPTIONS` | `--max-old-space-size=384` in the image | Heap cap sized for a 512 MB container. Raise it with the container's memory |
+| `WALKEROS_OBSERVER_URL`, `WALKEROS_INGEST_TOKEN` | none | Observer base URL and ingest token. With `WALKEROS_DEPLOYMENT_ID`, all three turn on telemetry to `<WALKEROS_OBSERVER_URL>/ingest/<WALKEROS_DEPLOYMENT_ID>`. An Observe session in the walkerOS app hands out all three, its session ID as the deployment ID |
+| `NODE_OPTIONS` | `--max-old-space-size=384 --no-warnings` in the image | Heap cap sized for a 512 MB container. Raise it with the container's memory, and keep `--no-warnings`: the runtime logs Node's process warnings itself |
 
 Every start logs the loaded flow as `Flow: <name> release <release>`. With
 `WALKEROS_FLOW_RELEASE` set, a runtime that loaded any other artifact, or one
@@ -195,8 +197,8 @@ export `WALKEROS_DEPLOY_TOKEN` (or `WALKEROS_TOKEN`) instead.
 
 ## Connecting to the walkerOS app
 
-A flow runs on its own with no account. Setting a flow ID, a project ID and a
-token connects it to the app:
+A flow runs on its own with no account. Setting a flow ID, a project ID, a
+deployment ID and a runner token connects it to the app:
 
 <CodeSnippet
   code={`docker run --rm -p 8080:8080 \\
@@ -210,7 +212,8 @@ token connects it to the app:
 />
 
 The self-hosted tab of a flow in the app prints this command with the values
-filled in, including a runner token bound to that flow. A flow ID without a
+filled in, including the deployment ID and, once you generate it there, a
+runner token bound to that deployment. A flow ID without a
 token or without a project ID stops the runtime at boot with an error naming
 the missing value.
 
@@ -240,7 +243,9 @@ a log.
 The runtime prints text lines by default. A flow that sets
 `collector.logger.format` to `json` prints one JSON object per line instead,
 errors and warnings on stderr, which log collectors such as Cloud Run read as
-structured logs (see [Logger](/docs/collector/logger#log-format)). The flow's
+structured logs (see [Logger](/docs/collector/logger#log-format)). The lines
+before the flow loads, up to `Health server listening on port <port>`, print
+as text, because the runtime learns the format from the flow. The flow's
 `logger.level` applies to the collector's lines, and `--verbose` still forces
 `DEBUG`.
 
@@ -270,13 +275,18 @@ The runtime serves two endpoints on `PORT`, independent of the flow's sources:
 | `GET /health` | Always `200` | `{"status":"ok"}` |
 | `GET /ready` | `200` once the flow's collector is constructed | `{"status":"ready"}` |
 | `GET /ready` | `503` while starting | `{"status":"not_ready"}` |
-| `GET /ready` | `503` when the flow failed to start | `{"status":"failed","reason":"flow failed to start, see the runtime log"}` |
 | `GET /ready` | `503` after a sustained loop of uncaught errors | `{"status":"degraded","reason":"flow degraded, see the runtime log"}` |
 
 Use `/health` for liveness and `/ready` for readiness. The image's
 `HEALTHCHECK` polls `/ready` every 30 seconds after a 30-second start period.
+A flow that fails to start logs `Readiness failed: <reason>`, and the runtime
+closes the port and exits with code 1, so probes get no answer.
+
 Every other request goes to the flow's HTTP handler (for example the Express
-source's routes); before a flow is loaded, those answer `503`.
+source's routes); before a flow is loaded, those answer `503`. A flow whose
+sources have no HTTP handler, such as the fetch, AWS and GCP sources built for
+their own platforms, still reports ready, and every request answers `503` with
+`{"error":"No flow loaded"}`.
 
 ## Serving files
 
@@ -355,7 +365,9 @@ Before loading a flow, the runtime changes its working directory to the
 artifact's directory. Relative paths in flow settings resolve against the
 artifact, not your project root: with the artifact at `/app/flow/flow.mjs`,
 `"filePath": "./data.json"` reads `/app/flow/data.json`. Use `include` to put
-such files next to the artifact.
+such files next to the artifact. In the example above, a file the fs store
+does not find there gets the express source's default answer, `200` with a
+1x1 GIF, and the log shows `invalid event rejected` at WARN.
 
 ## Constraints
 
@@ -363,8 +375,10 @@ such files next to the artifact.
   those inputs need that directory writable. A read-only root filesystem, the
   usual ECS and Kubernetes hardening, works only with a local `.mjs` artifact
   already in place (for example the canonical Dockerfile, or a read-only
-  mount). A connected runtime persists recent errors to its cache directory
-  (default `~/.cache/walkeros`), which also needs to be writable; the image's
+  mount); an archive there fails with
+  `Archive did not contain flow.mjs after extraction to /app/flow`. A
+  connected runtime persists recent errors to its cache directory (default
+  `~/.cache/walkeros`), which also needs to be writable; the image's
   `/app/cache` is writable by the runtime user, so on a read-only root
   filesystem set `WALKEROS_CACHE_DIR=/app/cache` and mount a volume there.
   Without a writable cache directory, recent errors are not persisted across
@@ -379,8 +393,8 @@ such files next to the artifact.
   deployments scale up to five instances; point such steps at a store shared
   by every instance.
 - **User.** The image runs as `walker` (UID 1001). `node_modules/` in the
-  image is read-only for that user; only `/app/flow` and `/app/cache` are
-  writable.
+  image is read-only for that user; under `/app`, only `/app/flow` and
+  `/app/cache` are writable.
 
 ## Kubernetes
 
@@ -430,8 +444,13 @@ Build it first with `walkeros bundle` and start the output.
 **`Flow artifact not found: /app/flow/flow.mjs`**: nothing was copied or
 mounted at the artifact path. Copy the whole `dist/` directory to `/app/flow/`.
 
-**`Cannot find package` at startup**: only `flow.mjs` was copied. A server
-artifact is the directory, including `node_modules/`.
+**`Cannot find package` at startup**: only `flow.mjs` was copied, piped or
+fetched. A server artifact is the directory, including `node_modules/`, or
+its archive.
+
+**`does not provide an export named 'default'` at startup**: a step's package
+has no default export (the AWS and GCP sources, for example). Name the export
+in the step's [`import`](/docs/apps/cli#named-export-selection-with-import).
 
 **`--flow-id requires --project or WALKEROS_PROJECT_ID`**, or
 **`Remote flow requires authentication`**: a flow ID was set without its

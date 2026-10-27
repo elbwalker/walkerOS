@@ -1,3 +1,7 @@
+import * as fs from 'fs';
+import * as os from 'os';
+import * as path from 'path';
+import type * as Core from '@walkeros/core';
 import { createLocalRuntime } from '../../runtime/local.js';
 import { HINT_OUT_OF_PROCESS } from '../../runtime/types.js';
 import {
@@ -12,6 +16,7 @@ import {
   rows,
   hintsOf,
   textOf,
+  str,
 } from '../support/tool-result.js';
 
 // The real resolver and selector come from their cli source modules: the
@@ -27,7 +32,10 @@ jest.mock('@walkeros/cli', () => ({
   ).selectDevExamples,
 }));
 
+// The step package resolver and reader need core's real helpers; only the
+// network read is mocked.
 jest.mock('@walkeros/core', () => ({
+  ...jest.requireActual<typeof Core>('@walkeros/core'),
   fetchPackage: jest.fn(),
   mcpResult: jest.fn((result, hints) => ({
     content: [
@@ -67,6 +75,15 @@ function parse(text: string): unknown {
 /** The listed examples of a result, narrowed. */
 function examplesOf(result: unknown): Record<string, unknown>[] {
   return rows(structured(result).examples);
+}
+
+/** The warnings of a result, narrowed; none when it has no warnings. */
+function warningsOf(result: unknown): string[] {
+  const warnings = record(structured(result)._hints).warnings;
+  if (warnings === undefined) return [];
+  if (!Array.isArray(warnings))
+    throw new Error(`Not an array: ${JSON.stringify(warnings)}`);
+  return warnings.map(str);
 }
 
 /** The listed example with this name, or a failure naming what was listed. */
@@ -343,6 +360,15 @@ describe('flow_examples tool', () => {
       },
     };
     mockLoadJsonConfig.mockResolvedValue(configNoExamples);
+    mockFetchPackage.mockResolvedValue({
+      packageName: '@walkeros/web-destination-gtag',
+      version: '1.0.0',
+      type: 'destination',
+      schemas: {},
+      examples: {},
+      hintKeys: [],
+      exampleSummaries: [],
+    });
     const result = await tool.handler({ configPath: './flow.json' });
 
     expect(structured(result).count).toBe(0);
@@ -437,6 +463,58 @@ describe('flow_examples tool', () => {
     );
   });
 
+  it.each<[string, string, Record<string, string> | undefined]>([
+    ['a bundle pin', '@walkeros/transformer-ga4', { version: '1.0.0' }],
+    ['an inline version', '@walkeros/transformer-ga4@1.0.0', undefined],
+    [
+      'a bundle pin over a disagreeing inline version',
+      '@walkeros/transformer-ga4@2.0.0',
+      { version: '1.0.0' },
+    ],
+  ])(
+    'reads package examples at the version %s names',
+    async (_case, stepPackage, pin) => {
+      mockLoadJsonConfig.mockResolvedValue({
+        version: 4,
+        flows: {
+          default: {
+            config: {
+              platform: 'server',
+              ...(pin
+                ? { bundle: { packages: { '@walkeros/transformer-ga4': pin } } }
+                : {}),
+            },
+            transformers: { ga4: { package: stepPackage } },
+          },
+        },
+      });
+      mockFetchPackage.mockResolvedValue({
+        packageName: '@walkeros/transformer-ga4',
+        version: '1.0.0',
+        type: 'transformer',
+        schemas: {},
+        examples: {
+          step: {
+            purchase: { in: { name: 'order complete' } },
+            addToCart: { in: { name: 'product add' } },
+          },
+        },
+        hintKeys: [],
+        exampleSummaries: [],
+      });
+      const result = await tool.handler({ configPath: './flow.json' });
+
+      expect(mockFetchPackage).toHaveBeenCalledWith(
+        '@walkeros/transformer-ga4',
+        { version: '1.0.0', client: expect.any(String) },
+      );
+      expect(examplesOf(result).map((example) => example.version)).toEqual([
+        '1.0.0',
+        '1.0.0',
+      ]);
+    },
+  );
+
   describe('multi-export packages', () => {
     const bigqueryExamples = {
       step: { row: { in: { name: 'page view' }, out: [] } },
@@ -492,21 +570,29 @@ describe('flow_examples tool', () => {
       expect(names).toEqual(expected);
     });
 
-    it('follows bundle.packages imports when the step has no import', async () => {
-      const config = configWith(
-        { package: '@walkeros/server-destination-gcp' },
-        {
-          packages: {
-            '@walkeros/server-destination-gcp': {
-              imports: ['destinationPubSub'],
+    it.each([
+      '@walkeros/server-destination-gcp',
+      '@walkeros/server-destination-gcp@1.0.0',
+    ])(
+      'follows bundle.packages imports when the step (%s) has no import',
+      async (stepPackage) => {
+        const config = configWith(
+          { package: stepPackage },
+          {
+            packages: {
+              '@walkeros/server-destination-gcp': {
+                imports: ['destinationPubSub'],
+              },
             },
           },
-        },
-      );
-      mockLoadJsonConfig.mockResolvedValue(config);
-      const result = await tool.handler({ configPath: './flow.json' });
-      expect(examplesOf(result).map((e) => e.exampleName)).toEqual(['publish']);
-    });
+        );
+        mockLoadJsonConfig.mockResolvedValue(config);
+        const result = await tool.handler({ configPath: './flow.json' });
+        expect(examplesOf(result).map((e) => e.exampleName)).toEqual([
+          'publish',
+        ]);
+      },
+    );
   });
 
   it('prefers inline examples over package examples (no fallback, no duplicates)', async () => {
@@ -580,6 +666,112 @@ describe('flow_examples tool', () => {
     expect(structured(result).count).toBe(1);
     expect(examplesOf(result)[0].exampleName).toBe('inlineOne');
     expect(examplesOf(result)[0].source).toBe('inline');
+    expect(
+      warningsOf(result).filter((warning) =>
+        warning.includes('destination.broken'),
+      ),
+    ).toEqual([expect.stringContaining('HTTP 404')]);
+  });
+
+  it('reports steps naming one package at two inline versions instead of reading either', async () => {
+    mockLoadJsonConfig.mockResolvedValue({
+      version: 4,
+      flows: {
+        default: {
+          config: { platform: 'web' },
+          destinations: {
+            first: { package: '@walkeros/web-destination-gtag@1.0.0' },
+            second: { package: '@walkeros/web-destination-gtag@2.0.0' },
+          },
+        },
+      },
+    });
+    const result = await tool.handler({ configPath: './flow.json' });
+
+    expect(record(result).isError).toBeUndefined();
+    expect(mockFetchPackage).not.toHaveBeenCalled();
+    const conflicts = warningsOf(result).filter((warning) =>
+      warning.includes('Conflicting inline versions'),
+    );
+    expect(conflicts).toHaveLength(1);
+    expect(conflicts[0]).toContain('destination.first');
+    expect(conflicts[0]).toContain('destination.second');
+  });
+
+  describe('local path packages', () => {
+    let dir: string;
+    let packageDir: string;
+
+    beforeAll(() => {
+      dir = fs.mkdtempSync(path.join(os.tmpdir(), 'flow-examples-local-'));
+      packageDir = path.join(dir, 'local-pkg');
+      fs.mkdirSync(path.join(packageDir, 'dist'), { recursive: true });
+      fs.writeFileSync(
+        path.join(packageDir, 'package.json'),
+        JSON.stringify({ name: 'local-pkg', version: '0.1.0' }),
+      );
+      fs.writeFileSync(
+        path.join(packageDir, 'dist', 'walkerOS.json'),
+        JSON.stringify({
+          $meta: { type: 'destination', platform: 'web' },
+          schemas: {},
+          examples: { step: { localOne: { in: { name: 'page view' } } } },
+        }),
+      );
+    });
+
+    afterAll(() => {
+      fs.rmSync(dir, { recursive: true, force: true });
+    });
+
+    function localConfig(stepPackage: string) {
+      return {
+        version: 4,
+        flows: {
+          default: {
+            config: { platform: 'web' },
+            destinations: { local: { package: stepPackage } },
+          },
+        },
+      };
+    }
+
+    it('reads the examples of a local path package from disk, with its version', async () => {
+      const config = localConfig('./local-pkg');
+      const local = createFlowExamplesToolSpec({
+        load: async () => config,
+        baseDir: () => dir,
+      });
+      const result = await local.handler({ configPath: './flow.json' });
+
+      expect(examplesOf(result)).toEqual([
+        expect.objectContaining({
+          step: 'destination.local',
+          exampleName: 'localOne',
+          source: 'package',
+          version: '0.1.0',
+        }),
+      ]);
+      expect(mockFetchPackage).not.toHaveBeenCalled();
+    });
+
+    it('reads nothing on a runtime without a directory and says so', async () => {
+      const config = localConfig(packageDir);
+      const loadOnly = createFlowExamplesToolSpec({ load: async () => config });
+      const result = await loadOnly.handler({
+        configPath: JSON.stringify(config),
+      });
+
+      expect(record(result).isError).toBeUndefined();
+      expect(examplesOf(result)).toEqual([]);
+      const unreadable = warningsOf(result).filter((warning) =>
+        warning.includes(`destination.local (${packageDir})`),
+      );
+      expect(unreadable).toEqual([
+        expect.stringContaining('no directory to read it from'),
+      ]);
+      expect(mockFetchPackage).not.toHaveBeenCalled();
+    });
   });
 
   it('looks up a package shared by several steps once', async () => {

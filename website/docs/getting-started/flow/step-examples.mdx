@@ -20,7 +20,7 @@ Add `examples` to any step in your flow config to document what it expects and p
 
 Examples are test fixtures, documentation, and simulation data in one place. They live in your flow config, get stripped at build time, and have zero runtime impact.
 
-Examples are mainly internal: packages use them for tests, docs and demos. In your own flow, use them sparingly, where one shows something the package examples cannot, for example a client flow's source with an example of its default behaviour. Mark such a fixture `"public": false` to keep it out of docs, UI and MCP default output while tests and `--simulate` still use it.
+Examples are mainly internal: packages use them for tests, docs and demos. In your own flow, use them sparingly, where one shows something the package examples cannot, for example a client flow's source with an example of its default behaviour. Mark such a fixture `"public": false` to keep it out of docs, UI and MCP default output; your tests still run it, and you can pass its `in` to `--simulate`.
 
 ## What are step examples
 
@@ -90,7 +90,8 @@ Each example has a human-readable name and two fields:
 | `trigger` | object | Sources only: how the example fires the source (`type`, such as `load`, `click` or `POST`, and `options`). This is simulation and test input, not the event's `trigger` field, which is a string |
 | `command` | string | Route `in` through a walker command instead of pushing it as an event (`config`, `consent`, `user`, `run`) |
 | `title`, `description` | string | Labels shown in docs and MCP output |
-| `public` | boolean | `false` hides a test-only example from docs, UI and default MCP output (default `true`) |
+| `outcome` | object | How the push result reports a failure, such as `{ "status": "failed", "code": "missing-input" }`. Absent means the step must not fail |
+| `public` | boolean | `false` keeps a test-only example out of the Examples section in docs, the UI and default MCP output (default `true`). A package page still lists an example with `outcome` under "When it fails" |
 
 For destinations, the optional `mapping` field captures the mapping rule that transforms the walkerOS event into the vendor-specific output. This ties the example to a specific mapping configuration, so tests and simulations can register it dynamically as `{ [entity]: { [action]: example.mapping } }`.
 
@@ -361,7 +362,7 @@ This pattern means your flow config is the single source of truth for both docum
 
 ### Run a package's examples with `runExamples`
 
-Packages do not hand-roll that loop. `runExamples` from `@walkeros/collector/dev` starts a real collector for each example, applies the example's mapping through the destination's real config (`example.mapping ?? config.mapping`), records the vendor calls and compares them with `out`. A fixture that declares an `outcome` is compared with the push result as well.
+Packages do not hand-roll that loop. `runExamples` from `@walkeros/collector/dev` starts a real collector for each example, applies the example's mapping through the destination's real config (`example.mapping ?? config.mapping`), records the vendor calls and compares them with `out`. A fixture that declares an `outcome` is compared with the push result as well. Every example runs as published: the way the package's `walkerOS.json` ships it.
 
 <CodeSnippet
   code={`import type { StandardEventName } from '@walkeros/core';
@@ -386,7 +387,6 @@ it('maps the claimed standard events', async () => {
     env: { push: examples.env.push, simulation: examples.env.simulation },
     page,
     claims,
-    published: true,
   });
 });`}
   language="typescript"
@@ -394,10 +394,57 @@ it('maps the claimed standard events', async () => {
 
 - **Pinned standard events.** An example for a standard event starts from `getEvent(name)` in `@walkeros/core`, which returns the same event on every run: timestamp `1700000000000` and an id derived from the event name only. Because of that, an `out` can name the timestamp and id literally.
 - **`claims`.** The standard events a destination maps. Each claimed event needs a public example (the most complete case of it), and every public event example must be claimed. A claimed event without one, or a public event example that is not claimed, fails the run. Init examples take a config instead of an event and are not part of the check.
-- **`public: false`.** Edge cases, other tools and failure fixtures stay in the package as tests but out of docs, the app and MCP.
-- **Failure examples.** A fixture with `outcome` (and `respond` for a vendor answer) states how a failure is reported, such as `{ status: 'failed', code: 'missing-input' }`. Failure paths are examples too, not only the happy path.
-- **`published: true`.** Runs each mapping function the way `walkerOS.json` publishes it, as source text outside its module. A condition that relies on an imported helper passes as written and fails here, as it would in your flow.
+- **`public: false`.** Edge cases, other tools and failure fixtures stay in the package as tests but out of the Examples section in docs, the app and MCP.
+- **Failure examples.** A fixture with `outcome` (and `respond` for a vendor answer) states how a failure is reported, such as `{ status: 'failed', code: 'missing-input' }`. Failure paths are examples too, not only the happy path. The package page lists every failure example under "When it fails" with its `description`, so each one needs a `description`: the docs build fails without it.
+- **Published code.** Every function in an example (in its `in`, `mapping`, `trigger` options or `respond` body) runs the way `walkerOS.json` publishes it: as source text, outside its module. A condition that relies on an imported helper passes as written and fails here, as it would in your flow. The runner reads that text from the code the test run compiled, not from the built `dist/walkerOS.json`, so a change that only the package build makes is not covered.
 - **Literal outs.** An `out` is written from the vendor's documented request, not computed by the package's own code. If the code disagrees with the documented request, the example or the code is wrong, and the run shows it.
+
+### The minimal example of a destination
+
+A destination package also ships `examples.minimal`: only the settings its settings schema requires, plus any that `init` refuses to start without under the example's `config` (such as Plausible's `domain` with `loadScript: true`). Its docs page builds the install line, the integrated code and the `flow.json` under Installation from it, and the package's conformance test starts the destination with exactly those settings and requires one public example to be delivered. What a reader copies is what the test ran.
+
+<CodeSnippet
+  code={`// src/examples/minimal.ts
+import type { Flow } from '@walkeros/core';
+
+export const minimal: Flow.MinimalExample = {
+  settings: { accessToken: 's3cr3t', pixelId: '1234567890' },
+  secrets: { accessToken: 'META_ACCESS_TOKEN' },
+};
+
+// src/examples/index.ts
+export { minimal } from './minimal';`}
+  language="typescript"
+/>
+
+- **`settings`.** Those settings with placeholder values. Any other setting stays in the examples that need it; the conformance test fails a minimal example that sets one.
+- **`secrets`.** Server destinations only: a credential setting mapped to the name of the secret that holds it. The integrated code reads `process.env.META_ACCESS_TOKEN` and the flow file `$secret.META_ACCESS_TOKEN`; the placeholder value is never shown. A web destination with `secrets` fails.
+- **`config`.** `{ loadScript: true }` for a web destination that loads its vendor script only when asked to.
+- **Several exports.** One minimal example per export, in that export's folder (such as `src/firehose/examples/minimal.ts`) and in its entry of `exportExamples`. The export's conformance test passes `exportName` and `exportExamples`, and its docs page names the export: `<Quickstart data={data} export="destinationFirehose" />`.
+
+The package's conformance test passes it as `minimal`:
+
+<CodeSnippet
+  code={`await conformance('destination', destinationMeta, {
+  profile: 'http',
+  examples: examples.step,
+  schema: schemas.settings,
+  settings: examples.minimal.settings,
+  minimal: examples.minimal,
+  root: path.join(__dirname, '..', '..'),
+});`}
+  language="typescript"
+/>
+
+A package that cannot have one passes `withoutMinimal: '<reason>'` instead, and its page keeps a hand-written setup. A test with neither option fails, and so does one that disagrees with the package: `withoutMinimal` while `src/examples/minimal.ts` (per export: `src/<export>/examples/minimal.ts`) exists, or `minimal` without that file (the path is `MINIMAL_EXAMPLE_FILE` in `@walkeros/core/dev`). For a package with a minimal example, `npm run validate:docs` fails a page that shows a hand-written install or setup snippet under `## Installation`, or does not render the generated one there.
+
+### What a package page shows from its examples
+
+A step package's docs page renders its examples, so no example is copied into the page by hand:
+
+- **Installation** (destinations): the install line, the integrated code and the `flow.json`, from `examples.minimal`.
+- **Examples:** every public example, with its `title` and `description`.
+- **When it fails:** every example with an `outcome`, public or not: its title, its `description` and the status and code the push result reports. Its `in` is not shown.
 
 ## Package-level vs flow-level examples
 
@@ -408,7 +455,7 @@ Examples exist at two levels:
 | **Package** | `walkerOS.json` in the npm package (via `dev.ts`) | Generic examples showing what the package handles |
 | **Flow** | Inline on step references in `flow.json` | Specific examples for your actual data and mappings |
 
-**Package examples** are generic and ship with the npm package. They show the package's capabilities with sample data. The MCP tools `package_get` and `flow_examples` read them from the package's `walkerOS.json` on the CDN.
+**Package examples** are generic and ship with the npm package. They show the package's capabilities with sample data. The MCP tools read them from the package's `walkerOS.json`: `package_get` on the CDN, `flow_examples` at the version the flow pins, or from disk for a local path package.
 
 **Flow examples** are specific to your setup. They use your real event names, your actual data properties, and your configured mappings. In the MCP `flow_examples` tool, a step's flow examples take precedence over its package's examples; a step without flow examples falls back to the package's examples.
 

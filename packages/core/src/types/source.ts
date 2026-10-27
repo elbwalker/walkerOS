@@ -125,7 +125,7 @@ export interface Config<
   async?: boolean | Record<string, boolean>;
   /** Mark as primary source; its push function becomes the exported `elb` from startFlow. */
   primary?: boolean;
-  /** Defer source initialization until these collector events fire (e.g., `['consent']`). */
+  /** Collector events (e.g., `['consent']`) that must fire before the source receives on() calls; init and event capture are not delayed. */
   require?: string[];
   /**
    * Provisioning options for `walkeros setup`. `boolean | object`.

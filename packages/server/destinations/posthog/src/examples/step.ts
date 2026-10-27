@@ -48,7 +48,7 @@ export const defaultCapture: PostHogStepExample = {
 export const captureWithInclude: PostHogStepExample = {
   title: 'Capture with include',
   description:
-    'Destination-level include flattens data and globals sections into prefixed PostHog event properties.',
+    "With include: ['data', 'globals'] in the destination config, the data and globals sections are flattened into prefixed PostHog event properties.",
   in: getEvent('order complete', { id: 'ev1700000101', timestamp: 1700000101 }),
   configInclude: ['data', 'globals'],
   out: [
@@ -61,9 +61,10 @@ export const captureWithInclude: PostHogStepExample = {
         properties: {
           data_id: '0rd3r1d',
           data_currency: 'EUR',
+          data_value: 462,
+          data_tax: 73.76,
           data_shipping: 5.22,
-          data_taxes: 73.76,
-          data_value: 555,
+          data_total: 467.22,
           globals_pagegroup: 'shop',
         },
       },
@@ -81,7 +82,7 @@ export const identifyWithSetAndSetOnce: PostHogStepExample = {
     'A user login fires PostHog identify with $set and $set_once person properties and skips the capture.',
   in: createEvent({
     name: 'user login',
-    timestamp: 1700000102,
+    timestamp: 1700000102000,
     data: {
       user_id: 'new-user-123',
       email: 'user@acme.com',
@@ -120,7 +121,7 @@ export const identifyWithSetAndSetOnce: PostHogStepExample = {
             plan: 'premium',
           },
           $set_once: {
-            first_login: 1700000102,
+            first_login: 1700000102000,
           },
         },
       },
@@ -184,7 +185,7 @@ export const groupIdentifyWithProperties: PostHogStepExample = {
 export const captureWithGroupContext: PostHogStepExample = {
   title: 'Capture with group',
   description:
-    'A destination-level group mapping attaches the resolved group context to every PostHog capture call.',
+    "With settings.group mapping type to 'company' and key to 'globals.company_id', every PostHog capture call carries the resolved group.",
   in: getEvent('page view', {
     id: 'ev1700000104',
     timestamp: 1700000104,
@@ -224,7 +225,7 @@ const analyticsGranted: WalkerOS.Consent = { analytics: true };
 export const consentRevoke: PostHogStepExample = {
   title: 'Consent revoked',
   description:
-    'A walker consent command with analytics denied calls client.disable on the PostHog client.',
+    'With consent: { analytics: true } in the destination config, revoking analytics consent after a grant calls client.disable on the PostHog client.',
   command: 'consent',
   before: { analytics: true },
   in: analyticsDenied,
@@ -238,7 +239,7 @@ export const consentRevoke: PostHogStepExample = {
 export const consentGrant: PostHogStepExample = {
   title: 'Consent granted',
   description:
-    'A walker consent command with analytics granted calls client.enable on the PostHog client.',
+    'With consent: { analytics: true } in the destination config, a walker consent command that grants analytics calls client.enable on the PostHog client.',
   command: 'consent',
   in: analyticsGranted,
   settings: {},

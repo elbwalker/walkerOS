@@ -335,17 +335,17 @@ a page load, the page's `load` events, such as `product view`, arrive before its
 
 1. In the Google tag, under **Configuration settings**, add the parameter
    `send_page_view` with the value `false`.
-2. In GA4, go to Admin, Data streams, your web stream, Enhanced measurement,
-   Page views, **Show advanced settings**, and clear **Page changes based on
-   browser history events**. Otherwise GA4 still counts route changes itself,
-   and each one counts twice.
+2. In GA4, go to Admin, Data collection and modification, Data streams, your
+   web stream, Enhanced measurement, Page views, **Show advanced settings**,
+   and clear **Page changes based on browser history events**. Otherwise GA4
+   still counts route changes itself, and each one counts twice.
 3. Add a Custom Event trigger on `page view` and a GA4 Event tag with Event Name
    `page_view` and the parameters `page_location` from `source.url` and
    `page_title` from `data.title`, each read with a Data Layer Variable. Leave
    out `page_referrer`, GA4 fills it in.
 4. Pause any tag that sends page views on a **History Change** trigger.
 
-Or keep GA4's own page views and do not forward walker.js's. Never both.
+Or keep GA4's own page views and do not forward walker.js's; never send both.
 
 ### Consent
 
@@ -419,8 +419,8 @@ same attributes, so every click would count twice.
 
 Tag Mode is the walkerOS app's overlay for your live page: draw your
 measurement plan on it, capture sections and check your tagging where it runs.
-walker.js carries what Tag Mode needs from the first release after 4.8.0, as
-do the web bundles the CLI builds, so there is nothing to install or configure.
+walker.js carries what Tag Mode needs since 4.8.1, as do the web bundles the
+CLI builds, so there is nothing to install or configure.
 Start it from the walkerOS app with the **Tag Mode** button in a flow's plan:
 the app opens your page in a new tab with `elbMoin` added to its address.
 
@@ -464,8 +464,9 @@ trigger.
 
 No. walker.js sets no cookies, writes no local or session storage and sends
 events nowhere but the `dataLayer`. Consent applies where data leaves the page,
-in your GTM tags. The one exception is a tab the walkerOS app opened for
-[Tag Mode](#tag-mode): there walker.js keeps one session storage entry,
+in your GTM tags. The one exception is a tab opened with `elbMoin` in its
+address, as the walkerOS app opens one for [Tag Mode](#tag-mode): there
+walker.js keeps one session storage entry,
 `elbMoin`, so Tag Mode follows you from page to page, and Tag Mode keeps its
 frames and unsent work in that browser's site storage (localStorage and
 IndexedDB).

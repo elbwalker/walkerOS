@@ -27,19 +27,19 @@ export const postEvent: Flow.StepExample = {
 export const pixelGet: Flow.StepExample = {
   title: 'Pixel GET',
   description:
-    'An Express GET to /collect with query parameters is parsed into an elb event payload for pixel tracking.',
+    'An Express GET to /collect with name and data[...] query parameters becomes a single walker elb event for pixel tracking.',
   trigger: { type: 'GET' },
   in: {
     method: 'GET',
     path: '/collect',
-    query: { e: 'page view', d: '{"title":"Home"}' },
+    query: { name: 'page view', 'data[title]': 'Home' },
   },
   out: [
     [
       'elb',
       {
-        e: 'page view',
-        d: '{"title":"Home"}',
+        name: 'page view',
+        data: { title: 'Home' },
       },
     ],
   ],

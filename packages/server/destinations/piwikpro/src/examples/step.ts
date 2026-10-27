@@ -196,8 +196,8 @@ export const ecommerceOrder: StepExample = {
         {
           map: {
             orderId: 'data.id',
-            grandTotal: 'data.value',
-            tax: 'data.taxes',
+            grandTotal: ['data.total', 'data.value'],
+            tax: 'data.tax',
             shipping: 'data.shipping',
           },
         },
@@ -211,7 +211,7 @@ export const ecommerceOrder: StepExample = {
       ENDPOINT,
       JSON.stringify({
         requests: [
-          `?${COMMON}&e_t=order&ec_id=0rd3r1d&revenue=555&ec_tx=73.76&ec_sh=5.22&ec_products=%5B%5B%22ers%22%2C%22Everyday+Ruck+Snack%22%2Cnull%2C420%2C1%2Cnull%2C%22black%22%2C%7B%221%22%3A%22l%22%7D%5D%2C%5B%22cc%22%2C%22Cool+Cap%22%2Cnull%2C42%2C1%2Cnull%2Cnull%2C%7B%221%22%3A%22one+size%22%7D%5D%5D&cur=EUR&${CONTEXT}`,
+          `?${COMMON}&e_t=order&ec_id=0rd3r1d&revenue=467.22&ec_tx=73.76&ec_sh=5.22&ec_products=%5B%5B%22ers%22%2C%22Everyday+Ruck+Snack%22%2Cnull%2C420%2C1%2Cnull%2C%22black%22%2C%7B%221%22%3A%22l%22%7D%5D%2C%5B%22cc%22%2C%22Cool+Cap%22%2Cnull%2C42%2C1%2Cnull%2Cnull%2C%7B%221%22%3A%22one+size%22%7D%5D%5D&cur=EUR&${CONTEXT}`,
         ],
       }),
       OPTIONS,
@@ -288,8 +288,8 @@ export const eventWithGoalValue: StepExample = {
       ENDPOINT,
       JSON.stringify({
         requests: [
-          `?${COMMON}&e_c=order&e_a=complete&e_n=0rd3r1d&e_v=555&${CONTEXT}`,
-          `?${COMMON}&idgoal=${GOAL_ID}&revenue=555&${CONTEXT}`,
+          `?${COMMON}&e_c=order&e_a=complete&e_n=0rd3r1d&e_v=462&${CONTEXT}`,
+          `?${COMMON}&idgoal=${GOAL_ID}&revenue=462&${CONTEXT}`,
         ],
       }),
       OPTIONS,
@@ -333,12 +333,12 @@ export const siteSearch: StepExample = {
   description:
     'A search event maps to trackSiteSearch with keyword, category and result count.',
   in: otherEvent('search submit', {
-    data: { query: 'rucksack', category: 'bags', results: 12 },
+    data: { term: 'rucksack', category: 'bags', results: 12 },
   }),
   mapping: {
     name: 'trackSiteSearch',
     data: {
-      set: ['data.query', 'data.category', 'data.results'],
+      set: ['data.term', 'data.category', 'data.results'],
     },
   },
   out: [

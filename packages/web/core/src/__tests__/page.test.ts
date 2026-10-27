@@ -2,7 +2,7 @@ import path from 'path';
 import { conformance, runExamples } from '@walkeros/collector/dev';
 import type { Destination, Flow } from '@walkeros/core';
 import { page } from '../dev';
-import { VENDOR_SCRIPT_MARKER } from '../loadVendor';
+import { loadVendor, VENDOR_SCRIPT_MARKER } from '../loadVendor';
 import { sendWeb } from '../sendWeb';
 import { xhrSender } from './fixtures/src/sender';
 import type { Vendor } from './fixtures/src/vendor';
@@ -118,6 +118,55 @@ describe('page', () => {
     expect(kept.isConnected).toBe(true);
   });
 
+  it('loads each marked script a run adds once, and no unmarked one', async () => {
+    const session = page.open(recordAnswering({}));
+    const marked = document.createElement('script');
+    marked.setAttribute(VENDOR_SCRIPT_MARKER, '');
+    const unmarked = document.createElement('script');
+    const markedLoaded = jest.fn();
+    const unmarkedLoaded = jest.fn();
+    marked.addEventListener('load', markedLoaded);
+    unmarked.addEventListener('load', unmarkedLoaded);
+    try {
+      document.head.appendChild(marked);
+      document.body.appendChild(unmarked);
+      await Promise.resolve();
+      // Moved within the page, it is the same script: no second load.
+      document.body.appendChild(marked);
+      await Promise.resolve();
+    } finally {
+      session.close();
+    }
+    expect(markedLoaded).toHaveBeenCalledTimes(1);
+    expect(unmarkedLoaded).not.toHaveBeenCalled();
+  });
+
+  it('readies a loadVendor script, fails it on demand, and stops loading scripts at close', async () => {
+    const vendor = {};
+    const session = page.open(recordAnswering({}));
+    const loaded = loadVendor('https://vendor.example/ready.js', () => vendor, {
+      timeout: 50,
+    });
+    await expect(loaded.ready()).resolves.toBe(vendor);
+    session.failScripts();
+    await expect(loaded.ready()).rejects.toMatchObject({
+      code: 'vendor-not-loaded',
+    });
+    session.close();
+    expect(document.querySelector(`script[${VENDOR_SCRIPT_MARKER}]`)).toBe(
+      null,
+    );
+
+    const after = document.createElement('script');
+    after.setAttribute(VENDOR_SCRIPT_MARKER, '');
+    const afterLoaded = jest.fn();
+    after.addEventListener('load', afterLoaded);
+    document.head.appendChild(after);
+    await Promise.resolve();
+    after.remove();
+    expect(afterLoaded).not.toHaveBeenCalled();
+  });
+
   it("records sendWeb's beacon and XHR as a run's effects in the examples runner", async () => {
     const url = 'https://e.example/collect';
     const sending: Destination.Instance = {
@@ -174,9 +223,11 @@ describe('conformance kit on the page', () => {
     },
   };
   const root = path.join(__dirname, 'fixtures');
+  const withoutMinimal = 'a page fixture, not a published package';
   const options = {
     profile: 'vendor-global' as const,
     root,
+    withoutMinimal,
     schema: { type: 'object', properties: { site: { type: 'string' } } },
     settings: { site: 'docs' },
     env: {
@@ -261,6 +312,7 @@ describe('conformance kit on the page', () => {
       conformance('destination', xhrSender, {
         profile: 'http',
         root,
+        withoutMinimal,
         page,
         schema: {
           type: 'object',

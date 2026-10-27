@@ -35,7 +35,7 @@ npm install @walkeros/web-destination-plausible
           "config": {
             "loadScript": true,
             "settings": {
-              "domain": "walkeros.io"
+              "domain": "example.com"
             },
             "mapping": {
               "page": { "view": { "name": "pageview" } }

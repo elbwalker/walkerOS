@@ -64,7 +64,7 @@ export const ConfigSchema = z
       .union([z.boolean(), z.record(z.string(), z.unknown())])
       .optional()
       .describe(
-        'One-time setup options applied during store registration (boolean enables defaults, object configures specifics)',
+        'Provisioning options for `walkeros setup`, which runs only when invoked (boolean enables defaults, object configures specifics)',
       ),
     file: z
       .boolean()

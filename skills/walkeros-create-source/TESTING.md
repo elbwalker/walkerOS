@@ -13,12 +13,12 @@ process)
 
 **Skill Coverage:**
 
-| Step                 | Covered | Location               |
-| -------------------- | ------- | ---------------------- |
-| Template selection   | ✅      | Choose Your Template   |
-| Browser patterns     | ✅      | Browser source section |
-| Event listener setup | ✅      | Implementation phase   |
-| Push to collector    | ✅      | Phase 4                |
+| Step                 | Covered | Location                                |
+| -------------------- | ------- | --------------------------------------- |
+| Template selection   | ✅      | Choose Your Template                    |
+| Browser patterns     | ✅      | Phase 2.2 (DOM interception), Phase 3.7 |
+| Event listener setup | ✅      | Phase 7: Implement                      |
+| Push to collector    | ✅      | Phase 7, Key Patterns 3 (`env.push`)    |
 
 **Result:** ✅ PASS
 
@@ -30,11 +30,11 @@ process)
 
 **Skill Coverage:**
 
-| Feature             | Covered | Location              |
-| ------------------- | ------- | --------------------- |
-| Server template     | ✅      | Choose Your Template  |
-| Request parsing     | ✅      | Server source section |
-| Event normalization | ✅      | Mapping section       |
+| Feature             | Covered | Location                              |
+| ------------------- | ------- | ------------------------------------- |
+| Server template     | ✅      | Choose Your Template                  |
+| Request parsing     | ✅      | Phase 2.2 (HTTP handler), Phase 7 (6) |
+| Event normalization | ✅      | Phase 4: Define Mapping               |
 
 **Result:** ✅ PASS
 
@@ -46,10 +46,10 @@ process)
 
 **Skill Coverage:**
 
-| Feature           | Covered | Location          |
-| ----------------- | ------- | ----------------- |
-| DataLayer pattern | ✅      | DataLayer section |
-| Polling vs push   | ✅      | DataLayer section |
+| Feature           | Covered | Location                            |
+| ----------------- | ------- | ----------------------------------- |
+| DataLayer pattern | ✅      | Choose Your Template, Phase 5 (web) |
+| Polling vs push   | ✅      | Phase 1.2, Call ordering            |
 
 **Result:** ✅ PASS
 

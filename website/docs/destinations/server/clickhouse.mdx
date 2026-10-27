@@ -8,6 +8,7 @@ package: '@walkeros/server-destination-clickhouse'
 
 import data from '@walkeros/server-destination-clickhouse/walkerOS.json';
 import Configuration from '@site/src/components/snippets/_configuration.mdx';
+import Quickstart from '@site/src/components/snippets/_quickstart.mdx';
 
 import WhereThisFits from '@site/src/components/snippets/_where-this-fits.mdx';
 
@@ -29,70 +30,7 @@ An insert into a table that does not exist fails with `60 UNKNOWN_TABLE`, so rea
 
 ## Installation
 
-<CodeSnippet
-  code={`npm install @walkeros/server-destination-clickhouse`}
-  language="bash"
-/>
-
-<Tabs groupId="mode">
-  <TabItem value="integrated" label="Integrated" default>
-
-<CodeSnippet
-  code={`import { startFlow } from '@walkeros/collector';
-import { destinationClickHouse } from '@walkeros/server-destination-clickhouse';
-
-await startFlow({
-  destinations: {
-    clickhouse: {
-      code: destinationClickHouse,
-      config: {
-        settings: {
-          url: 'https://clickhouse.example.com:8443',
-          database: 'analytics',
-          table: 'events',
-        },
-        credentials: {
-          username: 'walkeros_writer',
-          password: process.env.CLICKHOUSE_PASSWORD ?? '',
-        },
-        batch: { size: 5000, age: 5000, wait: 1000 },
-      },
-    },
-  },
-});`}
-  language="typescript"
-/>
-
-  </TabItem>
-  <TabItem value="bundled" label="Bundled">
-
-Add to your `flow.json` destinations:
-
-<CodeSnippet
-  code={`"destinations": {
-  "clickhouse": {
-    "package": "@walkeros/server-destination-clickhouse",
-    "config": {
-      "settings": {
-        "url": "https://clickhouse.example.com:8443",
-        "database": "analytics",
-        "table": "events"
-      },
-      "credentials": {
-        "username": "walkeros_writer",
-        "password": "$secret.CLICKHOUSE_PASSWORD"
-      },
-      "batch": { "size": 5000, "age": 5000, "wait": 1000 }
-    }
-  }
-}`}
-  language="json"
-/>
-
-[See bundled mode setup](/docs/getting-started/modes/bundled) | [CLI reference](/docs/apps/cli)
-
-  </TabItem>
-</Tabs>
+<Quickstart data={data} />
 
 <Configuration type="destination" data={data} />
 
@@ -101,7 +39,19 @@ Add to your `flow.json` destinations:
 `config.credentials` carries the `{ username, password }` of the ClickHouse user
 the destination writes as. Back the password with a managed secret
 (`$secret.NAME`) instead of writing it into the flow config. It wins over a
-username or password left in `settings.clickhouse`.
+username or password left in `settings.clickhouse`. Without credentials the
+client signs in as the `default` user with an empty password.
+
+<CodeSnippet
+  code={`"config": {
+  "settings": { "url": "https://clickhouse.example.com:8443" },
+  "credentials": {
+    "username": "walkeros_writer",
+    "password": "$secret.CLICKHOUSE_PASSWORD"
+  }
+}`}
+  language="json"
+/>
 
 ## Passthrough options
 
@@ -149,8 +99,7 @@ The timestamp is a basic-format UTC string rather than a number or an ISO
 literal on purpose. `date_time_input_format` defaults changed in ClickHouse 26.5
 and integer parsing changed in 26.8, so a number can be read as Unix seconds by
 one server and as the raw value at the column's precision by another, which is a
-factor of 1000 apart. The basic format reads the same on every version a partner
-may run.
+factor of 1000 apart. The basic format reads the same on every server version.
 
 `JSONEachRow` is fixed and not configurable. A positional format would silently
 misalign every value the first time a column is reordered in a table the
@@ -170,7 +119,8 @@ nothing, and an insert into a table that does not exist fails with
 `60 UNKNOWN_TABLE`.
 
 Create the table before sending events. Replace `{database}` and `{table}` with
-the values in `settings`, and read the notes below before running it. The
+the values in `settings` (`default` and `events` when unset), and read the notes
+below before running it. The
 `ORDER BY` in particular is worth deciding first.
 
 <CodeSnippet
@@ -291,9 +241,9 @@ deliberately does not make for you:
 
 ## Batching at scale
 
-Batching belongs to the collector, through `config.batch`. The package default
-is batching off, matching every other walkerOS destination, so the numbers below
-are a flow-config recommendation rather than a package default:
+Batching belongs to the collector, through `config.batch`. The package sets no
+batch, so each event is its own insert until the flow sets one. The numbers
+below are a recommendation for the flow config:
 
 <CodeSnippet
   code={`"batch": { "size": 5000, "age": 5000, "wait": 1000 }`}
@@ -396,7 +346,9 @@ it is worse.
 
 A mapping rule's `data` object replaces the canonical row wholesale. The object
 a mapping produces travels verbatim, so a table that is not the reference DDL is
-configured in the flow rather than in the destination:
+configured in the flow rather than in the destination. An event without a `data`
+mapping still arrives as the canonical row, which a custom table rejects, so the
+`"*": { "*": { "ignore": true } }` rule keeps every other event out:
 
 <CodeSnippet
   code={`{
@@ -422,7 +374,8 @@ configured in the flow rather than in the destination:
                 }
               }
             }
-          }
+          },
+          "*": { "*": { "ignore": true } }
         }
       }
     }

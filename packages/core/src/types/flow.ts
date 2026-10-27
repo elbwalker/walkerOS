@@ -45,6 +45,7 @@ import type { Collector } from '.';
 import type { Cache, EventCacheRule, StoreCacheRule } from './cache';
 import type { Route } from './transformer';
 import type { State } from './state';
+import type { Config as DestinationConfig } from './destination';
 import type { Config as MappingConfig } from './mapping';
 import type { ValidateEvents, JsonSchema } from './validate';
 
@@ -817,9 +818,12 @@ export namespace Flow {
   export interface StepPageSession {
     /** Page globals merged over an examples env's `push` (the document). */
     globals: Record<string, unknown>;
-    /** Scripts added since `open`, with and without the loadVendor marker. */
+    /**
+     * Scripts added since `open`, with and without the loadVendor marker.
+     * A marked script loads (`load`, once) unless `failScripts` fails it.
+     */
     scripts(): { marked: number; unmarked: number };
-    /** Fire `error` on every marked script (kit item 2, vendor-global). */
+    /** Fire `error` on every marked script, loaded or not (kit item 2, vendor-global). */
     failScripts(): void;
     /** Restore the stubs and remove the scripts added since `open`. */
     close(): void;
@@ -842,7 +846,10 @@ export namespace Flow {
      * Whether this example is meant for public consumption (docs, UI, MCP default output).
      * Defaults to `true`. Set to `false` for test-only fixtures that should stay out of
      * user-facing surfaces but still run in test suites and remain available to
-     * `flow_simulate` / CLI `--simulate`.
+     * `flow_simulate` / CLI `--simulate`. A failure example (`public: false`
+     * with an `outcome`) is still listed on the docs page under "When it
+     * fails", by its title, description and outcome; its fixture `in` is
+     * never shown.
      */
     public?: boolean;
     in?: unknown;
@@ -864,7 +871,10 @@ export namespace Flow {
     /**
      * The reported outcome of a failure or queue example (`public: false`):
      * the step's status in the push result and its reason code. Absent means
-     * the step must not fail.
+     * the step must not fail. The docs page lists every example with an
+     * outcome under "When it fails" by title, description and outcome, so it
+     * needs a reader-facing `description` (the docs build fails without one);
+     * its fixture `in` is never shown.
      */
     outcome?: StepOutcome;
     /** What the boundary answers for this example (a failure fixture). */
@@ -890,4 +900,65 @@ export namespace Flow {
 
   /** Named step examples keyed by scenario name. */
   export type StepExamples = Record<string, StepExample>;
+
+  /**
+   * The settings a package needs to deliver, published as `examples.minimal`
+   * (for a package with several exports, as `exportExamples.<export>.minimal`).
+   * `composeQuickstart` turns it into the install line, the integrated code
+   * and a complete flow; the conformance kit runs it.
+   */
+  export interface MinimalExample {
+    /**
+     * Only the settings the schema requires, plus any that `init` refuses to
+     * start without under `config`. A secret holds a placeholder value that
+     * satisfies the schema; generated code never shows it.
+     */
+    settings: Record<string, unknown>;
+    /**
+     * Server destinations: settings keys that hold credentials, mapped to the
+     * secret name the reader sets (`A-Z`, `0-9` and `_`), for example
+     * `{ accessToken: 'META_ACCESS_TOKEN' }`. Generated code reads them as
+     * `process.env.<NAME>` (integrated) and `$secret.<NAME>` (flow). A web
+     * destination holds no secret.
+     */
+    secrets?: Record<string, string>;
+    /**
+     * Destination config the package needs to deliver beyond its settings:
+     * `loadScript` for a web destination that loads its vendor script only
+     * when asked to.
+     */
+    config?: Pick<DestinationConfig, 'loadScript'>;
+  }
+
+  /** The `$meta` of a package's walkerOS.json, as its build writes it. */
+  export interface PackageMeta {
+    package: string;
+    version: string;
+    /** Step type: `source`, `transformer`, `destination` or `store`. */
+    type?: string;
+    platform?: string[];
+    renderer?: string;
+    /** Declared exports, export name to description. */
+    exports?: Record<string, string>;
+    docs?: string;
+    source?: string;
+  }
+
+  /** A package's quickstart, composed from its `$meta` and minimal example. */
+  export interface Quickstart {
+    /** The install command. */
+    install: string;
+    /** TypeScript source that starts a flow with the package. */
+    integrated: string;
+    /** A complete flow with the package as its only step of its type. */
+    flow: Json;
+    /**
+     * What the conformance kit runs with: the settings (secrets as their
+     * placeholders) and the minimal example's config.
+     */
+    run: {
+      settings: Record<string, unknown>;
+      config?: Pick<DestinationConfig, 'loadScript'>;
+    };
+  }
 }

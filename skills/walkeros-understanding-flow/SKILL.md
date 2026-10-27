@@ -62,11 +62,14 @@ interface Flow {
 
 **All components communicate via `push` functions:**
 
-| Component   | Push Signature                | Purpose               |
-| ----------- | ----------------------------- | --------------------- |
-| Source      | `push(input) → events`        | Capture external data |
-| Collector   | `push(event) → void`          | Process and route     |
-| Destination | `push(event, context) → void` | Transform and deliver |
+| Component   | Push Signature                     | Purpose               |
+| ----------- | ---------------------------------- | --------------------- |
+| Source      | `push(input) → events`             | Capture external data |
+| Collector   | `push(event) → PushResult`         | Process and route     |
+| Destination | `push(event, context) → response?` | Transform and deliver |
+
+A destination's return value is the response a `destination.next` chain reads at
+`ingest._response`.
 
 The collector's `elb()` takes a partial event
 (`elb({ name: 'page view', data })`) or a `walker` command; `collector.push`
@@ -103,15 +106,15 @@ const { collector, elb } = await startFlow({
 
 walkerOS uses a two-layer data model:
 
-- **Event** - strict schema, structured analytics data (name, data, context,
+- **Event**: strict schema, structured analytics data (name, data, context,
   etc.)
-- **Ingest** - free-form mutable context that flows alongside events
+- **Ingest**: free-form mutable context that flows alongside events
 
 Any step can read and write arbitrary keys on ingest. The runtime manages
 `_meta`:
 
-- `_meta.hops` - increments per step (safety valve at 256)
-- `_meta.path` - ordered list of step IDs visited (path[0] = source ID)
+- `_meta.hops`: increments per step (safety valve at 256)
+- `_meta.path`: ordered list of step IDs visited (path[0] = source ID)
 
 ```typescript
 // In a transformer
@@ -130,15 +133,15 @@ processing. After a destination push, the response is available at
 ## Stores
 
 Three pipeline components (Source / Transformer / Destination) plus Stores as
-**passive infrastructure**. Stores are not a fourth pipeline stage - they're
+**passive infrastructure**. Stores are not a fourth pipeline stage: they are
 key-value storage that other components consume via `env`. They have no `push`,
 no `next`, no `before`; they sit alongside the pipeline rather than inside it.
 
 - Referenced via `$store.storeId` in `env` values (bundled mode) or by passing
   the same store definition object used in `stores` (integrated mode)
-- **Init first, destroy last** - stores are available before any source,
+- **Init first, destroy last**: stores are available before any source,
   transformer, or destination starts, and outlive them on shutdown
-- **No chains** - stores don't participate in the event pipeline. Components
+- **No chains**: stores don't participate in the event pipeline. Components
   access them through their `env`.
 - Implementations: `@walkeros/server-store-fs` (async, filesystem),
   `@walkeros/server-store-s3` (async, S3-compatible),
@@ -149,12 +152,15 @@ no `next`, no `before`; they sit alongside the pipeline rather than inside it.
 ```json
 {
   "stores": {
-    "data": { "package": "@walkeros/server-store-fs" }
+    "assets": {
+      "package": "@walkeros/server-store-fs",
+      "config": { "file": true, "settings": { "basePath": "./public" } }
+    }
   },
   "transformers": {
-    "fingerprint": {
-      "package": "@walkeros/server-transformer-fingerprint",
-      "env": { "store": "$store.data" }
+    "file": {
+      "package": "@walkeros/server-transformer-file",
+      "env": { "store": "$store.assets" }
     }
   }
 }
@@ -175,8 +181,9 @@ for the full store interface and lifecycle.
 
 ## Step-Level Primitives
 
-Every step (source, transformer, destination) supports a small set of inline
-primitives alongside its package wiring: `cache`, `mapping`, and `consent`.
+Next to its package wiring, every step (source, transformer, destination)
+carries `cache` and `state`, and a transformer also `mapping`. A source's or
+destination's `mapping` and `consent` sit in its `config`.
 
 Event shapes are not a step-level primitive. They live in the top-level
 `contract` block (a sibling of `flows`) as named JSON Schemas, and enforcement
@@ -225,15 +232,20 @@ Runs after source captures event, before collector processing:
   },
   "transformers": {
     "enrich": {
-      "package": "@walkeros/transformer-enricher",
+      "code": {
+        "push": "$code:(event) => ({ event: { ...event, data: { ...event.data, enrichedAt: Date.now() } } })"
+      },
       "next": "redact"
     },
     "redact": {
-      "package": "@walkeros/transformer-redact"
+      "mapping": { "policy": { "user.email": { "value": "[redacted]" } } }
     }
   }
 }
 ```
+
+`enrich` is inline code and `redact` a mapping-only step; any transformer
+package fits the same slots.
 
 **Integrated mode (TypeScript):**
 
@@ -247,7 +259,7 @@ sources: {
 transformers: {
   enrich: {
     code: transformerEnrich,
-    config: { next: 'redact' }
+    next: 'redact'
   },
   redact: {
     code: transformerRedact
@@ -255,9 +267,7 @@ transformers: {
 }
 ```
 
-Note: In flow.json, `next` is at the reference level. The CLI bundler
-automatically moves it into `config.next` for runtime - you don't need to handle
-this yourself.
+In both modes `next` sits on the step entry (`config.next` works too).
 
 ### Transformer before chain
 
@@ -267,12 +277,13 @@ function:
 ```json
 {
   "transformers": {
-    "enrich": {
-      "before": "lookup",
-      "package": "@walkeros/transformer-enricher"
+    "fingerprint": {
+      "before": "bot",
+      "package": "@walkeros/server-transformer-fingerprint",
+      "config": { "settings": { "salt": "$env.FINGERPRINT_SALT" } }
     },
-    "lookup": {
-      "package": "@walkeros/transformer-lookup"
+    "bot": {
+      "package": "@walkeros/server-transformer-bot"
     }
   }
 }
@@ -317,12 +328,13 @@ receives the event. A `stop` here skips only this destination:
   "destinations": {
     "gtag": {
       "package": "@walkeros/web-destination-gtag",
+      "config": { "settings": { "ga4": { "measurementId": "G-DEMO123456" } } },
       "before": "redact"
     }
   },
   "transformers": {
     "redact": {
-      "package": "@walkeros/transformer-redact"
+      "mapping": { "policy": { "user.email": { "value": "[redacted]" } } }
     }
   }
 }
@@ -356,6 +368,7 @@ Runs after destination push completes. The push response is available at
   "destinations": {
     "api": {
       "package": "@walkeros/server-destination-api",
+      "config": { "settings": { "url": "https://collect.example.com/events" } },
       "next": "auditLog"
     }
   },
@@ -392,10 +405,7 @@ transformers: {
 }
 ```
 
-`auditLog` is inline code: there is no audit transformer package. The complete
-example (`packages/cli/examples/flow-complete.json`) has no genuine use for
-`destination.next`, `transformer.before` or `many`; the tested route fixture
-`routeCases` in `@walkeros/core/dev` covers them.
+`auditLog` is inline code: there is no audit transformer package.
 
 ### Chain Resolution
 
@@ -441,13 +451,14 @@ two stay in sync without duplication.
 }
 ```
 
-`validate` warns on unresolved `$flow` references (lenient), `bundle` errors out
-(strict), so production builds never ship with an empty cross-flow value.
+An unknown flow, a missing key or an empty value is an error in
+`walkeros validate` (`UNRESOLVED_REFERENCE`) and in `bundle`, so a build never
+ships with an empty cross-flow value.
 
 ## Step Examples
 
 Each step in a flow (source, transformer, destination) can ship **step
-examples** -- structured `{ in, out }` pairs that define expected input/output
+examples**: structured `{ in, out }` pairs that define expected input/output
 behavior.
 
 ### The Three Type Zones
@@ -468,17 +479,30 @@ ASCII diagram and detailed explanation.
   "destinations": {
     "gtag": {
       "package": "@walkeros/web-destination-gtag",
-      "config": { "measurementId": "G-XXXXXX" },
+      "config": { "settings": { "ga4": { "measurementId": "G-DEMO123456" } } },
       "examples": {
         "purchase": {
           "in": {
             "name": "order complete",
             "data": { "id": "ORD-123", "value": 149.97 }
           },
+          "mapping": {
+            "name": "purchase",
+            "data": {
+              "map": { "transaction_id": "data.id", "value": "data.value" }
+            }
+          },
           "out": [
-            "event",
-            "purchase",
-            { "transaction_id": "ORD-123", "value": 149.97 }
+            [
+              "gtag",
+              "event",
+              "purchase",
+              {
+                "transaction_id": "ORD-123",
+                "value": 149.97,
+                "send_to": "G-DEMO123456"
+              }
+            ]
           ]
         }
       }
@@ -587,7 +611,7 @@ root `{ ingest, event }`.
 - **Repeated steps:** a step listed twice runs twice (no dedup, no warning)
 - **Cycles:** a member `next` that leads back to a step already on its insertion
   path is skipped; each copy is capped at 256 steps
-- **Unknown transformer id:** logged as a warning and skipped, the chain
+- **Unknown transformer id:** logged as an ERROR line and skipped, the chain
   continues; `walkeros validate` reports `UNKNOWN_ROUTE_TARGET` as an error
 - **Result `{ next }`:** replaces the member's own `next` for that event, then
   the array continues
@@ -609,13 +633,16 @@ entry whose `match` succeeds:
 ```json
 "next": {
   "one": [
-    { "match": { "key": "ingest.path", "operator": "prefix", "value": "/api" }, "next": "api-handler" },
+    { "match": { "key": "ingest.path", "operator": "prefix", "value": "/api" }, "next": "apiHandler" },
     { "next": "default" }
   ]
 }
 ```
 
 - `one` entries are evaluated in order, first match wins
+- Besides `_meta`, `ingest` holds only what the source's `config.ingest` maps
+  and what earlier steps write into it: without `{ "map": { "path": "path" } }`
+  in that config, `ingest.path` is empty and the `/api` entry never matches
 - An entry without `match` always matches, use it as the fallback
 - No matching entry means the event passes through unchanged
 - Works on all chain positions: `source.before`, `source.next`,
@@ -630,7 +657,7 @@ entry whose `match` succeeds:
 
 Use `many` when every matching entry should produce an independent copy of the
 event (audit-while-process, multi-decoder fan-out). Allowed in every chain
-field, at any depth. Each copy finishes the ENTIRE rest of the path on its own
+field, at any depth. Each copy finishes the entire rest of the path on its own
 (rest of the array, every enclosing chain, collector, destinations); copies are
 never merged. Each copy gets its own `event.id`, derived deterministically from
 the parent id and branch position (`deriveSpanId`); `trace` stays shared. One
@@ -640,11 +667,14 @@ matching entry continues in place without a copy. A transformer returning
 ```jsonc
 "next": {
   "many": [
-    { "match": { "key": "event.consent.analytics", "operator": "eq", "value": "granted" }, "next": "ga4-pipeline" },
-    { "next": "audit-log" }
+    { "match": { "key": "event.consent.analytics", "operator": "eq", "value": "true" }, "next": "ga4Pipeline" },
+    { "next": "auditLog" }
   ]
 }
 ```
+
+A consent value is a boolean, and `eq` compares it as text, so a granted consent
+matches `"true"`.
 
 ### Dropping an event (`stop`)
 
@@ -692,10 +722,12 @@ Pass-through steps come in three variants:
   "destinations": {
     "gtag": {
       "package": "@walkeros/web-destination-gtag",
+      "config": { "settings": { "ga4": { "measurementId": "G-DEMO123456" } } },
       "before": "validateThenEnrich"
     },
     "meta": {
       "package": "@walkeros/web-destination-meta",
+      "config": { "settings": { "pixelId": "1234567890" } },
       "before": "validateThenEnrich"
     }
   }
@@ -703,8 +735,8 @@ Pass-through steps come in three variants:
 ```
 
 Transformer step entries follow a **closed schema**: unknown top-level keys are
-validation errors, and at least one operative field (`code` / `package` /
-`before` / `next` / `cache` / `mapping`) must be set.
+validation errors (`UNKNOWN_KEY`). An entry with no field at all is a valid
+no-op.
 
 See
 [walkeros-understanding-transformers](../walkeros-understanding-transformers/SKILL.md)
@@ -722,16 +754,16 @@ every destination needs belongs in `collector.next`, not repeated in each
 
 ### Deferred activation (`require`)
 
-- `source.config.require: ["consent"]` - source deferred until "consent" event
-  fires
-- `destination.config.require: ["user"]` - destination deferred until "user"
+- `source.config.require: ["consent"]`: the source's `on()` deliveries wait
+  until consent state is recorded; its `init` runs at once
+- `destination.config.require: ["user"]`: destination deferred until "user"
   event fires
 - Multiple requirements: all must be fulfilled (each fires independently)
 
 ### Mapping and consent gating
 
-- **Source-level:** `source.config.mapping` and `source.config.consent` -
-  applied before the source chain; blocks event entirely
+- **Source-level:** `source.config.mapping` and `source.config.consent`: applied
+  before the source chain; blocks event entirely
 - **Destination-level:** `destination.config.consent` is checked first, before
   the destination chain (`destination.before`): it skips only that destination
   and queues denied events. The queue sits after `collector.next`, so a replay
@@ -774,7 +806,7 @@ every destination needs belongs in `collector.next`, not repeated in each
 
 **Documentation:**
 
-- [Website: Flow](../../website/docs/getting-started/modes/bundled.mdx) - Flow
+- [Website: Flow](../../website/docs/getting-started/flow/index.mdx) - Flow
   concept
 - [Website: Collector](../../website/docs/collector/index.mdx) - Collector docs
 - [Website: Routing](../../website/docs/getting-started/flow/routing.mdx) -

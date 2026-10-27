@@ -1,5 +1,5 @@
 import { isObject } from '@walkeros/core';
-import { mapping, settings } from '../schemas';
+import { mapping, settings, SettingsSchema } from '../schemas';
 
 function description(key: string, schema = settings): unknown {
   const properties = schema.properties;
@@ -9,6 +9,14 @@ function description(key: string, schema = settings): unknown {
 }
 
 describe('schemas', () => {
+  it('requires userId, the only source of the user id every event needs', () => {
+    expect(settings.required).toEqual(['sdkKey', 'userId']);
+    expect(SettingsSchema.safeParse({ sdkKey: 'key' }).success).toBe(false);
+    expect(
+      SettingsSchema.safeParse({ sdkKey: 'key', userId: 'user.id' }).success,
+    ).toBe(true);
+  });
+
   it('userId text shows a fallback chain, not a static value', () => {
     const userId = description('userId');
     expect(userId).toMatch(/\["user\.id", "user\.device"\]/);

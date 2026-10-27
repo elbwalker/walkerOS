@@ -6,7 +6,7 @@ export const SettingsSchema = z
       .string()
       .min(1)
       .describe(
-        'Your Microsoft Clarity project ID (e.g. "3t0wlogvdz"). Find it in your Clarity dashboard under Settings → Setup.',
+        'Your Microsoft Clarity project ID. Find it in your Clarity dashboard under Settings → Setup.',
       ),
     consent: z
       .record(z.string(), z.enum(['analytics_Storage', 'ad_Storage']))

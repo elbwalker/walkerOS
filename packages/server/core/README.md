@@ -9,7 +9,7 @@
 Node.js-specific utilities for server-side walkerOS implementations, covering
 HTTP communication and cryptographic hashing for backend event processing.
 
-[Documentation](https://www.walkeros.io/docs/sources/server) &bull;
+[Documentation](https://www.walkeros.io/docs/core/server) &bull;
 [NPM Package](https://www.npmjs.com/package/@walkeros/server-core) &bull;
 [Source Code](https://github.com/elbwalker/walkerOS/tree/main/packages/server/core)
 
@@ -35,7 +35,7 @@ const response = await sendServer('https://api.example.com/events', {
 ## Documentation
 
 Full configuration, mapping, and examples live in the docs:
-**https://www.walkeros.io/docs/sources/server**
+**https://www.walkeros.io/docs/core/server**
 
 ## Contribute
 

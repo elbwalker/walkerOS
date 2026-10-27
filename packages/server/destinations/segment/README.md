@@ -7,8 +7,7 @@
 # @walkeros/server-destination-segment
 
 Server-side event delivery to Segment via the official analytics-node SDK,
-implementing the full Segment Spec surface with automatic identity
-deduplication.
+sending the Segment Spec calls track, identify, group, page, and screen.
 
 [Documentation](https://www.walkeros.io/docs/destinations/server/segment) &bull;
 [NPM Package](https://www.npmjs.com/package/@walkeros/server-destination-segment)

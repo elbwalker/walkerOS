@@ -1,5 +1,5 @@
 import type { Flow, WalkerOS } from '@walkeros/core';
-import { createEvent, getEvent, isObject } from '@walkeros/core';
+import { createEvent, getEvent } from '@walkeros/core';
 
 /**
  * Reddit Conversions API step examples.
@@ -37,7 +37,7 @@ export const purchase: Flow.StepExample = {
     'A completed order is sent to the Reddit Conversions API as a Purchase event with value, currency, and items.',
   in: getEvent('order complete', {
     id: 'ev-1700000900',
-    timestamp: 1700000900,
+    timestamp: 1700000900000,
     data: { id: 'ORD-300', value: 249.99, currency: 'EUR' },
     nested: [
       {
@@ -73,7 +73,10 @@ export const purchase: Flow.StepExample = {
                 'nested',
                 {
                   condition: (entity: unknown) =>
-                    isObject(entity) && entity.entity === 'product',
+                    typeof entity === 'object' &&
+                    entity !== null &&
+                    'entity' in entity &&
+                    entity.entity === 'product',
                   map: {
                     id: 'data.id',
                     name: 'data.name',
@@ -95,8 +98,8 @@ export const purchase: Flow.StepExample = {
         data: {
           events: [
             {
-              event_at: '1970-01-20T16:13:20.900Z',
-              event_at_ms: 1700000900,
+              event_at: '2023-11-14T22:28:20.000Z',
+              event_at_ms: 1700000900000,
               event_type: { tracking_type: 'Purchase' },
               user: {},
               event_metadata: {
@@ -127,7 +130,7 @@ export const addToCart: Flow.StepExample = {
     'A product add is sent to Reddit as an AddToCart conversion with value and product details.',
   in: getEvent('product add', {
     id: 'ev-1700000901',
-    timestamp: 1700000901,
+    timestamp: 1700000901000,
     data: {
       id: 'SKU-B2',
       name: 'Cool Cap',
@@ -171,8 +174,8 @@ export const addToCart: Flow.StepExample = {
         data: {
           events: [
             {
-              event_at: '1970-01-20T16:13:20.901Z',
-              event_at_ms: 1700000901,
+              event_at: '2023-11-14T22:28:21.000Z',
+              event_at_ms: 1700000901000,
               event_type: { tracking_type: 'AddToCart' },
               user: {},
               event_metadata: {
@@ -199,7 +202,7 @@ export const pageVisit: Flow.StepExample = {
     'A page view is sent to Reddit as a PageVisit conversion used for retargeting audiences.',
   in: getEvent('page view', {
     id: 'ev-1700000902',
-    timestamp: 1700000902,
+    timestamp: 1700000902000,
     user: { id: 'user-789' },
     source: { type: 'express', platform: 'server' },
   }),
@@ -214,8 +217,8 @@ export const pageVisit: Flow.StepExample = {
         data: {
           events: [
             {
-              event_at: '1970-01-20T16:13:20.902Z',
-              event_at_ms: 1700000902,
+              event_at: '2023-11-14T22:28:22.000Z',
+              event_at_ms: 1700000902000,
               event_type: { tracking_type: 'PageVisit' },
               user: {},
               event_metadata: { conversion_id: 'ev-1700000902' },
@@ -235,7 +238,7 @@ export const lead: Flow.StepExample = {
   in: createEvent({
     name: 'form submit',
     id: 'ev-1700000903',
-    timestamp: 1700000903,
+    timestamp: 1700000903000,
     data: { form: 'contact' },
     user: { id: 'user-lead-1', email: 'lead@example.com' },
     source: { type: 'express', platform: 'server' },
@@ -261,8 +264,8 @@ export const lead: Flow.StepExample = {
         data: {
           events: [
             {
-              event_at: '1970-01-20T16:13:20.903Z',
-              event_at_ms: 1700000903,
+              event_at: '2023-11-14T22:28:23.000Z',
+              event_at_ms: 1700000903000,
               event_type: { tracking_type: 'Lead' },
               user: {
                 // sha256('lead@example.com')
@@ -289,7 +292,7 @@ export const signUp: Flow.StepExample = {
   in: createEvent({
     name: 'user signup',
     id: 'ev-1700000904',
-    timestamp: 1700000904,
+    timestamp: 1700000904000,
     data: { method: 'email' },
     user: { id: 'new-user-1', email: 'new@example.com' },
     source: { type: 'express', platform: 'server' },
@@ -315,8 +318,8 @@ export const signUp: Flow.StepExample = {
         data: {
           events: [
             {
-              event_at: '1970-01-20T16:13:20.904Z',
-              event_at_ms: 1700000904,
+              event_at: '2023-11-14T22:28:24.000Z',
+              event_at_ms: 1700000904000,
               event_type: { tracking_type: 'SignUp' },
               user: {
                 // sha256('new@example.com')
@@ -339,12 +342,12 @@ export const signUp: Flow.StepExample = {
 export const search: Flow.StepExample = {
   title: 'Search',
   description:
-    'A site search is sent to Reddit as a Search conversion with an item count in event_metadata.',
+    'A search submit is sent to Reddit as a Search conversion with an item count in event_metadata.',
   in: createEvent({
-    name: 'site search',
+    name: 'search submit',
     id: 'ev-1700000905',
-    timestamp: 1700000905,
-    data: { query: 'walkerOS destinations' },
+    timestamp: 1700000905000,
+    data: { term: 'walkerOS destinations' },
     user: { id: 'user-101' },
     source: { type: 'express', platform: 'server' },
   }),
@@ -368,8 +371,8 @@ export const search: Flow.StepExample = {
         data: {
           events: [
             {
-              event_at: '1970-01-20T16:13:20.905Z',
-              event_at_ms: 1700000905,
+              event_at: '2023-11-14T22:28:25.000Z',
+              event_at_ms: 1700000905000,
               event_type: { tracking_type: 'Search' },
               user: {},
               event_metadata: {

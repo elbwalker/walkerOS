@@ -8,6 +8,7 @@ package: '@walkeros/web-destination-meta'
 
 import data from '@walkeros/web-destination-meta/walkerOS.json';
 import Configuration from '@site/src/components/snippets/_configuration.mdx';
+import Quickstart from '@site/src/components/snippets/_quickstart.mdx';
 
 import WhereThisFits from '@site/src/components/snippets/_where-this-fits.mdx';
 
@@ -21,83 +22,43 @@ import WhereThisFits from '@site/src/components/snippets/_where-this-fits.mdx';
 
 [Meta Pixel (formerly Facebook Pixel)](https://developers.facebook.com/docs/meta-pixel/)
 tracks visitor activity and conversions for Facebook and Instagram advertising
-campaigns. The destination automatically sends events to Meta Pixel via `fbq`
-function. All you need to do is install the destination, and optionally map
-events to Meta's format. walkerOS takes care of loading the script and the
-function calls.
+campaigns. The destination sends events to the Meta Pixel through its `fbq`
+function. Install the destination; mapping events to Meta's format is
+optional. An event without a rule goes out with `fbq('track', ...)` under its
+walkerOS name, such as `product add`; only `page view` is renamed, to
+`PageView`. With `loadScript: true`, as in the quickstart, walkerOS also loads
+the Pixel script.
 
 <WhereThisFits
   pre={<>Meta Pixel is a <strong>web destination</strong> in the walkerOS flow:</>}
   flowMap={{
     destinations: { default: { label: 'Destination', text: 'Meta Pixel', highlight: true } },
   }}
-  post={<>Loads Meta Pixel script dynamically, initializes the fbq function with your pixel ID, and tracks page views and custom conversions for Facebook and Instagram ads.</>}
+  post={<>Initializes the <code>fbq</code> function with your pixel ID, loads the Meta Pixel script with <code>loadScript</code>, and tracks page views and custom conversions for Facebook and Instagram ads.</>}
 />
 
 ## Installation
 
-<CodeSnippet
-  code={`npm install @walkeros/web-destination-meta`}
-  language="bash"
-/>
+<Quickstart data={data} />
 
-<Tabs groupId="mode">
-  <TabItem value="integrated" label="Integrated" default>
-
-<CodeSnippet
-  code={`import { startFlow } from '@walkeros/collector';
-import { destinationMeta } from '@walkeros/web-destination-meta';
-
-const { collector, elb } = await startFlow({
-  destinations: {
-    meta: {
-      code: destinationMeta,
-      config: {
-        settings: {
-          pixelId: '1234567890', // Your Meta Pixel ID
-        },
-        loadScript: true, // Load Meta Pixel script automatically
-      },
-    },
-  },
-});`}
-  language="typescript"
-/>
-
-  </TabItem>
-  <TabItem value="bundled" label="Bundled">
-
-Add to your `flow.json` destinations:
-
-<CodeSnippet
-  code={`"destinations": {
-  "meta": {
-    "package": "@walkeros/web-destination-meta",
-    "config": {
-      "settings": {
-        "pixelId": "1234567890"
-      },
-      "loadScript": true
-    }
-  }
-}`}
-  language="json"
-/>
-
-[See bundled mode setup](/docs/getting-started/modes/bundled) | [CLI reference](/docs/apps/cli)
-
-  </TabItem>
-</Tabs>
+The quickstart above sets no consent, so the Meta Pixel loads and receives
+every event without `marketing` consent, and a revocation changes nothing. Add
+`consent: { marketing: true }` to `config`, next to `settings`, before you go
+live: the Pixel then loads once `marketing` is granted, and events pushed
+before the grant wait in the queue and are sent then (see
+[consent](/docs/guides/consent#gate-a-destination-with-consent)).
 
 <Configuration type="destination" data={data} />
 
 ## Custom events
 
-Set `trackCustom` in a rule's `settings` to send an event that is not one of Meta's standard events. The destination then calls `fbq('trackCustom', name, params, { eventID })` instead of `fbq('track', ...)`; the `eventID` is the walkerOS event ID, which the Conversions API can use for deduplication.
+Set `trackCustom` in a rule's `settings` to send an event that is not one of Meta's standard events. The destination then calls `fbq('trackCustom', name, params, { eventID })` instead of `fbq('track', ...)`; the `eventID` is the walkerOS event ID, which the Conversions API matches, together with the event name, to deduplicate.
 
 <StepExample example={data.examples.step.customEventWithTrackCustom} />
 
 A destination with `config.consent` calls `fbq('consent', 'revoke')` when the
 required consent is revoked and `fbq('consent', 'grant')` when it is granted. A
 blocked `fbevents.js` fails later events visibly, and a missing `pixelId` is a
-`config` error. A rule with `silent: true` sends no event.
+`config` error. A rule with `silent: true` sends no event. A rule whose `data`
+resolves to something other than an object is sent with empty parameters, and
+its push answers `done`.

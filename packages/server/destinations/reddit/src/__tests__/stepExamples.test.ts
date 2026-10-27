@@ -1,6 +1,6 @@
 import type { WalkerOS } from '@walkeros/core';
 import { startFlow } from '@walkeros/collector';
-import { clone } from '@walkeros/core';
+import { clone, isObject } from '@walkeros/core';
 import { examples } from '../dev';
 import { expectSimulationResolves } from '@walkeros/core/dev';
 
@@ -8,7 +8,7 @@ type Captured = [callable: string, ...args: unknown[]];
 
 /**
  * Reddit Conversions API destination invokes `env.sendServer(url, body, options)`
- * exactly once per push. Stateless — no init-time calls to filter.
+ * exactly once per push. Stateless: no init-time calls to filter.
  */
 describe('Step Examples', () => {
   const mockSendServer = jest.fn();
@@ -59,3 +59,10 @@ describe('Step Examples', () => {
 
 it('declares simulation paths that resolve', () =>
   expectSimulationResolves(examples.env));
+
+it('gives every example event a timestamp in milliseconds', () => {
+  for (const example of Object.values(examples.step)) {
+    const timestamp = isObject(example.in) ? example.in.timestamp : undefined;
+    expect(timestamp).toBeGreaterThan(1e12);
+  }
+});

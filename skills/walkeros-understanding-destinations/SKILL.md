@@ -14,7 +14,7 @@ Destinations receive processed events from the collector and deliver them to
 third-party tools (analytics, marketing, data warehouses).
 
 **Core principle:** Destinations transform and deliver. They don't capture or
-process—that's sources and collector.
+process: that's sources and collector.
 
 ## Destination Interface
 
@@ -30,7 +30,7 @@ for canonical interface.
 | `destroy(context)`          | Cleanup on shutdown        | Optional     |
 | `config`                    | Settings, mapping, consent | **Required** |
 
-`destroy?: DestroyFn` — Optional cleanup method. Called during
+`destroy?: DestroyFn`: optional cleanup method. Called during
 `command('shutdown')`. Use to close DB connections, flush buffers, or release
 SDK clients. Receives `{ id, config, env, logger }`.
 
@@ -119,8 +119,8 @@ config: {
   data: { /* global data mapping */ },
   consent: { /* required consent states */ },
   policy: { /* processing rules */ },
-  queue: boolean,  // queue events
-  dryRun: boolean, // test mode
+  queue: boolean,  // when added later, receive the run's earlier events (default true)
+  timeout: number, // delivery timeout in ms (default 10000)
   queueMax: number,  // consent-queued events cap (default 1000)
   dlqMax: number,    // dead-letter queue cap (default 100)
 }
@@ -138,8 +138,7 @@ evictions) and `?.dlq` (DLQ evictions). Build the key with `stepId()` from
 `collector.status.destinations[id].queuePushSize` / `dlqSize`.
 
 `queuePush` drains back into the destination once consent allows delivery. The
-DLQ is never replayed: an event that reaches it is gone once it is evicted,
-which is what makes the delivery rules below worth getting right.
+DLQ is never replayed: an event that reaches it is gone once it is evicted.
 
 ## Delivery timeout
 
@@ -149,13 +148,12 @@ incremented. The default is 10000 ms, applied whenever `timeout` is `0` or
 unset, so one slow destination never wedges the collector push.
 
 **A destination's own client timeout has to fit inside it, retry delays
-included.** Many SDK defaults are longer (30 s in several HTTP clients), and a
-longer one produces the worst outcome available: the collector stops waiting at
-10 s, dead-letters the batch and counts it lost, then the request lands anyway a
-few seconds later. Those events are both counted lost and actually written.
-Derive the client's per-attempt timeout from `config.timeout` minus what the
-retry delays can take, split across the attempts, so the last attempt finishes
-before the race does.
+included.** Many SDK defaults are longer (30 s in several HTTP clients). With a
+longer one, the collector stops waiting at 10 s, dead-letters the batch and
+counts it lost, then the request lands anyway a few seconds later. Those events
+are both counted lost and actually written. Derive the client's per-attempt
+timeout from `config.timeout` minus what the retry delays can take, split across
+the attempts, so the last attempt finishes before the race does.
 
 The same bound applies at shutdown, where the collector races each pending batch
 flush against a fixed 5000 ms step timeout before destroying the destination. A
@@ -177,8 +175,8 @@ resend (`acknowledge(result)` from `@walkeros/core`: `ack`, `retry` or
 `reject`); it never reads message text.
 
 **Unmet consent is never a failure.** A destination waiting for consent answers
-`queued` with the reason `consent`; a server collector skips a consent-denied
-event instead (`consentDenied: 'skip'`, counted in
+`queued` with the reason `consent`; a server flow built by the CLI skips a
+consent-denied event instead (`consentDenied: 'skip'`, counted in
 `status.destinations[id].skipped`, a `debug` line). A rule with `ignore: true`
 is a skip as well, not a delivery.
 
@@ -194,8 +192,14 @@ example.
 step examples and fails with every broken item of the contract at once. Pick the
 `profile` by what the destination talks to: `http`, `sdk-env`, `web-sdk` (a web
 SDK started in `init`), `vendor-global`, `socket`. A web destination also passes
-`page` from `@walkeros/web-core/dev`. See
-[create-destination](../walkeros-create-destination/SKILL.md).
+`page` from `@walkeros/web-core/dev`. Every destination test passes `minimal`,
+the package's `examples.minimal` published from `src/examples/minimal.ts` (a
+package with several exports passes `exportName` and `exportExamples`, one
+`src/<export>/examples/minimal.ts` each), or `withoutMinimal: '<reason>'` when
+the package publishes none. The kit composes the minimal example into the
+quickstart the docs page shows and requires it delivered. A test with neither
+option fails, and so does one whose option disagrees with the published file.
+See [create-destination](../walkeros-create-destination/SKILL.md).
 
 ## Batch scheduling
 
@@ -209,14 +213,14 @@ at both the destination-config layer and the mapping-rule layer.
 it and every event is sent one at a time; the collector logs one ERROR at
 registration naming the setting, and `walkeros validate` and the bundle fail
 (`BATCH_WITHOUT_PUSH_BATCH`) for inline `code`. When adding batching to a
-destination, implementing `pushBatch` is the change; `config.batch` alone buys
-nothing. A batched event answers `queued` with the reason `batch`, so a server
+destination, implementing `pushBatch` is the change; `config.batch` alone does
+not batch. A batched event answers `queued` with the reason `batch`, so a server
 source acknowledges the producer at queue time; a failed flush is visible (ERROR
 line, failed counter, DLQ) but is not redelivered. `walker flush` flushes every
 pending batch.
 
-- `wait` (ms): debounce window. The timer resets on every push. Legacy form
-  `batch: 1000` is shorthand for `{ wait: 1000 }`.
+- `wait` (ms): debounce window. The timer resets on every push. A bare number,
+  `batch: 1000`, is shorthand for `{ wait: 1000 }`.
 - `size`: hard count cap. Default `1000`. Flushes immediately when reached.
 - `age` (ms): hard age cap since the first entry of the current window. Default
   `30000`. Prevents debounce starvation under sustained load.
@@ -232,19 +236,18 @@ batches flush on shutdown.
 `{ event, ingest?, respond?, rule?, data? }`. Destinations that need per-event
 request IDs or HTTP responses (BigQuery, mParticle, HubSpot) should read
 `entries` instead of assuming all events in a batch share one `ingest`.
-`batch.events` and `batch.data` are derived views kept for backward
-compatibility.
+`batch.events` and `batch.data` are derived views of `entries`.
 
 ### Failure handling
 
 `pushBatch` has three return outcomes:
 
-- **Resolves `void`** - the whole batch succeeded; every entry counts as
+- **Resolves `void`**: the whole batch succeeded; every entry counts as
   delivered.
-- **Throws or rejects** - the whole batch failed. Every entry is routed to the
+- **Throws or rejects**: the whole batch failed. Every entry is routed to the
   destination's `dlq` and `status.destinations[id].failed` is incremented by the
   batch size.
-- **Resolves a `BatchOutcome`** - partial failure.
+- **Resolves a `BatchOutcome`**: partial failure.
   `{ failed: [{ index, error? }] }` names the entries that did not make it, by
   index into `batch.entries`. Only those are DLQ'd; the rest count as delivered.
   Use this when the vendor reports per-row results (BigQuery's `rowErrors` is
@@ -256,9 +259,8 @@ sink that succeeds or fails as a whole (one SQL `INSERT`, one file write, one
 publish) must never report an all-failed outcome in place of throwing. Only a
 throw records a transport failure on the breaker, and only a flush with at least
 one delivered entry records a success, so an outcome where nothing succeeded
-records neither: a total outage passes the breaker unseen and it never opens.
-For a whole-batch sink there are two answers and no third one, resolve `void` or
-throw.
+records neither: a total outage passes the breaker unseen and it never opens. A
+whole-batch sink has exactly two answers: resolve `void` or throw.
 
 Batching, the delivery timeout, the DLQ and the breaker are the collector's;
 per-call retry is the vendor SDK's (BigQuery, Kafka, HubSpot and the AWS SDK
@@ -320,25 +322,32 @@ Two separate mechanisms control when destinations receive events:
 | Mechanism | Purpose              | Scope             | Effect                                                                                 |
 | --------- | -------------------- | ----------------- | -------------------------------------------------------------------------------------- |
 | `require` | Delay initialization | Whole destination | Destination stays in `pending` until all required events fire (e.g., `walker consent`) |
-| `consent` | Filter events        | Per-event         | Events without matching consent are silently skipped or queued                         |
+| `consent` | Filter events        | Per-event         | Events without matching consent are queued (skipped in a server flow built by the CLI) |
 
 **Require** gates the destination _lifecycle_. A destination with
 `require: ["consent"]` does not exist in the collector until consent state is
 present: a `"walker consent"` event, or starting consent (`startFlow`'s
 `consent`, which `walkeros push --simulate` sets with `--consent`). Until then,
-events are queued internally.
+events are queued internally. `require` takes effect only in the step
+definition's `config` (`destinations.<id>.config` in flow.json,
+`{ code, config }` in `startFlow`); a `require` in the destination code's own
+`config` is ignored today, and the destination receives events at once.
 
 **Consent** gates _individual event delivery_. A destination with
 `consent: { marketing: true }` only receives events where the collector's
 consent state (or the event's own `consent` field) includes
 `{ marketing: true }`.
 
-**State refresh on flush:** When queued events are flushed to a destination,
-they receive the _current_ collector state (`consent`, `user`, `globals`) — not
-the stale state from when they were originally captured. Any state-mutation
-command (`walker consent`, `walker user`, `walker globals`, etc.) triggers a
-flush attempt. The consent gate still applies: events without required consent
-simply return to the queue.
+**State on flush (consent queue):** When consent is granted, the consent-queued
+events are delivered in their original order. Each one gets the current
+`consent`, its `user` is merged with the collector's (the event's own values
+win), and it keeps the `globals` it was captured with. Events that still lack
+the required consent stay queued. See
+[How queued events are processed](../../website/docs/guides/consent/index.mdx#how-queued-events-are-processed).
+Events replayed from the run's buffer, to a `require`-pending destination when
+it activates or to a destination added later, behave differently today: they
+carry the user set after they were captured, and only an event that brought its
+own `user` keeps its values.
 
 Both can be combined:
 
@@ -355,9 +364,10 @@ This means: don't initialize until consent fires, then only accept events with
 marketing consent. The state that satisfies `require` reaches `on()` before the
 destination's queued events are pushed.
 
-**Simulation impact:** `require` causes "destination not found" errors in
-`flow_simulate` because the destination stays pending. Remove `require`
-temporarily for simulation testing.
+**Simulation impact:** a destination whose `require` is not met is reported as
+skipped with the reason `pending` by `flow_simulate` and
+`walkeros push --simulate`. Pass the starting consent to simulate it:
+`state.consent` in `flow_simulate`, `--consent` on the CLI.
 
 ## Policy
 
@@ -377,7 +387,7 @@ Policy modifies the event BEFORE mapping rules run. Defined at config level
 }
 ```
 
-Policy supports consent-gated field injection — fields are only added when the
+Policy supports consent-gated field injection: fields are only added when the
 required consent is present in the event.
 
 ## Destination Paths
@@ -415,44 +425,55 @@ for chain details.
 
 Destinations that integrate vendor SDKs typically need two consent layers:
 
-**Layer 1: `config.consent`** — gates walkerOS event delivery. If consent is not
+**Layer 1: `config.consent`** gates walkerOS event delivery. If consent is not
 granted, events don't reach the destination. This is the primary barrier.
 
-**Layer 2: `on('consent')`** — controls vendor SDK internals. Even when walkerOS
+**Layer 2: `on('consent')`** controls vendor SDK internals. Even when walkerOS
 stops sending events, the vendor SDK may still run its own behaviors (DOM
 capture, polling, fetching configs). Use `on('consent')` to pause/resume these.
 
 ```typescript
-on(type, context) {
-  if (type !== 'consent') return;
-  const consent = context.data;
-  // Derive from config.consent keys — don't hardcode consent names
-  const granted = Object.keys(config.consent || {}).every(k => consent[k]);
+import { getGrantedConsent } from '@walkeros/core';
+
+on(type, { config, collector }) {
+  if (type !== 'consent' || !config.consent) return;
+  // The rule of the delivery gate: one granted required key is enough.
+  // Derive from config.consent, don't hardcode consent names.
+  const granted =
+    getGrantedConsent(config.consent, collector.consent) !== false;
   vendorSdk.setOptOut(!granted);
 }
 ```
 
-Both layers are needed for complete consent compliance. `config.consent`
-prevents data flow. `on('consent')` prevents vendor SDK side effects.
+Complete consent compliance needs both layers: `config.consent` prevents data
+flow, `on('consent')` prevents vendor SDK side effects.
 
 `on('consent')` runs before the first push on every activation path (`require`,
 `walker destination` at runtime, state passed to `walker run`, state set before
 `run`) and is delivered exactly once per state change. It may be async: the
-collector awaits it, bounded by `config.timeout`. A handler that does not settle
-in that time, or rejects, holds that destination: its events stay queued until a
-later delivery of the state settles, and are discarded at the next `walker run`.
-Lifecycle handlers such as `on('run')` are awaited too, bounded by the same
-timeout, and never hold events. An async state handler must settle: until it
-settles or reaches `config.timeout`, that destination receives no events. `elb`
-commands and `startFlow` resolve only after the destinations' `on()` handlers
-for that command have settled or timed out.
+collector awaits it, bounded by `config.timeout`, and events pushed meanwhile
+answer `queued` with the reason `held`. A handler that rejects or does not
+settle in that time writes an ERROR line (`consent not applied`) and holds the
+destination's events for one more `config.timeout`. A push after that window
+retries a failed delivery; once a delivery succeeds, the held events are
+delivered. If none has succeeded by the first push after the window, the held
+events and every later event with the required consent fail with the reason
+`blocked` until one does: the push answers `ok: false`, they are counted in
+`failed` and kept in the DLQ, an ERROR `Push failed` line is written, and they
+are not sent when the destination recovers. A handler that never settles keeps
+the destination blocked. Events still held at the next `walker run` are
+discarded. Lifecycle handlers such as `on('run')` are awaited too, bounded by
+the same timeout, and never hold events. `elb` commands and `startFlow` resolve
+only after the destinations' `on()` handlers for that command have settled or
+timed out. See
+[Gate a destination with consent](../../website/docs/guides/consent/index.mdx#gate-a-destination-with-consent).
 
 ## Response Delegation (env.respond)
 
 Destinations can customize HTTP responses by calling
 `context.env.respond?.({ body, status?, headers? })`. This is useful for
 destinations that need to signal success/failure back to the HTTP caller. First
-call wins (idempotent). The respond function is optional — only present when the
+call wins (idempotent). The respond function is optional, only present when the
 source provides one.
 
 ## Setup (optional)

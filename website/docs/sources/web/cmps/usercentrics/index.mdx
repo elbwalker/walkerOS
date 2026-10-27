@@ -45,7 +45,7 @@ The source supports both Usercentrics V2 (`window.UC_UI`) and V3
 (`window.__ucCmp`) APIs. With the default `apiVersion: 'auto'`, detection runs
 at init:
 
-- If the CMP is already initialized, consent is read **statically** through the
+- If the CMP is already initialized, consent is read statically through the
   official getters (V2 `UC_UI.getServicesBaseInfo()`, V3
   `__ucCmp.getConsentDetails()`).
 - If no CMP is present yet, the source listens for `UC_UI_INITIALIZED` and reads
@@ -120,8 +120,11 @@ versions:
 By default (`explicitOnly: true`), the source publishes only states the user has
 actively decided. It reads this from the official consent metadata: V3
 `consent.type === EXPLICIT`, and V2 an `EXPLICIT` entry in the service consent
-history. First-visit defaults stay suppressed. Set `explicitOnly: false` to also
-publish implicit/default consent.
+history. First-visit defaults stay suppressed. A visitor who never decides, for
+example one Usercentrics never asks, sends no consent, so destinations gated
+with `config.consent` never send their events (see
+[how CMP sources work](/docs/sources/web/cmps#how-cmp-sources-work)). Set
+`explicitOnly: false` to also publish implicit/default consent.
 
 ### Timing considerations
 

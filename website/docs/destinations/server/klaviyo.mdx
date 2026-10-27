@@ -7,6 +7,7 @@ package: '@walkeros/server-destination-klaviyo'
 ---
 import data from '@walkeros/server-destination-klaviyo/walkerOS.json';
 import Configuration from '@site/src/components/snippets/_configuration.mdx';
+import Quickstart from '@site/src/components/snippets/_quickstart.mdx';
 
 import WhereThisFits from '@site/src/components/snippets/_where-this-fits.mdx';
 
@@ -26,64 +27,17 @@ Server-side event delivery to [Klaviyo](https://www.klaviyo.com/) via the offici
 
 ## Installation
 
-<CodeSnippet
-  code={`npm install @walkeros/server-destination-klaviyo`}
-  language="bash"
-/>
-
-<Tabs groupId="mode">
-  <TabItem value="integrated" label="Integrated" default>
-
-<CodeSnippet
-  code={`import { startFlow } from '@walkeros/collector';
-import { destinationKlaviyo } from '@walkeros/server-destination-klaviyo';
-
-await startFlow({
-  destinations: {
-    klaviyo: {
-      code: destinationKlaviyo,
-      config: {
-        settings: {
-          apiKey: 'YOUR_KLAVIYO_PRIVATE_API_KEY',
-        },
-      },
-    },
-  },
-});`}
-  language="typescript"
-/>
-
-  </TabItem>
-  <TabItem value="bundled" label="Bundled">
-
-Add to your `flow.json` destinations:
-
-<CodeSnippet
-  code={`"destinations": {
-  "klaviyo": {
-    "package": "@walkeros/server-destination-klaviyo",
-    "config": {
-      "settings": {
-        "apiKey": "YOUR_KLAVIYO_PRIVATE_API_KEY"
-      }
-    }
-  }
-}`}
-  language="json"
-/>
-
-[See bundled mode setup](/docs/getting-started/modes/bundled) | [CLI reference](/docs/apps/cli)
-
-  </TabItem>
-</Tabs>
+<Quickstart data={data} />
 
 <Configuration type="destination" data={data} />
 
-Identity is resolved automatically from each event: `email` defaults to `user.email` and `externalId` defaults to `user.id`. Klaviyo requires at least one identifier (`email`, `phoneNumber`, or `externalId`) per event. An event without any identifier fails with `missing-input`.
+## Identity
+
+Identity is resolved automatically from each event: `email` defaults to `user.email` and `externalId` defaults to `user.id`; `phoneNumber` has no default. Klaviyo requires at least one identifier (`email`, `phoneNumber`, or `externalId`) per event. An event without any identifier fails with `missing-input`.
 
 ## Revenue tracking
 
-Map a mapping rule's `settings.value` to a numeric value. The destination sets it as the Klaviyo event's `value` attribute, the field revenue reporting reads, and when `settings.currency` is also set it adds `valueCurrency` alongside it.
+Map a mapping rule's `settings.value` to a numeric value. The destination sets it as the Klaviyo event's `value` attribute, the field revenue reporting reads, and when the destination's `settings.currency` is set it adds `valueCurrency` alongside it.
 
 ## Deduplication
 

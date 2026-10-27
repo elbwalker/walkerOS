@@ -33,6 +33,7 @@ describe('meta conformance', () => {
       examples: examples.step,
       schema: schemas.settings,
       settings,
+      minimal: examples.minimal,
       env,
       root: path.join(__dirname, '..', '..'),
     });
@@ -44,7 +45,6 @@ describe('meta conformance', () => {
       env,
       page,
       claims: CLAIMS,
-      published: true,
     });
   });
 

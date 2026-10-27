@@ -1,15 +1,13 @@
 import type { WalkerOS } from '@walkeros/core';
 
 /**
- * Expected walkerOS events from inputs.
- * Tests verify implementation produces these outputs.
- *
- * Create this file BEFORE implementation (Phase 2).
+ * Not part of the examples layout: examples/index.ts does not export this
+ * file, and a new source keeps its examples in step.ts (see SKILL.md, 3.2).
  */
 
 // From pageViewInput -> walkerOS event
 export const pageViewEvent: Partial<WalkerOS.Event> = {
-  event: 'page view',
+  name: 'page view',
   data: {
     title: 'Home Page',
     path: '/home',
@@ -20,7 +18,7 @@ export const pageViewEvent: Partial<WalkerOS.Event> = {
 
 // From purchaseInput -> walkerOS event
 export const purchaseEvent: Partial<WalkerOS.Event> = {
-  event: 'order complete',
+  name: 'order complete',
   data: {
     id: 'T-123',
     value: 99.99,
@@ -30,7 +28,7 @@ export const purchaseEvent: Partial<WalkerOS.Event> = {
 
 // From customEventInput -> walkerOS event
 export const buttonClickEvent: Partial<WalkerOS.Event> = {
-  event: 'button click',
+  name: 'button click',
   data: {
     id: 'cta',
     text: 'Sign Up',

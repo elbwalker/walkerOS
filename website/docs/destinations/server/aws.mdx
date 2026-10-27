@@ -7,6 +7,7 @@ package: '@walkeros/server-destination-aws'
 ---
 import data from '@walkeros/server-destination-aws/walkerOS.json';
 import Configuration from '@site/src/components/snippets/_configuration.mdx';
+import Quickstart from '@site/src/components/snippets/_quickstart.mdx';
 import AwsCredentials from '@site/src/components/snippets/_aws-credentials.mdx';
 
 import WhereThisFits from '@site/src/components/snippets/_where-this-fits.mdx';
@@ -34,84 +35,13 @@ its cause. The destination needs a stream name and, off AWS, credentials.
   post={<>Streams events to Amazon Data Firehose for S3 data lakes, Snowflake, Redshift and other downstream AWS services.</>}
 />
 
-## Quick start
+## Installation
 
-```json
-"destinations": {
-  "firehose": {
-    "package": "@walkeros/server-destination-aws",
-    "import": "destinationFirehose",
-    "config": {
-      "settings": { "streamName": "walkeros-events" }
-    }
-  }
-}
-```
+<Quickstart data={data} export="destinationFirehose" />
 
 That is the whole configuration on AWS compute in the stream's region. Add
 `settings.region` when the stream lives elsewhere, and
 [credentials](#credentials) when the flow runs outside AWS.
-
-## Installation
-
-<CodeSnippet
-  code={`npm install @walkeros/server-destination-aws`}
-  language="bash"
-/>
-
-<Tabs groupId="mode">
-  <TabItem value="integrated" label="Integrated" default>
-
-<CodeSnippet
-  code={`import { startFlow } from '@walkeros/collector';
-import { destinationFirehose } from '@walkeros/server-destination-aws';
-
-// Credentials come from the AWS default chain (role, AWS_* variables or profile).
-await startFlow({
-  destinations: {
-    firehose: {
-      code: destinationFirehose,
-      config: {
-        settings: {
-          streamName: 'walkeros-events',
-          region: 'eu-central-1',
-        },
-      },
-    },
-  },
-});`}
-  language="typescript"
-/>
-
-  </TabItem>
-  <TabItem value="bundled" label="Bundled">
-
-Add to your `flow.json` destinations:
-
-<CodeSnippet
-  code={`"destinations": {
-  "firehose": {
-    "package": "@walkeros/server-destination-aws",
-    "import": "destinationFirehose",
-    "config": {
-      "settings": {
-        "streamName": "walkeros-events",
-        "region": "eu-central-1"
-      },
-      "credentials": {
-        "accessKeyId": "$secret.AWS_ACCESS_KEY_ID",
-        "secretAccessKey": "$secret.AWS_SECRET_ACCESS_KEY"
-      }
-    }
-  }
-}`}
-  language="json"
-/>
-
-[See bundled mode setup](/docs/getting-started/modes/bundled) | [CLI reference](/docs/apps/cli)
-
-  </TabItem>
-</Tabs>
 
 <Configuration type="destination" data={data} />
 
@@ -128,12 +58,11 @@ AWS compute (Lambda, ECS, App Runner) sets `AWS_REGION`, so a flow running next
 to its stream needs no region at all. Every delivery error names the region the
 destination used.
 
-:::note Migrating from `settings.firehose`
-Earlier versions nested the options under `settings.firehose`. That form is
-still read as an alias of the flat fields `streamName`, `region`, `config` and
-`client`. When a flat field and its alias are both set to different values,
-the destination refuses to start, so a half-done migration never sends events
-to the wrong stream. Move the fields up one level and remove
+:::note `settings.firehose`
+`settings.firehose` is read as an alias of the flat fields `streamName`,
+`region`, `config` and `client`. When a flat field and its alias are both set to
+different values, the destination refuses to start, so a partly moved config
+never sends events to the wrong stream. Use the flat fields and remove
 `settings.firehose`.
 :::
 
@@ -163,7 +92,7 @@ The credentials need `firehose:PutRecordBatch` on the stream:
 Each record is one JSON object followed by a newline (`\n`):
 
 ```text
-{"name":"page view","entity":"page","action":"view","id":"ev-1700001000","data":{"title":"Home","url":"https://example.com/"},...}
+{"name":"page view","data":{"title":"Home","url":"https://example.com/"},...,"id":"ev-1700001000","trigger":"load","entity":"page","action":"view",...}
 ```
 
 - **Payload:** the full walkerOS event, or the mapped `data` when the event's
@@ -252,7 +181,8 @@ the event `id`.
 The outcome of every delivery is exact. A batch resolves only when every record
 was confirmed. A record AWS rejects inside an accepted call counts as failed
 and is reported to the collector with its index. When nothing landed, the
-whole batch fails with the dominant cause. Each failure is an error with:
+whole batch fails with the error of one of its records, a retryable one if
+there is one. Each failure is an error with:
 
 | Field       | Meaning                                                                                                |
 | ----------- | ------------------------------------------------------------------------------------------------------ |
@@ -266,11 +196,11 @@ attempts) stays on, and each attempt is bounded at a quarter of `config.timeout`
 collector stops waiting. Passing your own `settings.config.requestHandler`
 replaces that bound.
 
-:::caution Records rejected by AWS are not replayed yet
+:::caution Records rejected by AWS are not replayed
 There is no retry beyond the SDK's own. A record that AWS throttles or rejects
 goes to the collector's in-memory dead letter queue, which nothing replays, so
 it is lost. The collector logs every failure with its cause, so the loss is
-visible. A standard retry for all destinations is planned in the collector.
+visible.
 :::
 
 On shutdown, the destination waits for the calls still in flight before it
@@ -288,8 +218,8 @@ closed.
 | S3 objects contain `}{`                                                                             | Records have no delimiter at all. Leave `newline` at its default `true`.                                                 |
 | The destination refuses to start                                                                    | A configuration error found offline: missing `streamName`, a flat field and `settings.firehose` disagree, or malformed credentials. The message names the field. |
 
-Any other AWS error passes through with its AWS text, the stream and the
-region.
+Any other AWS error is reported with its AWS error name, the stream and the
+region; AWS's own message stays on the error's `cause`.
 
 ## Simulate and local testing
 

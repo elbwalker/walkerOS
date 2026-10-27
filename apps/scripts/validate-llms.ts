@@ -388,11 +388,16 @@ function checkAmplitudeExport(): void {
 
   const content = readFileSync(abs, 'utf-8');
 
-  if (!content.includes('npm install @walkeros/web-destination-amplitude')) {
+  // The quickstart installs the collector next to the package.
+  if (
+    !/npm install (?:@walkeros\/collector )?@walkeros\/web-destination-amplitude\b/.test(
+      content,
+    )
+  ) {
     issues.push({
       file: rel,
       message:
-        'missing install command "npm install @walkeros/web-destination-amplitude" (code export degraded)',
+        'missing install command "npm install @walkeros/collector @walkeros/web-destination-amplitude" (code export degraded)',
     });
   }
 

@@ -198,9 +198,10 @@ export const orderCompleteInclude: ClarityStepExample = {
   out: [
     ['clarity.setTag', 'data_id', '0rd3r1d'],
     ['clarity.setTag', 'data_currency', 'EUR'],
+    ['clarity.setTag', 'data_value', '462'],
+    ['clarity.setTag', 'data_tax', '73.76'],
     ['clarity.setTag', 'data_shipping', '5.22'],
-    ['clarity.setTag', 'data_taxes', '73.76'],
-    ['clarity.setTag', 'data_value', '555'],
+    ['clarity.setTag', 'data_total', '467.22'],
     ['clarity.event', 'order complete'],
   ],
 };

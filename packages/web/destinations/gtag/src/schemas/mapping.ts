@@ -13,7 +13,9 @@ export const GA4MappingSchema = z.object({});
 export const AdsMappingSchema = z.object({
   label: z
     .string()
-    .describe('Conversion label for this specific event')
+    .describe(
+      "Conversion label for this event, sent as send_to <conversionId>/<label>. A conversion is sent only when the rule also has a name; without a label, the rule's name is the label",
+    )
     .optional(),
 });
 

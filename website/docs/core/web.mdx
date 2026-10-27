@@ -16,20 +16,20 @@ package: '@walkeros/web-core'
 
 Web core utilities are browser-specific functions designed for client-side
 walkerOS implementations. These utilities handle DOM interactions, browser
-information, storage, sessions, and web-based communication.
+information, storage, and web-based communication.
 
 ## Installation
 
 Import web utilities from the `@walkeros/web-core` package:
 
-<CodeSnippet code={`import { getAttribute, sendWeb, sessionStart } from '@walkeros/web-core';`} language="typescript" />
+<CodeSnippet code={`import { getAttribute, isVisible, sendWeb } from '@walkeros/web-core';`} language="typescript" />
 
 ## DOM utilities
 
 ### getAttribute
 
-`getAttribute(element: Element, name: string): string` retrieves attribute
-values from DOM elements with enhanced handling.
+`getAttribute(element: Element, name: string): string` returns an attribute's
+trimmed value, or an empty string when the element does not have it.
 
 <CodeSnippet
   code={`const element = document.querySelector('[data-elb="product"]');
@@ -42,7 +42,7 @@ const entityType = getAttribute(element, 'data-elb'); // Returns 'product'`}
 #### splitAttribute
 
 `splitAttribute(str: string, separator?: string): string[]` splits attribute
-strings using specified separators.
+strings by a separator (default `;`).
 
 <CodeSnippet
   code={`splitAttribute('id:123,name:shirt', ','); // Returns ['id:123', 'name:shirt']`}
@@ -105,14 +105,14 @@ dimensions.
 
 ### isVisible
 
-`isVisible(element: HTMLElement): boolean` checks whether an element is
+`isVisible(element: HTMLElement, win: Window, doc: Document): boolean` checks whether an element is
 rendered and not painted over. It does not measure how much of the element is
 inside the viewport; that is the job of the `visible` and `impression`
 triggers.
 
 <CodeSnippet
   code={`const promoElement = document.getElementById('promotion');
-if (isVisible(promoElement)) {
+if (isVisible(promoElement, window, document)) {
   // Element is rendered and nothing else is painted over it
 }`}
   language="javascript"
@@ -135,28 +135,33 @@ This function considers:
 #### storageRead
 
 `storageRead(key: string, storage?: StorageType, env?: StorageEnv): WalkerOS.PropertyType` reads
-data from browser storage with automatic type conversion.
+data from browser storage with automatic type conversion. A missing or expired
+value reads as an empty string.
 
 <CodeSnippet
-  code={`// Default uses localStorage
-const userId = storageRead('walker_user_id');
+  code={`// Default uses sessionStorage
+const sessionData = storageRead('session_data');
 
-// Use sessionStorage
-const sessionData = storageRead('session_data', 'session');`}
+// Use localStorage
+const userId = storageRead('walker_user_id', 'local');`}
   language="javascript"
 />
 
 #### storageWrite
 
 `storageWrite(key: string, value: WalkerOS.PropertyType, maxAgeInMinutes?: number, storage?: StorageType, domain?: string, env?: StorageEnv): WalkerOS.PropertyType`
-writes data to storage with expiration and domain options.
+writes data to storage with expiration and domain options. `maxAgeInMinutes`
+defaults to 30 and `storage` to `'session'`. It returns the value read back,
+or an empty string when the write failed. Local and session storage keep
+`String(value)`, so pass an object as a JSON string; a cookie JSON-encodes an
+object itself.
 
 <CodeSnippet
   code={`// Store with 30-minute expiration
 storageWrite('user_preference', 'dark-mode', 30);
 
-// Store in sessionStorage
-storageWrite('temp_data', { id: 123 }, undefined, 'session');
+// Store in localStorage with the default expiration
+storageWrite('temp_data', JSON.stringify({ id: 123 }), undefined, 'local');
 
 // Store with custom domain for cookies
 storageWrite('tracking_id', 'abc123', 1440, 'cookie', '.example.com');`}
@@ -176,47 +181,17 @@ storageDelete('tracking_id', 'cookie', 'example.com');`}
   language="javascript"
 />
 
-## Session management
-
-### sessionStart
-
-`sessionStart(config?: SessionConfig): WalkerOS.SessionData | void` initializes
-and manages user sessions with automatic renewal and tracking.
-
-<CodeSnippet
-  code={`// Start session with default config
-const session = sessionStart();
-
-// Custom session configuration
-const session = sessionStart({
-  storage: true,
-  domain: '.example.com',
-  maxAge: 1440, // 24 hours
-  sampling: 1.0, // 100% sampling
-});`}
-  language="javascript"
-/>
-
-Session data includes:
-
-* `id` - Unique session identifier
-* `start` - Session start timestamp
-* `isNew` - Whether this is a new session
-* `count` - Number of events in session
-* `device` - Device identifier
-* `storage` - Whether storage is available
-
-### Advanced Session Functions
-
-* `sessionStorage` - Session-specific storage operations
-* `sessionWindow` - Window/tab session management
-
 ## Web communication
 
 ### sendWeb
 
 `sendWeb<T>(url: string, data?: SendDataValue, options?: SendWebOptionsDynamic<T>): SendWebReturn<T>`
-sends data using various web transport methods.
+sends data using various web transport methods. It resolves (fetch) or returns
+(beacon, xhr) `{ data }` when the request was sent, and throws a `StepError`
+otherwise: `code: 'transport'` with `status` and `body` for a non-2xx answer
+or a network error, `'timeout'` for a fetch past its `timeout`, and
+`'beacon-rejected'` when the browser refuses a beacon. The beacon transport
+ignores `headers` and `method`.
 
 <CodeSnippet
   code={`// Default fetch transport
@@ -226,7 +201,7 @@ await sendWeb('https://api.example.com/events', eventData);
 await sendWeb(url, data, { transport: 'beacon' });
 await sendWeb(url, data, { transport: 'xhr' });
 
-// With custom headers
+// With custom headers (fetch and xhr)
 await sendWeb(url, data, {
   headers: { Authorization: 'Bearer token' },
   method: 'PUT',
@@ -239,21 +214,28 @@ await sendWeb(url, data, {
 #### sendWebAsFetch
 
 `sendWebAsFetch(url: string, data?: SendDataValue, options?: SendWebOptionsFetch): Promise<SendResponse>`
-uses the modern Fetch API with advanced options.
+uses the Fetch API. Requests use `keepalive` while the keepalive bodies in
+flight on the page stay within 64 KiB, so they can outlive the page; past
+that a request goes out without it. With `noCors: true` the response is
+opaque: any answer counts as sent and `data` is empty.
 
 <CodeSnippet
   code={`await sendWebAsFetch(url, data, {
   credentials: 'include',
-  noCors: true,
-  headers: { 'Content-Type': 'application/json' },
-});`}
+  timeout: 5000,
+});
+
+// Opaque request: the status is not readable
+await sendWebAsFetch(url, data, { noCors: true });`}
   language="javascript"
 />
 
 #### sendWebAsBeacon
 
 `sendWebAsBeacon(url: string, data?: SendDataValue): SendResponse` uses the
-Beacon API for reliable data transmission, especially during page unload.
+Beacon API for reliable data transmission, especially during page unload. It
+throws a `StepError` with `code: 'beacon-rejected'` when the browser refuses
+the beacon.
 
 <CodeSnippet
   code={`// Reliable sending during page unload
@@ -291,7 +273,8 @@ moin(); // once, early, before startFlow`}
   language="typescript"
 />
 
-It does nothing unless the page was opened with `elbMoin` in its address. On
+It does nothing unless the page, or an earlier page in the same tab, was
+opened with `elbMoin` in its address, and it runs only in the top frame. On
 such a page it waits for the walkerOS app tab to answer and only then loads the
 Tag Mode script from `https://cdn.walkeros.io`; without that answer nothing
 loads. Without `https://cdn.walkeros.io` in your Content Security Policy's
@@ -300,22 +283,23 @@ which trusts scripts added by a script that carries your nonce.
 
 `moin(target?: MoinTarget)` takes no argument in normal use: the default,
 `MOIN_PRODUCTION`, trusts the walkerOS app at `https://app.walkeros.io`.
-`MOIN_PARAM` is the address parameter, `'elbMoin'`.
+`MOIN_PARAM` is the address parameter, `'elbMoin'`. Both constants are
+exported by `@walkeros/core`.
 
 ## Web hashing
 
 ### getHashWeb
 
 `getHashWeb(str: string, length?: number): Promise<string>` generates SHA-256
-hashes using the Web Crypto API.
+hex hashes using the Web Crypto API. Without Web Crypto, for example on a page
+served over plain `http`, it resolves to an empty string.
 
 <CodeSnippet
-  code={`// Generate hash for fingerprinting
-const userFingerprint = await getHashWeb(
-  navigator.userAgent + navigator.language + screen.width,
-  16,
-);
-// Returns shortened hash like '47e0bdd10f04ef13'`}
+  code={`await getHashWeb('user123@example.com');
+// Returns the full 64-character hash
+
+await getHashWeb('user123@example.com', 16);
+// Returns '865c4dd20427a134'`}
   language="javascript"
 />
 
@@ -338,18 +322,6 @@ interface SendWebOptionsFetch extends SendWebOptions {
   language="typescript"
 />
 
-### SessionConfig
-
-<CodeSnippet
-  code={`interface SessionConfig {
-  storage?: boolean; // Enable storage persistence
-  domain?: string; // Cookie domain
-  maxAge?: number; // Session duration in minutes
-  sampling?: number; // Sampling rate (0-1)
-}`}
-  language="typescript"
-/>
-
 ### StorageEnv
 
 <CodeSnippet code={`interface StorageEnv {
@@ -361,20 +333,19 @@ The optional `env` parameter on storage functions allows injecting `window` and 
 
 ### StorageType
 
-<CodeSnippet code={`type StorageType = 'localStorage' | 'sessionStorage' | 'cookie';`} language="typescript" />
+<CodeSnippet code={`type StorageType = 'local' | 'session' | 'cookie';`} language="typescript" />
 
 ## Usage notes
 
-* **Consent Required**: Browser information functions may require user consent
-  depending on privacy regulations
-* **Storage Fallbacks**: Storage functions gracefully handle unavailable storage
-  with fallbacks
-* **Transport Selection**: Choose transport based on use case:
-  * `fetch` - Modern, flexible, supports responses
-  * `beacon` - Reliable during page unload, small payloads
+* Browser information functions may require user consent, depending on privacy
+  regulations.
+* Storage functions do not throw when storage is unavailable: a read returns an
+  empty string, and so does a failed write.
+* Choose the transport by use case:
+  * `fetch` - Supports responses
+  * `beacon` - Reliable during page unload, small payloads, no custom headers
   * `xhr` - Synchronous when needed, broader browser support
-* **Performance**: Session and storage operations are optimized for minimal
-  performance impact
 
 For platform-agnostic utilities, see <Link to="/docs/core">Core
-Utilities</Link>.
+Utilities</Link>. Sessions are detected by the
+<Link to="/docs/sources/web/session">session source</Link>.

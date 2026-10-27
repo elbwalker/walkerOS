@@ -1,0 +1,261 @@
+{
+  "app": {
+    "description": "Events of a mobile app: its screens, its life from install to update, push messages and deep links.",
+    "extend": "default",
+    "schema": {
+      "description": "What every app event adds.",
+      "type": "object",
+      "properties": {
+        "globals": {
+          "type": "object",
+          "properties": {
+            "appVersion": {
+              "type": ["string", "number"],
+              "description": "The version of the app.",
+              "examples": ["2.4.0"]
+            },
+            "appBuild": {
+              "type": ["string", "number"],
+              "description": "The build number of the app.",
+              "examples": ["240"]
+            }
+          }
+        }
+      }
+    },
+    "events": {
+      "screen": {
+        "view": {
+          "title": "Screen view",
+          "description": "A screen of the app was shown. Every app needs it.",
+          "examples": [
+            {
+              "name": "screen view",
+              "data": {
+                "name": "home"
+              },
+              "globals": {
+                "appVersion": "2.4.0",
+                "appBuild": "240"
+              },
+              "trigger": "load"
+            }
+          ],
+          "required": ["data"],
+          "properties": {
+            "data": {
+              "type": "object",
+              "description": "The screen.",
+              "required": ["name"],
+              "properties": {
+                "name": {
+                  "type": "string",
+                  "description": "The name of the screen.",
+                  "examples": ["home"]
+                },
+                "id": {
+                  "type": ["string", "number"],
+                  "description": "The id of the screen."
+                }
+              }
+            }
+          }
+        }
+      },
+      "app": {
+        "install": {
+          "title": "App install",
+          "description": "The app opened for the first time after it was installed. Every app needs it.",
+          "examples": [
+            {
+              "name": "app install",
+              "globals": {
+                "appVersion": "2.4.0",
+                "appBuild": "240"
+              }
+            }
+          ],
+          "required": ["globals"],
+          "properties": {
+            "globals": {
+              "type": "object",
+              "description": "The installed app.",
+              "required": ["appVersion", "appBuild"],
+              "properties": {}
+            }
+          }
+        },
+        "open": {
+          "title": "App open",
+          "description": "The app came to the foreground, started fresh or from the background. Every app needs it.",
+          "examples": [
+            {
+              "name": "app open",
+              "data": {
+                "fromBackground": false
+              },
+              "globals": {
+                "appVersion": "2.4.0",
+                "appBuild": "240"
+              }
+            }
+          ],
+          "properties": {
+            "data": {
+              "type": "object",
+              "description": "The app opening.",
+              "properties": {
+                "fromBackground": {
+                  "type": "boolean",
+                  "description": "True when the app came back from the background.",
+                  "examples": [false]
+                }
+              }
+            }
+          }
+        },
+        "background": {
+          "title": "App background",
+          "description": "The app went to the background. Recommended for most apps.",
+          "examples": [
+            {
+              "name": "app background",
+              "globals": {
+                "appVersion": "2.4.0",
+                "appBuild": "240"
+              }
+            }
+          ]
+        },
+        "update": {
+          "title": "App update",
+          "description": "The app started for the first time after an update. Recommended for most apps.",
+          "examples": [
+            {
+              "name": "app update",
+              "data": {
+                "previousVersion": "2.3.1",
+                "previousBuild": "231"
+              },
+              "globals": {
+                "appVersion": "2.4.0",
+                "appBuild": "240"
+              }
+            }
+          ],
+          "required": ["data", "globals"],
+          "properties": {
+            "data": {
+              "type": "object",
+              "description": "The update.",
+              "required": ["previousVersion"],
+              "properties": {
+                "previousVersion": {
+                  "type": ["string", "number"],
+                  "description": "The version before the update.",
+                  "examples": ["2.3.1"]
+                },
+                "previousBuild": {
+                  "type": ["string", "number"],
+                  "description": "The build before the update.",
+                  "examples": ["231"]
+                }
+              }
+            },
+            "globals": {
+              "type": "object",
+              "description": "The updated app.",
+              "required": ["appVersion"],
+              "properties": {}
+            }
+          }
+        }
+      },
+      "notification": {
+        "open": {
+          "title": "Notification open",
+          "description": "The user tapped a push message. Recommended for apps that send push messages. The event names the message by its campaign and holds neither its title nor its text.",
+          "examples": [
+            {
+              "name": "notification open",
+              "data": {
+                "campaign": "autumn_sale_2026",
+                "medium": "push",
+                "content": "logolink",
+                "action": "Open"
+              },
+              "globals": {
+                "appVersion": "2.4.0",
+                "appBuild": "240"
+              }
+            }
+          ],
+          "required": ["data"],
+          "properties": {
+            "data": {
+              "type": "object",
+              "description": "The push message.",
+              "required": ["campaign"],
+              "properties": {
+                "campaign": {
+                  "type": "string",
+                  "description": "The name of the campaign the message belongs to.",
+                  "examples": ["autumn_sale_2026"]
+                },
+                "medium": {
+                  "type": "string",
+                  "description": "The kind of message, such as push.",
+                  "examples": ["push"]
+                },
+                "content": {
+                  "type": "string",
+                  "description": "Which version of the message it was.",
+                  "examples": ["logolink"]
+                },
+                "action": {
+                  "type": "string",
+                  "description": "The button of the message the user tapped.",
+                  "examples": ["Open"]
+                }
+              }
+            }
+          }
+        }
+      },
+      "deeplink": {
+        "open": {
+          "title": "Deeplink open",
+          "description": "A link opened the app. Recommended for apps with links.",
+          "examples": [
+            {
+              "name": "deeplink open",
+              "data": {
+                "url": "https://www.example.com/docs/"
+              },
+              "globals": {
+                "appVersion": "2.4.0",
+                "appBuild": "240"
+              }
+            }
+          ],
+          "required": ["data"],
+          "properties": {
+            "data": {
+              "type": "object",
+              "description": "The link.",
+              "required": ["url"],
+              "properties": {
+                "url": {
+                  "type": "string",
+                  "format": "url",
+                  "description": "The link that opened the app.",
+                  "examples": ["https://www.example.com/docs/"]
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}

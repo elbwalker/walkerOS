@@ -67,13 +67,13 @@ export const SettingsSchema = z
     identify: z
       .unknown()
       .describe(
-        'Destination-level identity mapping. Resolves to { traits } object. Fires identify() on the first push and re-fires when values change.',
+        'Destination-level identity mapping. Resolves to { userId?, traits? }. identify() fires when the userId or traits differ from the previous identify call this destination sent; the anonymousId is not compared.',
       )
       .optional(),
     group: z
       .unknown()
       .describe(
-        'Destination-level group mapping. Resolves to { groupId, traits }. Fires group() on the first push and re-fires on change.',
+        'Destination-level group mapping. Resolves to { groupId, traits? }. group() fires when the groupId or traits differ from the previous group call this destination sent; the user is not compared.',
       )
       .optional(),
     consent: z
@@ -85,7 +85,7 @@ export const SettingsSchema = z
     integrations: z
       .record(z.string(), z.unknown())
       .describe(
-        'Enable/disable downstream Segment destinations. Example: { "All": true, "Mixpanel": false }.',
+        'Has no effect: the destination does not add integrations to its calls.',
       )
       .optional(),
   })

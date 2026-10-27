@@ -18,7 +18,7 @@ export const defaultInsert: SqliteStepExample = {
   description:
     'A walker event is inserted into the default events table with canonical columns and JSON-encoded sections.',
   in: getEvent('page view', {
-    timestamp: 1700000100,
+    timestamp: 1700000100000,
     id: 'evt-1',
     user: { session: 'sess-1', id: 'user-42' },
     data: { title: 'Home' },
@@ -35,7 +35,7 @@ export const defaultInsert: SqliteStepExample = {
     [
       'client.runInsert',
       [
-        1700000100,
+        1700000100000,
         'evt-1',
         'page view',
         'page',
@@ -62,7 +62,7 @@ export const customTable: SqliteStepExample = {
     'A destination-level table setting inserts events into a custom SQLite table with the same column layout.',
   in: createEvent({
     name: 'form submit',
-    timestamp: 1700000101,
+    timestamp: 1700000101000,
     id: 'evt-2',
     user: { session: 'sess-99', id: '' },
     data: { type: 'contact' },
@@ -84,7 +84,7 @@ export const customTable: SqliteStepExample = {
     [
       'client.runInsert',
       [
-        1700000101,
+        1700000101000,
         'evt-2',
         'form submit',
         'form',
@@ -110,7 +110,7 @@ export const orderComplete: SqliteStepExample = {
   description:
     'An order complete is inserted with numeric data serialized as JSON in the data column.',
   in: getEvent('order complete', {
-    timestamp: 1700000102,
+    timestamp: 1700000102000,
     id: 'evt-3',
     user: { session: '', id: '' },
     data: { id: 'ORD-1', value: 99 },
@@ -122,7 +122,7 @@ export const orderComplete: SqliteStepExample = {
     [
       'client.runInsert',
       [
-        1700000102,
+        1700000102000,
         'evt-3',
         'order complete',
         'order',
@@ -148,7 +148,7 @@ export const tableOverride: SqliteStepExample = {
   description:
     'A mapping rule overrides the target table so specific events are inserted into a dedicated SQLite table.',
   in: getEvent('order complete', {
-    timestamp: 1700000103,
+    timestamp: 1700000103000,
     id: 'evt-4',
     user: { session: '', id: '' },
     data: { id: 'ORD-2', value: 42 },
@@ -165,7 +165,7 @@ export const tableOverride: SqliteStepExample = {
     [
       'client.runInsert',
       [
-        1700000103,
+        1700000103000,
         'evt-4',
         'order complete',
         'order',
@@ -190,7 +190,7 @@ export const ignoredEvent: SqliteStepExample = {
   public: false,
   in: createEvent({
     name: 'debug noise',
-    timestamp: 1700000104,
+    timestamp: 1700000104000,
     id: 'evt-5',
     source: { type: 'collector', schema: '4' },
   }),
@@ -204,7 +204,7 @@ export const ignoredEvent: SqliteStepExample = {
 export const silentRule: SqliteStepExample = {
   public: false,
   description: 'A rule with silent: true inserts no row.',
-  in: getEvent('page view', { timestamp: 1700000105, id: 'evt-6' }),
+  in: getEvent('page view', { timestamp: 1700000105000, id: 'evt-6' }),
   mapping: { silent: true },
   out: [],
 };

@@ -81,7 +81,7 @@ export const productView: Flow.StepExample = {
               id: 'ers',
               name: 'Everyday Ruck Snack',
               price: 420,
-              currency: 'USD',
+              currency: 'EUR',
             },
           },
         ],
@@ -114,7 +114,7 @@ export const addToCart: Flow.StepExample = {
           schema: SCHEMAS.CART,
           data: {
             total_value: 'globals.cart_value',
-            currency: { key: 'globals.cart_currency', value: 'USD' },
+            currency: ['data.currency', 'globals.cart_currency'],
           },
         },
         {
@@ -159,7 +159,7 @@ export const addToCart: Flow.StepExample = {
               id: 'ers',
               name: 'Everyday Ruck Snack',
               price: 420,
-              currency: 'USD',
+              currency: 'EUR',
               quantity: 1,
             },
           },
@@ -167,7 +167,7 @@ export const addToCart: Flow.StepExample = {
             schema:
               'iglu:com.snowplowanalytics.snowplow.ecommerce/cart/jsonschema/1-0-0',
             data: {
-              currency: 'USD',
+              currency: 'EUR',
             },
           },
           {
@@ -202,10 +202,10 @@ export const transaction: Flow.StepExample = {
           schema: SCHEMAS.TRANSACTION,
           data: {
             transaction_id: 'data.id',
-            revenue: 'data.value',
+            revenue: ['data.total', 'data.value'],
             currency: { key: 'data.currency', value: 'USD' },
             payment_method: { value: 'credit_card' },
-            tax: 'data.taxes',
+            tax: 'data.tax',
             shipping: 'data.shipping',
           },
         },
@@ -229,7 +229,7 @@ export const transaction: Flow.StepExample = {
               'iglu:com.snowplowanalytics.snowplow.ecommerce/transaction/jsonschema/1-0-0',
             data: {
               transaction_id: '0rd3r1d',
-              revenue: 555,
+              revenue: 467.22,
               currency: 'EUR',
               payment_method: 'credit_card',
               tax: 73.76,
@@ -281,8 +281,9 @@ export const promoView: Flow.StepExample = {
             schema:
               'iglu:com.snowplowanalytics.snowplow.ecommerce/promotion/jsonschema/1-0-0',
             data: {
+              id: 'promo_autumn26',
               name: 'Setting up tracking easily',
-              position: 'hero',
+              slot: 'hero',
             },
           },
         ],
@@ -303,8 +304,8 @@ export const pageView: Flow.StepExample = {
 export const checkoutStep: Flow.StepExample = {
   title: 'Checkout step',
   description:
-    'A checkout view fires a Snowplow checkout_step action with the current step and option.',
-  in: getEvent('checkout view', { timestamp: 1700000405 }),
+    'A checkout start fires a Snowplow checkout_step action with the checkout step, 1 when the event carries none.',
+  in: getEvent('checkout start', { timestamp: 1700000405 }),
   mapping: {
     name: ACTIONS.CHECKOUT_STEP,
     settings: {
@@ -312,7 +313,7 @@ export const checkoutStep: Flow.StepExample = {
         {
           schema: SCHEMAS.CHECKOUT_STEP,
           data: {
-            step: 'data.step',
+            step: { key: 'data.step', value: 1 },
             option: 'data.option',
           },
         },
@@ -335,7 +336,7 @@ export const checkoutStep: Flow.StepExample = {
             schema:
               'iglu:com.snowplowanalytics.snowplow.ecommerce/checkout_step/jsonschema/1-0-0',
             data: {
-              step: 'payment',
+              step: 1,
             },
           },
         ],
@@ -387,7 +388,7 @@ export const contextLoop: Flow.StepExample = {
           schema: SCHEMAS.TRANSACTION,
           data: {
             transaction_id: 'data.id',
-            revenue: 'data.value',
+            revenue: ['data.total', 'data.value'],
             currency: 'data.currency',
           },
         },
@@ -426,7 +427,7 @@ export const contextLoop: Flow.StepExample = {
               'iglu:com.snowplowanalytics.snowplow.ecommerce/transaction/jsonschema/1-0-0',
             data: {
               transaction_id: '0rd3r1d',
-              revenue: 555,
+              revenue: 467.22,
               currency: 'EUR',
             },
           },

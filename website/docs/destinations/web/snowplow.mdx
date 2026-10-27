@@ -8,6 +8,7 @@ package: '@walkeros/web-destination-snowplow'
 
 import data from '@walkeros/web-destination-snowplow/walkerOS.json';
 import Configuration from '@site/src/components/snippets/_configuration.mdx';
+import Quickstart from '@site/src/components/snippets/_quickstart.mdx';
 
 import WhereThisFits from '@site/src/components/snippets/_where-this-fits.mdx';
 
@@ -35,72 +36,24 @@ entities.
 
 ## Installation
 
-<CodeSnippet
-  code={`npm install @walkeros/web-destination-snowplow`}
-  language="bash"
-/>
-
 The destination supports two tracking approaches:
 
 - **JavaScript tag (sp.js)**: loads the Snowplow tracker script from CDN
-- **npm packages**: uses `@snowplow/browser-tracker` for smaller bundles and tree-shaking
-
-<Tabs groupId="tracker-mode">
-  <TabItem value="spjs" label="JavaScript Tag (sp.js)" default>
+- **npm packages**: uses `@snowplow/browser-tracker` for smaller bundles and tree-shaking (see [npm tracker](#npm-tracker))
 
 With `loadScript: true`, the destination loads the Snowplow tracker script
 (sp.js).
 
-<Tabs groupId="mode">
-  <TabItem value="integrated" label="Integrated" default>
+<Quickstart data={data} />
 
-<CodeSnippet
-  code={`import { startFlow } from '@walkeros/collector';
-import { destinationSnowplow } from '@walkeros/web-destination-snowplow';
+The quickstart above sends no event yet. Every event needs a rule: its `name` is
+the action type of the self-describing event (like `add_to_cart` for the
+ecommerce action schema). An event that no rule maps, and that is not the
+`pageViewEvent`, fails with `missing-input`; add an `ignore: true` rule for
+events you do not send. To send page views, add `pageViewEvent: 'page view'` to
+`settings`, as the package README's quick start does.
 
-const { elb } = await startFlow({
-  destinations: {
-    snowplow: {
-      code: destinationSnowplow,
-      config: {
-        settings: {
-          collectorUrl: 'https://collector.example.com',
-          appId: 'my-app',
-        },
-        loadScript: true,
-      },
-    },
-  },
-});`}
-  language="typescript"
-/>
-
-  </TabItem>
-  <TabItem value="bundled" label="Bundled">
-
-<CodeSnippet
-  code={`{
-  "destinations": {
-    "snowplow": {
-      "package": "@walkeros/web-destination-snowplow",
-      "config": {
-        "settings": {
-          "collectorUrl": "https://collector.example.com",
-          "appId": "my-app"
-        },
-        "loadScript": true
-      }
-    }
-  }
-}`}
-  language="json"
-/>
-
-  </TabItem>
-</Tabs>
-
-  </TabItem>
-  <TabItem value="npm" label="NPM Packages (browser-tracker)">
+## npm tracker
 
 Uses imported functions directly: smaller bundles through tree-shaking, and
 type-safe calls.
@@ -236,19 +189,11 @@ const { elb } = await startFlow({
   </TabItem>
 </Tabs>
 
-  </TabItem>
-</Tabs>
-
 [See bundled mode setup](/docs/getting-started/modes/bundled) | [CLI reference](/docs/apps/cli)
 
 <Configuration type="destination" data={data} />
 
 `settings.collectorUrl` is required and the settings schema is closed, so `walkeros validate` rejects a key Snowplow does not read. The Snowplow script is injected once per script URL; if it fails to load, later events fail visibly. If your page already loads sp.js, leave `loadScript` off, or the script loads twice.
-
-Every event needs a rule: its `name` is the action type of the self-describing
-event (like `add_to_cart` for the ecommerce action schema). An event that no
-rule maps, and that is not the `pageViewEvent`, fails with `missing-input`; add
-an `ignore: true` rule for events you do not send.
 
 ## User identity and privacy
 

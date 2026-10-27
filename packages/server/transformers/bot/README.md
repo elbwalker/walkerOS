@@ -4,7 +4,7 @@ Server-side bot and AI-agent detection transformer for walkerOS.
 
 Annotates events with an automation likelihood, a category saying what kind of
 client it is, the identified product when there is one, and stable reason codes.
-Never drops events: downstream destination mappings decide policy.
+It never drops events: downstream destination mappings decide the policy.
 
 ## Install
 
@@ -16,13 +16,18 @@ npm install @walkeros/server-transformer-bot
 
 ```typescript
 import { startFlow } from '@walkeros/collector';
+import { sourceExpress } from '@walkeros/server-source-express';
 import { transformerBot } from '@walkeros/server-transformer-bot';
+import { destinationDemo } from '@walkeros/destination-demo';
 
 await startFlow({
+  // Collector chain: every event is scored before the destinations get it.
+  next: 'bot',
   sources: {
     express: {
-      package: '@walkeros/server-source-express',
+      code: sourceExpress,
       config: {
+        settings: { port: 8080 },
         ingest: {
           map: {
             userAgent: { key: 'headers.user-agent' },
@@ -68,13 +73,8 @@ await startFlow({
       },
     },
   },
-  destinations: {
-    ga4: {
-      package: '@walkeros/server-destination-google-ga4',
-      before: 'bot',
-      // mapping can filter: if (event.user.botScore > 50) drop
-    },
-  },
+  // Destinations filter on the score in their mappings, see the recipes below.
+  destinations: { demo: { code: destinationDemo } },
 });
 ```
 
@@ -124,10 +124,10 @@ should point `settings.output.botReasons` at an event path instead.
 | `ai-crawler`     | AI training or search-index crawler (GPTBot, ClaudeBot, CCBot, OAI-SearchBot)                                                                    | 90     |
 | `unknown`        | nothing resolvable at all                                                                                                                        | `null` |
 
-Every UA-map match scores 90 regardless of kind: a match is a match, and ranking
-them in the number would assert a confidence difference that does not exist. The
-category carries the kind. `isbot` stays a rung lower at 80 because it is a
-weaker statement, saying "this looks automated" without naming a product.
+Every UA-map match scores 90 regardless of kind: ranking them in the number
+would assert a confidence difference that does not exist. The category carries
+the kind. `isbot` stays a rung lower at 80 because it is a weaker statement,
+saying "this looks automated" without naming a product.
 
 `botScore` is `null`, not omitted, for `unknown`. Events arrive as a request
 body on an endpoint that may be open, so an inbound `user.botScore` is
@@ -136,8 +136,8 @@ while still evaluating false under a `botScore > 50` filter.
 
 ## Detection layers
 
-Deterministic, most specific first, first match wins. The graded layer does not
-run when one of these fires.
+The deterministic layers run most specific first, and the first match wins. The
+graded layer does not run when one of these fires.
 
 | Score | Category     | Trigger                                   |
 | ----- | ------------ | ----------------------------------------- |
@@ -152,8 +152,8 @@ client is still software, but loses its claimed identity: the category drops to
 `automation`, no `botProduct` is written, and `identity_claim_contradicted`
 appears in the reasons.
 
-Graded, capped at 60, so the two layers never overlap and every score is
-attributable to exactly one of them:
+The graded layer is capped at 60, so the two layers never overlap and every
+score is attributable to exactly one of them:
 
 | Reason code                       | Weight |
 | --------------------------------- | ------ |
@@ -194,8 +194,7 @@ nothing and unlocks the check.
 
 Until a family is declared, `ingest.bot.reasons` reports `ch_not_declared`,
 `fetchmeta_not_declared` or `accept_not_declared`, naming exactly which mapping
-to add to unlock which checks. The default experience is deliberately
-conservative, and that is not a bug.
+to add to unlock which checks. The default is deliberately conservative.
 
 ## Request context
 
@@ -216,10 +215,11 @@ request was made.
   `[{ key: 'ingest.transport' }, { value: 'beacon' }]`.
 
 A bare string is always read as a lookup path, so a string that is not one of
-the six literals must contain a dot: `'beacn'` fails schema validation instead
-of silently becoming a lookup that resolves to nothing. The guard holds inside
-the array too, so a literal there is written `{ value: 'beacon' }` and never the
-bare `'beacon'`.
+the six literals must contain a dot. `walkeros validate` reports `'beacn'` as a
+warning (an error under `--strict`); at runtime it is read as a lookup that
+resolves to nothing, so the context falls back to `auto` and the reasons carry
+`context_undetermined`. The guard holds inside the array too, so a literal there
+is written `{ value: 'beacon' }` and never the bare `'beacon'`.
 
 The lookup form is what lets a single instance serve a deployment that receives
 beacons, pixels and fetches on the same endpoint. The sender annotates its URL
@@ -248,21 +248,12 @@ available, is context-independent and works in every deployment.
 
 ## Supported sources
 
-Header-driven scoring depends on what each source puts in its raw scope, because
-`config.ingest` resolves dot paths by plain property access.
-
-| Source             | Header access                                                            | Works with `{ key: 'headers.x' }` |
-| ------------------ | ------------------------------------------------------------------------ | --------------------------------- |
-| express            | `req.headers`, a plain object, lowercased                                | yes                               |
-| GCP Cloud Function | same, the Functions Framework request is Express-shaped                  | yes                               |
-| AWS Lambda         | `event.headers`; API Gateway v1 preserves original casing, v2 lowercases | casing-dependent                  |
-| fetch              | `request.headers` is a `Headers` instance, not own properties            | **no**                            |
-
-The fetch row is a hard limit rather than a nuance: a `Headers` instance holds
-its values internally, so `{ key: 'headers.user-agent' }` yields `undefined` and
-header-driven scoring is unavailable there until that source normalizes its
-headers into a plain object. If every event scores `unknown`, check this table
-first.
+`config.ingest` resolves dot paths by plain property access, so the headers have
+to arrive as a plain object. Every server source provides that, with lowercase
+header names: express and the GCP Cloud Function from the Node request, the
+fetch source from the WHATWG `Headers`, and the AWS Lambda source from either
+API Gateway version. `{ key: 'headers.user-agent' }` resolves on each of them.
+If every event scores `unknown`, check the source's `config.ingest` first.
 
 ## Category reachability
 
@@ -314,30 +305,30 @@ event.user.botCategory IN ('ai-agent', 'ai-crawler'), grouped by event.user.botP
 Cloudflare users: their `bot_score` runs the opposite way (1 = bot) because it
 is a trust score. Ours matches its field name, so higher = more bot.
 
-## Not yet implemented
+## Not covered
 
-- **Identity verification.** `settings.verify` (product to CIDR list), an
-  in-package CIDR matcher, and a `botVerified` output. Nothing here can
-  currently prove an identity, and a constant-`false` field would assert a check
-  that never ran. `Signature-Agent` presence is recorded as an observation only.
+- **Identity verification.** Nothing here proves an identity: there is no CIDR
+  check of a claimed bot and no `botVerified` output, since a constant-`false`
+  field would assert a check that never ran. `Signature-Agent` presence is
+  recorded as an observation only.
 - **Web Bot Auth signature verification.** Needs a JWKS fetch, so it needs an
   answer to async I/O in a transformer first.
 - **Reverse DNS verification.** A DNS round trip would land on client-visible
   latency, since the express source acknowledges synchronously.
 - **ASN / datacenter-IP detection.** Impossible without an embedded database
   (MaxMind GeoLite ASN is CC-BY-SA, incompatible with an MIT package) or a
-  network call. Bring-your-own CIDR lists replace it.
+  network call.
 - **TLS / JA4 fingerprinting and header ordering.** The input names `ja4` and
   `headerNames` are reserved and resolved, but nothing consumes them. `method`
-  is resolved and currently unconsumed for the same reason: under the `auto`
-  rule above there is nothing for a derived context to unlock.
+  is resolved and unconsumed for the same reason: under the `auto` rule above
+  there is nothing for a derived context to unlock.
 - **Web-side runtime checks** (`navigator.webdriver`, `userAgentData`). Needs a
   browser source.
 - **Behavioral signals** (rate, session shape). Needs a store.
 
 ## Limits
 
-Will not catch: residential-proxy plus stealth-patched Chrome with realistic
+It does not catch: residential-proxy plus stealth-patched Chrome with realistic
 behavior; paid CAPTCHA-solver farms; real-browser-as-a-service providers (Bright
 Data, ScrapingBee, Browserbase, Browserless). For that threat model use
 Cloudflare Bot Management, DataDome, or HUMAN.
@@ -348,8 +339,8 @@ session and produce headers identical to the underlying browser, so they
 score 0.
 
 A UA-map match is a claim, not proof. Screaming Frog ships Googlebot and Bingbot
-presets, and any client can send any UA. Until identity verification ships,
-treat `botProduct` as "what this client says it is".
+presets, and any client can send any UA. Treat `botProduct` as "what this client
+says it is".
 
 The graded layer will occasionally mark real people `suspicious`: Android
 WebViews send frozen UA strings with no client hints, enterprise Chrome policies

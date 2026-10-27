@@ -39,7 +39,7 @@ export const destinationLevelInclude: HeapStepExample = {
     data: {
       map: {
         order_id: 'data.id',
-        total: 'data.value',
+        total: ['data.total', 'data.value'],
         currency: { key: 'data.currency', value: 'EUR' },
       },
     },
@@ -48,7 +48,7 @@ export const destinationLevelInclude: HeapStepExample = {
     [
       'window.heap.track',
       'purchase',
-      { order_id: '0rd3r1d', total: 555, currency: 'EUR' },
+      { order_id: '0rd3r1d', total: 467.22, currency: 'EUR' },
     ],
   ],
 };

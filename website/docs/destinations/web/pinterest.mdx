@@ -8,6 +8,7 @@ package: '@walkeros/web-destination-pinterest'
 
 import data from '@walkeros/web-destination-pinterest/walkerOS.json';
 import Configuration from '@site/src/components/snippets/_configuration.mdx';
+import Quickstart from '@site/src/components/snippets/_quickstart.mdx';
 
 import WhereThisFits from '@site/src/components/snippets/_where-this-fits.mdx';
 
@@ -36,61 +37,12 @@ SDK for the browser tag. Mapped events become
 
 ## Installation
 
-<CodeSnippet
-  code={`npm install @walkeros/web-destination-pinterest`}
-  language="bash"
-/>
+<Quickstart data={data} />
 
-<Tabs groupId="mode">
-  <TabItem value="integrated" label="Integrated" default>
-
-<CodeSnippet
-  code={`import { startFlow } from '@walkeros/collector';
-import { destinationPinterest } from '@walkeros/web-destination-pinterest';
-
-await startFlow({
-  consent: { marketing: false },
-  destinations: {
-    pinterest: {
-      code: destinationPinterest,
-      config: {
-        consent: { marketing: true },
-        loadScript: true,
-        settings: {
-          apiKey: '2612345678901',
-        },
-      },
-    },
-  },
-});`}
-  language="typescript"
-/>
-
-  </TabItem>
-  <TabItem value="bundled" label="Bundled">
-
-Add to your `flow.json` destinations:
-
-<CodeSnippet
-  code={`"destinations": {
-  "pinterest": {
-    "package": "@walkeros/web-destination-pinterest",
-    "config": {
-      "consent": { "marketing": true },
-      "loadScript": true,
-      "settings": {
-        "apiKey": "2612345678901"
-      }
-    }
-  }
-}`}
-  language="json"
-/>
-
-[See bundled mode setup](/docs/getting-started/modes/bundled) | [CLI reference](/docs/apps/cli)
-
-  </TabItem>
-</Tabs>
+The quickstart above sets no consent, so the Pinterest Tag loads and receives
+every event without `marketing` consent, and a revocation changes nothing. Add
+`consent: { marketing: true }` to `config`, next to `settings`, before you go
+live (see [Consent](#consent)).
 
 The destination loads `core.js` unless `loadScript` is `false`, and walkerOS
 injects it once per page. If your page already has the Pinterest base code, set
@@ -115,7 +67,7 @@ To send only the events you map, add a wildcard rule with `ignore: true`
 | `product view`   | `viewcontent`   | Single product. `value`, `currency`, and the product in a one-item `line_items` array. |
 | `product add`    | `addtocart`     | Single product. Product fields (`product_id`, `product_name`, ...) go in `line_items`. |
 | `order complete` | `checkout`      | Multi-product. Use `mapping.data.line_items.loop` to iterate `event.nested`.       |
-| `site search`    | `search`        | Use `search_query` field.                                                          |
+| `search submit`  | `search`        | Use `search_query` field.                                                          |
 | `user login`     | `lead`          | Optional `lead_type`. Combine with `settings.identify` for enhanced matching.      |
 | `user signup`    | `signup`        | Same identify pattern as `lead`.                                                   |
 | (custom)         | `custom`        | Send Pinterest's `custom` event for non-standard conversions.                      |
@@ -154,9 +106,10 @@ Pinterest is an advertising platform. The walkerOS consent key is
   language="typescript"
 />
 
-Until `marketing` is granted, the destination does not load the Pinterest Tag
-and the collector holds its events in a queue. They are sent once consent is
-granted, see [consent management](/docs/guides/consent). After a revocation,
+With this `config.consent`, until `marketing` is granted, the destination does
+not load the Pinterest Tag and the collector holds its events in a queue. They
+are sent once consent is granted, see
+[consent management](/docs/guides/consent). After a revocation,
 walkerOS holds new events again until the next grant. The destination does not
 tell the loaded tag: Pinterest's consent call
 [`pintrk('setconsent', false)`](https://help.pinterest.com/en/business/article/install-the-base-code)

@@ -127,7 +127,7 @@ export const ConfigSchema = z
       .union([z.boolean(), z.record(z.string(), z.unknown())])
       .optional()
       .describe(
-        'One-time setup options applied during destination registration (boolean enables defaults, object configures specifics)',
+        'Provisioning options for `walkeros setup`, which runs only when invoked (boolean enables defaults, object configures specifics)',
       ),
     before: RouteSchema.optional().describe(
       'Transformer chain run for this destination only, before it receives the event.',

@@ -13,7 +13,8 @@ describe('criteo conformance', () => {
       profile: 'http',
       examples: examples.step,
       schema: schemas.settings,
-      settings: { partnerId: 'PARTNER_ID', callerId: 'CALLER_ID' },
+      settings: examples.minimal.settings,
+      minimal: examples.minimal,
       root: path.join(__dirname, '..', '..'),
     });
   });

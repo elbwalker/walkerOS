@@ -4,15 +4,16 @@ sidebar_position: 6
 description: Compare walkerOS and Snowplow to understand which solution fits your needs.
 ---
 
-[Snowplow](https://snowplow.io/) is a behavioral data platform founded in 2012
-that offers both open-source and enterprise solutions for event data collection.
+[Snowplow](https://snowplow.io/), founded in 2012, is customer data
+infrastructure for behavioral event data, with open-source trackers and a
+commercially licensed pipeline.
 
 ## Quick comparison
 
 | Feature              | Snowplow                         | walkerOS                          |
 | -------------------- | -------------------------------- | --------------------------------- |
-| Open-source          | Partially (SLULA license)        | Yes (MIT)                         |
-| Pricing              | From $800/month (BDP Cloud)      | Free (paid support available)     |
+| Open-source          | Trackers only (pipeline under a limited use license) | Yes (MIT)  |
+| Pricing              | Free for non-production, production on quote | Free (paid support available) |
 | Self-hosted option   | Yes                              | Yes                               |
 | Complexity           | High (enterprise-grade)          | Low to medium                     |
 | Setup time           | Days to weeks                    | Hours                             |
@@ -20,7 +21,7 @@ that offers both open-source and enterprise solutions for event data collection.
 | Composable tagging   | No                               | Yes (tag once, use everywhere)    |
 | Data warehouse focus | Primary destination              | One of many destinations          |
 | Real-time streaming  | Yes (enterprise)                 | Yes                               |
-| Trackers             | 35+ SDKs                         | Web, server, flexible sources     |
+| Trackers             | 35+ trackers and webhooks        | Web, server, flexible sources     |
 
 ## Who should use what?
 
@@ -29,8 +30,8 @@ that offers both open-source and enterprise solutions for event data collection.
 - You have a dedicated data engineering team
 - You need enterprise-grade data infrastructure at scale
 - Your primary goal is feeding data warehouses (Snowflake, BigQuery, Databricks)
-- You want 35+ pre-built trackers across platforms
-- Budget allows for $800+/month or self-hosting resources
+- You want 35+ pre-built trackers and webhooks across platforms
+- Budget allows for a commercial license, managed or self-hosted
 
 ### Choose walkerOS if
 
@@ -45,8 +46,9 @@ that offers both open-source and enterprise solutions for event data collection.
 ### Complexity and setup
 
 **Snowplow:** Infrastructure built for large-scale data operations. Setup takes
-significant time and often dedicated data engineering resources. The open-source
-version needs self-hosting expertise, and the managed BDP starts at $800/month.
+significant time and often dedicated data engineering resources. Running the
+pipeline yourself needs self-hosting expertise, and production use needs a
+commercial license.
 
 **walkerOS:** Lightweight and developer-friendly, with setup measured in hours
 rather than weeks. It is meant for teams that want tracking infrastructure
@@ -54,18 +56,20 @@ without the complexity of an enterprise data platform.
 
 ### Licensing
 
-**Snowplow:** The open-source version uses the Snowplow Limited Use License
-Agreement (SLULA), which restricts commercial use. Full commercial use requires
-their enterprise offering.
+**Snowplow:** The trackers are open source (Apache 2.0, the JavaScript tracker
+BSD 3-Clause). The collector, enrich and loaders use the Snowplow Limited Use
+License, which allows only non-production use: running them in production
+needs a commercial license from Snowplow.
 
 **walkerOS:** MIT licensed. You can use it commercially, modify it, and fork it
 without restrictions.
 
 ### Cost
 
-**Snowplow:** BDP Cloud starts at $800/month. Self-hosted open-source is
-"free" but requires significant infrastructure and engineering investment.
-Enterprise tiers (Basecamp, Ascent, Summit) scale up with custom pricing.
+**Snowplow:** Snowplow publishes no production prices. A self-managed setup
+for testing and experimentation is free; the managed Snowplow Platform and the
+self-hosted production pipeline are priced on quote, based on event volume,
+hosting and destinations.
 
 **walkerOS:** The software is free and open-source, and you pay for your own
 infrastructure. Optional paid services include implementation support (setup
@@ -90,7 +94,7 @@ Both solutions can:
 - Send data to warehouses and other destinations
 - Handle consent management
 
-Where they differ is scale and complexity: Snowplow is a full data platform, and
+They differ in scale and complexity: Snowplow is a full data platform, and
 walkerOS is focused event infrastructure.
 
 ## Can they work together?
@@ -101,40 +105,13 @@ frontend, and Snowplow's data infrastructure runs on the backend.
 
 ### Using the Snowplow destination
 
-The `@walkeros/web-destination-snowplow` package provides full integration:
-
-```typescript
-import { startFlow } from '@walkeros/collector';
-import { destinationSnowplow } from '@walkeros/web-destination-snowplow';
-
-const { elb } = await startFlow({
-  destinations: {
-    snowplow: {
-      code: destinationSnowplow,
-      config: {
-        settings: {
-          collectorUrl: 'https://collector.yourdomain.com',
-          appId: 'my-app',
-          userId: 'user.id', // Cross-session user stitching
-        },
-      },
-    },
-  },
-});
-```
-
-It supports:
-
-- Full ecommerce tracking (product views, cart actions, transactions)
-- Cross-session user identity via `setUserId`
-- Anonymous tracking mode for privacy compliance
-- Page context with `setPageType`
-- Global contexts and custom schemas
-- Activity tracking (page pings)
-- Plugin support (NPM and URL-based)
-
-See the [Snowplow destination documentation](/docs/destinations/web/snowplow) for
-full configuration options.
+The `@walkeros/web-destination-snowplow` package sends walkerOS events to your
+Snowplow collector as self-describing events, through sp.js or the npm browser
+tracker. Every event you send needs a mapping rule that names its Snowplow
+action, except the event you set as `pageViewEvent`; any other event without a
+rule fails with `missing-input`. The
+[Snowplow destination documentation](/docs/destinations/web/snowplow) covers
+setup, mapping, user identity and privacy settings.
 
 ## Getting started
 

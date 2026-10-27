@@ -8,6 +8,7 @@ package: '@walkeros/web-destination-mixpanel'
 
 import data from '@walkeros/web-destination-mixpanel/walkerOS.json';
 import Configuration from '@site/src/components/snippets/_configuration.mdx';
+import Quickstart from '@site/src/components/snippets/_quickstart.mdx';
 
 import WhereThisFits from '@site/src/components/snippets/_where-this-fits.mdx';
 
@@ -35,58 +36,7 @@ people properties, group assignments, and consent opt-in/opt-out.
 
 ## Installation
 
-<CodeSnippet
-  code={`npm install @walkeros/web-destination-mixpanel`}
-  language="bash"
-/>
-
-<Tabs groupId="mode">
-  <TabItem value="integrated" label="Integrated" default>
-
-<CodeSnippet
-  code={`import { startFlow } from '@walkeros/collector';
-import { destinationMixpanel } from '@walkeros/web-destination-mixpanel';
-
-await startFlow({
-  destinations: {
-    mixpanel: {
-      code: destinationMixpanel,
-      config: {
-        settings: {
-          apiKey: 'YOUR_PROJECT_TOKEN',
-          api_host: 'https://api-eu.mixpanel.com',
-        },
-      },
-    },
-  },
-});`}
-  language="typescript"
-/>
-
-  </TabItem>
-  <TabItem value="bundled" label="Bundled">
-
-Add to your `flow.json` destinations:
-
-<CodeSnippet
-  code={`"destinations": {
-  "mixpanel": {
-    "package": "@walkeros/web-destination-mixpanel",
-    "config": {
-      "settings": {
-        "apiKey": "YOUR_PROJECT_TOKEN",
-        "api_host": "https://api-eu.mixpanel.com"
-      }
-    }
-  }
-}`}
-  language="json"
-/>
-
-[See bundled mode setup](/docs/getting-started/modes/bundled) | [CLI reference](/docs/apps/cli)
-
-  </TabItem>
-</Tabs>
+<Quickstart data={data} />
 
 <Configuration type="destination" data={data} />
 

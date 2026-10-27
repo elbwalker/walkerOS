@@ -61,7 +61,7 @@ export const apiGatewayV1Post: Flow.StepExample = {
 export const lambdaGet: Flow.StepExample = {
   title: 'Lambda GET',
   description:
-    'An API Gateway v2 HTTP GET with query parameters is parsed into an elb event payload.',
+    'An API Gateway v2 HTTP GET with name and data[...] query parameters becomes a single walker elb event.',
   trigger: { type: 'GET' },
   in: {
     version: '2.0',
@@ -69,15 +69,15 @@ export const lambdaGet: Flow.StepExample = {
       http: { method: 'GET', path: '/collect' },
       requestId: 'req-456',
     },
-    rawQueryString: 'e=page+view&d=%7B%22title%22%3A%22Home%22%7D',
+    rawQueryString: 'name=page+view&data%5Btitle%5D=Home',
     isBase64Encoded: false,
   },
   out: [
     [
       'elb',
       {
-        e: 'page view',
-        d: '{"title":"Home"}',
+        name: 'page view',
+        data: { title: 'Home' },
       },
     ],
   ],

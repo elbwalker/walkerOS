@@ -8,7 +8,8 @@
 
 Cookieless, privacy-friendly visitor identification for walkerOS. Hashes the
 anonymized IP, a reduced user agent and the site with a secret salt, rotates
-daily, and stores the hash on the event. No cookies, no raw IP on the event.
+daily, and stores the hash on the event. It sets no cookies and keeps the raw IP
+off the event.
 
 [Documentation](https://www.walkeros.io/docs/transformers/fingerprint) &bull;
 [NPM Package](https://www.npmjs.com/package/@walkeros/server-transformer-fingerprint)
@@ -28,6 +29,8 @@ import { startFlow } from '@walkeros/collector';
 import { transformerFingerprint } from '@walkeros/server-transformer-fingerprint';
 
 await startFlow({
+  // Collector chain: every event gets the hash before the destinations
+  next: 'fingerprint',
   transformers: {
     fingerprint: {
       code: transformerFingerprint,
@@ -41,8 +44,8 @@ await startFlow({
 
 The source must extract `ip` and `userAgent` into `ingest` (its
 `config.ingest`). The event then carries the hash at `user.hash`. The salt is
-required: without it the hash could be reversed to the IP, so the transformer
-does not start. An event whose IP and user agent both resolve empty fails with
+required: without it the hash could be reversed to the IP, so the flow does not
+start. An event whose IP and user agent both resolve empty fails with
 `missing-input`, since every visitor would get the same hash.
 
 ## Documentation

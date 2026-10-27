@@ -79,7 +79,7 @@ This produces:
 ```typescript
 d8a('event', 'purchase', {
   transaction_id: '0rd3r1d',
-  value: 555,
+  value: 462,
   currency: 'EUR',
   send_to: '80e1d6d0-560d-419f-ac2a-fe9281e93386',
 });

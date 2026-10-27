@@ -5,7 +5,7 @@ export const SettingsSchema = z
     client: z
       .any()
       .describe(
-        'Google Cloud BigQuery client instance (like new BigQuery({ projectId, keyFilename }))',
+        'Google Cloud BigQuery client instance (like new BigQuery({ projectId, keyFilename })). Used by walkeros setup only; event writes authenticate with config.credentials, settings.bigquery or the default credentials.',
       )
       .optional(),
     projectId: z
@@ -27,7 +27,9 @@ export const SettingsSchema = z
     location: z
       .string()
       .default('EU')
-      .describe('Geographic location for the BigQuery dataset (like US)'),
+      .describe(
+        'Not read by the destination. walkeros setup creates the dataset in config.setup.location (like US), default EU.',
+      ),
     bigquery: z
       .any()
       .describe(

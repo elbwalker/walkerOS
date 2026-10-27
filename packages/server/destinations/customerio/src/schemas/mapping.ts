@@ -10,7 +10,7 @@ export const MappingSchema = z.object({
   page: z
     .unknown()
     .describe(
-      'Per-event page view. Resolves to { url, ... }. Calls trackPageView(). Use with silent: true.',
+      'Per-event page view. Resolves to { url }. Calls trackPageView(), which sends only the url: other resolved fields are not sent. Needs a customerId. Use with silent: true.',
     )
     .optional(),
   destroy: z
@@ -22,14 +22,12 @@ export const MappingSchema = z.object({
   suppress: z
     .boolean()
     .describe(
-      'Suppress person (stop messaging without deleting data). Set true with silent: true.',
+      'Suppress the person; unlike destroy, the id cannot be re-added. Set true with silent: true.',
     )
     .optional(),
   unsuppress: z
     .boolean()
-    .describe(
-      'Unsuppress person (resume messaging). Set true with silent: true.',
-    )
+    .describe('Undo a suppress for the person. Set true with silent: true.')
     .optional(),
   addDevice: z
     .unknown()
@@ -52,13 +50,13 @@ export const MappingSchema = z.object({
   sendEmail: z
     .unknown()
     .describe(
-      'Send transactional email. Resolves to { to, transactional_message_id, message_data?, identifiers? }. Requires appApiKey. Use with silent: true.',
+      'Send transactional email. Resolves to { to, transactional_message_id, message_data?, identifiers? }. Requires appApiKey. Fails today: the SDK accepts only its own SendEmailRequest object, so the call fails with transport. Use with silent: true.',
     )
     .optional(),
   sendPush: z
     .unknown()
     .describe(
-      'Send transactional push. Resolves to { transactional_message_id, message_data?, identifiers? }. Requires appApiKey. Use with silent: true.',
+      'Send transactional push. Resolves to { transactional_message_id, message_data?, identifiers? }. Requires appApiKey. Fails today: the SDK accepts only its own SendPushRequest object, so the call fails with transport. Use with silent: true.',
     )
     .optional(),
 });

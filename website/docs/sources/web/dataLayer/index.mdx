@@ -45,7 +45,7 @@ const { collector, elb } = await startFlow({
       config: {
         settings: {
           name: 'dataLayer', // Name of global dataLayer array
-          prefix: 'dataLayer', // Event prefix for filtering
+          prefix: 'dataLayer', // Entity of every event name
         },
       },
     },
@@ -88,18 +88,18 @@ Add to your `flow.json` sources:
 
 The dataLayer source intercepts `dataLayer.push()` calls and transforms them into walkerOS events:
 
-1. **Intercepts** existing `dataLayer.push()` calls
-2. **Filters** events based on prefix or custom filter function
-3. **Transforms** dataLayer format to walkerOS event format
-4. **Forwards** to collector for processing
+1. Intercepts existing `dataLayer.push()` calls
+2. Filters entries with an optional `filter` function
+3. Transforms each entry into a walkerOS event named `"<prefix> <event>"`
+4. Forwards the event to the collector for processing
 
 <CodeSnippet
   code={`// Existing dataLayer code (unchanged)
 window.dataLayer = window.dataLayer || [];
 dataLayer.push({ event: 'purchase', value: 99.99 });
 
-// Automatically captured and transformed by sourceDataLayer
-// → Sent to walkerOS collector as standard event`}
+// Captured by sourceDataLayer as the event "dataLayer purchase"
+// with data { value: 99.99 }`}
   language="javascript"
 />
 
@@ -111,12 +111,14 @@ Every event carries the page context in `source`, like browser source events:
 `window.location.href` and `referrer` from `document.referrer`. Both are read
 when the event is emitted, so a push after an SPA navigation carries the new
 URL, and entries queued before the source started get the URL at replay time.
-Destinations that read `source.url` (such as Meta or Piwik PRO) use it for
-dataLayer events without extra config.
+Server destinations that read `source.url` (such as Meta Conversions API or
+Piwik PRO) use it for dataLayer events without extra config.
 
 ## Custom filtering
 
-Filter which dataLayer events get processed:
+`filter` is called with each dataLayer entry before it becomes an event and
+returns `true` to skip it. This filter keeps only `purchase` and `add_to_cart`
+objects:
 
 <CodeSnippet
   code={`const { elb } = await startFlow({
@@ -125,13 +127,13 @@ Filter which dataLayer events get processed:
       code: sourceDataLayer,
       config: {
         settings: {
-          filter: (event) => {
-            // Only process purchase and add_to_cart events
-            if (typeof event === 'object' && event !== null) {
-              const e = event as { event?: string };
-              return e.event === 'purchase' || e.event === 'add_to_cart';
-            }
-            return false;
+          filter: (entry) => {
+            const name =
+              typeof entry === 'object' && entry !== null && 'event' in entry
+                ? entry.event
+                : undefined;
+            // true skips the entry
+            return name !== 'purchase' && name !== 'add_to_cart';
           },
         },
       },
@@ -141,9 +143,14 @@ Filter which dataLayer events get processed:
   language="typescript"
 />
 
+The entry is the raw value: an object for `dataLayer.push({ event: ... })`, the
+`arguments` of the call for `gtag(...)`. The filter must return synchronously: a
+returned Promise is not awaited and the entry is processed. A filter that
+throws keeps the entry.
+
 ## Source-level mapping
 
-The source emits walkerOS events whose `name` is `"<prefix> <gtag-action>"`. The collector splits `name` on the first space into `entity` and `action`, so the prefix becomes the entity and the gtag action becomes the action. Source-level mapping rules key on that pair:
+The source emits walkerOS events whose `name` is `"<prefix> <gtag-action>"`. The collector splits `name` on the first space into `entity` and `action`, so the prefix becomes the entity and the gtag action becomes the action. Source-level mapping rules key on that pair. At a source a rule renames the event (`name`) and edits it with `policy`; policy values resolve against the event, so the gtag fields are under `data.`, and a `data` entry in `policy` replaces the event's data with the mapped object:
 
 <CodeSnippet
   code={`"sources": {
@@ -155,23 +162,27 @@ The source emits walkerOS events whose `name` is `"<prefix> <gtag-action>"`. The
         "dataLayer": {
           "add_to_cart": {
             "name": "product add",
-            "data": {
-              "map": {
-                "id": "items.0.item_id",
-                "name": "items.0.item_name",
-                "price": "value",
-                "currency": "currency",
-                "quantity": "items.0.quantity"
+            "policy": {
+              "data": {
+                "map": {
+                  "id": "data.items.0.item_id",
+                  "name": "data.items.0.item_name",
+                  "price": "data.value",
+                  "currency": "data.currency",
+                  "quantity": "data.items.0.quantity"
+                }
               }
             }
           },
           "purchase": {
             "name": "order complete",
-            "data": {
-              "map": {
-                "id": "transaction_id",
-                "value": "value",
-                "currency": "currency"
+            "policy": {
+              "data": {
+                "map": {
+                  "id": "data.transaction_id",
+                  "value": "data.value",
+                  "currency": "data.currency"
+                }
               }
             }
           }
@@ -186,6 +197,8 @@ The source emits walkerOS events whose `name` is `"<prefix> <gtag-action>"`. The
 For the gtag commands `consent`, `config`, and `set`, the action equals the command name (any trailing token such as `update` or a measurement ID is dropped by the entity/action split). Branch on the dropped value via rule-level `condition` or `event.data` if you need to distinguish, for example, `consent default` from `consent update`.
 
 If you set a custom `prefix` (for example `"gtag"`), use that string as the entity key: `mapping.gtag.add_to_cart`.
+
+A `data` key in a source rule does nothing: `walkeros validate` rejects it, and the collector logs one ERROR line when the source registers. See [source mapping](/docs/mapping/rule#source-mapping) for what applies at a source.
 
 ## Migration strategy
 
@@ -208,9 +221,21 @@ dataLayer.push({ event: 'purchase', value: 99.99 });
     code: destinationGtag,
     config: {
       mapping: {
-        // Map dataLayer purchase to GA4 format
-      }
-    }
+        // dataLayer events arrive as "dataLayer <event>"
+        dataLayer: {
+          purchase: {
+            name: 'purchase',
+            data: {
+              map: {
+                transaction_id: 'data.transaction_id',
+                value: 'data.value',
+                currency: 'data.currency',
+              },
+            },
+          },
+        },
+      },
+    },
   }
 }`}
   language="typescript"

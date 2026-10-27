@@ -8,6 +8,7 @@ package: '@walkeros/web-destination-tiktok'
 
 import data from '@walkeros/web-destination-tiktok/walkerOS.json';
 import Configuration from '@site/src/components/snippets/_configuration.mdx';
+import Quickstart from '@site/src/components/snippets/_quickstart.mdx';
 
 import WhereThisFits from '@site/src/components/snippets/_where-this-fits.mdx';
 
@@ -21,11 +22,11 @@ import WhereThisFits from '@site/src/components/snippets/_where-this-fits.mdx';
 
 The [TikTok Pixel](https://business-api.tiktok.com/portal/docs?id=1739585702922241)
 forwards browser conversions to TikTok Ads for optimization, audience
-building, and reporting. This destination wraps the standard TikTok Pixel
-snippet (loaded from `analytics.tiktok.com/i18n/pixel/events.js`); there is
-no npm SDK for the browser pixel. Events become `ttq.track(name, params, { event_id })`
+building, and reporting. This destination loads the TikTok Pixel script from
+`analytics.tiktok.com/i18n/pixel/events.js` unless `loadScript` is `false`.
+Events become `ttq.track(name, params, { event_id })`
 calls; identity becomes `ttq.identify({ email, phone_number, external_id })`;
-consent toggles `ttq.enableCookie` / `ttq.disableCookie`.
+with `config.consent`, consent toggles `ttq.enableCookie` / `ttq.disableCookie`.
 
 <WhereThisFits
   pre={<>TikTok Pixel is a <strong>web destination</strong> in the walkerOS flow:</>}
@@ -36,106 +37,60 @@ consent toggles `ttq.enableCookie` / `ttq.disableCookie`.
 
 ## Installation
 
-<CodeSnippet
-  code={`npm install @walkeros/web-destination-tiktok`}
-  language="bash"
-/>
+<Quickstart data={data} />
 
-<Tabs groupId="mode">
-  <TabItem value="integrated" label="Integrated" default>
+The quickstart above sets no consent, so the TikTok Pixel script loads as the
+flow starts, every event the destination sends goes out without `marketing`
+consent, and a revocation changes nothing. Add
+`consent: { marketing: true }` to `config`, next to `settings`, before you go
+live (see [Consent](#consent)).
 
-<CodeSnippet
-  code={`import { startFlow } from '@walkeros/collector';
-import { destinationTikTok } from '@walkeros/web-destination-tiktok';
-
-await startFlow({
-  consent: { marketing: false },
-  destinations: {
-    tiktok: {
-      code: destinationTikTok,
-      config: {
-        consent: { marketing: true },
-        settings: {
-          apiKey: 'C4XXXXXXXXXXXXXXXXXXX',
-        },
-      },
-    },
-  },
-});`}
-  language="typescript"
-/>
-
-  </TabItem>
-  <TabItem value="bundled" label="Bundled">
-
-Add to your `flow.json` destinations:
-
-<CodeSnippet
-  code={`"destinations": {
-  "tiktok": {
-    "package": "@walkeros/web-destination-tiktok",
-    "config": {
-      "consent": { "marketing": true },
-      "settings": {
-        "apiKey": "C4XXXXXXXXXXXXXXXXXXX"
-      }
-    }
-  }
-}`}
-  language="json"
-/>
-
-[See bundled mode setup](/docs/getting-started/modes/bundled) | [CLI reference](/docs/apps/cli)
-
-  </TabItem>
-</Tabs>
+The destination starts only when `window.ttq` already provides `load`. On a
+page without that, the quickstart does not start: the console shows one ERROR line
+`destination init failed` with the code `vendor-not-ready`, every push answers
+`failed` with that code, and each push tries to start it again. Whatever sets
+up `window.ttq` on your page runs outside the walkerOS consent gate, so it has
+to wait for consent itself; otherwise the Pixel loads before `config.consent`
+is met.
 
 <Configuration type="destination" data={data} />
 
 ## Standard events
 
-TikTok recognizes 14 standard events for ad optimization. Use `mapping.name`
-to flip walkerOS event names into the rigid taxonomy. Custom names still
-work but receive no optimization signal.
-
-| TikTok name            | When to use                                    |
-| ---------------------- | ---------------------------------------------- |
-| `ViewContent`          | Product / content detail view                  |
-| `ClickButton`          | Generic CTA click                              |
-| `Search`               | Site search                                    |
-| `AddToWishlist`        | Item added to a wishlist                       |
-| `AddToCart`            | Item added to cart                             |
-| `InitiateCheckout`     | User started checkout                          |
-| `AddPaymentInfo`       | Payment details entered                        |
-| `CompletePayment`      | Order successfully placed (primary conversion) |
-| `PlaceAnOrder`         | Order placed (alternative)                     |
-| `Contact`              | Lead / contact form                            |
-| `Download`             | Asset download                                 |
-| `SubmitForm`           | Generic form submission                        |
-| `CompleteRegistration` | User signup                                    |
-| `Subscribe`            | Subscription start                             |
+TikTok optimizes ads on its
+[standard events](https://ads.tiktok.com/help/article/standard-events-parameters).
+Use `mapping.name` to send a walkerOS event under one of their names, for
+example `ViewContent`, `AddToCart` or `Purchase`; an event without a rule goes
+out under its walkerOS name. A rule whose `data` resolves to something other
+than an object is sent with empty parameters, and its push answers `done`.
 
 ## Advanced matching
 
 TikTok matches conversions back to TikTok users via three optional parameters:
-`email`, `phone_number`, `external_id`. The SDK hashes them with SHA256 before
-sending, so it's safe to pass raw values.
+`email`, `phone_number`, `external_id`. The destination passes the resolved
+values to `ttq.identify()` as they are, unhashed. TikTok states that its Pixel
+hashes email addresses and phone numbers with SHA-256
+([Advanced Matching](https://ads.tiktok.com/help/article/advanced-matching-web));
+the values still reach TikTok's script in the browser in plain form.
 
 `settings.identify` (destination-level) fires on first push and re-fires only
-when the resolved value changes (runtime state diffing).
+when the resolved value changes.
 `mapping.settings.identify` (per-event) overrides for one push, which is useful
 for signup and checkout flows where the identity becomes available mid-session.
 
-`ttq.identify()` always fires **before** `ttq.track()` so Advanced Matching
+`ttq.identify()` always fires before `ttq.track()` so Advanced Matching
 is set for the conversion event.
 
 ## Consent
 
-TikTok is an advertising platform. The typical walkerOS consent key is
+For TikTok, an advertising platform, the typical walkerOS consent key is
 `marketing` (whatever name your CMP reports). The walkerOS `config.consent`
-gate blocks unconsented events from reaching the destination in the first
-place; the destination's `on('consent')` handler then toggles TikTok's own
-cookie state for attribution.
+gate holds events until that consent is granted: they wait in the
+destination's queue and are sent once it is, and walkerOS injects the Pixel
+script only then (see
+[consent management](/docs/guides/consent#gate-a-destination-with-consent)).
+The destination's `on('consent')` handler then toggles TikTok's own cookie
+state for attribution.
 
 <CodeSnippet
   code={`config: {
@@ -145,18 +100,18 @@ cookie state for attribution.
   language="typescript"
 />
 
-The handler iterates every key in `config.consent` and calls
-`ttq.enableCookie()` only when **all** required keys are granted. Otherwise
-it calls `ttq.disableCookie()`. This is the conservative semantic that
-matches walkerOS's gating model.
+The handler acts on a consent command that names at least one key of
+`config.consent` and reads the whole consent state: it calls
+`ttq.enableCookie()` when at least one of those keys is granted, the rule the
+gate applies to events, and `ttq.disableCookie()` when none is.
 
-:::note Auto page view
-TikTok's SDK auto-fires `ttq.page()` once on load. The destination has no
-knob to suppress it. Letting the auto page view fire is the expected
-behavior.
+:::note Page views
+The destination calls no `ttq.page()`. A walkerOS `page view` without a rule
+goes out as `ttq.track('page view', ...)`.
 :::
 
 ## Related
 
-- [TikTok Events API documentation](https://business-api.tiktok.com/portal/docs)
+- [TikTok Events API destination](/docs/destinations/server/tiktok): the
+  server-side counterpart
 - [Bundled mode](/docs/getting-started/modes/bundled)

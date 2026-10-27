@@ -1,4 +1,5 @@
 import type { Simulation } from '.';
+import type { StepKind } from './collector';
 
 /**
  * FlowState is the canonical observation record emitted at each hop in a
@@ -14,12 +15,7 @@ import type { Simulation } from '.';
 
 export type FlowStatePhase = 'init' | 'in' | 'out' | 'error' | 'skip' | 'flush';
 
-export type FlowStepType =
-  | 'source'
-  | 'transformer'
-  | 'collector'
-  | 'destination'
-  | 'store';
+export type FlowStepType = StepKind;
 
 export interface FlowStateBatch {
   size: number;

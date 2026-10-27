@@ -13,11 +13,11 @@ process)
 
 **Skill Coverage:**
 
-| Step               | Covered | Location                       |
-| ------------------ | ------- | ------------------------------ |
-| Template selection | ✅      | Transformer types section      |
-| Validation pattern | ✅      | Validation transformer section |
-| Return values      | ✅      | Return value documentation     |
+| Step               | Covered | Location                            |
+| ------------------ | ------- | ----------------------------------- |
+| Template selection | ✅      | Transformer Categories, Phase 3     |
+| Validation pattern | ✅      | Phase 2.2 (a blocked event example) |
+| Return values      | ✅      | Phase 5, Key patterns 4             |
 
 **Result:** ✅ PASS
 
@@ -29,10 +29,10 @@ process)
 
 **Skill Coverage:**
 
-| Feature            | Covered | Location             |
-| ------------------ | ------- | -------------------- |
-| Enrichment pattern | ✅      | Enrichment section   |
-| Event mutation     | ✅      | Implementation phase |
+| Feature            | Covered | Location                        |
+| ------------------ | ------- | ------------------------------- |
+| Enrichment pattern | ✅      | Transformer Categories (Enrich) |
+| Event mutation     | ✅      | Phase 5: Implement              |
 
 **Result:** ✅ PASS
 
@@ -44,10 +44,10 @@ process)
 
 **Skill Coverage:**
 
-| Feature           | Covered | Location                |
-| ----------------- | ------- | ----------------------- |
-| Redaction pattern | ✅      | Redaction section       |
-| Field removal     | ✅      | Implementation examples |
+| Feature           | Covered | Location                      |
+| ----------------- | ------- | ----------------------------- |
+| Redaction pattern | ✅      | templates/validation (redact) |
+| Field removal     | ✅      | templates/validation/index.ts |
 
 **Result:** ✅ PASS
 

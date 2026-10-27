@@ -12,9 +12,9 @@ export const JavaScriptVarName = z
 
 /**
  * Event prefix
- * Used for filtering dataLayer events
+ * Used as the entity of every event name the source emits
  */
 export const EventPrefix = z
   .string()
   .min(1)
-  .describe('Prefix for filtering dataLayer events');
+  .describe('Entity of every event name the source emits');

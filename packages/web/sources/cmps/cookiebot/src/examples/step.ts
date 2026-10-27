@@ -63,7 +63,7 @@ export const firstVisit: Flow.StepExample = {
 export const impliedSkipped: Flow.StepExample = {
   title: 'Implied consent (skipped)',
   description:
-    'Cookiebot consented on its own (consent.method implied), for example outside the regions where the site asks. The default explicitOnly waits for an explicit decision, so no consent command is emitted.',
+    'Cookiebot consented on its own (consent.method implied), for example outside the regions where the site asks. The default explicitOnly publishes only an explicit decision, so no consent command is emitted, and a visitor Cookiebot never asks never sends one.',
   trigger: { type: 'consent', options: { dispatch: 'init' } },
   in: impliedConsent,
   out: [],

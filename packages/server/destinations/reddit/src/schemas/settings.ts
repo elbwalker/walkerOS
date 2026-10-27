@@ -21,7 +21,7 @@ export const SettingsSchema = z
         'Reddit Pixel ID used as the API path parameter (like a2_abcdef123456)',
       ),
     action_source: ActionSourceSchema.describe(
-      'Source of the event (WEBSITE, APP, PHYSICAL_STORE) (like WEBSITE)',
+      'Has no effect: the destination sends no action source to Reddit (accepts WEBSITE, APP, PHYSICAL_STORE)',
     ).optional(),
     doNotHash: z
       .array(z.string())
@@ -39,7 +39,7 @@ export const SettingsSchema = z
       .string()
       .url()
       .describe(
-        'Custom URL for Reddit Conversions API endpoint (like https://ads-api.reddit.com/api/v2.0/conversions/events/)',
+        'Custom base URL for the Reddit Conversions API, ending in /; the pixel ID is appended (like https://ads-api.reddit.com/api/v2.0/conversions/events/)',
       )
       .optional(),
     user_data: z

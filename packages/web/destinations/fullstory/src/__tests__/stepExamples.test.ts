@@ -120,3 +120,15 @@ describe('fullstory destination -- step examples', () => {
 
 it('declares simulation paths that resolve', () =>
   expectSimulationResolves(examples.env));
+
+describe('example text', () => {
+  // @fullstory/browser injects fs.js without awaiting it: a script load error
+  // never throws into init, so only a throwing start is reported.
+  it('reports a throwing start, not a blocked script', () => {
+    const { description } = examples.step.fullstoryUnreachable;
+    expect(description).not.toContain('network error');
+    expect(description).toContain(
+      'A blocked or unreachable fs.js script throws nothing',
+    );
+  });
+});

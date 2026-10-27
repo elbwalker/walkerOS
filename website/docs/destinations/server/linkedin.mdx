@@ -7,6 +7,7 @@ package: '@walkeros/server-destination-linkedin'
 ---
 import data from '@walkeros/server-destination-linkedin/walkerOS.json';
 import Configuration from '@site/src/components/snippets/_configuration.mdx';
+import Quickstart from '@site/src/components/snippets/_quickstart.mdx';
 
 import WhereThisFits from '@site/src/components/snippets/_where-this-fits.mdx';
 
@@ -26,59 +27,7 @@ Server-side event delivery to LinkedIn's Conversions API for enhanced ad attribu
 
 ## Installation
 
-<CodeSnippet
-  code={`npm install @walkeros/server-destination-linkedin`}
-  language="bash"
-/>
-
-<Tabs groupId="mode">
-  <TabItem value="integrated" label="Integrated" default>
-
-<CodeSnippet
-  code={`import { startFlow } from '@walkeros/collector';
-import { destinationLinkedIn } from '@walkeros/server-destination-linkedin';
-
-await startFlow({
-  destinations: {
-    linkedin: {
-      code: destinationLinkedIn,
-      config: {
-        settings: {
-          accessToken: 'YOUR_ACCESS_TOKEN',
-          conversionRuleId: 'YOUR_CONVERSION_RULE_ID',
-        },
-      },
-    },
-  },
-});`}
-  language="typescript"
-/>
-
-  </TabItem>
-  <TabItem value="bundled" label="Bundled">
-
-Add to your `flow.json` destinations:
-
-<CodeSnippet
-  code={`"destinations": {
-  "linkedin": {
-    "package": "@walkeros/server-destination-linkedin",
-    "import": "destinationLinkedIn",
-    "config": {
-      "settings": {
-        "accessToken": "YOUR_ACCESS_TOKEN",
-        "conversionRuleId": "YOUR_CONVERSION_RULE_ID"
-      }
-    }
-  }
-}`}
-  language="json"
-/>
-
-[See bundled mode setup](/docs/getting-started/modes/bundled) | [CLI reference](/docs/apps/cli)
-
-  </TabItem>
-</Tabs>
+<Quickstart data={data} />
 
 <Configuration type="destination" data={data} />
 

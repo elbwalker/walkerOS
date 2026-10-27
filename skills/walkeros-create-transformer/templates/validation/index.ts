@@ -16,7 +16,7 @@ export const transformerRedact: Transformer.Init<Types> = (context) => {
   // Destructure what you need from context
   const { config = {} } = context;
 
-  // Apply defaults inline — flow.json is developer-controlled, so no
+  // Apply defaults inline: flow.json is developer-controlled, so no
   // runtime validation. Shape checks live in ./schemas and are used by
   // `walkeros validate` and dev tooling, never at runtime.
   const userSettings = config.settings || {};

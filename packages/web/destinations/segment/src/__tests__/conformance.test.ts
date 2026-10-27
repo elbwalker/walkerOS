@@ -35,6 +35,7 @@ describe('segment conformance', () => {
         obfuscate: false,
         integrations: {},
       },
+      minimal: examples.minimal,
       env: { push: examples.env.push, simulation: examples.env.simulation },
       root: path.join(__dirname, '..', '..'),
       passThrough,

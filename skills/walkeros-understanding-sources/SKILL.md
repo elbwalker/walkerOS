@@ -13,7 +13,7 @@ description:
 Sources capture events from the external world (browser DOM, dataLayer, HTTP
 requests, cloud functions) and feed them to the collector.
 
-**Core principle:** Sources capture. They don't process or deliver—that's
+**Core principle:** Sources capture. They don't process or deliver: that's
 collector and destinations.
 
 ## Source Interface
@@ -53,18 +53,17 @@ export const sourceMySource: Source.Init<Types> = async (context) => {
 
 ### Init Method
 
-`init?: () => void | Promise<void>` — Optional eager-startup hook on the
-returned `Source.Instance`. The factory must be **side-effect-free**: build the
-instance and return it. The collector calls `init()` on every source eagerly
-after all factories register, regardless of `config.require`. Use `init` for
-work that previously sat in the factory body: adopting a pre-init window queue
-(e.g., `window.elbLayer`), attaching DOM listeners, opening sockets,
-intercepting `window.dataLayer`. After `init` runs the collector flips
-`Source.Config.init` to `true`.
+`init?: () => void | Promise<void>`: optional eager-startup hook on the returned
+`Source.Instance`. The factory must be **side-effect-free**: build the instance
+and return it. The collector calls `init()` on every source eagerly after all
+factories register, regardless of `config.require`. Use `init` for the side
+effects: adopting a pre-init window queue (e.g., `window.elbLayer`), attaching
+DOM listeners, opening sockets, intercepting `window.dataLayer`. After `init`
+runs the collector flips `Source.Config.init` to `true`.
 
 ### queueOn Buffer
 
-`queueOn?: Array<{ type: On.Types; data: unknown }>` — Optional buffer on the
+`queueOn?: Array<{ type: On.Types; data: unknown }>`: optional buffer on the
 `Source.Instance` for lifecycle events delivered before the source is
 **started** (started ≡ `config.init === true && !config.require?.length`). The
 collector pushes `{ type, data }` here when it would otherwise call
@@ -73,7 +72,7 @@ each entry via `source.on(...)` and clears the queue.
 
 ### Destroy Method
 
-`destroy?: DestroyFn` — Optional cleanup method. Called during
+`destroy?: DestroyFn`: optional cleanup method. Called during
 `command('shutdown')`. Use to close HTTP servers, timers, or connections.
 Receives `{ id, config, env, logger }`.
 
@@ -82,25 +81,25 @@ Receives `{ id, config, env, logger }`.
 The collector and every source agree on three lifecycle markers, all on
 `Source.Config`:
 
-| Field                | Purpose                                                                                                                                                                                                                                                                                                                                                                                                                                      |
-| -------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `init?: boolean`     | Set by the collector to `true` after `Instance.init()` resolves. Authors do not write to it. Reflects "init has run", not "is started".                                                                                                                                                                                                                                                                                                      |
-| `require?: string[]` | Author-supplied **timing hint**. Lists collector state a source needs before its first `on()` delivery. Satisfied by the collector's **current recorded state** (level), not only by a future event — so order does not matter: the gate clears whether the required state was recorded before or after this source registered. It is not a correctness dependency: a source reacts to state correctly whether or not it declares `require`. |
-| `disabled?: boolean` | Hard skip — no factory invocation, no init, no event capture.                                                                                                                                                                                                                                                                                                                                                                                |
+| Field                | Purpose                                                                                                                                                                                                                                                                                                                                                                                                                                     |
+| -------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `init?: boolean`     | Set by the collector to `true` after `Instance.init()` resolves. Authors do not write to it. Reflects "init has run", not "is started".                                                                                                                                                                                                                                                                                                     |
+| `require?: string[]` | Author-supplied **timing hint**. Lists collector state a source needs before its first `on()` delivery. Satisfied by the collector's **current recorded state** (level), not only by a future event, so order does not matter: the gate clears whether the required state was recorded before or after this source registered. It is not a correctness dependency: a source reacts to state correctly whether or not it declares `require`. |
+| `disabled?: boolean` | Accepted by `walkeros validate`, but the collector does not read it for sources: a source with `disabled: true` still registers, runs `init` and captures events. Remove the source from the flow to switch it off.                                                                                                                                                                                                                         |
 
 The flow is:
 
-1. **Register** — collector invokes the factory. Factory returns a fresh
+1. **Register**: collector invokes the factory. Factory returns a fresh
    `Source.Instance` with no side effects.
-2. **Init pass** — collector calls `Instance.init()` on every registered source,
+2. **Init pass**: collector calls `Instance.init()` on every registered source,
    then sets `config.init = true`.
-3. **Lifecycle delivery** — for each collector event (`consent`, `user`,
+3. **Lifecycle delivery**: for each collector event (`consent`, `user`,
    `session`, `run`, …) the collector decrements every source's `require` in
    place AND reconciles every still-pending source/destination against current
    state, so a gate also clears from state that was already recorded. If a
    source is started, it calls `source.on(type, data)` directly. Otherwise it
    pushes `{ type, data }` into `Instance.queueOn`.
-4. **Replay** — when a source becomes started (require empties), the collector
+4. **Replay**: when a source becomes started (require empties), the collector
    replays its `queueOn` via `source.on(...)` and clears the queue.
 
 `require` therefore gates the **timing** of `on()` delivery, not code execution
@@ -132,11 +131,11 @@ Events a source emits before the collector runs are held in a bounded FIFO
 buffer (`collector.preRunQueue`, capped by `config.queueMax`) and replayed at
 `run`, with the pipeline running once at replay time. A source therefore does
 **not** need bespoke `on('run')` deferral to avoid losing its startup events.
-Deferring emission to `on('run')` is still fine and often clearer for
-**ordering** (the session source does this so `session start` lands in the
-post-run pipeline), but it is no longer a loss-protection requirement.
+Deferring emission to `on('run')` is fine and often clearer for **ordering**
+(the session source does this so `session start` lands in the post-run
+pipeline), not for loss protection.
 
-The one case that still needs an explicit run gate is a **queue consumer**
+The one case that needs an explicit run gate is a **queue consumer**
 (`pubsub-pull`, `sqs`): starting to consume means acknowledging messages to a
 broker, and an ack must never precede delivery. These sources start their
 subscription or poll loop in `on('run')` and never ack a message the pipeline
@@ -145,13 +144,13 @@ disposition, nack by default).
 
 ## Push Signatures by Type
 
-| Source Type    | Signature                           | Example      |
-| -------------- | ----------------------------------- | ------------ |
-| Cloud Function | `push(req, res) → Promise<void>`    | HTTP handler |
-| Browser        | `push(event, data) → Promise<void>` | DOM events   |
-| DataLayer      | `push(event, data) → Promise<void>` | GTM-style    |
+| Source Type    | Signature                           | Example                                  |
+| -------------- | ----------------------------------- | ---------------------------------------- |
+| Cloud Function | `push(req, res) → Promise<void>`    | HTTP handler                             |
+| Browser        | `push(event) → Promise<PushResult>` | A partial event or a `walker` command    |
+| DataLayer      | `push` is the collector's `elb`     | Captures `window.dataLayer.push` instead |
 
-**Key insight:** Source `push` IS the handler. No wrappers needed.
+A source's `push` is the handler itself, with no wrapper:
 
 ```typescript
 // Direct deployment
@@ -166,11 +165,11 @@ http('handler', source.push);
 - `env.push` is **outward**: where the source sends the events it produced.
 
 A source can legitimately have both, and they need not be related: the browser
-source's `Instance.push` is a `BrowserPush` that accepts event objects, `walker`
-commands and the string form, while its events leave via `env.push`. The
-dataLayer and session sources keep `Instance.push: env.elb`, because callers do
-not feed them events at all: they capture from `dataLayer.push` and from session
-detection respectively.
+source's `Instance.push` is a `BrowserPush` that accepts partial events and
+`walker` commands, while its events leave via `env.push`. The dataLayer and
+session sources keep `Instance.push: env.elb`, because callers do not feed them
+events at all: they capture from `dataLayer.push` and from session detection
+respectively.
 
 When a test or integration code needs to invoke a source's `push` through the
 collector bag, `collector.sources` erases the per-source generic on read. Use
@@ -210,7 +209,7 @@ or `elb: false` and `elbLayer: false` for an embedded source with no page-window
 footprint.
 
 Full contract, recipes, and known limits:
-[Multiple sources on one page](../../website/docs/sources/web/browser/index.mdx).
+[Multiple sources on one page](../../website/docs/sources/web/browser/index.mdx#multiple-sources-on-one-page).
 
 ## DataLayer Source
 
@@ -218,9 +217,11 @@ Captures events from a GTM-style dataLayer array.
 
 ```typescript
 window.dataLayer.push({
-  event: 'product view',
-  product: { id: 'P123', name: 'Laptop' },
+  event: 'view_item',
+  ecommerce: { items: [{ item_id: 'P123' }] },
 });
+// arrives as the event 'dataLayer view_item' (settings.prefix, default
+// 'dataLayer'), the other keys as its data; a source mapping renames it
 ```
 
 See [packages/web/sources/dataLayer/](../../packages/web/sources/dataLayer/) for
@@ -232,12 +233,12 @@ Handle HTTP requests in cloud functions. Server sources use the context pattern:
 
 ```typescript
 import type { Source } from '@walkeros/core';
+import { createRespond, toEventList } from '@walkeros/core';
 
 export const sourceCloudFunction: Source.Init<Types> = async (context) => {
-  const { config = {}, env } = context;
-  const { push: envPush } = env;
+  const { config = {} } = context;
 
-  // Apply defaults inline — flow.json is developer-controlled, so no
+  // Apply defaults inline: flow.json is developer-controlled, so no
   // runtime validation. Shape checks live in ./schemas and are used by
   // `walkeros validate` and dev tooling, never at runtime.
   const userSettings = config.settings || {};
@@ -247,17 +248,19 @@ export const sourceCloudFunction: Source.Init<Types> = async (context) => {
   };
 
   const push = async (req: Request, res: Response): Promise<void> => {
-    // Transform HTTP request → walkerOS event
-    const event = transformRequest(req);
-    await envPush(event);
-    res.json({ success: true });
+    const respond = createRespond((options) => {
+      res.status(options.status ?? 200).json(options.body);
+    });
+    const scope = buildScope(req); // see Per-Scope Context below
+
+    await context.withScope(scope, respond, async (env) => {
+      for (const event of toEventList(scope.body)) await env.push(event);
+    });
+    respond({ body: { success: true } }); // a no-op if a step responded
   };
 
   return { type: 'cloudfunction', config: { ...config, settings }, push };
 };
-
-// Direct deployment
-export const handler = source.push;
 ```
 
 See [packages/server/sources/gcp/](../../packages/server/sources/gcp/) for
@@ -319,11 +322,11 @@ Commands must keep using `env.elb`. `env.push` takes `WalkerOS.DeepPartialEvent`
 only, so a command string has no meaning there.
 
 Both exits, plus `env.command`, `env.logger` and `env.sources`, are
-runtime-owned: the collector writes these five capabilities into the env LAST,
+runtime-owned: the collector writes these five capabilities into the env last,
 so an author value for any of them is ignored, uniformly. `env` stays the
 author's bag for platform and vendor dependencies only. To end the pipeline
 somewhere else, declare `terminus` on the source registration (a sibling of
-`code`); it is explicit and TOTAL, and stored flow configs cannot carry it
+`code`); it is explicit and total, and stored flow configs cannot carry it
 (validation rejects unknown source keys).
 
 ```typescript
@@ -338,14 +341,14 @@ Call `env.push` with the event alone. The collector supplies `id`, `ingest`,
 `mapping` and `preChain` itself; passing your own `options` is for server
 sources threading a per-request scope via `context.withScope`.
 
-Two consequences worth knowing when testing a source:
+Two consequences for testing a source:
 
 - The pipeline's end is captured **when the source is constructed**. Replacing
   `collector.push` after `startFlow` resolves is invisible to pipeline pushes,
   so assert on a spy **destination** instead of a `collector.push` mock. For a
   deterministic raw capture at the source→collector boundary, declare `terminus`
   on the registration: it receives the event exactly as the source emitted it,
-  and the ENTIRE pipeline is skipped (no `before`/`next` chains, no `cache`, no
+  and the entire pipeline is skipped (no `before`/`next` chains, no `cache`, no
   `state`, no `mapping`, no minted span id, no ingest, no `respond`, no
   `status.sources` counting, no Observe records).
 - A `next`/`before` chain adds `await` hops between the emit and delivery. For a
@@ -435,7 +438,7 @@ type CreateFn<TContent, TResult> = (
 ) => Promise<Trigger.Instance<TContent, TResult>>;
 ```
 
-`createTrigger` simulates real-world invocations from the outside — full
+`createTrigger` simulates real-world invocations from the outside: full
 blackbox, no source instance access. Each package implements it differently:
 
 | Source  | Content        | Trigger type       | Mechanism               |

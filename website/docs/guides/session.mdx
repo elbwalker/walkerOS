@@ -13,20 +13,27 @@ import PackageLink from '@site/src/components/docs/package-link';
   npm="@walkeros/web-source-session"
 />
 
-There are multiple ways to define and measure a session. Sessions represent a
-period when a user actively engages with a website, often used for attribution
-and conversion tracking. Different tools may define and detect sessions in
+A session is a period in which a user actively engages with a website, often
+used for attribution and conversion tracking. Tools define and detect sessions in
 different ways.
 
-The `sessionStart` util helps to detect a new session independently and triggers
-a `session start` event or [executes custom code](#callback). It works
-client-side and is cookieless by default. The Util returns
-[Session Data](#session-data) information. There are
-[Config Parameters](#config-parameters) to customize the session detection.
+The [session source](/docs/sources/web/session) runs `sessionStart` with its
+settings: it detects a new session, sets the user ids and pushes a
+`session start` event, or [executes custom code](#callback). It works
+client-side and is cookieless by default, and returns
+[Session Data](#session-data). The [Config Parameters](#config-parameters) below
+are the config of `sessionStart`: the session source passes its `settings` and
+its own `collector`; set the source up as its page describes.
+
+`sessionStart` is also exported for direct use. Called without a `collector`, it
+only returns the session data: it pushes no event, sets no user ids, and with
+`consent` it does nothing. The snippets below pass `collector` where they show an
+event and leave it out where only the returned data matters.
 
 In the cookieless mode (default), only the [sessionWindow](#sessionwindow) Util
 is used. With config parameter `storage: true`, the
-[sessionStorage](#sessionstorage) gets called before the `sessionWindow`.
+[sessionStorage](#sessionstorage) runs and reads the page signals through
+`sessionWindow`.
 
 :::note
 
@@ -67,22 +74,28 @@ extended with the following:
 | Property | Type    | Description                                       |
 | -------- | ------- | ------------------------------------------------- |
 | updated  | number  | Timestamp of last update                          |
-| isNew    | boolean | If this is the first visit on a device            |
+| isNew    | boolean | If no stored session was found                    |
 | device   | string  | Randomly generated or previously stored device id |
-| count    | number  | Total number of sessions                          |
+| count    | number  | Sessions counted since the stored session began   |
 | runs     | number  | Total number of runs (like page views)            |
+
+The stored session is kept for twice the session `length` after its last
+update. A visitor who returns later starts with `isNew: true` and `count: 1`
+again, while `device` stays the same (see
+[isStart vs isNew](/docs/sources/web/session#session-start-event)).
 
 ## sessionStart
 
-Example of calling `sessionStart` on a user's first visit:
+Example of calling `sessionStart` on a user's first visit, with the
+`collector` that `startFlow` returns:
 
 <CodeSnippet
   code={`// On page https://www.walkeros.io/docs/session?utm_campaign=docs
-sessionStart({ storage: true });
+sessionStart({ storage: true, collector });
 
-// will automatically create the event
+// pushes the event
 {
-  event: "session start",
+  name: "session start",
   data: {
     isStart: true,
     storage: true,
@@ -113,14 +126,14 @@ Window mode sets neither: its `id` is only available as `data.id` of the
 
 ### Config parameters
 
-The `sessionStart` function is designed to work out of the box. All parameters
-are optional for customization:
+All parameters of `sessionStart` are optional:
 
 | Parameter           | Type                   | Description                                                                                          |
 | ------------------- | ---------------------- | ---------------------------------------------------------------------------------------------------- |
-| [consent](#consent) | Array&lt;string&gt;    | The consent state to permit or deny storage access                                                   |
+| [consent](#consent) | string or Array&lt;string&gt; | The consent state to permit or deny storage access                                     |
 | [storage](#storage) | boolean                | If the storage should be used                                                                        |
 | [cb](#callback)     | false or<br />function | Callback function called after detection, or `false` to disable the default callback |
+| collector           | object                 | Receives the user ids and the `session start` event; the session source passes its own |
 
 :::info
 
@@ -131,24 +144,24 @@ There are additional config parameters [for storage](#sessionstorage) and
 
 #### Consent
 
-Setting a consent state to wait for before detecting a new session is used to
-decide if storage access is allowed or not. If set, it registers an
+The consent state to wait for before detecting a new session decides whether
+storage access is allowed. If set, it registers an
 [on consent event](/docs/collector/commands#on) and won't start until a
 consent choice is available. If at least one permission was granted, the
 `sessionStorage` detects a new session; otherwise, the `sessionWindow`.
 
 <CodeSnippet
-  code={`sessionStart({ consent: 'marketing' }); // Won't start automatically
+  code={`sessionStart({ consent: 'marketing', collector }); // Won't start automatically
 // User makes a consent choice and CMP calls:
 elb('walker consent', { marketing: true }); // Triggers the session detection
-// Returns a session with storage access`}
+// Detects the session with storage access`}
   language="javascript"
 />
 
 #### Storage
 
-Option to enable the [sessionStorage](#sessionstorage) util to detect a new
-session with more accuracy and enhanced data.
+Enables the [sessionStorage](#sessionstorage) util, which detects a new session
+with more accuracy and more data.
 
 <CodeSnippet
   code={`sessionStart({ storage: true });`}
@@ -159,14 +172,15 @@ session with more accuracy and enhanced data.
 
 The `cb` parameter can be used to disable the default callback or to define a
 custom one. The default callback triggers a `session start` event if `isStart`
-is `true`. And additionally, with `storage: true`, the user's `session` and
-`device` ids are also set via `elb('walker user', user);`. The default callback
+is `true`. With `storage: true`, it also sets the user's `session` and
+`device` ids via `elb('walker user', user);`. The default callback
 function is passed as the third parameter.
 
 <CodeSnippet
   code={`const session = sessionStart({ cb: false }); // Disables the default callback
 
 sessionStart({
+  collector,
   cb: (session, instance, defaultCb) => {
     console.log(session);
     defaultCb(session, instance); // Call the default callback
@@ -181,7 +195,8 @@ Based on the [storage](#storage) option either the
 [sessionStorage](#sessionstorage) or the [sessionWindow](#sessionwindow) is used
 to detect a new session. If a [consent](#consent) state is set, the session
 detection gets scheduled via an [on-consent](/docs/collector/commands#on)
-command. It will only run once per `run`.
+command. Each mode (window, storage) detects once per page load, so a later
+consent change in the same mode starts no new session.
 
 ```mermaid
 ---
@@ -309,8 +324,7 @@ saveSession --> returnSession
 
 #### Custom data
 
-Enhance the default `data` properties with custom information, like a session
-count:
+Add custom information to the default `data` properties, like a session count:
 
 <CodeSnippet
   code={`const count = 2;
@@ -332,8 +346,8 @@ between them:
   language="javascript"
 />
 
-A user coming from `subdomain.walkeros.io` or `example.com` to e.g.
-`www.walkeros.io`, will no longer trigger a new session.
+A user who comes from `subdomain.walkeros.io` or `example.com` to, for example,
+`www.walkeros.io` does not trigger a new session.
 
 #### Manual new session control
 
@@ -341,11 +355,13 @@ Determine if it's a new session using the `isStart` parameter. This might
 require consent for storage access, which isn't implemented by default.
 
 Usually, the `sessionId` written to the storage is set up to expire and should
-be updated with each page view. If the `sessionId` is missing, it may be an
-expired but at least a new session.
+be updated with each page view. If the `sessionId` is missing, the session may
+have expired, but it is a new session either way.
 
 <CodeSnippet
-  code={`if (!storageRead('sessionId')) {
+  code={`import { storageRead, storageWrite } from '@walkeros/web-core';
+
+if (!storageRead('sessionId')) {
   const session = sessionStart({ isStart: true });
   storageWrite('sessionId', session.id);
 }`}
@@ -357,12 +373,12 @@ expired but at least a new session.
 
 #### Marketing parameters
 
-The helper util `getMarketingParameters` is used to extract common parameters like all
-`utm variants`, typical clickIds like `fbclid`, `gclid`, and others.
+The helper util `getMarketingParameters` extracts common parameters like all
+`utm variants` and typical clickIds such as `fbclid` and `gclid`.
 
-To enhance the default and support custom ones add `parameters`, like
-`{ elb_campaign: 'campaign' }` to add `campaign: "docs"` to `data` for a url
-with `?elb_campaign=docs`.
+To support custom parameters as well, add `parameters`: for example
+`{ elb_campaign: 'campaign' }` adds `campaign: "docs"` to `data` for a URL with
+`?elb_campaign=docs`.
 
 A session with marketing parameters will be flagged with `data.marketing = true`
 automatically.
@@ -373,7 +389,7 @@ automatically.
 }
 
 sessionStart({
-  parameters: { elb_campaign: 'docs' },
+  parameters: { elb_campaign: 'campaign' },
 });`}
   language="typescript"
 />
@@ -398,8 +414,8 @@ The raw value is also stored under the parameter name itself, so a URL like
 ```
 
 If a URL contains multiple click IDs, every raw value is preserved, but
-`clickId` and `platform` reference the **highest-priority** match. See
-[`clickIds.ts`](https://github.com/elbwalker/walkerOS/blob/main/packages/core/src/clickIds.ts)
+`clickId` and `platform` reference the highest-priority match. See
+[`getMarketingParameters.ts`](https://github.com/elbwalker/walkerOS/blob/main/packages/core/src/getMarketingParameters.ts)
 for the full list and priority order.
 
 #### Extending the registry from flow.json
@@ -442,9 +458,6 @@ By default the `document.referrer` is used, but it can be overwritten with the
   language="javascript"
 />
 
-Domains can be extended, e.g., internal sub-domains. Data can be pre-defined,
-e.g., to use your ID.
-
 #### URL customization
 
 By default, the `window.location.href` is used, but it can be overwritten with
@@ -462,11 +475,12 @@ Basic rules to detect a new session:
 0. **Storage Check** (_Optional_): First, check for an existing sessionId in
    storage. If none is found, consider it a new session. This usually requires
    consent.
-1. **Page reload**: If the entry type is a page reload, it's not a new session.
+1. **Navigation type**: Only a plain navigation can start a session. A reload,
+   back and forward, or a browser without Navigation Timing cannot.
 2. **Marketing Parameters**: The presence of marketing parameters in the URL
    indicates a new session.
-3. **Referrer Check**: A different referrer from the current domain signals a
-   new session.
+3. **Referrer Check**: A referrer from another host, or none (a direct visit),
+   signals a new session.
 
 ```mermaid
 ---
@@ -496,8 +510,8 @@ isReload -- reload --> existingSession
 
 :::note
 
-Be aware of potential multiple unintended events for the same user due to
-referrer hiding. For more details, learn about
+Referrer hiding can cause multiple unintended events for the same user. For
+more details, see
 [Referrer Hiding](https://en.wikipedia.org/wiki/HTTP_referer#Referrer_hiding).
 
 :::

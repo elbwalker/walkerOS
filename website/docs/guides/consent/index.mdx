@@ -194,7 +194,12 @@ the destinations. Before the check, each queued event is updated:
   passes, it carries only the granted keys. A held event keeps the consent it
   was pushed with (see [Revoke consent](#revoke-consent)).
 - `user` is merged with the collector's user data. Values already on the event
-  take precedence.
+  take precedence. This holds for the consent queue. Events a destination
+  receives when its `require` is met, or when it is added with
+  `walker destination`, carry the user set after they were captured: an event
+  from before a `walker user` call reaches that destination under the user id
+  that call set. An event that brought its own `user` keeps those values; a
+  field it lacks, such as `id`, comes from the later user.
 - `globals` keeps the values the event was captured with.
 
 The queues belong to the current run. A `walker run` command starts a new run

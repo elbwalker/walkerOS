@@ -79,6 +79,7 @@ export const destinationLevelInclude: SegmentStepExample = {
         data_color: 'black',
         data_size: 'l',
         data_price: 420,
+        data_currency: 'EUR',
       },
     ],
   ],
@@ -389,8 +390,8 @@ export const orderCompletedEcommerce: SegmentStepExample = {
         order_id: 'data.id',
         currency: { key: 'data.currency', value: 'EUR' },
         shipping: 'data.shipping',
-        tax: 'data.taxes',
-        total: 'data.value',
+        tax: 'data.tax',
+        total: ['data.total', 'data.value'],
         products: {
           loop: [
             'nested',
@@ -421,7 +422,7 @@ export const orderCompletedEcommerce: SegmentStepExample = {
         currency: 'EUR',
         shipping: 5.22,
         tax: 73.76,
-        total: 555,
+        total: 467.22,
         products: [
           {
             product_id: 'ers',

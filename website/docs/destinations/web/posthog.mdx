@@ -8,6 +8,7 @@ package: '@walkeros/web-destination-posthog'
 
 import data from '@walkeros/web-destination-posthog/walkerOS.json';
 import Configuration from '@site/src/components/snippets/_configuration.mdx';
+import Quickstart from '@site/src/components/snippets/_quickstart.mdx';
 
 import WhereThisFits from '@site/src/components/snippets/_where-this-fits.mdx';
 
@@ -37,58 +38,7 @@ are available through SDK init passthrough.
 
 ## Installation
 
-<CodeSnippet
-  code={`npm install @walkeros/web-destination-posthog`}
-  language="bash"
-/>
-
-<Tabs groupId="mode">
-  <TabItem value="integrated" label="Integrated" default>
-
-<CodeSnippet
-  code={`import { startFlow } from '@walkeros/collector';
-import { destinationPostHog } from '@walkeros/web-destination-posthog';
-
-await startFlow({
-  destinations: {
-    posthog: {
-      code: destinationPostHog,
-      config: {
-        settings: {
-          apiKey: 'phc_XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX',
-          api_host: 'https://eu.i.posthog.com',
-        },
-      },
-    },
-  },
-});`}
-  language="typescript"
-/>
-
-  </TabItem>
-  <TabItem value="bundled" label="Bundled">
-
-Add to your `flow.json` destinations:
-
-<CodeSnippet
-  code={`"destinations": {
-  "posthog": {
-    "package": "@walkeros/web-destination-posthog",
-    "config": {
-      "settings": {
-        "apiKey": "phc_XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX",
-        "api_host": "https://eu.i.posthog.com"
-      }
-    }
-  }
-}`}
-  language="json"
-/>
-
-[See bundled mode setup](/docs/getting-started/modes/bundled) | [CLI reference](/docs/apps/cli)
-
-  </TabItem>
-</Tabs>
+<Quickstart data={data} />
 
 <Configuration type="destination" data={data} />
 

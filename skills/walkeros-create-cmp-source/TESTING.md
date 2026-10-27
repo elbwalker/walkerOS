@@ -22,7 +22,7 @@ process)
 | TDD test structure      | ✅      | Phase 6 + templates/cmp/         |
 | Implementation skeleton | ✅      | Phase 7 + templates/cmp/index.ts |
 | Documentation           | ✅      | Phase 8, README structure        |
-| Mandatory checks        | ✅      | All 10 checks                    |
+| Mandatory checks        | ✅      | All 11 checks                    |
 
 **Result:** ✅ PASS
 
@@ -58,7 +58,7 @@ of addEventListener"
 | ------------------------ | ------- | --------------------------------- |
 | Event registration table | ✅      | Phase 1, Event registration       |
 | Adapted MockWindow       | ✅      | Phase 6, templates/cmp/test-utils |
-| Destroy cleanup          | ✅      | Templates + mandatory check #9    |
+| Destroy cleanup          | ✅      | Templates + validation checklist  |
 | Known limitations        | ✅      | Known limitations table           |
 
 **Result:** ✅ PASS

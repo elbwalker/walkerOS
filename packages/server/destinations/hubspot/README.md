@@ -6,7 +6,8 @@
 
 # @walkeros/server-destination-hubspot
 
-Server-side event delivery to HubSpot CRM with custom events and contact upsert.
+Server-side event delivery to HubSpot CRM with custom events and contact
+updates.
 
 [Documentation](https://www.walkeros.io/docs/destinations/server/hubspot) &bull;
 [NPM Package](https://www.npmjs.com/package/@walkeros/server-destination-hubspot)
@@ -33,7 +34,7 @@ npm install @walkeros/server-destination-hubspot
           "config": {
             "settings": {
               "accessToken": "YOUR_HUBSPOT_ACCESS_TOKEN",
-              "eventNamePrefix": "pe12345678_"
+              "eventNamePrefix": "YOUR_EVENT_NAME_PREFIX"
             }
           }
         }

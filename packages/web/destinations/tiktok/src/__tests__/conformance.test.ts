@@ -20,6 +20,7 @@ describe('tiktok conformance', () => {
         auto_config: true,
         limited_data_use: false,
       },
+      minimal: examples.minimal,
       env: { push: examples.env.push, simulation: examples.env.simulation },
       root: path.join(__dirname, '..', '..'),
       passThrough: ['auto_config', 'limited_data_use'],

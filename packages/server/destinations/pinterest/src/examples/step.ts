@@ -1,5 +1,5 @@
 import type { Flow, WalkerOS } from '@walkeros/core';
-import { getEvent, isObject } from '@walkeros/core';
+import { createEvent, getEvent } from '@walkeros/core';
 
 /**
  * Pinterest Conversions API step examples.
@@ -36,7 +36,7 @@ export const checkout: Flow.StepExample = {
     'A completed order is sent to the Pinterest Conversions API as a checkout event with value, currency, and contents.',
   in: getEvent('order complete', {
     id: 'a1b2c3d4e5f60001',
-    timestamp: 1700000900,
+    timestamp: 1700000900000,
     data: { id: 'ORD-300', value: 249.99, currency: 'EUR' },
     nested: [
       {
@@ -76,7 +76,10 @@ export const checkout: Flow.StepExample = {
                 'nested',
                 {
                   condition: (entity: unknown) =>
-                    isObject(entity) && entity.entity === 'product',
+                    typeof entity === 'object' &&
+                    entity !== null &&
+                    'entity' in entity &&
+                    entity.entity === 'product',
                   map: {
                     id: 'data.id',
                     item_name: 'data.name',
@@ -100,7 +103,7 @@ export const checkout: Flow.StepExample = {
           {
             event_name: 'checkout',
             event_id: 'a1b2c3d4e5f60001',
-            event_time: 1700001,
+            event_time: 1700000900,
             action_source: 'web',
             user_data: {},
             custom_data: {
@@ -132,7 +135,7 @@ export const addToCart: Flow.StepExample = {
     'A product add is sent to Pinterest as an add_to_cart conversion with the added item details.',
   in: getEvent('product add', {
     id: 'a1b2c3d4e5f60002',
-    timestamp: 1700000901,
+    timestamp: 1700000901000,
     data: { id: 'SKU-B2', name: 'Cool Cap', price: '42.00', quantity: 1 },
     user: { id: 'user-456' },
     source: {
@@ -175,7 +178,7 @@ export const addToCart: Flow.StepExample = {
           {
             event_name: 'add_to_cart',
             event_id: 'a1b2c3d4e5f60002',
-            event_time: 1700001,
+            event_time: 1700000901,
             action_source: 'web',
             user_data: {},
             custom_data: {
@@ -205,7 +208,7 @@ export const pageVisit: Flow.StepExample = {
     'A page view is sent to Pinterest as a page_visit conversion with the source URL.',
   in: getEvent('page view', {
     id: 'a1b2c3d4e5f60003',
-    timestamp: 1700000902,
+    timestamp: 1700000902000,
     user: { id: 'user-789' },
     source: {
       type: 'browser',
@@ -225,7 +228,7 @@ export const pageVisit: Flow.StepExample = {
           {
             event_name: 'page_visit',
             event_id: 'a1b2c3d4e5f60003',
-            event_time: 1700001,
+            event_time: 1700000902,
             action_source: 'web',
             user_data: {},
             event_source_url: 'https://www.example.com/docs/',
@@ -240,12 +243,12 @@ export const pageVisit: Flow.StepExample = {
 export const search: Flow.StepExample = {
   title: 'Search',
   description:
-    'A site search event is forwarded to Pinterest as a search conversion with the query in custom data.',
-  in: getEvent('entity action', {
+    'A search submit event is forwarded to Pinterest as a search conversion with the query in custom data.',
+  in: createEvent({
     id: 'a1b2c3d4e5f60004',
-    timestamp: 1700000903,
-    name: 'site search',
-    data: { query: 'walkerOS destinations' },
+    timestamp: 1700000903000,
+    name: 'search submit',
+    data: { term: 'walkerOS destinations' },
     user: { id: 'user-101' },
     source: {
       type: 'browser',
@@ -259,7 +262,7 @@ export const search: Flow.StepExample = {
       map: {
         custom_data: {
           map: {
-            search_string: 'data.query',
+            search_string: 'data.term',
           },
         },
       },
@@ -274,7 +277,7 @@ export const search: Flow.StepExample = {
           {
             event_name: 'search',
             event_id: 'a1b2c3d4e5f60004',
-            event_time: 1700001,
+            event_time: 1700000903,
             action_source: 'web',
             user_data: {},
             custom_data: {
@@ -295,7 +298,7 @@ export const signup: Flow.StepExample = {
     'A user signup is sent to Pinterest as a signup conversion with the hashed email and external id.',
   in: getEvent('entity action', {
     id: 'a1b2c3d4e5f60005',
-    timestamp: 1700000904,
+    timestamp: 1700000904000,
     name: 'user signup',
     data: { method: 'email' },
     user: { id: 'new-user-1', email: 'new@example.com' },
@@ -327,7 +330,7 @@ export const signup: Flow.StepExample = {
           {
             event_name: 'signup',
             event_id: 'a1b2c3d4e5f60005',
-            event_time: 1700001,
+            event_time: 1700000904,
             action_source: 'web',
             user_data: {
               // sha256('new@example.com')
@@ -354,7 +357,7 @@ export const silentRule: Flow.StepExample = {
   description: 'A rule with silent: true sends no request to Pinterest.',
   in: getEvent('page view', {
     id: 'a1b2c3d4e5f60006',
-    timestamp: 1700000905,
+    timestamp: 1700000905000,
   }),
   mapping: { silent: true },
   out: [],
@@ -367,7 +370,7 @@ export const rejectedEvent: Flow.StepExample = {
     'Pinterest answers HTTP 200 and reports the event as failed: the push fails with transport, not retryable, and the event goes to the DLQ.',
   in: getEvent('page view', {
     id: 'a1b2c3d4e5f60007',
-    timestamp: 1700000906,
+    timestamp: 1700000906000,
   }),
   respond: {
     status: 200,

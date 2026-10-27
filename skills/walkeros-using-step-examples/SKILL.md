@@ -56,27 +56,28 @@ type StepEffect = readonly [callable: string, ...args: unknown[]];
 type StepOut = readonly StepEffect[];
 
 interface StepExample {
-  in: unknown; // Platform-specific input
-  out: StepOut; // Array of effect tuples - see shape rules below
+  in?: unknown; // Platform-specific input
+  out?: StepOut; // Array of effect tuples - see shape rules below
   trigger?: { type?: string; options?: unknown }; // How to invoke
   mapping?: unknown; // Destination mapping rule
   command?: 'config' | 'consent' | 'user' | 'run'; // Route to walker command
+  // also: title, description, public (Metadata), outcome, respond (failures)
 }
 ```
 
 `out` is **always an array of effect tuples**, even for a single effect. Each
-tuple is `[callable, ...args]`. The first element is the callable's public name
-(the SDK function users would write). Remaining elements are the arguments.
+tuple is `[callable, ...args]`. The first element names the call, the remaining
+elements are its arguments. `runExamples` compares the tuples exactly with the
+calls it records, so the callable is the recorded path.
 
 ### Callable conventions
 
-| Component type                 | Callable                                | Notes                                                                                   |
-| ------------------------------ | --------------------------------------- | --------------------------------------------------------------------------------------- |
-| Destination (SDK function)     | `'gtag'`, `'fbq'`, `'ttq.track'`        | Public SDK name. Dotted paths render literally.                                         |
-| Destination (method on global) | `'analytics.track'`, `'dataLayer.push'` | Method notation.                                                                        |
-| Destination (HTTP)             | `'fetch'`, `'sendServer'`               | The actual call users would make. NOT `env.*` prop names - those are internal plumbing. |
-| Source                         | `'elb'`                                 | The walker public push API.                                                             |
-| Transformer                    | `'return'`                              | Reserved keyword. Renders as `return <value>` (no parens).                              |
+| Component type              | Callable                                                                         | Notes                                                                                                                             |
+| --------------------------- | -------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------- |
+| Destination with a mock env | `'window.gtag'`, `'window.fbq'`, `'window.dataLayer.push'`, `'window.ttq.track'` | The package's `simulation` path without `call:` (`'call:window.gtag'` records as `'window.gtag'`). Dotted paths render literally. |
+| Destination (HTTP)          | `'fetch'`, `'sendServer'`                                                        | The request call the destination makes.                                                                                           |
+| Source                      | `'elb'`                                                                          | The walker public push API.                                                                                                       |
+| Transformer                 | `'return'`                                                                       | Reserved keyword. Renders as `return <value>` (no parens).                                                                        |
 
 `'return'` is reserved. Don't use it for anything else.
 
@@ -147,6 +148,8 @@ export const clickEvent: Flow.StepExample = {
         trigger: 'click',
         entity: 'cta',
         action: 'click',
+        // plus context, globals, nested and source: an out lists every field
+        // the step emits
       },
     ],
   ],
@@ -155,14 +158,20 @@ export const clickEvent: Flow.StepExample = {
 
 ### Transformer Step Example
 
-`in` is a walkerOS event, `out` is a `['return', value]` tuple. An empty array
-means the transformer passed the event through unchanged:
+`in` is a walkerOS event, `out` is a `['return', value]` tuple with what the
+transformer returns (`{ event }`, or `false` to drop). An empty array means the
+transformer passed the event through unchanged:
 
 ```typescript
 export const step = {
   orderPasses: {
     in: { name: 'order complete', data: { id: 'ORD-123' } },
-    out: [['return', { name: 'order complete', data: { id: 'ORD-123' } }]],
+    out: [
+      [
+        'return',
+        { event: { name: 'order complete', data: { id: 'ORD-123' } } },
+      ],
+    ],
   },
   debugFiltered: {
     in: { name: 'debug test', data: { message: 'noise' } },
@@ -174,6 +183,12 @@ export const step = {
   },
 };
 ```
+
+These outs are what the transformer itself returns, the shape a test that calls
+`push` directly compares (see Transformer Tests below). `runExamples` instead
+records what reaches the next step, the event as the collector completed it. A
+dropped event is `out: []` there, and an event passed through unchanged is
+`['return', { event }]` with every collector field.
 
 ### Destination Step Example
 
@@ -196,10 +211,10 @@ export const purchase: Flow.StepExample = {
   },
   out: [
     [
-      'fbq',
+      'window.fbq',
       'track',
       'Purchase',
-      { value: 555, currency: 'EUR' },
+      { value: 462, currency: 'EUR' },
       { eventID: '1700000000-gr0up-1' },
     ],
   ],
@@ -210,9 +225,9 @@ Multi-tool example (one walker event produces GA4, Ads, GTM in order):
 
 ```typescript
 out: [
-  ['gtag', 'event', 'purchase', { transaction_id: 'o1', value: 555 }],
-  ['gtag', 'event', 'conversion', { send_to: 'AW-123', value: 555 }],
-  ['dataLayer.push', { event: 'purchase', ecommerce: { ... } }],
+  ['window.gtag', 'event', 'purchase', { transaction_id: 'o1', value: 462 }],
+  ['window.gtag', 'event', 'conversion', { send_to: 'AW-123', value: 462 }],
+  ['window.dataLayer.push', { event: 'purchase', ecommerce: { ... } }],
 ],
 ```
 
@@ -235,9 +250,17 @@ export const consentGranted: Flow.StepExample = {
   command: 'consent',
   in: { marketing: true, analytics: true },
   out: [
-    'consent',
-    'update',
-    { ad_storage: 'granted', analytics_storage: 'granted' },
+    [
+      'window.gtag',
+      'consent',
+      'update',
+      {
+        ad_storage: 'granted',
+        ad_user_data: 'granted',
+        ad_personalization: 'granted',
+        analytics_storage: 'granted',
+      },
+    ],
   ],
 };
 ```
@@ -248,8 +271,10 @@ Supported commands: `config`, `consent`, `user`, `run`.
   `elb(in)`.
 - When `command` is set, `mapping` is **not** applied - commands don't flow
   through event mapping.
-- The `out` format is destination-specific. For gtag it's
-  `[action, subAction, params]` matching `gtag(...)` calls.
+- The `out` holds the calls the destination makes for the command, as tuples
+  like any other `out`. The gtag example above runs with `config.consent` set;
+  without it a `['window.gtag', 'consent', 'default', {...}]` call comes first,
+  as in the gtag package's `consentModeV2` example.
 - Simulate a command example with `--command <name>` (MCP: `command`): the
   destination simulation runs `collector.command(name, in)` instead of a push
   and records the calls it makes. Add `--consent` when the destination needs
@@ -288,6 +313,10 @@ export const missingInput: Flow.StepExample = {
 - `outcome` is `{ status: 'failed' | 'queued', code, retryable? }`. Absent means
   the step must not fail. The codes are the collector's failure codes (`config`,
   `missing-input`, `transport`, `timeout`, `vendor-not-loaded`, ...).
+- Every example with an `outcome` needs a `description`: the package's docs page
+  lists it under "When it fails" (title, `description`, `status` and `code`,
+  never its `in`), public or not, and the docs build fails on one without a
+  `description`.
 - `respond` is `{ status?, body?, error?: 'network' | 'timeout' }`.
 - A step with no vendor call for an example has `out: []`. A `silent` rule is an
   example with `mapping: { silent: true }` and `out: []`, and a deliberate skip
@@ -317,10 +346,16 @@ other tools and failures are `public: false`; they still run as tests.
   example up by event name and applies `example.mapping ?? config.mapping`. A
   public example whose setup needs other settings runs in its own `runExamples`
   call with those `settings`.
-- **`published: true`** runs each example's mapping functions the way
-  `walkerOS.json` publishes them: as source text, outside the module they were
-  written in. A condition that calls an imported helper passes as written and
-  fails published, which is how it would fail in a user's flow.
+- **Every example runs as published.** `runExamples` and `conformance` run every
+  function in an example (in `in`, `mapping`, `trigger.options`, `respond.body`)
+  the way `walkerOS.json` publishes it: as source text, revived outside the
+  module it was written in. There is no option to turn this off. A condition
+  that calls an imported helper passes as written and fails here
+  (`example <name>: published code fails: ... is not defined`), which is how it
+  would fail in a user's flow: a published function may use only its parameters
+  and standard globals. The text revived is the one the test run compiled, not
+  the one in the built `dist/walkerOS.json`, so a change only the package build
+  makes is not covered.
 - **An `out` is a literal.** Write it from the vendor's documented request (or a
   captured one), cite the source in the example, and only then run the code.
   Never compute an `out` with production code (a helper from `src/`, the
@@ -346,10 +381,74 @@ it('maps the claimed standard events', async () => {
     settings,
     env,
     claims: CLAIMS,
-    published: true,
   });
 });
 ```
+
+### Minimal example (destinations)
+
+A destination package ships `examples.minimal`, a `Flow.MinimalExample` in
+`src/examples/minimal.ts` (the path is `MINIMAL_EXAMPLE_FILE` on
+`@walkeros/core/dev`), re-exported from `src/examples/index.ts`. It holds only
+the settings the settings schema requires, plus any that `init` refuses to start
+without. `composeQuickstart` (on `@walkeros/core/dev`) turns it into the install
+line, the integrated code and the `flow.json` that the package's docs page
+renders under `## Installation`, and the conformance kit starts the destination
+with exactly those settings and requires one public success example to be
+delivered.
+
+```typescript
+// src/examples/minimal.ts
+import type { Flow } from '@walkeros/core';
+
+export const minimal: Flow.MinimalExample = {
+  settings: { accessToken: 's3cr3t', pixelId: '1234567890' },
+  secrets: { accessToken: 'META_ACCESS_TOKEN' },
+};
+
+// src/examples/index.ts
+export * as env from './env';
+export * as step from './step';
+export { minimal } from './minimal';
+```
+
+- **`settings`**: required keys only, placeholder values. An optional key stays
+  in the examples that need it; the kit rejects a top-level key the schema does
+  not require, unless `init` refuses to start without it.
+- **`secrets`** (server only): a credential setting mapped to its secret name,
+  `<VENDOR>_<SETTING>` in `A-Z`, `0-9` and `_`. Generated code reads
+  `process.env.<NAME>` (integrated) and `$secret.<NAME>` (flow) and never shows
+  the placeholder. `secrets` on a web destination throws.
+- **`config`**: only `{ loadScript: true }`, for a web destination that loads
+  its vendor script only when asked to. The kit fails a script-loaded web
+  destination whose minimal example lacks it.
+- **Several exports**: one minimal example per export, in the export's folder
+  (`src/firehose/examples/minimal.ts`) and its `exportExamples` entry; the test
+  passes `exportName` and `exportExamples`, the page
+  `<Quickstart data={data} export="destinationFirehose" />`.
+
+Every destination conformance test passes one of two options:
+
+```typescript
+await conformance('destination', destinationMeta, {
+  profile: 'http',
+  examples: examples.step,
+  schema: schemas.settings,
+  settings: examples.minimal.settings,
+  minimal: examples.minimal,
+  root: path.join(__dirname, '..', '..'),
+});
+
+// A package that cannot have one passes the reason instead of `minimal`, and
+// its docs page keeps a hand-written setup:
+//   withoutMinimal: 'the install line cannot express the driver choice',
+```
+
+A test with neither fails, and so does one that disagrees with the file:
+`withoutMinimal` while `src/examples/minimal.ts` exists, `minimal` without it,
+both, or a blank reason. The doc-lint (`npm run validate:docs`) fails a page
+whose package has the file but whose `## Installation` shows a hand-written
+`npm install`, `startFlow(` or bundled tab, or no `<Quickstart>`.
 
 ## Writing Examples
 
@@ -360,9 +459,10 @@ it('maps the claimed standard events', async () => {
 2. **Cover happy path and edge cases** -- include at least one positive and one
    negative case for transformers
 3. **Use realistic data** -- real-looking event names, IDs, and values
-4. **Keep examples minimal** -- only include fields relevant to the step's
-   logic; omit empty/default-value fields (`context: {}`, `nested: []`,
-   `user: {}`, etc.)
+4. **Keep examples minimal** -- in `in`, only include fields relevant to the
+   step's logic; omit empty/default-value fields (`context: {}`, `nested: []`,
+   `user: {}`, etc.). An `out` is compared exactly, so it lists every field the
+   step emits, empty ones included
 5. **Export from `examples/step.ts`** -- follow the existing `dev.ts` structure
 6. **Title and describe public examples** -- add `title` (2-5 words) and
    `description` (one short sentence, 10-25 words) for every example that should
@@ -378,7 +478,15 @@ import { getEvent } from '@walkeros/core';
 export const purchase: Flow.StepExample = {
   in: getEvent('order complete', { id: '1700000000-gr0up-1' }),
   mapping: { name: 'Purchase', data: { map: { value: 'data.value' } } },
-  out: ['track', 'Purchase', { value: 555 }, { eventID: '1700000000-gr0up-1' }],
+  out: [
+    [
+      'window.fbq',
+      'track',
+      'Purchase',
+      { value: 462 },
+      { eventID: '1700000000-gr0up-1' },
+    ],
+  ],
 };
 
 // src/examples/index.ts
@@ -416,12 +524,14 @@ export const exportExamples = {
 
 The step's export name comes from `resolveExportName` (exported from
 `@walkeros/cli`): the step's `import`, else `bundle.packages[pkg].imports[0]`,
-else the default. When the module has the map, `map[exportName]` is used and a
-missing name resolves to nothing (never a fallback to `examples`); without a
-map, `examples` is used. `selectDevExamples(devModule, exportName)` implements
-this. The CLI simulate, MCP `flow_examples` and `package_get`, core `cdn.ts` and
-the tsup `walkerOS.json` (`exportExamples` key) all follow it. Existing named
-exports (`pubsubExamples`, `sqsExamples`, ...) stay for back compat.
+else the default. The bundler runs only the step's `import` or the default
+export, so set `import` on the step for examples and code to agree. When the
+module has the map, `map[exportName]` is used and a missing name resolves to
+nothing (never a fallback to `examples`); without a map, `examples` is used.
+`selectDevExamples(devModule, exportName)` implements this. The CLI simulate,
+MCP `flow_examples` and `package_get`, core `cdn.ts` and the tsup
+`walkerOS.json` (`exportExamples` key) all follow it. Existing named exports
+(`pubsubExamples`, `sqsExamples`, ...) stay for back compat.
 
 The same package also exports `exportSchemas`, every export to that export's
 schemas in the shape of a single-export `schemas` (`settings` required,
@@ -507,9 +617,10 @@ it surfaces in docs and MCP output:
   each example in docs and surfaced in MCP `flow_examples` output. Explains what
   the example demonstrates, not how.
 - **`public?: boolean`** - defaults to `true`. When `false`, the example is
-  excluded from the website docs render and from default MCP `flow_examples`
-  output. It still runs in tests and remains callable via CLI/MCP
-  `flow_simulate`.
+  excluded from the Examples section of the website docs and from default MCP
+  `flow_examples` output. It still runs in tests and remains callable via
+  CLI/MCP `flow_simulate`. An example with `outcome` is listed under "When it
+  fails" on the package page either way, so it needs a `description`.
 
 ```typescript
 export const purchase: Flow.StepExample = {
@@ -517,8 +628,19 @@ export const purchase: Flow.StepExample = {
   description:
     'A completed order mapped to the Meta Pixel Purchase standard event.',
   in: getEvent('order complete', { id: '1700000000-gr0up-1' }),
-  mapping: { name: 'Purchase', data: { map: { value: 'data.value' } } },
-  out: [['fbq', 'track', 'Purchase', { value: 555, currency: 'EUR' }]],
+  mapping: {
+    name: 'Purchase',
+    data: { map: { value: 'data.value', currency: { value: 'EUR' } } },
+  },
+  out: [
+    [
+      'window.fbq',
+      'track',
+      'Purchase',
+      { value: 462, currency: 'EUR' },
+      { eventID: '1700000000-gr0up-1' },
+    ],
+  ],
 };
 
 // Internal fixture - runs in tests, hidden from docs and default MCP output.
@@ -551,9 +673,9 @@ Source step examples can include a `trigger` field for simulation:
 
 ```typescript
 {
-  in: '<button data-elb="cta">Sign Up</button>',
-  trigger: { type: 'click' },
-  out: { name: 'cta click', data: { label: 'Sign Up' } }
+  in: '<button data-elb="cta" data-elb-cta="label:Sign Up" data-elbaction="click">Sign Up</button>',
+  trigger: { type: 'click', options: 'button' }, // a click needs its selector
+  out: [['elb', { name: 'cta click', data: { label: 'Sign Up' } /* ... */ }]],
 }
 ```
 
@@ -571,8 +693,8 @@ with `--event`. For a source step, that is `SourceInput`
 (`{ content, trigger? }`):
 
 ```bash
-# Simulate a source step with trigger metadata
-walkeros push flow.json --simulate source.browser --event '{"content":"<html>...","trigger":{"type":"click"}}'
+# Simulate a source step with trigger metadata (a click needs its selector)
+walkeros push flow.json --simulate source.browser --event '{"content":"<button data-elb=\"cta\" data-elbaction=\"click\">Sign up</button>","trigger":{"type":"click","options":"button"}}'
 ```
 
 The CLI does not compare the result against `out`. For each simulated step it
@@ -609,15 +731,13 @@ validation checks that:
 - A connection is only checked when both steps declare `examples`; a step
   without an `examples` key produces no warning.
 - When both steps declare `examples` but one side has no usable value, the
-  connection produces a warning. An upstream `out` counts when it is a non-empty
-  array, string, or object (such as a walkerOS event); `out: false` and empty
-  values are skipped. A downstream `in` counts unless its example sets
-  `command`.
-- A StepOut `out` (every entry an array with a string head) contributes the
-  events it passes on: `elb` gives `args[0]` when it is an object; `return`
-  gives `a.event` for `{ event }`, `a` for a bare event, each item for an array
-  (fan-out); `false`, `message.ack`, `message.nack`, `response`, `respond` and
-  vendor calls give nothing. A StepOut with no events counts as no usable `out`.
+  connection produces a warning. An upstream `out` counts when it passes on at
+  least one event (next bullet); a downstream `in` counts unless its example
+  sets `command`.
+- An `out` passes on the events of its effects: `elb` gives `args[0]` when it is
+  an object; `return` gives `a.event` for `{ event }`, `a` for a bare event,
+  each item for an array (fan-out); `false`, `message.ack`, `message.nack`,
+  `response`, `respond` and vendor calls give nothing.
 - Contracts bind only where a `@walkeros/transformer-validate` step links them,
   as at runtime. Each validate step's own examples run through that step's
   resolved `settings.contract`, `mode`, `format` and `output`, and the verdict
@@ -642,43 +762,31 @@ Each package implements createTrigger differently:
 - **Browser:** Injects HTML into DOM, starts flow, dispatches native events
 - **Express:** Boots real HTTP server, sends `fetch()` requests
 
-Use a spy destination to capture events:
+`runExamples` feeds each example's `in` through the package's `createTrigger`
+and compares the `elb` calls the source makes with `out`:
 
 ```typescript
-import type { Destination, WalkerOS } from '@walkeros/core';
+import { runExamples } from '@walkeros/collector/dev';
 import { sourceExpress } from '@walkeros/server-source-express';
 import { examples } from '@walkeros/server-source-express/dev';
 
-describe('Step Examples', () => {
-  it.each(Object.entries(examples.step))('%s', async (name, example) => {
-    const events: WalkerOS.Event[] = [];
-    const spy: Destination.Instance = {
-      type: 'spy',
-      config: { init: true },
-      push: jest.fn((event) => {
-        events.push(JSON.parse(JSON.stringify(event)));
-      }),
-    };
-
-    const instance = await examples.createTrigger({
-      consent: { functional: true },
-      sources: {
-        express: { code: sourceExpress, config: { settings: { port: 0 } } },
-      },
-      destinations: { spy: { code: spy } },
-    });
-
-    await instance.trigger(example.trigger?.type)(example.in);
-
-    const found = events.find((e) => e.name === example.out.name);
-    expect(found).toBeDefined();
+it('runs the step examples', async () => {
+  await runExamples('source', sourceExpress, examples.step, {
+    createTrigger: examples.createTrigger,
+    settings: { port: 0 },
   });
 });
 ```
 
+The run passes, but today the option is typed for `unknown` content, so `tsc`
+rejects a package's typed `createTrigger` here (`TS2769`). The express package's
+own `src/__tests__/stepExamples.test.ts` shows a typed loop that narrows `in`
+with a type guard instead.
+
 **Browser source note:** The browser source's elbLayer processes events via a
-detached promise chain (fire-and-forget). For interactive triggers (click,
-submit), poll until events arrive:
+detached promise chain (fire-and-forget). A test that collects events with its
+own spy destination after an interactive trigger (click, submit) polls until
+they arrive:
 
 ```typescript
 while (!events.length) await Promise.resolve();
@@ -705,13 +813,11 @@ await instance.trigger(
   example.trigger?.options,
 )(example.in);
 
-// Yield for detached elb('walker consent') chain
-while (!Object.keys(instance.flow!.collector.config.consent || {}).length)
-  await Promise.resolve();
+// Yield for the detached elb('walker consent') chain
+await new Promise((resolve) => setTimeout(resolve, 20));
 
-expect(instance.flow!.collector.config.consent).toEqual(
-  expect.objectContaining(expected),
-);
+// out is [['elb', 'walker consent', consent]]
+expect(instance.flow?.collector.consent).toEqual(example.out?.[0]?.[2] ?? {});
 ```
 
 ### Server Function Handler Tests (collector.sources)
@@ -735,64 +841,42 @@ const response = await source.push(request);
 
 ### Destination Functional Tests
 
-For destinations, use `startFlow` + `elb()` to run events through the real
-collector pipeline. This verifies the full flow including mapping:
-
-```typescript
-import { startFlow } from '@walkeros/collector';
-import { clone } from '@walkeros/core';
-import { examples } from './dev';
-
-describe('Step Examples', () => {
-  it.each(Object.entries(examples.step))('%s', async (name, example) => {
-    const event = example.in as WalkerOS.Event;
-    const mapping = example.mapping as Rule | undefined;
-
-    const mockFn = jest.fn();
-    const env = clone(examples.env.push);
-    env.window.fbq = mockFn;
-
-    const dest = jest.requireActual('.').default;
-    const { elb } = await startFlow({});
-
-    // Build mapping config from event entity/action
-    const mappingConfig = mapping
-      ? { [event.entity]: { [event.action]: mapping } }
-      : undefined;
-
-    elb('walker destination', {
-      code: { ...dest, env },
-      config: {
-        settings: { pixelId: '1234567890' },
-        mapping: mappingConfig,
-      },
-    });
-
-    await elb(event);
-    expect(mockFn).toHaveBeenLastCalledWith(...(example.out as unknown[]));
-  });
-});
-```
+For destinations, `runExamples('destination', ...)` (shown under Public examples
+above) is the test: it starts a real collector, applies each example's `mapping`
+through the destination config, records the calls named by
+`examples.env.simulation`, and compares them with `out`. Pass the package's
+`env` (`{ push, simulation }`), the `settings`, and for a web destination `page`
+from `@walkeros/web-core/dev` (run in a jsdom test environment).
 
 ### Transformer Tests
 
-For transformers that can return `false`:
+A test that calls the transformer's `push` directly wraps its return in the
+`out` shape (`runExamples('transformer', ...)` records what reaches the next
+step instead, see Transformer Step Example):
 
 ```typescript
+import type { WalkerOS } from '@walkeros/core';
+import { createMockContext } from '@walkeros/core';
+import { transformerMyTransformer } from '../transformer';
 import { examples } from '../dev';
 
 describe('transformer', () => {
-  it.each(Object.entries(examples.step))(
-    '%s',
-    async (name, { in: input, out: expected }) => {
-      const result = await transformer.push(input, context);
-      if (expected === false) {
-        expect(result).toBe(false);
-      } else {
-        expect(result).toEqual(expected);
-      }
-    },
-  );
+  it.each(Object.entries(examples.step))('%s', async (name, example) => {
+    const instance = await transformerMyTransformer(
+      createMockContext({ id: 'myTransformer' }),
+    );
+    const result = await instance.push(
+      example.in as WalkerOS.DeepPartialEvent,
+      createMockContext({ id: 'myTransformer' }),
+    );
+    const actual =
+      result === false
+        ? [['return', false]]
+        : result
+          ? [['return', result]]
+          : [];
+    expect(actual).toEqual(example.out);
+  });
 });
 ```
 
@@ -807,11 +891,17 @@ When adding step examples to a package or flow:
 - [ ] For transformers, include a `false` (filtered) case
 - [ ] Add `it.each` test using step examples
 - [ ] Exactly one public example per standard event the destination maps, from
-      `getEvent(name)`, with `claims` and `published: true` in a `runExamples`
-      call; every `out` a literal written from the vendor's documentation
-- [ ] Failure examples (`public: false`, `outcome`, `respond`) for every event
-      the step cannot send, a `silent` example for a destination, and a
-      conformance test (`conformance` from `@walkeros/collector/dev`)
+      `getEvent(name)`, with `claims` in a `runExamples` call; every `out` a
+      literal written from the vendor's documentation
+- [ ] Failure examples (`public: false`, `outcome`, `respond`, a `description`)
+      for every event the step cannot send, a `silent` example for a
+      destination, and a conformance test (`conformance` from
+      `@walkeros/collector/dev`)
+- [ ] Destination: `src/examples/minimal.ts` with only the settings the schema
+      requires or `init` refuses to start without (credentials as `secrets` on a
+      server destination, `config.loadScript` for a script-loaded web
+      destination), exported as `examples.minimal` and passed to `conformance`
+      as `minimal`; or `withoutMinimal: '<reason>'`
 - [ ] Verify examples compile: `npm run build`
 - [ ] Run tests: `npm run verify:touched -- <pkg>` (L1)
 - [ ] Add `title` and `description` to every public example.

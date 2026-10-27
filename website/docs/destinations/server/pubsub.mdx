@@ -8,6 +8,7 @@ package: '@walkeros/server-destination-gcp'
 
 import gcpData from '@walkeros/server-destination-gcp/walkerOS.json';
 import Configuration from '@site/src/components/snippets/_configuration.mdx';
+import Quickstart from '@site/src/components/snippets/_quickstart.mdx';
 
 import WhereThisFits from '@site/src/components/snippets/_where-this-fits.mdx';
 
@@ -35,75 +36,23 @@ The destination ships inside `@walkeros/server-destination-gcp` alongside BigQue
 
 ## Installation
 
-<CodeSnippet
-  code={`npm install @walkeros/server-destination-gcp`}
-  language="bash"
-/>
-
-<Tabs groupId="mode">
-  <TabItem value="integrated" label="Integrated" default>
-
-<CodeSnippet
-  code={`import { startFlow } from '@walkeros/collector';
-import { destinationPubSub } from '@walkeros/server-destination-gcp';
-
-await startFlow({
-  destinations: {
-    pubsub: {
-      code: destinationPubSub,
-      config: {
-        settings: {
-          projectId: 'YOUR_PROJECT_ID',
-          topic: 'events',
-        },
-      },
-    },
-  },
-});`}
-  language="typescript"
-/>
-
-  </TabItem>
-  <TabItem value="bundled" label="Bundled">
-
-Add to your `flow.json` destinations:
-
-<CodeSnippet
-  code={`"destinations": {
-  "pubsub": {
-    "package": "@walkeros/server-destination-gcp",
-    "import": "destinationPubSub",
-    "config": {
-      "settings": {
-        "projectId": "YOUR_PROJECT_ID",
-        "topic": "events"
-      }
-    }
-  }
-}`}
-  language="json"
-/>
-
-[See bundled mode setup](/docs/getting-started/modes/bundled) | [CLI reference](/docs/apps/cli)
-
-  </TabItem>
-</Tabs>
+<Quickstart data={data} export="destinationPubSub" />
 
 <Configuration type="destination" data={data} />
 
 ## Authentication
 
-Three modes, evaluated in order:
+Three modes. The first one that is set wins:
 
-1. **Application Default Credentials (ADC).** Nothing to configure beyond `projectId`. Works on GCP-native runtimes (Cloud Run, Cloud Functions, GKE, GCE) where the runtime service account is attached, and locally with `gcloud auth application-default login`.
-2. **Service account JSON.** Pass credentials via `config.credentials`, either as a parsed object or a JSON string (the destination JSON-parses strings). Pair with `$env.NAME` to inject from an environment variable. (The package-specific `settings.credentials` still works but is deprecated.)
-3. **Pre-configured client.** Pass an existing `PubSub` SDK instance as `settings.client`. Useful for shared clients across destinations or custom transport configuration.
+1. **Pre-configured client.** Pass an existing `PubSub` SDK instance as `settings.client`. Useful for shared clients across destinations or custom transport configuration.
+2. **Service account JSON.** Pass credentials via `config.credentials`, either as a parsed object or a JSON string (the destination JSON-parses strings). Back it with a `$secret` whose value is the key file's JSON: `"credentials": "$secret.PUBSUB_SA_KEY"`. If the secret is unset, the flow stops at startup; a string that is not a service account key makes the destination fail to start with `Invalid credentials JSON`. An unset `$env` reference without a default leaves `config.credentials` empty instead: the destination then authenticates with Application Default Credentials, possibly as another identity, and nothing reports it.
+3. **Application Default Credentials (ADC).** Nothing to configure beyond `projectId`. Works on GCP-native runtimes (Cloud Run, Cloud Functions, GKE, GCE) where the runtime service account is attached, and locally with `gcloud auth application-default login`.
 
 When `settings.projectId` and the credentials' `project_id` both resolve, the top-level `settings.projectId` wins. The runtime publish target stays unambiguous.
 
 ## Ordering
 
-`orderingKey` is a `Mapping.Value` resolved per event. Truthy resolved values enable per-key ordering, the topic handle is constructed with `messageOrdering: true`, and the resolved key flows on the publish.
+`orderingKey` is a `Mapping.Value` resolved per event. Any resolved value except `undefined`, `null` or an empty string becomes the ordering key as a string, so `false` becomes `"false"`. The topic handle is then constructed with `messageOrdering: true`, and the key goes on the publish.
 
 ```json
 {
@@ -117,7 +66,7 @@ When `settings.projectId` and the credentials' `project_id` both resolve, the to
 
 Per-rule overrides live under `mapping.<entity>.<action>.settings.orderingKey`.
 
-If a publish fails for an ordered key, Pub/Sub permanently halts subsequent publishes for that key until `topic.resumePublishing(key)` is called. The destination handles this automatically: on publish failure for an ordered key it calls `resumePublishing` immediately and re-throws so the caller observes the original error.
+If a publish fails for an ordered key, Pub/Sub permanently halts subsequent publishes for that key until `topic.resumePublishing(key)` is called. The destination handles this automatically: on publish failure for an ordered key it calls `resumePublishing` immediately; the push still fails, with the SDK's error as its cause.
 
 ## Attributes
 
@@ -145,11 +94,11 @@ Provision the topic once per environment:
   language="bash"
 />
 
-Idempotent: re-running on an existing topic logs `setup: topic exists` and runs drift detection. Drift on `messageStoragePolicy.allowedPersistenceRegions`, `messageRetentionDuration`, `kmsKeyName`, or `labels` emits `WARN setup.drift {...}` and never auto-mutates. Migrations are an operator decision.
+Setup runs only when `config.setup` is `true` or an object; without it the command provisions nothing and prints `setup: skipped destination.pubsub (config.setup is unset)`. The command is idempotent: re-running it on an existing topic runs drift detection (with `--verbose` it also prints `setup: topic exists`). Drift on `messageStoragePolicy.allowedPersistenceRegions`, `messageRetentionDuration`, `kmsKeyName`, or `labels` emits `WARN setup.drift {...}` and never auto-mutates. Migrations are an operator decision.
 
 `config.setup`:
 
-- `false` (default): no provisioning. Operator must run setup explicitly.
+- omitted or `false` (default): no provisioning; the command skips.
 - `true`: provisions with safe defaults (EU multi-region storage policy).
 - `{ messageStoragePolicy, messageRetentionDuration, kmsKeyName, labels }`: object form for explicit overrides.
 
@@ -185,11 +134,11 @@ The SDK automatically picks up `PUBSUB_EMULATOR_HOST`. For explicit configuratio
 
 ## Troubleshooting
 
-- **`NOT_FOUND` on publish**: the topic does not exist. Run `walkeros setup destination.<id>` once.
-- **`PERMISSION_DENIED` / `UNAUTHENTICATED`**: the runtime service account lacks `roles/pubsub.publisher` on the topic, or ADC is not configured. The destination logs the actionable message including the topic and project IDs.
+- **`NOT_FOUND` on publish**: the topic does not exist. Set `config.setup: true` and run `walkeros setup destination.<id>` once. The message names the topic and the project.
+- **`PERMISSION_DENIED` / `UNAUTHENTICATED`**: the runtime service account lacks `roles/pubsub.publisher` on the topic, or ADC is not configured. The message names the topic and the role to grant.
 - **Ordering stuck**: a previous publish for an ordering key failed. The destination calls `resumePublishing` automatically; if stalls persist, check publish-side error logs for the original failure.
 
 ## Next steps
 
 - [Pub/Sub source](/docs/sources/server/pubsub) for consuming events from a Pub/Sub topic
-- [GCP package overview](/docs/destinations/server/gcp) for BigQuery and shared GCP setup
+- [BigQuery destination](/docs/destinations/server/gcp) for BigQuery and the shared GCP service account setup

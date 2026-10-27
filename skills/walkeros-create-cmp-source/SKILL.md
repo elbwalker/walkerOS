@@ -41,8 +41,8 @@ This skill includes reference files you can copy:
     minimal, revocation)
   - [outputs.ts](examples/outputs.ts) - Expected walkerOS consent states after
     mapping
-  - [env.ts](examples/env.ts) - Mock environment factories (createMockElb,
-    createMockWindow)
+  - [env.ts](examples/env.ts) - Mock environment factories (createMockElbFn,
+    createMockWindow, mockEnv)
 - **[templates/cmp/](templates/cmp/)** - Complete CMP source implementation
   template
   - [index.ts](templates/cmp/index.ts) - Source implementation with detection
@@ -76,7 +76,7 @@ Cookiebot packages do).
 5. Convention   -> walkerOS.json, buildDev
 6. Test         -> Write tests FIRST (TDD): 25-32 tests across 8-9 describe blocks
 7. Implement    -> Wire up detection paths + handleConsent + destroy
-8. Document     -> README + update existing consent guide page
+8. Document     -> README + docs page, registered with the other CMP sources
 ```
 
 ---
@@ -101,7 +101,7 @@ Fill in ALL of these fields for the target CMP:
 | **"Already loaded" detection**    | How to detect CMP loaded before source                                                               | `window.CookieFirst.consent` exists and is non-null                      |
 | **Official docs URL**             | Link to CMP's developer/API documentation                                                            | CookieFirst Public API docs                                              |
 | **npm packages / TS types**       | Available type packages                                                                              | None (define own types)                                                  |
-| **Timing constraints**            | Does the source need to load before/after the CMP? Any `require` config needed?                      | No `require` -- consent sources should init immediately                  |
+| **Timing constraints**            | Does the source need to load before/after the CMP? Any `require` config needed?                      | No `require`: consent sources should init immediately                    |
 | **Event registration mechanism**  | How does the CMP register event listeners? `addEventListener`, callback assignment, SDK method?      | `addEventListener` (standard DOM events)                                 |
 | **Cleanup/unsubscribe mechanism** | How to remove listeners on destroy? `removeEventListener`, nullify callback, SDK unsubscribe method? | `removeEventListener` (standard DOM cleanup)                             |
 | **SDK readiness pattern**         | How does the CMP signal its SDK is ready? DOM event, callback array, global flag, Promise?           | `cf_init` DOM event                                                      |
@@ -137,16 +137,16 @@ Fill in this matrix for your CMP. Reference implementations for comparison:
 
 | Decision                | CookieFirst                             | Usercentrics                                                                                     | CookiePro                                        | Cookiebot                                                                   |
 | ----------------------- | --------------------------------------- | ------------------------------------------------------------------------------------------------ | ------------------------------------------------ | --------------------------------------------------------------------------- |
-| Already loaded?         | `window.CookieFirst.consent`            | None (events only)                                                                               | `window.OneTrust` + `window.OptanonActiveGroups` | `window.Cookiebot` with `hasResponse`                                       |
-| Init listener           | `cf_init` event                         | Same as change event (`ucEvent`)                                                                 | `OptanonWrapper` callback (self-unwrap)          | None separate: the change events re-fire on every load with a stored choice |
-| Change listener         | `cf_consent` event                      | `ucEvent` / `UC_SDK_EVENT`                                                                       | `OneTrustGroupsUpdated` event                    | `CookiebotOnAccept` / `CookiebotOnDecline` events                           |
-| Consent shape           | Boolean map `{ category: bool }`        | Mixed object (groups + services)                                                                 | Comma-separated IDs `,C0001,C0003,`              | Boolean map plus `method` and `stamp`                                       |
+| Already loaded?         | `window.CookieFirst.consent`            | Getter read at init (V3 `__ucCmp.getConsentDetails()`, V2 `UC_UI.getServicesBaseInfo()`)         | `window.OneTrust` + `window.OptanonActiveGroups` | `window.Cookiebot` with `hasResponse`                                       |
+| Init listener           | `cf_init` event                         | `UC_UI_INITIALIZED` event, then the getter                                                       | `OptanonWrapper` callback (self-unwrap)          | None separate: the change events re-fire on every load with a stored choice |
+| Change listener         | `cf_consent` event                      | `UC_UI_CMP_EVENT` decisions (`ACCEPT_ALL`, `DENY_ALL`, `SAVE`), then the getter                  | `OneTrustGroupsUpdated` event                    | `CookiebotOnAccept` / `CookiebotOnDecline` events                           |
+| Consent shape           | Boolean map `{ category: bool }`        | Category states (V3 `categories`, V2 services grouped by `categorySlug`)                         | Comma-separated IDs `,C0001,C0003,`              | Boolean map plus `method` and `stamp`                                       |
 | Category naming         | Human-readable                          | Admin-configured                                                                                 | Opaque IDs (C0001-C0005)                         | Fixed (`necessary`, `preferences`, `statistics`, `marketing`)               |
 | Explicit check          | `consent === null`                      | Official consent metadata (V3 `consent.type`; V2 an `EXPLICIT` entry in service consent history) | `IsAlertBoxClosed()`                             | `consent.method === 'explicit'`                                             |
 | Default categoryMap     | Populated (human names to walkerOS)     | Empty (pass-through)                                                                             | Populated (opaque IDs need mapping)              | Populated, `necessary` left unmapped                                        |
-| Number of change events | 1 (`cf_consent`)                        | 1 (`ucEvent`)                                                                                    | 2 (`OptanonWrapper` + `OneTrustGroupsUpdated`)   | 2 (accept, decline), plus `CookieConsentOn*` aliases that are not used      |
-| Consent layers          | Single (categories only)                | Dual (groups + services)                                                                         | Single (categories only)                         | Single (categories only)                                                    |
-| Consent access          | Property (`window.CookieFirst.consent`) | Event detail (`event.detail`)                                                                    | Property (`window.OptanonActiveGroups`)          | Property (`window.Cookiebot.consent`)                                       |
+| Number of change events | 1 (`cf_consent`)                        | 1 (`UC_UI_CMP_EVENT`, which also fires for UI events that are no decision)                       | 2 (`OptanonWrapper` + `OneTrustGroupsUpdated`)   | 2 (accept, decline), plus `CookieConsentOn*` aliases that are not used      |
+| Consent layers          | Single (categories only)                | Single (categories; services are read only to group them)                                        | Single (categories only)                         | Single (categories only)                                                    |
+| Consent access          | Property (`window.CookieFirst.consent`) | API method (the getter; the event carries no consent)                                            | Property (`window.OptanonActiveGroups`)          | Property (`window.Cookiebot.consent`)                                       |
 | Event registration      | `addEventListener`                      | `addEventListener`                                                                               | Callback assignment + `addEventListener`         | `addEventListener`                                                          |
 
 ### Gate: Research complete
@@ -167,14 +167,14 @@ Fill in this matrix for your CMP. Reference implementations for comparison:
 Create at minimum these scenarios in `src/examples/inputs.ts`. See
 [inputs.ts](./examples/inputs.ts) for the generic template.
 
-| Example           | Purpose                            | Description                                                                                                                                                                                 |
-| ----------------- | ---------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `fullConsent`     | All categories accepted            | User clicked "Accept All"                                                                                                                                                                   |
-| `partialConsent`  | Some categories accepted           | User customized consent                                                                                                                                                                     |
-| `minimalConsent`  | Only essential/necessary           | User clicked "Deny All" or similar                                                                                                                                                          |
-| `implicitConsent` | Page-load defaults (if applicable) | CMP loaded but user hasn't chosen. **Note:** behavior varies by CMP -- some grant nothing by default, others grant functional/necessary. Research the specific CMP's default consent state. |
-| `noConsent`       | No consent data available          | CMP hasn't loaded yet                                                                                                                                                                       |
-| `revocationInput` | Consent withdrawal                 | User goes from full to partial                                                                                                                                                              |
+| Example           | Purpose                            | Description                                                                                                                                                                               |
+| ----------------- | ---------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `fullConsent`     | All categories accepted            | User clicked "Accept All"                                                                                                                                                                 |
+| `partialConsent`  | Some categories accepted           | User customized consent                                                                                                                                                                   |
+| `minimalConsent`  | Only essential/necessary           | User clicked "Deny All" or similar                                                                                                                                                        |
+| `implicitConsent` | Page-load defaults (if applicable) | CMP loaded but user hasn't chosen. **Note:** behavior varies by CMP: some grant nothing by default, others grant functional/necessary. Research the specific CMP's default consent state. |
+| `noConsent`       | No consent data available          | CMP hasn't loaded yet                                                                                                                                                                     |
+| `revocationInput` | Consent withdrawal                 | User goes from full to partial                                                                                                                                                            |
 
 Add CMP-specific edge cases:
 
@@ -196,12 +196,27 @@ mandatory check #1).
 Create mock factories in `src/examples/env.ts`. See [env.ts](./examples/env.ts)
 for the generic template.
 
+### Step examples
+
+`src/examples/step.ts` turns the inputs into `Flow.StepExample` entries: the CMP
+input as `in`, a `trigger` that says how to deliver it, and the consent command
+the source issues as `out` (`[['elb', 'walker consent', state]]`).
+`src/examples/trigger.ts` exports the `createTrigger` that feeds them (see
+[create-source](../walkeros-create-source/SKILL.md), Phase 3). The docs page,
+`walkeros push --simulate source.<id>` and the step example tests read them;
+`packages/web/sources/cmps/usercentrics/src/examples/step.ts` builds its
+examples from its `inputs.ts` and `outputs.ts`.
+
 ### Export via dev.ts
 
 ```typescript
 // src/dev.ts
 export * as examples from './examples';
+export * as schemas from './schemas';
 ```
+
+`schemas` carries the settings schema (`categoryMap`, `explicitOnly`, ...):
+`buildDev()` fails the build without it.
 
 ### Gate: Examples valid
 
@@ -269,9 +284,8 @@ state[mapped] = state[mapped] === undefined ? value : state[mapped] && value;
 
 ### Dual-layer consent (categories + services/vendors)
 
-Some CMPs expose consent at multiple layers (e.g., Usercentrics: groups +
-services; Didomi: purposes + vendors). When the decision matrix shows "Consent
-layers: Dual," decide how to handle:
+Some CMPs expose consent at multiple layers (e.g., Didomi: purposes + vendors).
+When the decision matrix shows "Consent layers: Dual," decide how to handle:
 
 **Option A: Map primary layer only (recommended for most cases).** Use the
 category/purpose layer and ignore the service/vendor layer. This matches
@@ -308,13 +322,17 @@ packages/web/sources/cmps/[name]/
 ├── README.md
 └── src/
     ├── index.ts                    # Main source export
-    ├── dev.ts                      # Dev exports (examples)
+    ├── dev.ts                      # Dev exports (examples, schemas)
+    ├── schemas/
+    │   └── index.ts                # Settings schema
     ├── types/
     │   └── index.ts                # Types, Settings, CMP API interface, declare global
     ├── examples/
     │   ├── index.ts                # Re-exports
     │   ├── inputs.ts               # CMP consent input examples
     │   ├── outputs.ts              # Expected walkerOS consent outputs
+    │   ├── step.ts                 # Step examples built from inputs and outputs
+    │   ├── trigger.ts              # createTrigger
     │   └── env.ts                  # Mock factories
     └── __tests__/
         ├── index.test.ts           # Full test suite
@@ -323,13 +341,20 @@ packages/web/sources/cmps/[name]/
 
 ### package.json template
 
+`[version]` is the version every `@walkeros/*` package currently has (see
+`packages/core/package.json`); they are released together.
+
 ```json
 {
   "name": "@walkeros/web-source-cmp-[name]",
   "description": "[CMP Name] consent management source for walkerOS",
-  "version": "1.0.0",
+  "version": "[version]",
   "license": "MIT",
-  "walkerOS": { "type": "source", "platform": "web" },
+  "walkerOS": {
+    "type": "source",
+    "platform": "web",
+    "docs": "https://www.walkeros.io/docs/sources/web/cmps/[name]"
+  },
   "main": "./dist/index.js",
   "module": "./dist/index.mjs",
   "types": "./dist/index.d.ts",
@@ -348,20 +373,22 @@ packages/web/sources/cmps/[name]/
       "types": "./dist/dev.d.ts",
       "import": "./dist/dev.mjs",
       "require": "./dist/dev.js"
-    }
+    },
+    "./walkerOS.json": "./dist/walkerOS.json"
   },
-  "files": ["dist/**"],
+  "files": ["dist/**", "CHANGELOG.md"],
   "scripts": {
     "build": "tsup --silent",
-    "clean": "rm -rf .turbo && rm -rf node_modules && rm -rf dist",
+    "clean": "rm -rf .turbo && rm -rf dist",
     "dev": "jest --watchAll --colors",
-    "lint": "tsc && eslint \"**/*.ts*\"",
+    "lint": "eslint \"**/*.ts*\"",
     "test": "jest",
+    "typecheck": "tsc --noEmit",
     "update": "npx npm-check-updates -u && npm update"
   },
   "dependencies": {
-    "@walkeros/core": "1.0.0",
-    "@walkeros/collector": "1.0.0"
+    "@walkeros/core": "[version]",
+    "@walkeros/collector": "[version]"
   },
   "repository": {
     "url": "git+https://github.com/elbwalker/walkerOS.git",
@@ -387,7 +414,7 @@ Copy these exactly from CookieFirst, updating only the `globalName`:
 
 - `tsconfig.json` - extends `@walkeros/config/tsconfig/web.json`
 - `tsup.config.ts` - uses `buildModules`, `buildExamples`, `buildBrowser`,
-  `buildES5`
+  `buildES5` and `buildDev`
 - `jest.config.mjs` - extends `@walkeros/config/jest/web.config`
 
 ---
@@ -411,9 +438,7 @@ import { buildDev } from '@walkeros/config/tsup';
 buildDev(),
 ```
 
-**Note:** The CookieFirst template uses
-`buildModules({ entry: ['src/dev.ts'] })` instead. New CMP sources should prefer
-`buildDev()` for consistency.
+The CookieFirst `tsup.config.ts` already has it.
 
 ### Hints (Optional)
 
@@ -429,7 +454,7 @@ hints. See `walkeros-writing-documentation` skill for full guidelines and
 
 ---
 
-## Phase 6: Test (TDD -- write tests BEFORE implementation)
+## Phase 6: Test (TDD: write tests BEFORE implementation)
 
 **Goal:** Write the full test suite first. Watch it fail. Then implement.
 
@@ -493,15 +518,13 @@ declare module '@walkeros/core' {
 }
 ```
 
-The source returns `{ type: 'cookiefirst', config, push }` from `Source.Init`
-
-- the `type` literal must match the `SourceMap` key.
+The source returns `{ type: 'cookiefirst', config, push, init, destroy }` from
+`Source.Init`; the `type` literal must match the `SourceMap` key.
 
 **CMP sources do NOT set `source.url` or `source.referrer`.** A CMP only knows
-about consent state, not the page that produced it. Setting page context belongs
-to a future web-context transformer that runs in the source's `next` chain.
-Don't reach for `window.location` in CMP source code, leave those fields
-untouched.
+about consent state, not the page that produced it; the browser, dataLayer and
+session sources set the page context of the events they push. Don't reach for
+`window.location` in CMP source code, leave those fields untouched.
 
 ### Settings interface pattern
 
@@ -509,14 +532,17 @@ See [types.ts](./templates/cmp/types.ts) for the complete type definitions
 including `Settings`, `InitSettings`, `Types` bundle, CMP API interfaces, and
 `declare global` window augmentation.
 
-Every CMP source has these core settings:
+The core settings of a CMP source:
 
-- `categoryMap?: Record<string, string>` -- map CMP categories to walkerOS
-  consent groups
-- `explicitOnly?: boolean` -- only process explicit consent (default: `true`:
-  the source waits for the visitor's decision, privacy by design; `false`
-  follows implicit or default consent)
-- `globalName?: string` -- only where the CMP lets a site rename its global;
+- `categoryMap?: Record<string, string>`: maps CMP categories to walkerOS
+  consent groups (every CMP source)
+- `explicitOnly?: boolean`: for a CMP that reports implicit or default consent
+  before the visitor decides (Usercentrics, CookiePro, Cookiebot). Default
+  `true`: the source reports only explicit choices, so a visitor the CMP never
+  asks sends no consent; `false` also reports implicit or default consent.
+  CookieFirst reports consent only after a choice (`consent` is `null` before),
+  so its source has no such setting.
+- `globalName?: string`: only where the CMP lets a site rename its global;
   Cookiebot hard-codes `window.Cookiebot`, so its source has no such setting
 
 ### Source skeleton
@@ -545,7 +571,7 @@ Emitting consent from the factory races source merge order and can leave a later
 `{ type, config, push, init, destroy }`; `init` runs the static read + attaches
 listeners, `destroy` removes them. (The collector also matches `require` against
 current recorded state, so a consent read from `init()` still activates
-dependent steps regardless of order — but a side-effect-free factory is the
+dependent steps regardless of order, but a side-effect-free factory is the
 contract.)
 
 **Note on init listeners:** Some init listeners (like CookieFirst's `cf_init`)
@@ -555,8 +581,8 @@ CMP uses for each detection path.
 
 ### Gate: All tests pass
 
-- [ ] `npm run verify:touched -- <cmp-name>` passes (L1: typecheck + lint +
-      test)
+- [ ] `npm run verify:touched -- web-source-cmp-<name>` passes (L1: typecheck +
+      lint + test; the argument is the package name after `@walkeros/`)
 - [ ] `npm run build` passes
 
 ---
@@ -566,7 +592,7 @@ CMP uses for each detection path.
 ### README structure
 
 Keep it short and point to the docs page, like the existing CMP sources
-(sentence case headings, imports in code examples):
+(sentence-case headings, imports in code examples):
 
 ```markdown
 <logo>
@@ -599,7 +625,8 @@ considerations. Then register the page:
 
 1. Add it to the CMPs category in `website/sidebars.ts`
 2. Add a row to the table in `website/docs/sources/web/cmps/index.mdx`, and name
-   the source where that page compares the CMP sources
+   the source where that page and `website/docs/guides/consent/index.mdx`
+   compare the CMP sources
 3. Add the package to `website/package.json` so the page can import its
    `walkerOS.json`
 
@@ -620,19 +647,19 @@ not just `true` for granted ones.
 **Boolean-map CMPs** (CookieFirst, Usercentrics group-level): The CMP's consent
 object already contains explicit `false` values (e.g.,
 `{ marketing: false, functional: true }`). These flow through naturally via
-iteration -- no extra code needed.
+iteration, no extra code needed.
 
 **Presence-based CMPs** (CookiePro): Only active groups are listed (e.g.,
-`",C0001,C0003,"`). Absence means denied. You MUST initialize ALL mapped groups
-to `false`, then set active ones to `true`:
+`",C0001,C0003,"`). Absence means denied. You MUST give EVERY mapped group an
+explicit value, `true` only when every ID mapped to it is active (any deny
+denies):
 
 ```typescript
-// Presence-based CMPs: initialize all groups to false, then set active to true
-allMappedGroups.forEach((group) => {
-  state[group] = false;
-});
-activeIds.forEach((id) => {
-  if (map[id]) state[map[id]] = true;
+// Presence-based CMPs: walk the map, not the active IDs
+const active = new Set(activeIds.map((id) => id.toLowerCase()));
+Object.entries(normalizedMap).forEach(([id, group]) => {
+  const granted = active.has(id);
+  state[group] = state[group] === undefined ? granted : state[group] && granted;
 });
 ```
 
@@ -684,10 +711,11 @@ dispatches each event under a `CookieConsentOn*` alias. Because the static read
 at init and the load-time event report the same choice, drop a state identical
 to the last one the source sent.
 
-**Pattern C: Init event re-fires on change (Usercentrics)** Single event type
-(`ucEvent`) fires for both init and change. No dual-firing risk, but the
-init/change distinction must come from event detail (e.g., `detail.type`), not
-event name.
+**Pattern C: One event bus for every UI event (Usercentrics)** Usercentrics
+fires `UC_UI_CMP_EVENT` for decisions and for UI events such as a view change.
+Handle only the decision types (`ACCEPT_ALL`, `DENY_ALL`, `SAVE`) from the event
+detail, and read the consent from the getter (the event carries none). A view
+toggle then publishes nothing.
 
 **Research step:** During Phase 1, fill in "Number of change events" in the
 decision matrix. If >1, determine which pattern applies and plan accordingly.
@@ -695,7 +723,7 @@ decision matrix. If >1, determine which pattern applies and plan accordingly.
 ### 5. Document timing/race conditions in the README
 
 What if the CMP loads before the source? What about `explicitOnly: false`? Each
-CMP has different timing behavior -- document it explicitly under "Timing
+CMP has different timing behavior: document it explicitly under "Timing
 considerations."
 
 For "previous-choice" detection (was this an active user decision or a
@@ -712,24 +740,32 @@ Full grant -> revoke -> verify denied (explicit `false` values). This is the
 most common source of bugs.
 
 ```typescript
-test('handles consent withdrawal', async () => {
-  // Initial: full consent
-  mockWindow.__dispatchEvent('event', inputs.fullConsent);
+test('handles consent withdrawal (full to partial)', async () => {
+  const mockWindow = createMockWindow(inputs.fullConsent);
+  await createCmpSource(mockWindow, mockElb);
+
+  // Initial: full consent, read at init
   expect(consentCalls[0].consent).toEqual(outputs.fullConsentMapped);
 
-  // User revokes marketing
-  mockWindow.__dispatchEvent('event', inputs.partialConsent);
+  // User revokes marketing and analytics
+  mockWindow.__dispatchEvent('cmp_consent', inputs.revocationInput);
   expect(consentCalls[1].consent.marketing).toBe(false); // explicit false
+  expect(consentCalls[1].consent.analytics).toBe(false); // explicit false
 });
 ```
+
+This is the revocation test of the template
+([index.test.ts](./templates/cmp/index.test.ts)); `cmp_consent` stands for your
+CMP's change event.
 
 ### 7. Use `MockWindow` interface in tests
 
 Properly typed, not `as unknown as` casts scattered through tests. Define one
 `MockWindow` interface in `test-utils.ts` that extends the source's **narrowed**
 `CmpWindow` (the surface the source actually touches), not the global `Window`.
-Because `Env.window` is narrowed to `CmpWindow`, the mock literal satisfies it
-directly — no `as unknown as Window` anywhere.
+Because `Env.window` is narrowed to `CmpWindow` (as the template and the
+Cookiebot source do), the mock literal satisfies it directly, with no
+`as unknown as Window` cast.
 
 ### 8. Store category keys in user-expected format
 
@@ -792,7 +828,7 @@ requirements (build, test, lint, no `any`):
       returns early or returns `false`; a CMP that is simply absent is not an
       error (consent stays unknown)
 - [ ] README follows required structure
-- [ ] Consent guide page updated
+- [ ] Docs page created and registered (Phase 8)
 
 ---
 
@@ -809,7 +845,7 @@ this pattern will require adaptation:
 | **`destroy()` may not be possible**            | CMPs with SDK readiness arrays (fire-once, no unsubscribe) | Document in README that the init callback cannot be removed. Only the change listener needs cleanup.                                                          |
 | **No vendor-level consent model**              | Didomi (purposes + vendors as separate consent layers)     | Use the "Dual-layer consent" guidance in Phase 3. walkerOS `Consent` is category-level; vendor-level consent requires flattening or a `consentLayer` setting. |
 
-These are research-phase decisions -- the skill's phases, mandatory checks, and
+These are research-phase decisions; the skill's phases, mandatory checks, and
 validation checklist still apply. The research template and decision matrix
 capture these variations so they are identified early.
 

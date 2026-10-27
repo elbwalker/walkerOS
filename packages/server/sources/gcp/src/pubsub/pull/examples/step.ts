@@ -49,7 +49,7 @@ export const orderComplete: Flow.StepExample = {
 export const decoderText: Flow.StepExample = {
   title: 'Text decoder',
   description:
-    'With decoder=text on the source settings, the message data is forwarded to the collector as a UTF-8 string and acked.',
+    'With decoder=text on the source settings, the message data is forwarded as data.payload. It has no event name, so without a before transformer that builds the event the collector rejects it and the message is acked.',
   in: {
     id: 'msg-3',
     dataString: 'plain text payload',

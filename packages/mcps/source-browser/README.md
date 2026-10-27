@@ -8,7 +8,8 @@
 
 Model Context Protocol server for walkerOS HTML tagging. Generates, parses, and
 validates `data-elb` attributes using real DOM parsing, so an AI assistant can
-tag a page and check its own work. Runs locally, no account or API token.
+tag a page and check its own work. It runs locally and needs no account or API
+token.
 
 [Documentation](https://www.walkeros.io/docs/apps/mcp) &bull;
 [NPM Package](https://www.npmjs.com/package/@walkeros/mcp-source-browser) &bull;
@@ -30,13 +31,9 @@ client's configuration:
 }
 ```
 
-In Claude Code you can install the walkerOS plugin instead, which registers this
-server along with the flow development server and the walkerOS skills:
-
-```
-/plugin marketplace add elbwalker/walkerOS
-/plugin install walkeros@elbwalker
-```
+The walkerOS Claude Code plugin registers the flow servers and the walkerOS
+skills. It does not register this server, so in Claude Code add it to the
+configuration as above too.
 
 To install the binary directly:
 
@@ -52,11 +49,11 @@ ready-to-paste `data-elb` attributes.
 
 ## Tools
 
-| Tool               | Description                                                                                        |
-| ------------------ | -------------------------------------------------------------------------------------------------- |
-| `generate_tagging` | Turn structured input into `data-elb` attributes and an example HTML snippet                       |
-| `parse_tagging`    | Parse an HTML snippet and extract the walkerOS events and globals it produces                      |
-| `validate_tagging` | Check tagging for orphan actions, missing entities, unknown triggers, and entities without actions |
+| Tool               | Description                                                                                                             |
+| ------------------ | ----------------------------------------------------------------------------------------------------------------------- |
+| `generate_tagging` | Turn structured input into `data-elb` attributes and an example HTML snippet                                            |
+| `parse_tagging`    | Parse an HTML snippet and extract the walkerOS events and globals it produces                                           |
+| `validate_tagging` | Check tagging for empty entity names, orphan actions, unknown triggers, orphan properties, and entities without actions |
 
 All three accept an optional `prefix` to match a custom attribute prefix, which
 defaults to `data-elb`.

@@ -32,7 +32,18 @@ Checks events against JSON Schema [contracts](/docs/getting-started/flow/contrac
   code={`import { startFlow } from '@walkeros/collector';
 import { transformerValidate } from '@walkeros/transformer-validate';
 
+// An order complete event needs data.value and data.currency
+const contractWeb = {
+  events: {
+    order: {
+      complete: { properties: { data: { required: ['value', 'currency'] } } },
+    },
+  },
+};
+
 await startFlow({
+  // Collector chain: checks every event before any destination gets it
+  next: 'validate',
   transformers: {
     validate: {
       code: transformerValidate,
@@ -47,11 +58,11 @@ await startFlow({
   <TabItem value="bundled" label="Bundled">
 
 <CodeSnippet
-  code={`"transformers": {
+  code={`"collector": { "next": "validate" },
+"transformers": {
   "validate": {
     "package": "@walkeros/transformer-validate",
-    "config": { "settings": { "contract": ["$contract.web"], "mode": "strict" } },
-    "next": "ga4"
+    "config": { "settings": { "contract": ["$contract.web"], "mode": "strict" } }
   }
 }`}
   language="json"
@@ -67,11 +78,13 @@ The transformer reads the `{ ingest, event }` context and validates the canonica
 `mode` decides what happens to an invalid event:
 
 - **`pass`** (default): write the verdict to the event and continue. A downstream destination or transformer routes on `event.source.valid`.
-- **`strict`**: record the errors, then stop the chain so the event never reaches downstream steps.
+- **`strict`**: record the errors, then stop the chain so the event never reaches downstream steps. The push result of a dropped event is `ok: true` with `dropped: true`, and nothing is logged at the default level; the issue list on the ingest says why.
 
-The verdict and the error list are written to two different places. The boolean verdict goes onto the **event** (`output.isValid`, default `source.valid`) as analytics-grade data that travels with the event. The issue list goes onto the **ingest** (`output.errors`, default `validation`) as observer-visible diagnostics, never event data, so it survives even a strict-mode drop. Set either path to an empty string to skip that write.
+Wire the step into a chain, or it never runs and nothing reports it: in `collector.next` it checks every event after the collector has completed it, as in the examples above (see [routing](/docs/getting-started/flow/routing)). In a source's `next` chain, before the collector, an event that carries only a `name` gets no per-event contract rule: the collector sets `entity` and `action` after that chain. Such an invalid event gets the verdict `true`, strict mode lets it through there, and nothing reports it. Inline whole-event schemas and `format` apply in every position.
 
-The transformer never throws. A schema the engine cannot compile or apply (for example an unresolvable `$ref`) is reported as an issue with `level: "error"`, so `pass` still forwards the event and `strict` drops it like an invalid one. A field whose value is `undefined` counts as absent, as in JSON.
+The verdict and the error list are written to two different places. The boolean verdict goes onto the event (`output.isValid`, default `source.valid`) as analytics-grade data that travels with the event. The issue list goes onto the ingest (`output.errors`, default `validation`) as observer-visible diagnostics, not event data, so it survives even a strict-mode drop. Set either path to an empty string to skip that write.
+
+The transformer never throws. A schema the engine cannot compile or apply (for example an unresolvable `$ref`) is reported as an issue with `level: "error"` and as one ERROR line per event (`validation engine failed`), so `pass` still forwards the event and `strict` drops it like an invalid one. A field whose value is `undefined` counts as absent, as in JSON.
 
 <Configuration type="transformer" data={data} />
 
@@ -108,7 +121,7 @@ move the verdict (`isValid`, default `source.valid`) or the issue list
 
 ## Filter unwanted events
 
-There is no separate `ignore` or `filter` setting. To drop unwanted events (for example GTM lifecycle pings like `gtm.js` / `gtm.dom`), author an inline schema that rejects them and run `mode: "strict"`. A schema where `name` must NOT match `^gtm\.` fails those events while real events pass.
+There is no separate `ignore` or `filter` setting. To drop unwanted events (for example GTM lifecycle pings like `gtm.js` / `gtm.dom`), author an inline schema that rejects them and run `mode: "strict"`. A schema where `name` must not match `^gtm\.` fails those events while real events pass.
 
 <CodeSnippet
   code={`"validate": {

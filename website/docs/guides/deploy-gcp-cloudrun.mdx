@@ -11,15 +11,15 @@ This guide deploys a walkerOS flow to Google Cloud Run, forwarding events to Big
 ## Prerequisites
 
 - [Docker](https://docs.docker.com/get-docker/) installed (for local testing)
-- [Node.js 18+](https://nodejs.org/) installed
+- [Node.js 22.12+](https://nodejs.org/) installed
 
 ## 1. Set Up BigQuery
 
 Follow the <Link to="/docs/destinations/server/gcp#gcp-setup">GCP BigQuery setup</Link> to:
 
-- Create a BigQuery dataset
 - <Link to="/docs/destinations/server/gcp#create-service-accounts">Create a service account</Link> with write permissions
-- <Link to="/docs/destinations/server/gcp#setup-lifecycle">Create the events table</Link>
+
+Step 2 creates the dataset and the events table with `walkeros setup`.
 
 For local testing, <Link to="/docs/destinations/server/gcp#authentication">download a service account key</Link>. Production uses <Link to="/docs/destinations/server/gcp#authentication">Workload Identity</Link>.
 
@@ -52,11 +52,11 @@ The example flow at `https://www.walkeros.io/flows/gcp-bigquery.json` receives e
           "package": "@walkeros/server-destination-gcp",
           "import": "destinationBigQuery",
           "config": {
+            "setup": { "location": "$env.BQ_LOCATION:EU" },
             "settings": {
               "projectId": "$env.GCP_PROJECT_ID",
               "datasetId": "$env.BQ_DATASET:walkerOS",
-              "tableId": "$env.BQ_TABLE:events",
-              "location": "$env.BQ_LOCATION:EU"
+              "tableId": "$env.BQ_TABLE:events"
             }
           }
         }
@@ -76,13 +76,22 @@ walkeros bundle https://www.walkeros.io/flows/gcp-bigquery.json -o dist/
 
 This creates `dist/flow.mjs`, `dist/package.json`, and `dist/node_modules/`. The CLI adds the packages named in `package` to the bundle, so the flow needs no separate package list.
 
+`"setup"` lets <Link to="/docs/destinations/server/gcp#setup-lifecycle">`walkeros setup`</Link> create the dataset and the events table, in the region `BQ_LOCATION` names (default `EU`). Run it once. It finds Google credentials the way the runtime does, from `GOOGLE_APPLICATION_CREDENTIALS` (the key from step 1) or your gcloud application default credentials, and the account needs the setup permissions listed under <Link to="/docs/destinations/server/gcp#create-service-accounts">Create service accounts</Link>:
+
+```bash
+export GCP_PROJECT_ID=your-project-id
+export GOOGLE_APPLICATION_CREDENTIALS=$(pwd)/sa-bigquery.json
+
+walkeros setup destination.bigquery -c https://www.walkeros.io/flows/gcp-bigquery.json
+```
+
 :::note Environment variables
-In a server flow, `$env.NAME` is read from the environment when the container starts, not at bundle time. Required: `GCP_PROJECT_ID`. Optional with defaults: `BQ_DATASET` (walkerOS), `BQ_TABLE` (events), `BQ_LOCATION` (EU). Only web flows bake `$env` values in, from `config.bundle.env`. See [Reference Syntax](/docs/guides/reference-syntax#env--environment-variables).
+In a server flow, `$env.NAME` is read from the environment when the container starts, not at bundle time. Required: `GCP_PROJECT_ID`; without it the first event fails with `Config settings projectId missing` in the log. Optional with defaults: `BQ_DATASET` (walkerOS) and `BQ_TABLE` (events). Only `walkeros setup` uses `BQ_LOCATION`, for the dataset it creates. Only web flows bake `$env` values in, from `config.bundle.env`. See [Reference Syntax](/docs/guides/reference-syntax#env--environment-variables).
 :::
 
 ## 3. Test Locally with Docker
 
-Before deploying, verify everything works locally. Replace `<version>` with the `walkeros/flow` version matching your CLI, see [image tags](/docs/apps/runtime#image-tags):
+Before deploying, verify everything works locally. Replace `<version>` with the `walkeros/flow` version matching your CLI (see [image tags](/docs/apps/runtime#image-tags)):
 
 ```bash
 # Run locally (uses key file for auth)
@@ -114,6 +123,8 @@ Expected response:
 ```json
 { "success": true, "timestamp": 1234567890 }
 ```
+
+The Express source answers a POST <Link to="/docs/sources/server/express#response-modes-async">before delivery</Link>, so the response says nothing about BigQuery. A failed write shows up as a `Push failed` line in the container log.
 
 Check BigQuery for the event:
 
@@ -195,8 +206,8 @@ collector block, then bundle and deploy again:
 ```
 
 A destination that fails to deliver shows up as one `ERROR` entry per cause and
-minute, with the destination id, the cause `code` and the HTTP `status` in the
-`context`. See [Logger](/docs/collector/logger#failure-codes) for the codes.
+minute, with the step (`destination.bigquery`), the cause `code` and, when the
+vendor answered, the HTTP `status` in the `context`. See [Logger](/docs/collector/logger#failure-codes) for the codes.
 
 ## Next Steps
 

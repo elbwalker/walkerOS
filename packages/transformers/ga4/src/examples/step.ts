@@ -3,7 +3,7 @@ import type { Flow } from '@walkeros/core';
 /**
  * Step examples for transformer-ga4.
  *
- * `in` is a raw `GA4Request` (`{ url, body? }`) — the shape the transformer
+ * `in` is a raw `GA4Request` (`{ url, body? }`), the shape the transformer
  * reads from `ctx.ingest`. `out` is the array of effect tuples produced by
  * pushing that request through the transformer:
  *
@@ -92,7 +92,7 @@ export const pageView: Flow.StepExample = {
 };
 
 export const purchase: Flow.StepExample = {
-  title: 'Purchase (canary)',
+  title: 'Purchase',
   description:
     'A GA4 purchase hit decoded to a walkerOS order complete event with id, currency, value, tax, shipping, and coupon.',
   in: {
@@ -336,7 +336,7 @@ export const consentDenied: Flow.StepExample = {
 export const userEngagementIgnored: Flow.StepExample = {
   title: 'user_engagement (ignored)',
   description:
-    'Auto-fired GA4 user_engagement events are dropped by default — the transformer returns false.',
+    'Auto-fired GA4 user_engagement events are dropped by default: the transformer returns false.',
   in: {
     url:
       'https://www.google-analytics.com/g/collect' +

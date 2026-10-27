@@ -51,6 +51,7 @@ This server flow turns raw request signals into a privacy-friendly identifier be
           "package": "@walkeros/server-destination-gcp",
           "import": "destinationBigQuery",
           "config": {
+            "setup": true,
             "settings": {
               "projectId": "my-analytics-project",
               "datasetId": "events",
@@ -66,11 +67,11 @@ This server flow turns raw request signals into a privacy-friendly identifier be
   language="json"
 />
 
-Replace `x-client-ip` with the single-address header your proxy sets or overwrites with the visitor's address, see [Client IP behind a proxy](/docs/sources/server/express#client-ip-behind-a-proxy).
+Replace `x-client-ip` with the single-address header your proxy sets or overwrites with the visitor's address, see [Client IP behind a proxy](/docs/sources/server/express#client-ip-behind-a-proxy). If that header does not reach the source, the transformer hashes without the IP and logs only a `WARN` line, which the default log level does not show; visitors with the same browser, browser version and operating system then share one hash per day.
 
 ## Run it
 
-Save the config as `flow.json` and run the fingerprint transformer of the built flow on an event. `--ingest` passes the request context the Express source extracts, the client IP and user agent, and the salt comes from the environment. Nothing is written to BigQuery:
+Save the config as `flow.json` and run the fingerprint transformer of the built flow on an event. `--ingest` passes the request context the Express source extracts, the client IP and user agent, and the salt comes from the environment (without `FINGERPRINT_SALT` the step fails with `Config settings salt missing`). Nothing is written to BigQuery:
 
 <CodeSnippet
   code={`FINGERPRINT_SALT=change-me npx walkeros push flow.json -e '{"name":"page view"}' --simulate transformer.fingerprint \\
@@ -91,14 +92,14 @@ success: true
 
 ## What you get
 
-In production every event lands as one row in your table, using the standard walkerOS schema (name, entity, action, timestamp, user, and more). The destination receives an `appendRows` call, and the `user` column carries the hash in place of a raw IP or user agent (from the package's examples):
+Create the dataset and table once with `walkeros setup destination.bigquery`, which provisions them because the flow sets `"setup": true` (see [setup lifecycle](/docs/destinations/server/gcp#setup-lifecycle)); until they exist, pushes fail with `BigQuery dataset or table not found`. Then every event lands as one row in your table, using the standard walkerOS schema (name, entity, action, timestamp, user, and more). The destination appends each row with `appendRows`, and the `user` column carries the hash in place of a raw IP or user agent:
 
 <CodeSnippet
   code={`['appendRows', [{
   "name": "page view",
   "entity": "page",
   "action": "view",
-  "user": "{\\"hash\\":\\"158f99cc06e33fd6\\"}",
+  "user": "{\\"hash\\":\\"8015a6ca3b754e5e\\"}",
   ...
 }]]`}
   language="bash"

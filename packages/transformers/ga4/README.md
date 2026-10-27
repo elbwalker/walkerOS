@@ -20,7 +20,8 @@ npm install @walkeros/transformer-ga4
 
 ## Quick start
 
-Drop the transformer into a server source's `before` chain:
+Drop the transformer into a server source's `before` chain. gtag.js sends its
+hits to `/g/collect`, so the source listens there:
 
 ```json
 {
@@ -32,6 +33,7 @@ Drop the transformer into a server source's `before` chain:
         "http": {
           "package": "@walkeros/server-source-express",
           "config": {
+            "settings": { "paths": ["/g/collect"] },
             "ingest": {
               "map": {
                 "url": { "key": "url" },

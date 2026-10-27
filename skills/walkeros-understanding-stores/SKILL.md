@@ -15,7 +15,7 @@ destinations) consume via environment injection. They are the 4th component type
 in Flow.Json alongside sources, transformers, and destinations.
 
 **Core principle:** Stores are passive infrastructure. They don't process events
-or participate in chains — they provide state that other components read and
+or participate in chains; they provide state that other components read and
 write.
 
 ## Store interface
@@ -25,14 +25,14 @@ for the canonical interface.
 
 ### Instance
 
-| Property  | Type                               | Purpose                      | Required     |
-| --------- | ---------------------------------- | ---------------------------- | ------------ |
-| `type`    | `string`                           | Store type identifier        | **Required** |
-| `config`  | `Store.Config`                     | Settings and env             | **Required** |
-| `get`     | `(key) => StoreValue \| undefined` | Read a value                 | **Required** |
-| `set`     | `(key, value, ttl?) => void`       | Write a value (optional TTL) | **Required** |
-| `delete`  | `(key) => void`                    | Remove a value               | **Required** |
-| `destroy` | `DestroyFn`                        | Cleanup on shutdown          | Optional     |
+| Property  | Type                               | Purpose                   | Required     |
+| --------- | ---------------------------------- | ------------------------- | ------------ |
+| `type`    | `string`                           | Store type identifier     | **Required** |
+| `config`  | `Store.Config`                     | Settings and env          | **Required** |
+| `get`     | `(key) => StoreValue \| undefined` | Read a value              | **Required** |
+| `set`     | `(key, value, ttl?) => void`       | Write a value (see below) | **Required** |
+| `delete`  | `(key) => void`                    | Remove a value            | **Required** |
+| `destroy` | `DestroyFn`                        | Cleanup on shutdown       | Optional     |
 
 All methods can be sync or async (return `Promise`).
 
@@ -58,9 +58,11 @@ init:
   init.
 
 TTL is owned by the cache layer, not the store. The store persists values; a
-`cache` wrapper manages expiry. `flow_validate` warns when a store sets both
-`file: true` and `cache`, and when a `@walkeros/server-transformer-file` is
-wired to a byte-native store that does not set `file: true`.
+`cache` wrapper manages expiry. The `ttl` argument of `set` is only a hint for
+TTL-native backends: the fs, S3, GCS and Sheets stores ignore it and keep the
+value. `flow_validate` warns when a store sets both `file: true` and `cache`,
+and when a `@walkeros/server-transformer-file` is wired to a byte-native store
+that does not set `file: true`.
 
 ### Init function (context pattern)
 
@@ -75,7 +77,7 @@ export const storeMyStore: Store.Init = (context) => {
 
   return {
     type: 'my-store',
-    config: context.config as Store.Config,
+    config,
     get(key) {
       /* ... */
     },
@@ -116,7 +118,7 @@ Shutdown: Sources → Destinations → Transformers → Stores
 - **Destroy last:** Stores destroy after all other components so transformers
   can flush during their own destroy
 - **No lazy init:** Unlike destinations, stores don't support `require` or
-  deferred activation — they are always eager
+  deferred activation; they are always eager
 
 ## Wiring stores via `$store.`
 
@@ -127,28 +129,24 @@ Use `$store.storeId` in a component's `env` to inject a store instance:
 ```json
 {
   "stores": {
-    "data": {
+    "assets": {
       "package": "@walkeros/server-store-fs",
-      "config": { "settings": { "basePath": "./data" } },
-      "cache": { "rules": [{ "ttl": 60 }] }
+      "config": { "file": true, "settings": { "basePath": "./public" } }
     }
   },
   "transformers": {
-    "fingerprint": {
-      "package": "@walkeros/server-transformer-fingerprint",
-      "env": { "store": "$store.data" }
+    "file": {
+      "package": "@walkeros/server-transformer-file",
+      "env": { "store": "$store.assets" }
     }
   }
 }
 ```
 
-The bundler resolves `$store.data` to a runtime reference. Invalid references
+The bundler resolves `$store.assets` to a runtime reference. Invalid references
 are caught at build time. `walkeros validate` also catches typos at validation
 time, including unknown store names and the colon-instead-of-dot mistake (e.g.
-`$store:data` is flagged with the suggested form `$store.data`).
-
-The `cache` field enables the built-in in-memory cache tier (`__cache`) on top
-of any backing store. No separate memory store declaration is needed.
+`$store:assets` is flagged with the suggested form `$store.assets`).
 
 ### Integrated mode (TypeScript)
 
@@ -157,20 +155,19 @@ Pass the store definition object itself, no `$store.` prefix:
 ```typescript
 import { startFlow } from '@walkeros/collector';
 import { storeFsInit } from '@walkeros/server-store-fs';
-import { transformerFingerprint } from '@walkeros/server-transformer-fingerprint';
+import { transformerFile } from '@walkeros/server-transformer-file';
 
-const data = {
+const assets = {
   code: storeFsInit,
-  config: { settings: { basePath: './data' } },
-  cache: { rules: [{ ttl: 60 }] },
+  config: { file: true, settings: { basePath: './public' } },
 };
 
 await startFlow({
-  stores: { data },
+  stores: { assets },
   transformers: {
-    fingerprint: {
-      code: transformerFingerprint,
-      env: { store: data }, // same object as stores.data
+    file: {
+      code: transformerFile,
+      env: { store: assets }, // same object as stores.assets
     },
   },
 });
@@ -195,6 +192,7 @@ separate package import needed:
   "stores": {
     "files": {
       "package": "@walkeros/server-store-fs",
+      "config": { "settings": { "basePath": "./data" } },
       "cache": { "rules": [{ "ttl": 60 }] }
     }
   }
@@ -214,10 +212,11 @@ import { storeFsInit } from '@walkeros/server-store-fs';
 
 ### `@walkeros/server-store-s3` (S3-compatible object storage)
 
-S3-compatible store using `s3mini` (~20 KB, zero dependencies). Works with AWS
-S3, Cloudflare R2, Scaleway, DigitalOcean Spaces, Backblaze B2, MinIO, and any
-S3-compatible provider. Structured by default (stored as `application/json`);
-set `file: true` to serve raw bytes byte-exact with the real mime. Server-only.
+S3-compatible store using `s3mini` (~26 KB minified, zero dependencies). Works
+with AWS S3, Cloudflare R2, Scaleway, DigitalOcean Spaces, Backblaze B2, MinIO,
+and any S3-compatible provider. Structured by default (stored as
+`application/json`); set `file: true` to serve raw bytes byte-exact with the
+real mime. Server-only.
 
 ```typescript
 import { storeS3Init } from '@walkeros/server-store-s3';
@@ -227,12 +226,12 @@ import { storeS3Init } from '@walkeros/server-store-s3';
 
 | Setting           | Type     | Required | Default  | Purpose                    |
 | ----------------- | -------- | -------- | -------- | -------------------------- |
-| `bucket`          | `string` | Yes      | —        | S3 bucket name             |
-| `endpoint`        | `string` | Yes      | —        | S3-compatible endpoint URL |
-| `accessKeyId`     | `string` | Yes      | —        | S3 access key ID           |
-| `secretAccessKey` | `string` | Yes      | —        | S3 secret access key       |
+| `bucket`          | `string` | Yes      | -        | S3 bucket name             |
+| `endpoint`        | `string` | Yes      | -        | S3-compatible endpoint URL |
+| `accessKeyId`     | `string` | Yes      | -        | S3 access key ID           |
+| `secretAccessKey` | `string` | Yes      | -        | S3 secret access key       |
 | `region`          | `string` | No       | `"auto"` | AWS region (SigV4 signing) |
-| `prefix`          | `string` | No       | —        | Key prefix for scoping     |
+| `prefix`          | `string` | No       | -        | Key prefix for scoping     |
 
 **Primary use case:** Serving static files in managed deployments where files
 live in a bucket rather than being baked into a Docker image.
@@ -250,15 +249,17 @@ import { storeGcsInit } from '@walkeros/server-store-gcs';
 
 | Setting  | Type     | Required | Default | Purpose                |
 | -------- | -------- | -------- | ------- | ---------------------- |
-| `bucket` | `string` | Yes      | —       | GCS bucket name        |
-| `prefix` | `string` | No       | —       | Key prefix for scoping |
+| `bucket` | `string` | Yes      | -       | GCS bucket name        |
+| `prefix` | `string` | No       | -       | Key prefix for scoping |
 
-Credentials live at `config.credentials` (sibling of `settings`):
-`string | object` SA JSON for non-GCP envs, `$env`-resolvable; omit for ADC. The
-deprecated `settings.credentials` still works.
+Credentials live at `config.credentials` (sibling of `settings`): a
+service-account JSON (`string | object`) for non-GCP environments, set as
+`$secret.<NAME>` (an unset secret stops the flow at startup); omit it for ADC. A
+value missing `client_email` or `private_key` is ignored without a log line, and
+the store falls back to ADC, the runtime's default credentials.
 
 **Primary use case:** Serving static files on GCP infrastructure (Cloud Run,
-GKE) where ADC provides seamless authentication.
+GKE) where ADC handles authentication.
 
 ### `@walkeros/server-store-sheets` (Google Sheets)
 
@@ -276,21 +277,24 @@ import { storeSheetsInit } from '@walkeros/server-store-sheets';
 
 | Setting      | Type     | Required | Default    | Purpose                          |
 | ------------ | -------- | -------- | ---------- | -------------------------------- |
-| `id`         | `string` | Yes      | —          | Spreadsheet ID (segment in URL)  |
+| `id`         | `string` | Yes      | -          | Spreadsheet ID (segment in URL)  |
 | `sheet`      | `string` | No       | `'Sheet1'` | Sheet (tab) name                 |
 | `key`        | `string` | No       | `'A'`      | Column letter for keys           |
 | `value`      | `string` | No       | `'B'`      | Column letter for JSON values    |
 | `headerRows` | `number` | No       | `1`        | Header rows to skip when reading |
 
-Credentials live at `config.credentials` (sibling of `settings`):
-`string | object` SA JSON for non-GCP envs, `$env`-resolvable; omit for ADC. The
-deprecated `settings.credentials` still works.
+Credentials live at `config.credentials` (sibling of `settings`): a
+service-account JSON (`string | object`) for non-GCP environments, set as
+`$secret.<NAME>` (an unset secret stops the flow at startup); omit it for ADC. A
+value that is not valid JSON, or is missing `client_email` or `private_key`, is
+ignored without a log line, and the store falls back to ADC, the runtime's
+default credentials.
 
 **Primary use case:** Demos and small prototypes where the spreadsheet is the
-operator-facing UI for tweaking lookup data. Quota: 60 reads/min and 60
-writes/min per project. Enable the built-in cache via `Flow.Store.cache` on the
-store declaration to absorb the quota, otherwise quota burns in seconds. **Not a
-production CRM substitute.** See
+operator-facing UI for tweaking lookup data. Quota: 60 read and 60 write
+requests per minute per user per project. Enable the built-in cache via
+`Flow.Store.cache` on the store declaration to absorb the quota, otherwise quota
+burns in seconds. **Not a production CRM substitute.** See
 [Website: Sheets Store](../../website/docs/stores/server/sheets.mdx) for the
 cache-wiring example.
 
@@ -313,7 +317,7 @@ const { collector } = await startFlow({
 });
 
 // Read/write
-await collector.stores.files.set('key', 'value', 60000); // 60s TTL
+await collector.stores.files.set('key', 'value'); // fs keeps it, no expiry
 const value = await collector.stores.files.get('key');
 await collector.stores.files.delete('key');
 ```
@@ -418,13 +422,14 @@ Add `./dev` export to package.json:
 - `buildDev()` generates `dist/walkerOS.json` at build time
 - MCP tools fetch `walkerOS.json` from CDN for package discovery and schema
   validation
-- Website docs use `<PropertyTable schema={schemas.settings} />` instead of
-  hardcoded markdown tables
+- Website docs import that `walkerOS.json` and render the settings with
+  `<Configuration type="store" data={data} />` instead of hardcoded markdown
+  tables
 - Without `dev.ts`, a store is invisible to MCP and docs tables rot
 
 ### Hints (Optional)
 
-Stores can optionally export hints — lightweight, actionable context for AI
+Stores can optionally export hints: lightweight, actionable context for AI
 agents beyond what schemas and examples already provide. Create `src/hints.ts`:
 
 ```typescript
@@ -445,7 +450,7 @@ export * as examples from './examples';
 export { hints } from './hints';
 ```
 
-Most stores don't need hints — only add them for non-obvious behaviors,
+Most stores don't need hints; only add them for non-obvious behaviors,
 prerequisites, or troubleshooting patterns.
 
 ## Setup (optional)
@@ -502,8 +507,8 @@ operator workflow.
 
 **Documentation:**
 
-- [Website: Flow](../../website/docs/getting-started/modes/bundled.mdx) - Flow
-  configuration with stores section
+- [Website: Flow](../../website/docs/getting-started/flow/index.mdx) - Flow
+  configuration
 - [Website: Stores](../../website/docs/stores/index.mdx) - Stores overview
 - [Website: S3 Store](../../website/docs/stores/server/s3.mdx) - S3 store
   documentation

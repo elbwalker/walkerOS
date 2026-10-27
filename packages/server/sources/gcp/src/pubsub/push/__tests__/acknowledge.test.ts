@@ -76,4 +76,30 @@ describe('Pub/Sub push acknowledgement', () => {
     const { status } = await deliver(delivering, { name: 'invalid' });
     expect(status).toBe(400);
   });
+
+  // settings.projectId is not read by the handler: a valid and a malformed
+  // envelope are answered the same with and without it.
+  it('answers the same with and without settings.projectId', async () => {
+    const answers = async (settings: { projectId?: string }) => {
+      const instance = await createTrigger({
+        logger: { handler: () => undefined },
+        sources: { pubsub: { code: sourcePubSubPush, config: { settings } } },
+        destinations: { vendorX: { code: delivering } },
+      });
+      try {
+        const data = Buffer.from(
+          JSON.stringify({ name: 'page view' }),
+        ).toString('base64');
+        return [
+          await instance.trigger()({ message: { messageId: 'm1', data } }),
+          await instance.trigger()({ message: { data } }),
+        ];
+      } finally {
+        await instance.flow?.collector.command('shutdown');
+      }
+    };
+    expect(await answers({ projectId: 'my-project-id' })).toEqual(
+      await answers({}),
+    );
+  });
 });

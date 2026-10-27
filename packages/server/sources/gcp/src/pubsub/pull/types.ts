@@ -145,7 +145,7 @@ export interface Env extends CoreSource.Env {
 export interface Setup {
   /** Optional: create the topic if it does not exist. Default: false (require pre-existing topic). */
   createTopic?: boolean;
-  /** Subscription ack deadline in seconds. Default: 60. */
+  /** Subscription ack deadline in seconds. Unset: Pub/Sub's default (10). */
   ackDeadlineSeconds?: number;
   /** Subscription message retention. Default: undefined (project default). */
   messageRetentionDuration?: { seconds: number };

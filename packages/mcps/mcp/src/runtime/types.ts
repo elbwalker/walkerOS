@@ -1,4 +1,10 @@
-import type { Flow, Ingest, Simulation, WalkerOS } from '@walkeros/core';
+import type {
+  Flow,
+  Ingest,
+  Simulation,
+  StepKind,
+  WalkerOS,
+} from '@walkeros/core';
 import type { BundleStats, PushResult } from '@walkeros/cli';
 
 /**
@@ -56,11 +62,8 @@ export interface BundleOptions {
   output?: string;
 }
 
-export type SimulateStepType =
-  | 'source'
-  | 'transformer'
-  | 'collector'
-  | 'destination';
+/** The step kinds a simulation runs: every kind but a store. */
+export type SimulateStepType = Exclude<StepKind, 'store'>;
 
 export interface SimulateOptions {
   stepType: SimulateStepType;

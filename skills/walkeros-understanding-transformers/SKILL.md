@@ -15,7 +15,7 @@ events in the walkerOS pipeline. They run in chains at configurable points
 between sources, collector, and destinations.
 
 **Core principle:** Transformers transform events. They don't capture (sources)
-or deliver (destinations)—they modify events in-flight.
+or deliver (destinations); they modify events in-flight.
 
 ## Use Cases
 
@@ -30,9 +30,10 @@ or deliver (destinations)—they modify events in-flight.
 | Package                                    | Env    | Purpose                                            |
 | ------------------------------------------ | ------ | -------------------------------------------------- |
 | `@walkeros/transformer-validate`           | both   | Enforce JSON Schema contracts on events at runtime |
-| `@walkeros/transformer-ga4`                | server | Decode GA4 Measurement Protocol hits into events   |
+| `@walkeros/transformer-ga4`                | both   | Decode GA4 Measurement Protocol hits into events   |
 | `@walkeros/server-transformer-bot`         | server | Annotate an automation score and client category   |
-| `@walkeros/server-transformer-fingerprint` | server | Derive a stable visitor fingerprint                |
+| `@walkeros/server-transformer-fingerprint` | server | Hash request fields into a rotating visitor id     |
+| `@walkeros/server-transformer-file`        | server | Serve static files from a store                    |
 
 ### Contract validation
 
@@ -44,7 +45,7 @@ live in the top-level `contract` block; the transformer references one via
 annotates `event.source.valid` and continues so a downstream step can route on
 the verdict. `format: true` additionally checks the canonical `WalkerOS.Event`
 structure. Filtering is the same mechanism: an inline schema that rejects the
-unwanted events plus `mode: "strict"`, there is no separate `ignore` field. See
+unwanted events plus `mode: "strict"`; there is no separate `ignore` field. See
 [Website: Validate transformer](../../website/docs/transformers/validate.mdx).
 
 ## Transformer Interface
@@ -62,7 +63,7 @@ import type { Transformer } from '@walkeros/core';
 
 export const transformerMyTransformer: Transformer.Init<Types> = (context) => {
   const { config = {}, env, logger, id } = context;
-  // Apply defaults inline — flow.json is developer-controlled, so no
+  // Apply defaults inline: flow.json is developer-controlled, so no
   // runtime validation. Shape checks live in ./schemas and are used by
   // `walkeros validate` and dev tooling, never at runtime.
   const userSettings = config.settings || {};
@@ -72,6 +73,8 @@ export const transformerMyTransformer: Transformer.Init<Types> = (context) => {
   };
 
   return {
+    type: 'my-transformer',
+    config: { ...config, settings },
     push(event, pushContext) {
       // Process event
       return { event };
@@ -89,12 +92,14 @@ export const transformerMyTransformer: Transformer.Init<Types> = (context) => {
 | `logger`    | `Logger`             | Logging functions                       |
 | `id`        | `string`             | Transformer identifier                  |
 | `collector` | `Collector.Instance` | Reference to collector                  |
-| `ingest`    | `Ingest` (optional)  | Request metadata from source            |
+| `ingest`    | `Ingest`             | Empty (`_meta` only); see Push Context  |
 
 ### Instance Methods
 
-| Method    | Purpose                              | Required     |
+| Member    | Purpose                              | Required     |
 | --------- | ------------------------------------ | ------------ |
+| `type`    | Transformer type identifier          | **Required** |
+| `config`  | The transformer's config             | **Required** |
 | `push`    | Process event, return modified/false | **Required** |
 | `init`    | One-time initialization              | Optional     |
 | `destroy` | Cleanup resources                    | Optional     |
@@ -156,8 +161,8 @@ bundler to parse the following string as executable JavaScript:
 
 **Push code has access to:**
 
-- `event` - The event being processed
-- `context` - Push context with logger, config, etc.
+- `event`: the event being processed
+- `context`: push context with logger, config, etc.
 
 **Return values in push code:**
 
@@ -188,10 +193,11 @@ bundler to parse the following string as executable JavaScript:
       "code": {
         "push": "$code:(event) => { event.data.processedAt = new Date().toISOString(); return { event }; }"
       },
-      "next": "enrich"
+      "next": "validate"
     },
-    "enrich": {
-      "package": "@walkeros/transformer-enricher"
+    "validate": {
+      "package": "@walkeros/transformer-validate",
+      "config": { "settings": { "format": true } }
     }
   }
 }
@@ -285,13 +291,13 @@ push(event, context) {
 }
 ```
 
-Conditional routing is built into `next`/`before` properties using the `one`
-operator, no separate router transformer needed:
+Conditional routing is built into the `next`/`before` properties through the
+`one` operator, so no router transformer is needed:
 
 ```json
 "next": {
   "one": [
-    { "match": { "key": "ingest.path", "operator": "prefix", "value": "/api" }, "next": "api-handler" },
+    { "match": { "key": "ingest.path", "operator": "prefix", "value": "/api" }, "next": "apiHandler" },
     { "next": "default" }
   ]
 }
@@ -301,21 +307,27 @@ operator, no separate router transformer needed:
 disjoint union: each config sets at most one of `next` (gated link), `one`
 (first-match dispatch), `many` (all-match fan-out), or `stop` (drop), never more
 than one. Every `match` reads `{ ingest, event }` and is evaluated when the
-event reaches it, so it sees what earlier steps wrote. An entry with no `match`
-always matches (use it as a fallback). If no entry matches, the event passes
-through unchanged. Use `many` (allowed in every chain field) when every matching
-branch should run: each matching entry becomes an independent copy of the event
-with its own derived `event.id`, and each copy finishes the rest of the path on
-its own (never merged):
+event reaches it, so it sees what earlier steps wrote. Besides `_meta`, `ingest`
+holds only what the source's `config.ingest` maps and what earlier steps write
+into it: without `{ "map": { "path": "path" } }` in that config, `ingest.path`
+is empty and the `/api` entry never matches. An entry with no `match` always
+matches (use it as a fallback). If no entry matches, the event passes through
+unchanged. Use `many` (allowed in every chain field) when every matching branch
+should run: each matching entry becomes an independent copy of the event with
+its own derived `event.id`, and each copy finishes the rest of the path on its
+own (never merged):
 
 ```json
 "next": {
   "many": [
-    { "match": { "key": "event.consent.analytics", "operator": "eq", "value": "granted" }, "next": "ga4-pipeline" },
-    { "next": "audit-log" }
+    { "match": { "key": "event.consent.analytics", "operator": "eq", "value": "true" }, "next": "ga4Pipeline" },
+    { "next": "auditLog" }
   ]
 }
 ```
+
+A consent value is a boolean, and `eq` compares it as text, so a granted consent
+matches `"true"`.
 
 ### Paths and pass-through steps
 
@@ -345,10 +357,12 @@ duplicating arrays in `before` / `next` references:
   "destinations": {
     "gtag": {
       "package": "@walkeros/web-destination-gtag",
+      "config": { "settings": { "ga4": { "measurementId": "G-DEMO123456" } } },
       "before": "validateThenEnrich"
     },
     "meta": {
       "package": "@walkeros/web-destination-meta",
+      "config": { "settings": { "pixelId": "1234567890" } },
       "before": "validateThenEnrich"
     }
   }
@@ -411,24 +425,26 @@ semantic is disambiguated by where the step sits:
 
 At the transformer position, only event-mutating fields apply: `policy`, and per
 rule `condition`, `policy`, `name` and `ignore`. `consent`, `include`, `data`
-and per rule `remove`, `batch`, `settings`, `extend`, `silent` do nothing there
-and are named in a one-time init warning. A `config.mapping` wins over the
-step-level `mapping`; next to `code` or `package`, a mapping never runs (warned
-too). `mapping[].ignore: true` drops the event from the chain (not "skip this
+and per rule `consent`, `include`, `remove`, `batch`, `settings`, `extend`,
+`data`, `silent` do nothing there. A `config.mapping` wins over the step-level
+`mapping`; next to `code` or `package`, a mapping never runs.
+`walkeros validate` and the bundle reject all of these (`MAPPING_NO_OP`), and
+the collector logs one ERROR line for them when the transformer registers.
+`mapping[].ignore: true` drops the event from the chain (not "skip this
 destination", which is the destination-position semantic).
 
 ### Closed schema (unknown keys are errors)
 
-Transformer step entries follow a **closed schema**. Known keys only: `code`,
-`package`, `config`, `before`, `next`, `cache`, `mapping`. Unknown keys at the
-top of a step are validation errors. This catches misrouted keys (e.g.
+Transformer step entries follow a **closed schema**. Unknown keys at the top of
+a step are validation errors (`UNKNOWN_KEY`; the message lists the allowed keys,
+among them `package`, `import`, `code`, `config`, `env`, `before`, `next`,
+`cache`, `state` and `mapping`). This catches misrouted keys (e.g.
 `{ rules: [], stop: true }` placed at the top of a step instead of nested under
 `cache:`) at validate time instead of letting them silently pass through at
 runtime.
 
-A step must declare at least one operative field. An empty `{}` is rejected with
-`EMPTY_TRANSFORMER`. Declaring both `code` and `package` on the same step is
-rejected with `CONFLICT`.
+An empty `{}` is a valid no-op step. Declaring both `code` and `package` on the
+same step is rejected with `CONFLICT`.
 
 ### Chain resolution safety
 
@@ -439,7 +455,7 @@ needs the root `{ ingest, event }` and returns `NextSteps`: ids (plus a
 continuation for the rest of a sequence), a stop, or forks. A member `next` that
 leads back to a step already on its insertion path is skipped, and each copy is
 capped at 256 steps. A step listed twice in an array runs twice. An unknown
-transformer id is logged as a warning and skipped, and the chain continues;
+transformer id is logged as an ERROR line and skipped, and the chain continues;
 `walkeros validate` reports it as an `UNKNOWN_ROUTE_TARGET` error. Static tools
 without an event use `getRouteGraph(spec, transformers?)`, which enumerates
 every branch of the same compiled route.
@@ -496,13 +512,14 @@ Transformers can customize HTTP responses by calling
 `context.env.respond?.({ body, status?, headers? })`. This is useful for
 validation transformers that reject events with custom error responses, or
 transformers that short-circuit the pipeline. First call wins (idempotent). The
-respond function is optional — only present when the source provides one.
+respond function is optional, only present when the source provides one.
 
 ## Transformer Paths
 
-| Path                     | Description          |
-| ------------------------ | -------------------- |
-| `packages/transformers/` | Transformer packages |
+| Path                            | Description                                     |
+| ------------------------------- | ----------------------------------------------- |
+| `packages/transformers/`        | Transformers for both platforms (validate, ga4) |
+| `packages/server/transformers/` | Server transformers (bot, fingerprint, file)    |
 
 ## Related Skills
 

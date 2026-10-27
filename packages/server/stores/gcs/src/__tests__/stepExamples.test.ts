@@ -56,7 +56,7 @@ describe('Step Examples', () => {
     __seedBucketExists('my-assets');
   });
 
-  it('readWithAdc — read object from GCS using ADC', async () => {
+  it('readWithAdc: read object from GCS using ADC', async () => {
     const example = examples.step.readWithAdc;
     const input = example.in as { operation: string; key: string };
 
@@ -84,7 +84,7 @@ describe('Step Examples', () => {
     );
   });
 
-  it('prefixScoping — key is scoped under configured prefix', async () => {
+  it('prefixScoping: key is scoped under configured prefix', async () => {
     const example = examples.step.prefixScoping;
     const input = example.in as {
       operation: string;
@@ -115,5 +115,11 @@ describe('Step Examples', () => {
       expect.stringContaining(`/o/${encodeURIComponent(gcsPath)}`),
       expect.anything(),
     );
+  });
+});
+
+describe('Config examples', () => {
+  it('reference the service account JSON as a secret', () => {
+    expect(examples.serviceAccount.credentials).toBe('$secret.GCS_SA_KEY');
   });
 });

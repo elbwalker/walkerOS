@@ -116,4 +116,49 @@ describe('Pub/Sub pull acknowledgement', () => {
     expect(result).toEqual([['message.ack', 'm1']]);
     expect(status.sources.pubsub.rejected).toBe(1);
   });
+
+  // text and raw forward the payload as data.payload: no event name, so the
+  // collector rejects it unless a before transformer builds the event.
+  it.each(['text', 'raw'] as const)(
+    'acks a %s-decoded message as rejected input',
+    async (decoder) => {
+      const delivered: string[] = [];
+      const instance = await createTrigger({
+        logger: { handler: () => undefined },
+        sources: {
+          pubsub: {
+            code: sourcePubSubPull,
+            config: {
+              settings: {
+                projectId: 'project',
+                subscription: 'events',
+                client,
+                decoder,
+              },
+            },
+          },
+        },
+        destinations: {
+          vendorX: {
+            code: {
+              type: 'capture',
+              config: {},
+              push: (event) => void delivered.push(event.name),
+            },
+          },
+        },
+      });
+      try {
+        const result = await instance.trigger()({
+          id: 'm1',
+          dataString: 'plain text payload',
+        });
+        expect(result).toEqual([['message.ack', 'm1']]);
+        expect(delivered).toEqual([]);
+        expect(instance.flow?.collector.status.sources.pubsub.rejected).toBe(1);
+      } finally {
+        await instance.flow?.collector.command('shutdown');
+      }
+    },
+  );
 });

@@ -93,7 +93,7 @@ export const customTransform: Flow.StepExample = {
       map: {
         order_id: 'data.id',
         amount: 'data.value',
-        tax: 'data.taxes',
+        tax: 'data.tax',
         shipping_cost: 'data.shipping',
         currency: 'data.currency',
         event_name: 'name',
@@ -107,7 +107,7 @@ export const customTransform: Flow.StepExample = {
       URL,
       JSON.stringify({
         order_id: '0rd3r1d',
-        amount: 555,
+        amount: 462,
         tax: 73.76,
         shipping_cost: 5.22,
         currency: 'EUR',

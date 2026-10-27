@@ -34,7 +34,7 @@ npm install @walkeros/web-destination-clarity
           "package": "@walkeros/web-destination-clarity",
           "config": {
             "settings": {
-              "apiKey": "3t0wlogvdz",
+              "apiKey": "YOUR_PROJECT_ID",
               "consent": {
                 "analytics": "analytics_Storage",
                 "marketing": "ad_Storage"

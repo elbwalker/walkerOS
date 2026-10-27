@@ -25,6 +25,7 @@ describe('file conformance', () => {
       schema: schemas.settings,
       settings: { filename: path.join(dir, 'events.jsonl') },
       env: { push: examples.env.push, simulation: examples.env.simulation },
+      minimal: examples.minimal,
       root: path.join(__dirname, '..', '..'),
     });
   });

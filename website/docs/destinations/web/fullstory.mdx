@@ -8,6 +8,7 @@ package: '@walkeros/web-destination-fullstory'
 
 import data from '@walkeros/web-destination-fullstory/walkerOS.json';
 import Configuration from '@site/src/components/snippets/_configuration.mdx';
+import Quickstart from '@site/src/components/snippets/_quickstart.mdx';
 
 import WhereThisFits from '@site/src/components/snippets/_where-this-fits.mdx';
 
@@ -36,56 +37,7 @@ identity, user/page properties, and consent gating via `start`/`shutdown`.
 
 ## Installation
 
-<CodeSnippet
-  code={`npm install @walkeros/web-destination-fullstory`}
-  language="bash"
-/>
-
-<Tabs groupId="mode">
-  <TabItem value="integrated" label="Integrated" default>
-
-<CodeSnippet
-  code={`import { startFlow } from '@walkeros/collector';
-import { destinationFullStory } from '@walkeros/web-destination-fullstory';
-
-await startFlow({
-  destinations: {
-    fullstory: {
-      code: destinationFullStory,
-      config: {
-        settings: {
-          orgId: 'o-XXXXXX-na1',
-        },
-      },
-    },
-  },
-});`}
-  language="typescript"
-/>
-
-  </TabItem>
-  <TabItem value="bundled" label="Bundled">
-
-Add to your `flow.json` destinations:
-
-<CodeSnippet
-  code={`"destinations": {
-  "fullstory": {
-    "package": "@walkeros/web-destination-fullstory",
-    "config": {
-      "settings": {
-        "orgId": "o-XXXXXX-na1"
-      }
-    }
-  }
-}`}
-  language="json"
-/>
-
-[See bundled mode setup](/docs/getting-started/modes/bundled) | [CLI reference](/docs/apps/cli)
-
-  </TabItem>
-</Tabs>
+<Quickstart data={data} />
 
 <Configuration type="destination" data={data} />
 
@@ -107,7 +59,7 @@ to delay recording until consent is granted:
 <CodeSnippet
   code={`destinations: {
   fullstory: {
-    code: destinationFullStory,
+    code: destinationFullstory,
     config: {
       consent: { analytics: true },
       settings: {

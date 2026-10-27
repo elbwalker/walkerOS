@@ -190,7 +190,7 @@ describe('buildHits', () => {
     );
     expect(hits).toHaveLength(1);
     expect(hits[0].get('idgoal')).toBe('g1');
-    expect(hits[0].get('revenue')).toBe('555');
+    expect(hits[0].get('revenue')).toBe('462');
     expect(hits[0].has('e_c')).toBe(false);
   });
 

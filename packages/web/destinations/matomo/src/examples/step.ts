@@ -88,7 +88,7 @@ export const customEvent: StepExample = {
       goalId: '1',
     },
     data: {
-      set: ['data.name', 'data.position'],
+      set: ['data.name', 'data.slot'],
     },
   },
   out: [
@@ -135,8 +135,8 @@ export const ecommerceOrder: StepExample = {
         {
           map: {
             orderId: 'data.id',
-            grandTotal: 'data.value',
-            tax: 'data.taxes',
+            grandTotal: ['data.total', 'data.value'],
+            tax: 'data.tax',
             shipping: 'data.shipping',
           },
         },
@@ -166,7 +166,7 @@ export const ecommerceOrder: StepExample = {
         ],
         {
           orderId: '0rd3r1d',
-          grandTotal: 555,
+          grandTotal: 467.22,
           tax: 73.76,
           shipping: 5.22,
         },
@@ -291,7 +291,7 @@ export const siteSearch: StepExample = {
   in: createEvent({
     name: 'search submit',
     timestamp: 1700000405,
-    data: { query: 'shoes', category: 'products', resultsCount: 42 },
+    data: { term: 'shoes', category: 'products', results: 42 },
   }),
   mapping: {
     name: 'trackSiteSearch',
@@ -299,7 +299,7 @@ export const siteSearch: StepExample = {
       siteSearch: true,
     },
     data: {
-      set: ['data.query', 'data.category', 'data.resultsCount'],
+      set: ['data.term', 'data.category', 'data.results'],
     },
   },
   out: [['_paq.push', ['trackSiteSearch', 'shoes', 'products', 42]]],
@@ -315,7 +315,7 @@ export const goalTracking: StepExample = {
     'A promotion event fires Matomo trackEvent and then trackGoal with a monetary goal value from event data.',
   in: getEvent('promotion visible', {
     timestamp: 1700000406,
-    data: { name: 'Setting up tracking easily', position: 'hero', value: 50 },
+    data: { name: 'Setting up tracking easily', slot: 'hero', value: 50 },
   }),
   mapping: {
     name: 'trackEvent',

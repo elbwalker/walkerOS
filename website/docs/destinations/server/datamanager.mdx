@@ -7,6 +7,7 @@ package: '@walkeros/server-destination-datamanager'
 ---
 import data from '@walkeros/server-destination-datamanager/walkerOS.json';
 import Configuration from '@site/src/components/snippets/_configuration.mdx';
+import Quickstart from '@site/src/components/snippets/_quickstart.mdx';
 
 import WhereThisFits from '@site/src/components/snippets/_where-this-fits.mdx';
 
@@ -28,42 +29,9 @@ advertising ecosystem through a single unified API endpoint.
 
 ## Installation
 
-<CodeSnippet
-  code={`npm install @walkeros/server-destination-datamanager`}
-  language="bash"
-/>
+<Quickstart data={data} />
 
-<CodeSnippet
-  code={`import { startFlow } from '@walkeros/collector';
-import { destinationDataManager } from '@walkeros/server-destination-datamanager';
-
-await startFlow({
-  destinations: {
-    datamanager: {
-      code: destinationDataManager,
-      config: {
-        // Service account credentials
-        credentials: {
-          client_email: process.env.GOOGLE_CLIENT_EMAIL,
-          private_key: process.env.GOOGLE_PRIVATE_KEY,
-        },
-        settings: {
-          destinations: [
-            {
-              operatingAccount: {
-                accountId: '123-456-7890',
-                accountType: 'GOOGLE_ADS',
-              },
-              productDestinationId: 'AW-CONVERSION-123',
-            },
-          ],
-        },
-      },
-    },
-  },
-});`}
-  language="typescript"
-/>
+The destination authenticates with Application Default Credentials: the `GOOGLE_APPLICATION_CREDENTIALS` environment variable, or the metadata server on Google Cloud. To use a service account instead, set `config.credentials` to its `client_email` and `private_key`, or `settings.keyFilename` to the path of its key file.
 
 <Configuration type="destination" data={data} />
 

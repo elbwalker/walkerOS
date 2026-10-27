@@ -1,4 +1,5 @@
 import {
+  configJsonSchema,
   InitSourceSchema,
   initSourceJsonSchema,
   PartialConfigSchema,
@@ -71,5 +72,32 @@ describe('Source.Config async', () => {
   it('rejects a non-boolean record value', () => {
     const result = PartialConfigSchema.safeParse({ async: { GET: 'yes' } });
     expect(result.success).toBe(false);
+  });
+});
+
+// These descriptions render in the sources docs and in MCP: they must say what
+// the collector does. `require` delays only on() deliveries, setup runs only
+// on `walkeros setup`, and ingest resolves against the normalized scope.
+describe('Source.Config descriptions', () => {
+  it.each([
+    [
+      'require',
+      /^Collector events .* before the source receives on\(\) calls; init and event capture are not delayed/,
+    ],
+    [
+      'setup',
+      /^Provisioning options for `walkeros setup`, which runs only when invoked/,
+    ],
+    ['ingest', /resolves against the normalized request scope/],
+  ])('describes %s by its behaviour', (key, pattern) => {
+    expect(configJsonSchema).toMatchObject({
+      definitions: {
+        SourceConfig: {
+          properties: {
+            [key]: { description: expect.stringMatching(pattern) },
+          },
+        },
+      },
+    });
   });
 });

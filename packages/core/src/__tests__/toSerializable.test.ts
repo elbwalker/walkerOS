@@ -1,4 +1,5 @@
-import { toSerializable } from '../index.mjs';
+import { z } from '../schemas';
+import { toSerializable } from '../toSerializable';
 
 describe('toSerializable', () => {
   // Primitives
@@ -28,24 +29,23 @@ describe('toSerializable', () => {
   // Functions
   it('converts functions to $code objects', () => {
     const fn = () => 'test';
-    const result = toSerializable(fn);
-    expect(result).toEqual({ $code: fn.toString() });
+    expect(toSerializable(fn)).toEqual({ $code: fn.toString() });
   });
 
   it('converts named functions to $code objects', () => {
-    function myFunc(a, b) {
+    function myFunc(a: number, b: number) {
       return a + b;
     }
-    const result = toSerializable(myFunc);
-    expect(result).toHaveProperty('$code');
-    expect(result.$code).toContain('myFunc');
+    expect(toSerializable(myFunc)).toEqual({
+      $code: expect.stringContaining('myFunc'),
+    });
   });
 
   // Zod schema instances (objects with _def.typeName starting with 'Zod')
   it('should filter out Zod schema instances', () => {
     const zodSchema = {
-      parse: (val) => val,
-      safeParse: (val) => ({ success: true, data: val }),
+      parse: (val: unknown) => val,
+      safeParse: (val: unknown) => ({ success: true, data: val }),
       _def: { typeName: 'ZodObject' },
     };
     expect(toSerializable(zodSchema)).toBeUndefined();
@@ -65,6 +65,10 @@ describe('toSerializable', () => {
       _zod: { def: {}, constr: {}, traits: new Set(), bag: {} },
     };
     expect(toSerializable(zod4Schema)).toBeUndefined();
+  });
+
+  it('filters out a real Zod schema', () => {
+    expect(toSerializable(z.object({ url: z.string() }))).toBeUndefined();
   });
 
   it('filters out Zod 4 instances from nested objects', () => {
@@ -89,9 +93,14 @@ describe('toSerializable', () => {
   });
 
   it('should NOT filter out non-Zod objects that have a .parse method', () => {
-    const csvParser = { parse: (str) => str.split(','), data: [1, 2, 3] };
-    const result = toSerializable(csvParser);
-    expect(result).toEqual({ data: [1, 2, 3], parse: { $code: csvParser.parse.toString() } });
+    const csvParser = {
+      parse: (str: string) => str.split(','),
+      data: [1, 2, 3],
+    };
+    expect(toSerializable(csvParser)).toEqual({
+      data: [1, 2, 3],
+      parse: { $code: csvParser.parse.toString() },
+    });
   });
 
   // Plain objects
@@ -124,10 +133,11 @@ describe('toSerializable', () => {
       handler: noop,
       nested: { callback: noop },
     };
-    const result = toSerializable(obj);
-    expect(result.name).toBe('test');
-    expect(result.handler).toEqual({ $code: noop.toString() });
-    expect(result.nested.callback).toEqual({ $code: noop.toString() });
+    expect(toSerializable(obj)).toEqual({
+      name: 'test',
+      handler: { $code: noop.toString() },
+      nested: { callback: { $code: noop.toString() } },
+    });
   });
 
   // Arrays
@@ -142,19 +152,29 @@ describe('toSerializable', () => {
       { name: 'also keep' },
     ];
     const result = toSerializable(arr);
-    expect(result).toEqual([{ name: 'keep' }, undefined, { name: 'also keep' }]);
+    expect(result).toEqual([
+      { name: 'keep' },
+      undefined,
+      { name: 'also keep' },
+    ]);
     expect(result).toHaveLength(3);
   });
 
   it('converts functions inside arrays', () => {
     const fn = () => 'test';
-    const result = toSerializable([1, fn, 'three']);
-    expect(result).toEqual([1, { $code: fn.toString() }, 'three']);
+    expect(toSerializable([1, fn, 'three'])).toEqual([
+      1,
+      { $code: fn.toString() },
+      'three',
+    ]);
   });
 
   it('handles nested arrays', () => {
-    const result = toSerializable([[1, 2], [3, 4]]);
-    expect(result).toEqual([[1, 2], [3, 4]]);
+    const nested = [
+      [1, 2],
+      [3, 4],
+    ];
+    expect(toSerializable(nested)).toEqual(nested);
   });
 
   // Complex/realistic scenario
@@ -170,23 +190,24 @@ describe('toSerializable', () => {
       },
     };
 
-    const result = toSerializable(devExports);
-
-    // sendServer undefined should be stripped (key omitted)
-    expect(result.env.init).toEqual({});
-    // sendServer function should become $code
-    expect(result.env.standard.sendServer).toHaveProperty('$code');
-    expect(result.env.standard.sendServer.$code).toContain('Promise.resolve');
-    // Plain data passes through
-    expect(result.events.pageView).toEqual({
-      event: 'page view',
-      data: { title: 'Home' },
+    // sendServer undefined is stripped (key omitted), the function becomes
+    // $code and plain data passes through
+    expect(toSerializable(devExports)).toEqual({
+      env: {
+        init: {},
+        standard: {
+          sendServer: { $code: expect.stringContaining('Promise.resolve') },
+        },
+      },
+      events: {
+        pageView: { event: 'page view', data: { title: 'Home' } },
+      },
     });
   });
 
   // JSON roundtrip safety
   it('produces JSON-safe output', () => {
-    const fn = (a) => a * 2;
+    const fn = (a: number) => a * 2;
     const input = {
       name: 'test',
       handler: fn,
@@ -194,14 +215,13 @@ describe('toSerializable', () => {
       data: [1, 'two', { nested: true }],
     };
 
-    const result = toSerializable(input);
-    const json = JSON.stringify(result);
-    const parsed = JSON.parse(json);
+    const parsed: unknown = JSON.parse(JSON.stringify(toSerializable(input)));
 
-    expect(parsed.name).toBe('test');
-    expect(parsed.handler.$code).toContain('a * 2');
-    expect(parsed).not.toHaveProperty('zodSchema');
-    expect(parsed.data).toEqual([1, 'two', { nested: true }]);
+    expect(parsed).toEqual({
+      name: 'test',
+      handler: { $code: expect.stringContaining('a * 2') },
+      data: [1, 'two', { nested: true }],
+    });
   });
 
   // Edge cases

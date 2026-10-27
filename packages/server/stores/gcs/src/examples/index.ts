@@ -17,7 +17,7 @@ export const serviceAccount: Store.Config = {
     bucket: 'my-assets',
     prefix: 'public',
   },
-  credentials: '$env.GCS_SA_KEY',
+  credentials: '$secret.GCS_SA_KEY',
   file: true,
 };
 

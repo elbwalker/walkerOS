@@ -91,7 +91,7 @@ export const orderCompleteFullConversion: LinkedInStepExample = {
       'track',
       {
         conversion_id: 67890,
-        conversion_value: 555,
+        conversion_value: 462,
         currency: 'EUR',
         event_id: '1700000102abcdef',
       },

@@ -24,6 +24,7 @@ describe('optimizely conformance', () => {
         batchSize: 10,
         flushInterval: 1000,
       },
+      minimal: examples.minimal,
       env: { push: examples.env.push, simulation: examples.env.simulation },
       root: path.join(__dirname, '..', '..'),
     });

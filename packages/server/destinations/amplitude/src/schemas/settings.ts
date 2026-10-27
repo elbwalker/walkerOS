@@ -58,7 +58,7 @@ export const SettingsSchema = z
     optOut: z
       .boolean()
       .describe(
-        'Initial opt-out state. When true, no events are sent. Default: false.',
+        'Initial opt-out state. When true, no events are sent, and each event the destination receives fails with a transport error. Default: false.',
       )
       .optional(),
     enableRequestBodyCompression: z
