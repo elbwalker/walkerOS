@@ -1,5 +1,5 @@
 ---
-'@walkeros/collector': patch
+'@walkeros/collector': minor
 ---
 
 The `minimal` check of `conformance` accepts a setting the schema leaves
