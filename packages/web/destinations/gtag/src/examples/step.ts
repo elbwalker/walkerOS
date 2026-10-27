@@ -247,20 +247,20 @@ export const purchase: Flow.StepExample = {
 };
 
 /**
- * Consent Mode v2 with marketing + functional granted.
+ * Consent Mode v2 with marketing + analytics granted.
  *
  * Uses the `command: 'consent'` field to route `in` through the
  * `elb('walker consent', in)` handler rather than pushing it as an event.
  * The default consent mapping is:
  *   marketing → ad_storage, ad_user_data, ad_personalization
- *   functional → analytics_storage
+ *   analytics → analytics_storage
  */
 export const consentModeV2: Flow.StepExample = {
   title: 'Consent Mode v2',
   description:
-    'A walker consent command with marketing and functional granted updates gtag Consent Mode v2 parameters.',
+    'A walker consent command with marketing and analytics granted updates gtag Consent Mode v2 parameters.',
   command: 'consent',
-  in: { marketing: true, functional: true },
+  in: { marketing: true, analytics: true },
   out: [
     // First consent call sets default to denied for all mapped parameters.
     [

@@ -1,0 +1,140 @@
+---
+title: Cookiebot
+description: Integrate Cookiebot consent management with walkerOS
+---
+
+import data from '@walkeros/web-source-cmp-cookiebot/walkerOS.json';
+import Configuration from '@site/src/components/snippets/_configuration.mdx';
+
+# Cookiebot
+
+Integrates [Cookiebot](https://www.cookiebot.com/) consent management with walkerOS by mapping Cookiebot's categories `preferences`, `statistics` and `marketing` to walkerOS consent groups. Strictly necessary cookies are reported as `necessary`.
+
+## Installation
+
+```bash
+npm install @walkeros/web-source-cmp-cookiebot
+```
+
+```typescript
+import { startFlow } from '@walkeros/collector';
+import { sourceCookiebot } from '@walkeros/web-source-cmp-cookiebot';
+
+await startFlow({
+  sources: {
+    consent: {
+      code: sourceCookiebot,
+    },
+  },
+});
+```
+
+<Configuration type="source" data={data} />
+
+## How it works
+
+1. **Already loaded**: If `window.Cookiebot` already holds the visitor's
+   choice when the source starts, the source publishes it at once.
+
+2. **Decision events**: The source listens for Cookiebot's
+   `CookiebotOnAccept` and `CookiebotOnDecline` window events. Cookiebot fires
+   one of them on every page load with a stored choice and again after each new
+   choice, including a withdrawal. Each time, the source reads
+   `window.Cookiebot.consent`.
+
+3. **Mapping**: The four Cookiebot categories are mapped through
+   `categoryMap` and published with `elb('walker consent', state)`. Denied
+   groups are published as `false`.
+
+4. **One command per choice**: A stored choice is reported both by the read at
+   start and by the event on page load. The source sends a state only when it
+   differs from the last one it sent.
+
+### Default category mapping
+
+```typescript
+{
+  preferences: 'functional',
+  statistics: 'analytics',
+  marketing: 'marketing',
+}
+```
+
+`necessary` has no entry and is published as `necessary`. Cookiebot always
+grants it, so `functional` follows the visitor's `preferences` choice instead of
+being granted with every choice. Category names are compared
+case-insensitively, and any category without an entry keeps its own name.
+
+When several categories map to the same group, the group is `true` only if
+every one of them is granted: any deny denies.
+
+Custom entries are merged with the default mapping. Specify only the categories
+you want to override. All other defaults remain active.
+
+### Custom mapping example
+
+```typescript
+await startFlow({
+  sources: {
+    consent: {
+      code: sourceCookiebot,
+      config: {
+        settings: {
+          categoryMap: {
+            statistics: 'statistics', // Use 'statistics' instead of 'analytics'
+          },
+        },
+      },
+    },
+  },
+});
+```
+
+### Implied consent
+
+Cookiebot records how consent was given in `consent.method`: `explicit` when
+the visitor chose, `implied` when Cookiebot consented on its own. Cookiebot
+implies consent for visitors outside the regions where your site asks for
+consent, for an implied-consent banner, and for old consents of unknown method.
+
+With `explicitOnly: true` (the default) the source waits for the visitor's
+explicit decision and publishes only explicit consent. For a visitor with
+implied consent it sends no consent command, so destinations and sources that
+require consent keep waiting until that visitor decides. To follow the consent
+Cookiebot implied, set `explicitOnly: false`:
+
+```typescript
+await startFlow({
+  sources: {
+    consent: {
+      code: sourceCookiebot,
+      config: { settings: { explicitOnly: false } },
+    },
+  },
+});
+```
+
+### Google Consent Mode
+
+Cookiebot sends Google Consent Mode updates itself unless its script tag
+carries `data-consentmode="disabled"`. The
+[gtag destination](/docs/destinations/web/gtag) does the same with its `como`
+setting, so with both on Google receives every update twice. Keep one of them:
+disable it on the Cookiebot script tag, or set `"como": false` on the gtag
+destination.
+
+### Timing considerations
+
+The source handles both load orders:
+
+- **Cookiebot loads before the source**: the read at start publishes the
+  stored choice.
+- **Source loads before Cookiebot**: the source publishes the choice when
+  Cookiebot fires `CookiebotOnAccept` or `CookiebotOnDecline`.
+- **First visit**: until the visitor answers the banner, Cookiebot holds no
+  choice and the source sends nothing.
+
+## Reference
+
+- [Cookiebot JavaScript SDK](https://www.cookiebot.com/en/developer/)
+- [Source code](https://github.com/elbwalker/walkerOS/tree/main/packages/web/sources/cmps/cookiebot)

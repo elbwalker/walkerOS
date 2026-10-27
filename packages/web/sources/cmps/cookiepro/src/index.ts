@@ -11,18 +11,21 @@ export * as SourceCookiePro from './types';
  * Lookups are case-insensitive (normalized during init).
  *
  * Maps OneTrust's standard category IDs to walkerOS convention:
- * - C0001 (Strictly Necessary) -> functional
+ * - C0001 (Strictly Necessary) -> necessary
  * - C0002 (Performance) -> analytics
  * - C0003 (Functional) -> functional
  * - C0004 (Targeting) -> marketing
- * - C0005 (Social Media) -> marketing
+ * - C0005 (Social Media) -> social
+ *
+ * Strictly necessary cookies need no consent, so C0001 grants no consent
+ * group and is reported under its own name.
  */
 export const DEFAULT_CATEGORY_MAP: Record<string, string> = {
-  C0001: 'functional',
+  C0001: 'necessary',
   C0002: 'analytics',
   C0003: 'functional',
   C0004: 'marketing',
-  C0005: 'marketing',
+  C0005: 'social',
 };
 
 /**
@@ -99,38 +102,29 @@ export const sourceCookiePro: Source.Init<Types> = async (context) => {
     const globalName = settings.globalName ?? 'OneTrust';
 
     /**
-     * Collect all unique walkerOS group names from the normalizedMap.
-     * Used to set explicit false for absent groups.
-     */
-    const allMappedGroups = new Set(Object.values(normalizedMap));
-
-    /**
      * Parse OptanonActiveGroups string into walkerOS consent state.
      *
      * OptanonActiveGroups format: ",C0001,C0003," (comma-separated, leading/trailing commas)
      * Only active groups are listed. Absence means denied.
      * Uses case-insensitive comparison for category IDs via normalizedMap.
      * Only mapped categories produce consent entries (unmapped IDs are ignored).
-     * Sets explicit false for all mapped groups not in the active list.
+     * Every mapped group gets an explicit value. Any deny denies: a group is
+     * true only when every ID mapped to it is active.
      */
     const parseActiveGroups = (activeGroups: string): WalkerOS.Consent => {
+      const active = new Set(
+        activeGroups
+          .split(',')
+          .filter((id) => id.length > 0)
+          .map((id) => id.toLowerCase()),
+      );
+
       const state: WalkerOS.Consent = {};
-
-      // Initialize all mapped groups to false
-      allMappedGroups.forEach((group) => {
-        state[group] = false;
+      Object.entries(normalizedMap).forEach(([id, group]) => {
+        const granted = active.has(id);
+        state[group] =
+          state[group] === undefined ? granted : state[group] && granted;
       });
-
-      // Set active groups to true (case-insensitive via normalizedMap)
-      activeGroups
-        .split(',')
-        .filter((id) => id.length > 0)
-        .forEach((id) => {
-          const mapped = normalizedMap[id.toLowerCase()];
-          if (mapped) {
-            state[mapped] = true;
-          }
-        });
 
       return state;
     };

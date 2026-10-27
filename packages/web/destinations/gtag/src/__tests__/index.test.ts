@@ -28,6 +28,7 @@ jest.mock('../gtm', () => ({
   pushGTMEvent: jest.fn(),
 }));
 
+import { startFlow } from '@walkeros/collector';
 import { initGA4, pushGA4Event } from '../ga4';
 import { initAds, pushAdsEvent, resolveUserData } from '../ads';
 import { initGTM, pushGTMEvent } from '../gtm';
@@ -621,7 +622,7 @@ describe('Unified Gtag Destination', () => {
           collector: mockCollector,
           id: contextId,
           config: destination.config,
-          data: { marketing: true, functional: false },
+          data: { marketing: true, analytics: false },
           env: mockEnvWithGtag,
           logger: mockLogger,
         });
@@ -664,7 +665,7 @@ describe('Unified Gtag Destination', () => {
           id: contextId,
           collector: mockCollector,
           config: destination.config,
-          data: { marketing: false, functional: false },
+          data: { marketing: false, analytics: false },
           env: mockEnvWithGtag,
           logger: mockLogger,
         });
@@ -714,7 +715,7 @@ describe('Unified Gtag Destination', () => {
           id: contextId,
           collector: mockCollector,
           config: destination.config,
-          data: { marketing: false, functional: false },
+          data: { marketing: false, analytics: false },
           env: mockEnvWithGtag,
           logger: mockLogger,
         });
@@ -741,7 +742,7 @@ describe('Unified Gtag Destination', () => {
           id: contextId,
           collector: mockCollector,
           config: destination.config,
-          data: { marketing: false, functional: true },
+          data: { marketing: false, analytics: true },
           env: mockEnvWithGtag,
           logger: mockLogger,
         });
@@ -777,7 +778,7 @@ describe('Unified Gtag Destination', () => {
           id: contextId,
           collector: mockCollector,
           config: destination.config,
-          data: { marketing: true, functional: true },
+          data: { marketing: true, analytics: true },
           env: mockEnvWithGtag,
           logger: mockLogger,
         });
@@ -812,6 +813,61 @@ describe('Unified Gtag Destination', () => {
 
         // Verify regular event processing still works
         expect(pushGA4Event).toHaveBeenCalled();
+      });
+
+      it('does not grant analytics_storage from functional under the default mapping', async () => {
+        const destination = { ...destinationGtag };
+        destination.config = {
+          settings: { como: true, ga4: { measurementId: 'G-TEST123' } },
+        };
+        destination.env = mockEnvWithGtag;
+
+        await destination.on?.('consent', {
+          id: contextId,
+          collector: mockCollector,
+          config: destination.config,
+          data: { marketing: false, functional: true, analytics: false },
+          env: mockEnvWithGtag,
+          logger: mockLogger,
+        });
+
+        expect(mockGtag).toHaveBeenCalledWith('consent', 'update', {
+          ad_storage: 'denied',
+          ad_user_data: 'denied',
+          ad_personalization: 'denied',
+          analytics_storage: 'denied',
+        });
+      });
+
+      it('decides a parameter mapped from two groups from the whole state', async () => {
+        const destination = { ...destinationGtag };
+        destination.config = {
+          settings: {
+            como: {
+              analytics: 'analytics_storage',
+              functional: 'analytics_storage',
+            },
+            ga4: { measurementId: 'G-TEST123' },
+          },
+        };
+        destination.env = mockEnvWithGtag;
+        const { collector } = await startFlow({ run: false });
+        await collector.command('consent', { analytics: true });
+
+        // The command changes only functional; analytics was granted before,
+        // so the whole state grants the parameter
+        await destination.on?.('consent', {
+          id: contextId,
+          collector,
+          config: destination.config,
+          data: { functional: true },
+          env: mockEnvWithGtag,
+          logger: mockLogger,
+        });
+
+        expect(mockGtag).toHaveBeenCalledWith('consent', 'update', {
+          analytics_storage: 'granted',
+        });
       });
 
       it('should handle custom consent mapping', () => {

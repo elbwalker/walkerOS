@@ -1,7 +1,7 @@
+import { DEFAULT_CONSENT_MODE_MAPPING } from '@walkeros/web-core';
 import {
   DEFAULT_CONSENT_MAPPING,
   resolveConsentMapping,
-  collectGtagParams,
   buildDefaultConsent,
   hasConsentSignal,
 } from '../shared/consent';
@@ -24,15 +24,8 @@ describe('shared/consent', () => {
     expect(resolveConsentMapping({ como: custom })).toEqual(custom);
   });
 
-  it('collects all unique gtag params from a mapping', () => {
-    expect(collectGtagParams(DEFAULT_CONSENT_MAPPING).sort()).toEqual(
-      [
-        'ad_personalization',
-        'ad_storage',
-        'ad_user_data',
-        'analytics_storage',
-      ].sort(),
-    );
+  it('uses the shared consent mode default', () => {
+    expect(DEFAULT_CONSENT_MAPPING).toBe(DEFAULT_CONSENT_MODE_MAPPING);
   });
 
   it('builds an all-denied default object', () => {

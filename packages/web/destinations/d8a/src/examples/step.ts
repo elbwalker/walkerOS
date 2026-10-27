@@ -150,7 +150,7 @@ export const consentMode: Flow.StepExample = {
   description:
     'A walker consent command updates d8a using gtag consent mode parameters.',
   command: 'consent',
-  in: { marketing: true, functional: true },
+  in: { marketing: true, analytics: true },
   out: [
     [
       'd8a',

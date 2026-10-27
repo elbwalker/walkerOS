@@ -349,7 +349,8 @@ walkeros push packages/cli/examples/flow-complete.json -f web -e '{"name":"order
 - **Features:**
   - `cmp-category-map` at
     `/flows/web/sources/usercentrics/config/settings/categoryMap`: categoryMap
-    maps CMP categories onto exactly the consent keys the contract names.
+    maps CMP categories onto exactly the consent keys the contract names; folded
+    in, essential never grants functional alone.
   - `cmp-explicit-only` at
     `/flows/web/sources/usercentrics/config/settings/explicitOnly`: explicitOnly
     publishes consent only after a real decision, so consent.functional present
@@ -389,8 +390,9 @@ walkeros push packages/cli/examples/flow-complete.json -f web -e '{"name":"order
   - `pubsub-before` at `/flows/server/destinations/pubsub/before`: A conditional
     next on Pub/Sub runs pseudonymize only when an email exists; other events
     pass untouched.
-  - `ga4-como` at `/flows/web/destinations/ga4/config/settings/como`: como turns
-    walker consent into Google Consent Mode calls.
+  - `ga4-como` at `/flows/web/destinations/ga4/config/settings/como`: como maps
+    this flow's consent keys to Google Consent Mode: functional to
+    analytics_storage, marketing to the ad parameters.
 - **Consent keys:** there are no collector consent defaults, only granted keys
   travel. `consent.functional` is set only by Usercentrics with `explicitOnly`,
   so its presence means the user decided.

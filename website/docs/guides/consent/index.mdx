@@ -43,9 +43,10 @@ state as it is.
 
 ## Configure consent in a flow
 
-This web flow uses a CMP source to record consent, allows the gtag
-destination to receive events only with analytics or marketing consent, and
-maps the CMP source's `analytics` group to Google's `analytics_storage`:
+This web flow uses a CMP source to record consent and allows the gtag
+destination to receive events only with analytics or marketing consent. The
+gtag destination's default Consent Mode mapping sends the CMP source's
+`analytics` group to Google's `analytics_storage`:
 
 <CodeSnippet
   code={`{
@@ -71,14 +72,6 @@ maps the CMP source's `analytics` group to Google's `analytics_storage`:
             "loadScript": true,
             "consent": { "analytics": true, "marketing": true },
             "settings": {
-              "como": {
-                "marketing": [
-                  "ad_storage",
-                  "ad_user_data",
-                  "ad_personalization"
-                ],
-                "analytics": "analytics_storage"
-              },
               "ga4": {
                 "measurementId": "G-XXXXXXXXXX",
                 "pageview": false
@@ -362,14 +355,16 @@ initializes until initialization. The default mapping is:
 | walkerOS key | Consent Mode parameters                             |
 | ------------ | --------------------------------------------------- |
 | `marketing`  | `ad_storage`, `ad_user_data`, `ad_personalization`  |
-| `functional` | `analytics_storage`                                 |
+| `analytics`  | `analytics_storage`                                 |
 
-The CookieFirst and CookiePro sources report measurement consent as
-`analytics` and, by default, map strictly necessary cookies to `functional`,
-which is granted as soon as the CMP reports a choice. With the default
-mapping, `analytics_storage` is then granted even when the user denied
-analytics. With these sources, map `analytics` instead, as in the example
-below.
+The Cookiebot, CookieFirst and CookiePro sources report measurement consent as
+`analytics` and advertising consent as `marketing`, so the default mapping
+follows the visitor's choices. The Usercentrics source reports your own
+category slugs: map your measurement category to `analytics` and your
+advertising category to `marketing` in its `categoryMap`, or `analytics_storage`
+stays denied.
+When several walkerOS keys map to the same parameter, the parameter is
+`granted` only if every one of them is granted in the current consent state.
 
 Pass an object to use your own keys:
 
@@ -378,11 +373,11 @@ Pass an object to use your own keys:
   "package": "@walkeros/web-destination-gtag",
   "config": {
     "loadScript": true,
-    "consent": { "analytics": true, "marketing": true },
+    "consent": { "statistics": true, "marketing": true },
     "settings": {
       "como": {
         "marketing": ["ad_storage", "ad_user_data", "ad_personalization"],
-        "analytics": "analytics_storage"
+        "statistics": "analytics_storage"
       },
       "ga4": { "measurementId": "G-XXXXXXXXXX", "pageview": false }
     }

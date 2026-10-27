@@ -19,7 +19,7 @@ import {
   stepId,
   StepError,
 } from '@walkeros/core';
-import { getEnv } from '@walkeros/web-core';
+import { getEnv, resolveConsentMode } from '@walkeros/web-core';
 
 // Types
 export * as DestinationGtag from './types';
@@ -209,7 +209,11 @@ export const destinationGtag: Destination = {
     // Only handle consent events
     if (type !== 'consent' || !isObject(context.data)) return;
 
-    const consent = context.data;
+    // The consent groups this command changed, as booleans
+    const consent: WalkerOS.Consent = {};
+    Object.entries(context.data).forEach(([group, granted]) => {
+      if (typeof granted === 'boolean') consent[group] = granted;
+    });
     // `on` runs with the runtime (non-generic) context, so config.settings and
     // env surface as the loose base types. Narrowing them to this destination's
     // own Settings/Env needs a core-types change to make `on` generic over
@@ -231,21 +235,14 @@ export const destinationGtag: Destination = {
       ? undefined
       : buildDefaultConsent(settings);
 
-    // Build gtag consent object for update
-    const gtagConsent: Record<string, 'granted' | 'denied'> = {};
-
-    // Map walkerOS consent to gtag consent parameters for update
-    Object.entries(consent).forEach(([walkerOSGroup, granted]) => {
-      const gtagParams = mapping[walkerOSGroup];
-      if (!gtagParams) return;
-
-      const params = Array.isArray(gtagParams) ? gtagParams : [gtagParams];
-      const consentValue = granted ? 'granted' : 'denied';
-
-      params.forEach((param) => {
-        gtagConsent[param] = consentValue;
-      });
-    });
+    // The command carries only the changed groups; a parameter is decided
+    // from the whole consent state, granted only when every group mapped to
+    // it is granted.
+    const gtagConsent = resolveConsentMode(
+      mapping,
+      { ...context.collector.consent, ...consent },
+      consent,
+    );
 
     await stepCall(
       () =>

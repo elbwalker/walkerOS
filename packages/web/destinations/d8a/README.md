@@ -93,9 +93,10 @@ mapping is:
 | walkerOS consent key | d8a consent fields                                 |
 | -------------------- | -------------------------------------------------- |
 | `marketing`          | `ad_storage`, `ad_user_data`, `ad_personalization` |
-| `functional`         | `analytics_storage`                                |
+| `analytics`          | `analytics_storage`                                |
 
-Disable consent mode with:
+When several consent keys map to the same field, the field is `granted` only if
+every one of them is granted. Disable consent mode with:
 
 ```typescript
 settings: {
@@ -103,13 +104,13 @@ settings: {
 }
 ```
 
-Or provide a custom mapping:
+Or provide a custom mapping, which replaces the default:
 
 ```typescript
 settings: {
   como: {
-    analytics: 'analytics_storage',
-    marketing: ['ad_storage', 'ad_personalization'],
+    statistics: 'analytics_storage',
+    marketing: ['ad_storage', 'ad_user_data', 'ad_personalization'],
   },
 }
 ```

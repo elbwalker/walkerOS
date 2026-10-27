@@ -1,11 +1,13 @@
 import type { WalkerOS } from '@walkeros/core';
+import {
+  DEFAULT_CONSENT_MODE_MAPPING,
+  consentModeParameters,
+} from '@walkeros/web-core';
 import type { ConsentMapping, Settings } from '../types';
 
 // walkerOS consent groups -> gtag consent parameters
-export const DEFAULT_CONSENT_MAPPING: ConsentMapping = {
-  marketing: ['ad_storage', 'ad_user_data', 'ad_personalization'],
-  functional: ['analytics_storage'],
-};
+export const DEFAULT_CONSENT_MAPPING: ConsentMapping =
+  DEFAULT_CONSENT_MODE_MAPPING;
 
 const DEFAULT_WAIT_FOR_UPDATE = 500;
 
@@ -16,15 +18,6 @@ export function resolveConsentMapping(
   const { como = true } = settings;
   if (como === false) return undefined;
   return como === true ? DEFAULT_CONSENT_MAPPING : como;
-}
-
-/** Flatten a mapping to the unique set of gtag parameter names. */
-export function collectGtagParams(mapping: ConsentMapping): string[] {
-  const params = new Set<string>();
-  Object.values(mapping).forEach((value) => {
-    (Array.isArray(value) ? value : [value]).forEach((p) => params.add(p));
-  });
-  return [...params];
 }
 
 /**
@@ -38,7 +31,7 @@ export function buildDefaultConsent(
   const mapping = resolveConsentMapping(settings);
   if (!mapping) return undefined;
 
-  const params = collectGtagParams(mapping);
+  const params = consentModeParameters(mapping);
   if (!params.length) return undefined;
 
   const result: Record<string, 'denied' | number> = {};

@@ -49,22 +49,23 @@ await startFlow({
 
 ```typescript
 {
-  necessary: 'functional',
   functional: 'functional',
   performance: 'analytics',
   advertising: 'marketing',
 }
 ```
 
-When multiple CookieFirst categories map to the same walkerOS group (e.g., both
-`necessary` and `functional` to `functional`), the source uses OR logic: if ANY
-source category is `true`, the target group is `true`.
+`necessary` has no entry and is reported as `necessary`: strictly necessary
+cookies need no consent, so they grant no consent group, and `functional`
+follows the visitor's choice for the `functional` category. Categories missing
+from `categoryMap` are reported under their CookieFirst name.
 
-With the default mapping, `functional` is granted whenever CookieFirst reports
-`necessary: true`, even if the visitor denied the `functional` category.
-Categories missing from `categoryMap` are reported under their CookieFirst
-name. The source reports nothing while `window.CookieFirst.consent` is `null`,
-that is until the visitor has made a choice.
+When several categories map to the same group, the group is `true` only if
+every one of them is granted: any deny denies. Category names are compared
+case-insensitively.
+
+The source reports nothing while `window.CookieFirst.consent` is `null`, that
+is until the visitor has made a choice.
 
 ### Custom mapping example
 

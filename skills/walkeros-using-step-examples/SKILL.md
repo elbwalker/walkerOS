@@ -233,7 +233,7 @@ through `elb('walker <command>', in)` instead of pushing it as an event:
 ```typescript
 export const consentGranted: Flow.StepExample = {
   command: 'consent',
-  in: { marketing: true, functional: true },
+  in: { marketing: true, analytics: true },
   out: [
     'consent',
     'update',

@@ -155,9 +155,43 @@ describe('CookieFirst Source', () => {
       await createCookieFirstSource(mockWindow, mockElb);
 
       expect(consentCalls[0].consent).toEqual({
-        functional: true,
+        necessary: true,
         custom_category: true,
       });
+    });
+
+    test('grants a group only when every category mapped to it is granted', async () => {
+      const { window: mockWindow } = createMockWindow(inputs.partialConsent);
+
+      await createCookieFirstSource(mockWindow, mockElb, {
+        settings: {
+          categoryMap: { functional: 'essential', performance: 'essential' },
+        },
+      });
+
+      // functional is granted, performance denied: any deny denies
+      expect(consentCalls[0].consent.essential).toBe(false);
+    });
+
+    test('matches category map keys case-insensitively', async () => {
+      const { window: mockWindow } = createMockWindow(inputs.fullConsent);
+
+      await createCookieFirstSource(mockWindow, mockElb, {
+        settings: { categoryMap: { Performance: 'statistics' } },
+      });
+
+      expect(consentCalls[0].consent.statistics).toBe(true);
+      expect(consentCalls[0].consent).not.toHaveProperty('analytics');
+    });
+
+    test('grants no consent group for strictly necessary cookies alone', async () => {
+      const { window: mockWindow } = createMockWindow(inputs.minimalConsent);
+
+      await createCookieFirstSource(mockWindow, mockElb);
+
+      const { necessary, ...groups } = consentCalls[0].consent;
+      expect(necessary).toBe(true);
+      expect(Object.values(groups).every((granted) => !granted)).toBe(true);
     });
   });
 

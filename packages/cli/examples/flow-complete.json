@@ -305,7 +305,7 @@
           "examples": {
             "explicitDecision": {
               "title": "Explicit decision",
-              "description": "The user accepts every category in the banner. categoryMap turns essential and functional into functional, so the collector receives exactly the consent keys the contract names.",
+              "description": "The user accepts every category in the banner. categoryMap folds essential into functional so the collector receives exactly the consent keys the contract names; because any deny denies, functional still follows the functional category, and essential never grants it alone.",
               "public": true,
               "trigger": {
                 "type": "consent",
@@ -931,7 +931,14 @@
               "ga4": {
                 "measurementId": "$env.GA4_MEASUREMENT_ID:G-MAINSITE"
               },
-              "como": true
+              "como": {
+                "marketing": [
+                  "ad_storage",
+                  "ad_user_data",
+                  "ad_personalization"
+                ],
+                "functional": "analytics_storage"
+              }
             },
             "mapping": {
               "product": {
@@ -1419,6 +1426,14 @@
             "settings": {
               "gtm": {
                 "containerId": "$env.GTM_ID:GTM-SHOP01"
+              },
+              "como": {
+                "marketing": [
+                  "ad_storage",
+                  "ad_user_data",
+                  "ad_personalization"
+                ],
+                "functional": "analytics_storage"
               }
             },
             "mapping": {

@@ -59,11 +59,11 @@ mapped to walkerOS consent groups:
 
 ```typescript
 {
-  C0001: 'functional',  // Strictly Necessary
+  C0001: 'necessary',   // Strictly Necessary
   C0002: 'analytics',   // Performance
   C0003: 'functional',  // Functional
   C0004: 'marketing',   // Targeting
-  C0005: 'marketing',   // Social Media
+  C0005: 'social',      // Social Media
 }
 ```
 
@@ -72,9 +72,14 @@ since CookiePro's opaque IDs are meaningless without a mapping. All mapped
 walkerOS groups receive explicit `true`/`false` values. Absent groups are set
 to `false` so destinations know which consent is denied.
 
-When several category IDs map to the same group, the group is `true` if any of
-them is active. With the default mapping, `C0001` (Strictly Necessary) keeps
-`functional` granted even when the visitor denies `C0003` (Functional).
+Strictly necessary cookies need no consent, so `C0001` grants no consent group
+and is reported as `necessary`. `functional` follows the visitor's choice for
+`C0003` (Functional) and `marketing` the one for `C0004` (Targeting). Social
+media cookies (`C0005`) get their own `social` group.
+
+When several category IDs map to the same group, the group is `true` only if
+every one of them is active: any deny denies. Map only IDs your banner uses: an
+ID OneTrust never lists keeps its group denied.
 
 Custom entries are merged with the default mapping. Specify only the categories
 you want to override. All other defaults remain active.

@@ -332,6 +332,20 @@ describe('CookiePro Source', () => {
       expect(consentCalls[0].consent.marketing).toBe(false);
     });
 
+    test('grants no consent group for strictly necessary cookies alone', async () => {
+      const mockWindow = createMockWindow({
+        sdkLoaded: true,
+        alertBoxClosed: true,
+        activeGroups: inputs.minimalConsent,
+      });
+
+      await createCookieProSource(mockWindow, mockElb);
+
+      const { necessary, ...groups } = consentCalls[0].consent;
+      expect(necessary).toBe(true);
+      expect(Object.values(groups).every((granted) => !granted)).toBe(true);
+    });
+
     test('maps analytics only consent correctly', async () => {
       const mockWindow = createMockWindow({
         sdkLoaded: true,
@@ -391,12 +405,14 @@ describe('CookiePro Source', () => {
 
       await createCookieProSource(mockWindow, mockElb);
 
-      // C0001 -> functional, CUSTOM01 and CUSTOM02 are not in default map -> ignored
-      // analytics and marketing absent -> false
+      // C0001 -> necessary, CUSTOM01 and CUSTOM02 are not in default map -> ignored
+      // functional, analytics, marketing and social absent -> false
       expect(consentCalls[0].consent).toEqual({
-        functional: true,
+        necessary: true,
+        functional: false,
         analytics: false,
         marketing: false,
+        social: false,
       });
     });
 
@@ -412,9 +428,11 @@ describe('CookiePro Source', () => {
       // Empty string -> no active categories -> all groups false
       expect(consentCalls).toHaveLength(1);
       expect(consentCalls[0].consent).toEqual({
+        necessary: false,
         functional: false,
         analytics: false,
         marketing: false,
+        social: false,
       });
     });
 
@@ -429,10 +447,27 @@ describe('CookiePro Source', () => {
 
       expect(consentCalls).toHaveLength(1);
       expect(consentCalls[0].consent).toEqual({
-        functional: true,
+        necessary: true,
+        functional: false,
         analytics: true,
         marketing: false,
+        social: false,
       });
+    });
+
+    test('grants a group only when every ID mapped to it is active', async () => {
+      const mockWindow = createMockWindow({
+        sdkLoaded: true,
+        alertBoxClosed: true,
+        activeGroups: inputs.marketingOnlyConsent,
+      });
+
+      await createCookieProSource(mockWindow, mockElb, {
+        settings: { categoryMap: { C0005: 'marketing' } },
+      });
+
+      // C0004 is active, C0005 is not: any deny denies
+      expect(consentCalls[0].consent.marketing).toBe(false);
     });
   });
 

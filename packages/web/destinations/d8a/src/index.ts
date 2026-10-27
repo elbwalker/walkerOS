@@ -1,6 +1,11 @@
 import type { WalkerOS } from '@walkeros/core';
 import { isObject, StepError, stepCall } from '@walkeros/core';
-import { getEnv } from '@walkeros/web-core';
+import {
+  DEFAULT_CONSENT_MODE_MAPPING,
+  consentModeParameters,
+  getEnv,
+  resolveConsentMode,
+} from '@walkeros/web-core';
 import type { D8aConfigParams, D8aFn } from '@d8a-tech/wt';
 import { installD8a } from '@d8a-tech/wt';
 import type { ConsentMapping, Destination, Settings } from './types';
@@ -10,11 +15,6 @@ export * as DestinationD8a from './types';
 
 const DEFAULT_GLOBAL_NAME = 'd8a';
 const DEFAULT_DATA_LAYER_NAME = 'd8aLayer';
-
-const DEFAULT_CONSENT_MAPPING: ConsentMapping = {
-  marketing: ['ad_storage', 'ad_user_data', 'ad_personalization'],
-  functional: 'analytics_storage',
-};
 
 let defaultConsentSet = false;
 
@@ -152,16 +152,13 @@ export const destinationD8a: Destination = {
     if (!d8a) return;
 
     const consent = context.data as WalkerOS.Consent;
-    const consentMapping = como === true ? DEFAULT_CONSENT_MAPPING : como;
+    const consentMapping: ConsentMapping =
+      como === true ? DEFAULT_CONSENT_MODE_MAPPING : como;
 
     if (!defaultConsentSet) {
-      const allParams = new Set<string>();
-      Object.values(consentMapping).forEach((params) => {
-        const paramArray = Array.isArray(params) ? params : [params];
-        paramArray.forEach((param) => allParams.add(param));
-      });
+      const allParams = consentModeParameters(consentMapping);
 
-      if (allParams.size > 0) {
+      if (allParams.length > 0) {
         const defaultConsent: Record<string, 'denied'> = {};
         allParams.forEach((param) => {
           defaultConsent[param] = 'denied';
@@ -176,17 +173,14 @@ export const destinationD8a: Destination = {
       defaultConsentSet = true;
     }
 
-    const d8aConsent: Record<string, 'granted' | 'denied'> = {};
-    Object.entries(consent).forEach(([walkerOSGroup, granted]) => {
-      const d8aParams = consentMapping[walkerOSGroup];
-      if (!d8aParams) return;
-
-      const params = Array.isArray(d8aParams) ? d8aParams : [d8aParams];
-      const consentValue = granted ? 'granted' : 'denied';
-      params.forEach((param) => {
-        d8aConsent[param] = consentValue;
-      });
-    });
+    // The command carries only the changed groups; a parameter is decided
+    // from the whole consent state, granted only when every group mapped to
+    // it is granted.
+    const d8aConsent = resolveConsentMode(
+      consentMapping,
+      { ...context.collector.consent, ...consent },
+      consent,
+    );
 
     if (Object.keys(d8aConsent).length === 0) return;
 

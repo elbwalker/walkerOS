@@ -173,6 +173,30 @@ describe('Usercentrics Source', () => {
       });
     });
 
+    test('matches category map keys case-insensitively', async () => {
+      const mockWindow = createMockWindow();
+      mockWindow.__setUcUi(
+        makeUcUi([
+          makeV2Service('essential', true, 'explicit'),
+          makeV2Service('functional', true, 'explicit'),
+          makeV2Service('marketing', false, 'explicit'),
+        ]),
+      );
+
+      await createUsercentricsSource(mockWindow, mockElb, {
+        settings: {
+          apiVersion: 'v2',
+          categoryMap: { Functional: 'analytics' },
+        },
+      });
+
+      expect(consentCalls[0].consent).toEqual({
+        essential: true,
+        analytics: true,
+        marketing: false,
+      });
+    });
+
     test('applies custom category mapping', async () => {
       const mockWindow = createMockWindow();
       mockWindow.__setUcUi(

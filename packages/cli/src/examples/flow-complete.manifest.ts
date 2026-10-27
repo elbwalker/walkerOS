@@ -226,7 +226,7 @@ const teaching = {
     chapter: 'consent-privacy',
     level: 'intermediate',
     useCases: ['consent'],
-    note: 'categoryMap maps CMP categories onto exactly the consent keys the contract names.',
+    note: 'categoryMap maps CMP categories onto exactly the consent keys the contract names; folded in, essential never grants functional alone.',
     docs: [],
   },
   'cmp-explicit-only': {
@@ -895,7 +895,7 @@ const teaching = {
     chapter: 'consent-privacy',
     level: 'intermediate',
     useCases: ['consent'],
-    note: 'como turns walker consent into Google Consent Mode calls.',
+    note: "como maps this flow's consent keys to Google Consent Mode: functional to analytics_storage, marketing to the ad parameters.",
     docs: [],
     example: { step: 'ga4', name: 'consentUpdate' },
   },

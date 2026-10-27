@@ -62,11 +62,9 @@ examples go in `packages/web/sources/cmps/[name]/src/examples/`.
 **CookieFirst** at `packages/web/sources/cmps/cookiefirst/` is the canonical
 template. Copy its structure for every new CMP source.
 
-**Note:** The CookieFirst README and package.json predate this skill and are
-missing some sections required by mandatory check #10 (walkerOS.json, Type
-definitions, Related, Timing considerations) and the `walkerOS-source` keyword.
-New CMP sources MUST include all required sections. The CookieFirst package will
-be updated to match.
+**Note:** The CookieFirst package.json predates this skill and lacks the
+`walkerOS-source` keyword. New CMP sources MUST include it (the CookiePro and
+Cookiebot packages do).
 
 ## Process overview
 
@@ -123,12 +121,12 @@ Every CMP source needs up to 3 detection paths:
 Not all CMPs use `addEventListener`. Fill in "Event registration mechanism" in
 the research template to determine which pattern applies:
 
-| Pattern                 | CMPs                     | Registration                         | Cleanup                              |
-| ----------------------- | ------------------------ | ------------------------------------ | ------------------------------------ |
-| **DOM events**          | CookieFirst, CookiePro   | `addEventListener(name, handler)`    | `removeEventListener(name, handler)` |
-| **Callback assignment** | Cookiebot (`onaccept`)   | `window.CMP.onaccept = handler`      | `window.CMP.onaccept = original`     |
-| **SDK readiness array** | Didomi (`didomiOnReady`) | `window.didomiOnReady.push(handler)` | No unsubscribe (fires once)          |
-| **SDK method**          | Didomi (`on`)            | `CMP.on('consent.changed', handler)` | Vendor-specific (check docs)         |
+| Pattern                 | CMPs                              | Registration                         | Cleanup                              |
+| ----------------------- | --------------------------------- | ------------------------------------ | ------------------------------------ |
+| **DOM events**          | CookieFirst, CookiePro, Cookiebot | `addEventListener(name, handler)`    | `removeEventListener(name, handler)` |
+| **Callback assignment** | CookiePro (`OptanonWrapper`)      | `window.OptanonWrapper = handler`    | `window.OptanonWrapper = original`   |
+| **SDK readiness array** | Didomi (`didomiOnReady`)          | `window.didomiOnReady.push(handler)` | No unsubscribe (fires once)          |
+| **SDK method**          | Didomi (`on`)                     | `CMP.on('consent.changed', handler)` | Vendor-specific (check docs)         |
 
 This affects the source skeleton (Phase 7), MockWindow shape (Phase 6), and
 destroy implementation.
@@ -137,19 +135,19 @@ destroy implementation.
 
 Fill in this matrix for your CMP. Reference implementations for comparison:
 
-| Decision                | CookieFirst                             | Usercentrics                                                                                     | CookiePro                                        |
-| ----------------------- | --------------------------------------- | ------------------------------------------------------------------------------------------------ | ------------------------------------------------ |
-| Already loaded?         | `window.CookieFirst.consent`            | None (events only)                                                                               | `window.OneTrust` + `window.OptanonActiveGroups` |
-| Init listener           | `cf_init` event                         | Same as change event (`ucEvent`)                                                                 | `OptanonWrapper` callback (self-unwrap)          |
-| Change listener         | `cf_consent` event                      | `ucEvent` / `UC_SDK_EVENT`                                                                       | `OneTrustGroupsUpdated` event                    |
-| Consent shape           | Boolean map `{ category: bool }`        | Mixed object (groups + services)                                                                 | Comma-separated IDs `,C0001,C0003,`              |
-| Category naming         | Human-readable                          | Admin-configured                                                                                 | Opaque IDs (C0001-C0005)                         |
-| Explicit check          | `consent === null`                      | Official consent metadata (V3 `consent.type`; V2 an `EXPLICIT` entry in service consent history) | `IsAlertBoxClosed()`                             |
-| Default categoryMap     | Populated (human names to walkerOS)     | Empty (pass-through)                                                                             | Populated (opaque IDs need mapping)              |
-| Number of change events | 1 (`cf_consent`)                        | 1 (`ucEvent`)                                                                                    | 2 (`OptanonWrapper` + `OneTrustGroupsUpdated`)   |
-| Consent layers          | Single (categories only)                | Dual (groups + services)                                                                         | Single (categories only)                         |
-| Consent access          | Property (`window.CookieFirst.consent`) | Event detail (`event.detail`)                                                                    | Property (`window.OptanonActiveGroups`)          |
-| Event registration      | `addEventListener`                      | `addEventListener`                                                                               | Callback assignment + `addEventListener`         |
+| Decision                | CookieFirst                             | Usercentrics                                                                                     | CookiePro                                        | Cookiebot                                                                   |
+| ----------------------- | --------------------------------------- | ------------------------------------------------------------------------------------------------ | ------------------------------------------------ | --------------------------------------------------------------------------- |
+| Already loaded?         | `window.CookieFirst.consent`            | None (events only)                                                                               | `window.OneTrust` + `window.OptanonActiveGroups` | `window.Cookiebot` with `hasResponse`                                       |
+| Init listener           | `cf_init` event                         | Same as change event (`ucEvent`)                                                                 | `OptanonWrapper` callback (self-unwrap)          | None separate: the change events re-fire on every load with a stored choice |
+| Change listener         | `cf_consent` event                      | `ucEvent` / `UC_SDK_EVENT`                                                                       | `OneTrustGroupsUpdated` event                    | `CookiebotOnAccept` / `CookiebotOnDecline` events                           |
+| Consent shape           | Boolean map `{ category: bool }`        | Mixed object (groups + services)                                                                 | Comma-separated IDs `,C0001,C0003,`              | Boolean map plus `method` and `stamp`                                       |
+| Category naming         | Human-readable                          | Admin-configured                                                                                 | Opaque IDs (C0001-C0005)                         | Fixed (`necessary`, `preferences`, `statistics`, `marketing`)               |
+| Explicit check          | `consent === null`                      | Official consent metadata (V3 `consent.type`; V2 an `EXPLICIT` entry in service consent history) | `IsAlertBoxClosed()`                             | `consent.method === 'explicit'`                                             |
+| Default categoryMap     | Populated (human names to walkerOS)     | Empty (pass-through)                                                                             | Populated (opaque IDs need mapping)              | Populated, `necessary` left unmapped                                        |
+| Number of change events | 1 (`cf_consent`)                        | 1 (`ucEvent`)                                                                                    | 2 (`OptanonWrapper` + `OneTrustGroupsUpdated`)   | 2 (accept, decline), plus `CookieConsentOn*` aliases that are not used      |
+| Consent layers          | Single (categories only)                | Dual (groups + services)                                                                         | Single (categories only)                         | Single (categories only)                                                    |
+| Consent access          | Property (`window.CookieFirst.consent`) | Event detail (`event.detail`)                                                                    | Property (`window.OptanonActiveGroups`)          | Property (`window.Cookiebot.consent`)                                       |
+| Event registration      | `addEventListener`                      | `addEventListener`                                                                               | Callback assignment + `addEventListener`         | `addEventListener`                                                          |
 
 ### Gate: Research complete
 
@@ -225,11 +223,11 @@ names** that are meaningless without mapping:
 ```typescript
 // CookiePro: opaque IDs require mapping
 export const DEFAULT_CATEGORY_MAP: Record<string, string> = {
-  C0001: 'functional', // Strictly Necessary
+  C0001: 'necessary', // Strictly Necessary, grants no consent group (check 11)
   C0002: 'analytics', // Performance
   C0003: 'functional', // Functional
   C0004: 'marketing', // Targeting
-  C0005: 'marketing', // Social Media
+  C0005: 'social', // Social Media
 };
 ```
 
@@ -256,14 +254,17 @@ const mergedCategoryMap = {
 };
 ```
 
-### OR logic for many-to-one mappings
+### Any deny denies for many-to-one mappings
 
-When multiple CMP categories map to the same walkerOS group, use OR logic: if
-ANY source category is `true`, the target group is `true`.
+When multiple CMP categories map to the same walkerOS group, the group is `true`
+only if every one of them is `true`: any deny denies. All CMP sources follow
+this rule. For a presence list (CookiePro), an inactive ID is a denial. Keep the
+default map one category per group, so the rule only matters for a user's own
+map.
 
 ```typescript
-// OR logic: once true, stays true
-state[mapped] = state[mapped] || value;
+// Any deny denies: once false, stays false
+state[mapped] = state[mapped] === undefined ? value : state[mapped] && value;
 ```
 
 ### Dual-layer consent (categories + services/vendors)
@@ -286,7 +287,7 @@ Document the chosen approach in the README under "How it works."
 ### Gate: Mapping defined
 
 - [ ] Default categoryMap chosen (populated or empty, with rationale)
-- [ ] OR logic for many-to-one mappings documented
+- [ ] Any-deny-denies rule for many-to-one mappings documented
 - [ ] Merge behavior with user overrides documented
 - [ ] Dual-layer strategy decided (if applicable per decision matrix)
 
@@ -439,7 +440,7 @@ hints. See `walkeros-writing-documentation` skill for full guidelines and
 | `initialization`              | 4-6   | No errors, correct type, default settings, custom settings, listener registration             |
 | `explicit consent filtering`  | 3-4   | Explicit events processed, implicit ignored/processed based on setting, case-insensitive type |
 | `non-consent event filtering` | 2     | Non-consent events ignored, events without detail ignored                                     |
-| `category mapping`            | 5-8   | Full/partial/minimal consent, custom mapping, unmapped categories, OR logic                   |
+| `category mapping`            | 5-8   | Full/partial/minimal consent, custom mapping, unmapped categories, any deny denies            |
 | `[CMP-specific parsing]`      | 2-4   | CMP-specific consent format parsing (service-level, string parsing, etc.)                     |
 | `event handling`              | 3     | Consent changes, multiple changes, revocation                                                 |
 | `consent revocation`          | 2     | Full->partial, full->minimal (explicit false values verified)                                 |
@@ -453,8 +454,8 @@ including `MockWindow` interface, `createMockElb`, `createMockWindow`, and
 `createCmpSource` factories.
 
 For CMPs that use callback assignment or SDK methods instead of
-`addEventListener` (e.g., Didomi's `onReady`, Cookiebot's `onaccept`), adapt
-`MockWindow` to expose those callbacks as testable properties.
+`addEventListener` (e.g., Didomi's `onReady`, CookiePro's `OptanonWrapper`),
+adapt `MockWindow` to expose those callbacks as testable properties.
 
 ### Test template
 
@@ -512,8 +513,11 @@ Every CMP source has these core settings:
 
 - `categoryMap?: Record<string, string>` -- map CMP categories to walkerOS
   consent groups
-- `explicitOnly?: boolean` -- only process explicit consent (default: `true`)
-- `globalName?: string` -- CMP-specific: global object name
+- `explicitOnly?: boolean` -- only process explicit consent (default: `true`:
+  the source waits for the visitor's decision, privacy by design; `false`
+  follows implicit or default consent)
+- `globalName?: string` -- only where the CMP lets a site rename its global;
+  Cookiebot hard-codes `window.Cookiebot`, so its source has no such setting
 
 ### Source skeleton
 
@@ -525,7 +529,7 @@ Key implementation steps:
 1. Resolve window (`env.window` fallback to `globalThis`)
 2. Merge settings with defaults
 3. Track listener references for cleanup
-4. `handleConsent` function (explicitOnly, categoryMap with OR logic,
+4. `handleConsent` function (explicitOnly, categoryMap with any deny denies,
    `elb('walker consent', state)`)
 5. Detection path: Already loaded
 6. Detection path: Init listener
@@ -561,52 +565,43 @@ CMP uses for each detection path.
 
 ### README structure
 
-Follow this structure (sentence case headings, imports in code examples):
+Keep it short and point to the docs page, like the existing CMP sources
+(sentence case headings, imports in code examples):
 
 ```markdown
+<logo>
+
 # @walkeros/web-source-cmp-[name]
 
-[CMP Name] consent management source for walkerOS.
+[One line: what the source integrates and how it maps categories.]
 
-Source Code | NPM | Documentation
+Documentation | NPM Package | Source Code
 
 ## Installation
 
-## Usage (with imports)
+## Quick start (startFlow with imports)
 
-## Configuration
+## Documentation (link to the docs page)
 
-### Settings (table)
-
-### Default category mapping (if applicable)
-
-### Custom mapping example
-
-## How it works (numbered list of detection paths)
-
-### Timing considerations
-
-## [CMP] API reference (links to CMP docs)
-
-## walkerOS.json
-
-## Type definitions
-
-## Related (links to consent guide)
+## Contribute
 
 ## License
 ```
 
-### Update consent guide page
+### Create the docs page
 
-Update `website/docs/guides/consent/examples/[cmp-name].mdx` to recommend the
-source package first, preserving the manual snippet as a fallback. Follow the
-Usercentrics page (`usercentrics.mdx`) as the reference pattern:
+Create the docs page at `website/docs/sources/web/cmps/[cmp-name]/index.mdx`,
+following the CookiePro page
+(`website/docs/sources/web/cmps/cookiepro/index.mdx`): installation with
+imports, the `<Configuration>` block fed by the package's `walkerOS.json`, how
+it works, the default category mapping, a custom mapping example and timing
+considerations. Then register the page:
 
-1. **"Using the source package (recommended)"** heading first -- install
-   command, usage code with imports, bullet list of what the source handles
-2. **"Manual event listener"** heading -- preserve the existing manual snippet
-   as a fallback option
+1. Add it to the CMPs category in `website/sidebars.ts`
+2. Add a row to the table in `website/docs/sources/web/cmps/index.mdx`, and name
+   the source where that page compares the CMP sources
+3. Add the package to `website/package.json` so the page can import its
+   `walkerOS.json`
 
 ---
 
@@ -681,10 +676,13 @@ actualWindow.OptanonWrapper = () => {
 };
 ```
 
-**Pattern B: Multiple change events (Cookiebot)** CMP fires separate events for
-accept, decline, and revoke. Each event carries the full consent state. Register
-the SAME handler for all change events -- no special dedup needed, but be aware
-of the multiplicity.
+**Pattern B: Change events that re-fire on load (Cookiebot)** CMP fires one of
+several events per decision (`CookiebotOnAccept`, `CookiebotOnDecline`), and
+fires it again on every page load with a stored choice. Register the SAME
+handler for all of them, and listen to one name set only: Cookiebot also
+dispatches each event under a `CookieConsentOn*` alias. Because the static read
+at init and the load-time event report the same choice, drop a state identical
+to the last one the source sent.
 
 **Pattern C: Init event re-fires on change (Usercentrics)** Single event type
 (`ucEvent`) fires for both init and change. No dual-firing risk, but the
@@ -755,9 +753,22 @@ Add `"walkerOS": { "type": "source", "platform": "web" }` to `package.json`.
 
 ### 10. README requirements
 
-Must include: Source Code/NPM/Documentation links, walkerOS.json section, Type
-definitions section, Related section, License section, sentence case headings,
-imports in all code examples, timing considerations section.
+Keep the README short, as the existing CMP sources do: logo, one-line
+description, Documentation/NPM/Source Code links, installation, a quick start
+with imports, a link to the docs page, contribute and license sections, sentence
+case headings. Configuration, mapping, how it works and timing considerations
+belong on the docs page (see "Create the docs page").
+
+### 11. Strictly necessary cookies grant no consent group
+
+Strictly necessary cookies need no consent, and the CMP grants them with every
+choice. Never map such a category (`necessary`, `C0001`, an essential category)
+to a consent group like `functional` in the default `categoryMap`: as the only
+category of that group, it would grant the group with every choice, and every
+destination that requires the group would act on consent the visitor never gave.
+Report it under its own name (`necessary`) or leave it out, and cover it with a
+test: a choice that grants only strictly necessary cookies leaves every group
+except `necessary` `false`.
 
 ---
 
@@ -767,13 +778,13 @@ Beyond
 [understanding-development](../walkeros-understanding-development/SKILL.md)
 requirements (build, test, lint, no `any`):
 
-- [ ] All 10 mandatory checks pass
+- [ ] All 11 mandatory checks pass
 - [ ] Research template fully filled
 - [ ] Decision matrix row complete
 - [ ] Examples include revocation and edge cases
 - [ ] Tests: 25-32 tests across 8-9 describe blocks
 - [ ] `MockWindow` interface in test-utils (not scattered casts)
-- [ ] Category mapping uses OR logic for many-to-one
+- [ ] Category mapping: any deny denies for many-to-one
 - [ ] Consent state always includes explicit `false` for denied groups
 - [ ] `destroy()` cleans up ALL listeners and restores wrapped functions
 - [ ] Detection never fails silently: a setting the source needs that is missing
@@ -793,7 +804,7 @@ this pattern will require adaptation:
 
 | Limitation                                     | Affected CMPs                                              | Workaround                                                                                                                                                    |
 | ---------------------------------------------- | ---------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **Source skeleton assumes `addEventListener`** | Didomi (SDK array/method), Cookiebot (callback assignment) | Use the "Event registration patterns" table in Phase 1 to identify the correct pattern, then adapt the skeleton's listener setup and `destroy()` accordingly. |
+| **Source skeleton assumes `addEventListener`** | Didomi (SDK array/method)                                  | Use the "Event registration patterns" table in Phase 1 to identify the correct pattern, then adapt the skeleton's listener setup and `destroy()` accordingly. |
 | **Consent read via property, not API method**  | Didomi (`getCurrentUserStatus()`)                          | If consent is accessed via an API method call rather than a window property, wrap the call in `handleConsent` and adjust the "already loaded" detection path. |
 | **`destroy()` may not be possible**            | CMPs with SDK readiness arrays (fire-once, no unsubscribe) | Document in README that the init callback cannot be removed. Only the change listener needs cleanup.                                                          |
 | **No vendor-level consent model**              | Didomi (purposes + vendors as separate consent layers)     | Use the "Dual-layer consent" guidance in Phase 3. walkerOS `Consent` is category-level; vendor-level consent requires flattening or a `consentLayer` setting. |

@@ -37,10 +37,10 @@ export const minimalConsentMapped: WalkerOS.Consent = {
 
 /**
  * Full consent with a custom category mapping applied
- * (essential->functional, functional->analytics).
+ * (functional->analytics; essential keeps its own name).
  */
 export const fullConsentCustomMapped: WalkerOS.Consent = {
-  functional: true,
+  essential: true,
   analytics: true,
   marketing: true,
 };

@@ -9,9 +9,11 @@ import type { WalkerOS } from '@walkeros/core';
 
 /**
  * Full consent mapped to walkerOS groups
- * (necessary + functional → functional, performance → analytics, advertising → marketing)
+ * (functional → functional, performance → analytics, advertising → marketing;
+ * necessary has no entry and keeps its own name)
  */
 export const fullConsentMapped: WalkerOS.Consent = {
+  necessary: true,
   functional: true,
   analytics: true,
   marketing: true,
@@ -21,6 +23,7 @@ export const fullConsentMapped: WalkerOS.Consent = {
  * Partial consent mapped to walkerOS groups
  */
 export const partialConsentMapped: WalkerOS.Consent = {
+  necessary: true,
   functional: true,
   analytics: false,
   marketing: false,
@@ -30,29 +33,28 @@ export const partialConsentMapped: WalkerOS.Consent = {
  * Minimal consent mapped to walkerOS groups
  */
 export const minimalConsentMapped: WalkerOS.Consent = {
-  functional: true,
+  necessary: true,
+  functional: false,
   analytics: false,
   marketing: false,
 };
 
 /**
  * Analytics only consent mapped to walkerOS groups
- * Note: functional is true because necessary=true maps to functional
- * (OR logic: if ANY source category is true, target group is true)
  */
 export const analyticsOnlyMapped: WalkerOS.Consent = {
-  functional: true,
+  necessary: true,
+  functional: false,
   analytics: true,
   marketing: false,
 };
 
 /**
  * Marketing only consent mapped to walkerOS groups
- * Note: functional is true because necessary=true maps to functional
- * (OR logic: if ANY source category is true, target group is true)
  */
 export const marketingOnlyMapped: WalkerOS.Consent = {
-  functional: true,
+  necessary: true,
+  functional: false,
   analytics: false,
   marketing: true,
 };

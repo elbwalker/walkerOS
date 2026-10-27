@@ -11,9 +11,11 @@ export const fullConsent: Flow.StepExample = {
       'elb',
       'walker consent',
       {
+        necessary: true,
         functional: true,
         analytics: true,
         marketing: true,
+        social: true,
       },
     ],
   ],
@@ -22,7 +24,7 @@ export const fullConsent: Flow.StepExample = {
 export const minimalConsent: Flow.StepExample = {
   title: 'Minimal consent',
   description:
-    'Only the necessary CookiePro group is granted so analytics and marketing map to false in the walker consent command.',
+    'Only the strictly necessary CookiePro group is granted, so it is reported as necessary and functional, analytics and marketing map to false in the walker consent command.',
   trigger: { type: 'consent' },
   in: ',C0001,',
   out: [
@@ -30,9 +32,11 @@ export const minimalConsent: Flow.StepExample = {
       'elb',
       'walker consent',
       {
-        functional: true,
+        necessary: true,
+        functional: false,
         analytics: false,
         marketing: false,
+        social: false,
       },
     ],
   ],
@@ -49,9 +53,11 @@ export const categoryMapOverride: Flow.StepExample = {
       'elb',
       'walker consent',
       {
-        functional: true,
+        necessary: true,
+        functional: false,
         statistics: true,
         marketing: false,
+        social: false,
       },
     ],
   ],
@@ -68,9 +74,11 @@ export const sdkLoadedDetection: Flow.StepExample = {
       'elb',
       'walker consent',
       {
+        necessary: true,
         functional: true,
         analytics: false,
         marketing: true,
+        social: false,
       },
     ],
   ],
