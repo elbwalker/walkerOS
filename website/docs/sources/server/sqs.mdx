@@ -137,7 +137,7 @@ The provisioning identity needs `sqs:CreateQueue`, `sqs:GetQueueAttributes`, `sq
 
 Neither `text` nor `raw` carries an event name: without a `source.before` transformer that builds the event, the collector rejects it as invalid and the message is deleted. A JSON body of `null` is deleted with a DEBUG line only.
 
-A decoder that throws on malformed payloads, or a push that throws, triggers `onPushError`: `nack` lets visibility expire (SQS redelivers; eventually the DLQ if wired), `ack` deletes the message; the decode failure is an ERROR line. A push that fails for a retryable reason (a timeout, an unavailable vendor) takes the same path. A failure a redelivery cannot fix (a missing setting, a `4xx` from the vendor, a destination that is not ready) and invalid input are acknowledged and the message is deleted: the failure is in the destination's dead-letter queue and in one ERROR line from the collector, and invalid input is counted as `rejected` with a WARN line once a minute, which the default log level does not show.
+A decoder that throws on malformed payloads, or a push that throws, triggers `onPushError`: `nack` lets visibility expire (SQS redelivers; eventually the DLQ if wired), `ack` deletes the message; the decode failure is an ERROR line. A push that fails for a retryable reason (a timeout, an unavailable vendor) takes the same path. A failure a redelivery cannot fix (a missing setting, a `4xx` from the vendor, a destination that is not ready) and invalid input are acknowledged and the message is deleted: the failure is in the destination's dead-letter queue and in one ERROR line from the collector, and invalid input is counted as `rejected` with one ERROR line per source and minute.
 
 ## Backpressure
 
