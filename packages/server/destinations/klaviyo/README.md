@@ -30,7 +30,7 @@ npm install @walkeros/server-destination-klaviyo
       "destinations": {
         "klaviyo": {
           "package": "@walkeros/server-destination-klaviyo",
-          "config": { "settings": { "apiKey": "YOUR_API_KEY" } }
+          "config": { "settings": { "apiKey": "$secret.KLAVIYO_API_KEY" } }
         }
       }
     }

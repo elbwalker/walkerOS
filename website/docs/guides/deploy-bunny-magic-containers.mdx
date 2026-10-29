@@ -69,13 +69,17 @@ FROM walkeros/flow:<version>
 # Copy the pre-built flow bundle (flow.mjs, package.json, node_modules/)
 COPY dist/ /app/flow/
 
-# Copy service account credentials
-COPY sa-bigquery.json /app/sa-bigquery.json
+# Copy service account credentials, owned by the user the image runs as
+COPY --chown=walker:walker sa-bigquery.json /app/sa-bigquery.json
 
 # Configure runtime
 ENV GOOGLE_APPLICATION_CREDENTIALS=/app/sa-bigquery.json
 ENV GCP_PROJECT_ID=your-project-id
 ```
+
+The image runs as the user `walker` (uid 1001). Without `--chown` the file is
+copied as owned by root, so a key that only its owner can read (mode 600) stays
+unreadable for that user.
 
 Replace `<version>` with the `walkeros/flow` version matching your CLI (see
 [image tags](/docs/apps/runtime#image-tags)). The image already starts
@@ -176,50 +180,28 @@ For security, create a separate token with read-only access:
 1. Log in to [bunny.net dashboard](https://dash.bunny.net/)
 2. Navigate to **Magic Containers** → **Image Registries**
 3. Click **Add Image Registry**
-4. Select **GitHub** from the dropdown
+4. As **Registry**, select **GitHub**
 5. Enter:
    - **Username**: Your GitHub username
-   - **Personal Access Token**: The read-only token from above
-6. Click **Save**
+   - **Personal access token**: The read-only token from above
+6. Click **Add Image Registry**
 
 ## 7. Deploy to Bunny Magic Containers
 
-### Create New App
+1. In the bunny.net dashboard, go to **Magic Containers** and click **+ Add App**
+2. Search for and select the image `walkeros-collector` from your GitHub
+   registry; its `latest` tag is selected automatically
+3. Add an endpoint with **+ CDN** (routes HTTP(S) traffic through bunny.net's
+   edge network) or **+ Anycast IP** (direct access through an Anycast IP), name
+   it `collect` and set the container port to `8080`. Leave **SSL for origin**
+   off: the container serves plain HTTP on port 8080
+4. Enter the app name `walkeros-collector` and choose a region (the one closest
+   to you is preselected)
+5. Click **Deploy**
+6. Note the endpoint URL (e.g., `https://walkeros-collector-xxxxx.b-cdn.net`)
 
-1. In Bunny dashboard, go to **Magic Containers**
-2. Click **Add App**
-3. Enter app name: `walkeros-collector`
-4. Select deployment type:
-   - **Magic** (recommended) - AI auto-scales across regions
-   - **Single Region** - Deploy to one region
-5. Click **Next**
-
-### Add Container
-
-1. Click **Add Container**
-2. Enter container name: `collector`
-3. Select your GitHub registry
-4. Select image: `walkeros-collector`
-5. Select tag: `latest`
-6. Click **Next**
-
-### Configure Endpoint
-
-1. Click **Add New Endpoint**
-2. Enter endpoint name: `collect`
-3. Select exposure method:
-   - **CDN** - Routes HTTP(S) traffic through bunny.net's edge network
-   - **Anycast** - Direct access through an Anycast IP
-4. Set container port: `8080`
-5. Leave **SSL for origin** off: the container serves plain HTTP on port 8080
-6. Click **Next**
-
-### Deploy
-
-1. Review your configuration
-2. Click **Confirm and Create**
-3. Wait for deployment (typically 1-2 minutes)
-4. Note the endpoint URL (e.g., `https://walkeros-collector-xxxxx.b-cdn.net`)
+To run in more regions, add them after the deploy in the app's **Regions and
+Scaling** settings.
 
 ## 8. Verify Deployment
 

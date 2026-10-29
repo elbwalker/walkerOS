@@ -19,7 +19,7 @@ export const defaultEventForwarding: FullStoryStepExample = {
   title: 'Default event',
   description:
     'A walker event becomes a FullStory trackEvent call with the event name and empty properties.',
-  in: getEvent('product view', { timestamp: 1700000100 }),
+  in: getEvent('product view', { timestamp: 1700000100000 }),
   out: [['fullstory.trackEvent', { name: 'product view', properties: {} }]],
 };
 
@@ -29,7 +29,7 @@ export const defaultEventForwarding: FullStoryStepExample = {
  */
 export const wildcardIgnored: FullStoryStepExample = {
   public: false,
-  in: createEvent({ name: 'debug noise', timestamp: 1700000101 }),
+  in: createEvent({ name: 'debug noise', timestamp: 1700000101000 }),
   mapping: { ignore: true },
   out: [],
 };
@@ -41,7 +41,7 @@ export const mappedEventName: FullStoryStepExample = {
   title: 'Renamed event',
   description:
     'A mapping renames the event so the FullStory trackEvent uses Purchase instead of the walker name.',
-  in: getEvent('order complete', { timestamp: 1700000102 }),
+  in: getEvent('order complete', { timestamp: 1700000102000 }),
   mapping: {
     name: 'Purchase',
   },
@@ -59,7 +59,7 @@ export const userLoginIdentify: FullStoryStepExample = {
     'A user login fires FullStory setIdentity with uid and profile properties before tracking the event.',
   in: createEvent({
     name: 'user login',
-    timestamp: 1700000103,
+    timestamp: 1700000103000,
     data: { id: 'u-123', name: 'Jane Doe', email: 'jane@example.com' },
   }),
   mapping: {
@@ -97,7 +97,7 @@ export const destinationLevelIdentify: FullStoryStepExample = {
   title: 'Destination identify',
   description:
     "With settings.identify mapping uid to 'user.id', the destination fires FullStory setIdentity before every track call.",
-  in: getEvent('page view', { timestamp: 1700000104 }),
+  in: getEvent('page view', { timestamp: 1700000104000 }),
   settings: {
     identify: {
       map: {
@@ -119,7 +119,7 @@ export const setUserProperties: FullStoryStepExample = {
   title: 'Set user properties',
   description:
     'A purchase sets user-level FullStory properties such as revenue and currency alongside the tracked event.',
-  in: getEvent('order complete', { timestamp: 1700000105 }),
+  in: getEvent('order complete', { timestamp: 1700000105000 }),
   mapping: {
     name: 'Purchase',
     settings: {
@@ -150,7 +150,7 @@ export const setPageProperties: FullStoryStepExample = {
   description:
     'A page view sets FullStory page-type properties without firing a track, since FullStory auto-captures navigation.',
   in: getEvent('page view', {
-    timestamp: 1700000106,
+    timestamp: 1700000106000,
     data: { id: '/docs/', title: 'Getting Started' },
   }),
   mapping: {
@@ -180,7 +180,7 @@ export const combinedFeatures: FullStoryStepExample = {
   title: 'Combined features',
   description:
     'A purchase fires FullStory setIdentity, setProperties, and trackEvent in the canonical execution order.',
-  in: getEvent('order complete', { timestamp: 1700000107 }),
+  in: getEvent('order complete', { timestamp: 1700000107000 }),
   mapping: {
     name: 'Purchase',
     settings: {
@@ -207,7 +207,7 @@ export const silentWithIdentify: FullStoryStepExample = {
   description: 'A silent rule still runs its identify.',
   in: createEvent({
     name: 'user login',
-    timestamp: 1700000108,
+    timestamp: 1700000108000,
     data: { id: 'u-123', name: 'Jane Doe' },
   }),
   mapping: {
@@ -321,7 +321,7 @@ export const consentRevokeFlag: FullStoryStepExample = {
 export const silentRule: FullStoryStepExample = {
   public: false,
   description: 'A rule with silent: true and no settings calls nothing.',
-  in: getEvent('page view', { timestamp: 1700000120 }),
+  in: getEvent('page view', { timestamp: 1700000120000 }),
   mapping: { silent: true },
   out: [],
 };
@@ -331,7 +331,7 @@ export const fullstoryUnreachable: FullStoryStepExample = {
   public: false,
   description:
     'The FullStory SDK throws while it starts, so the destination does not start and the push can be retried. A blocked or unreachable fs.js script throws nothing, so it is not reported.',
-  in: getEvent('product view', { timestamp: 1700000121 }),
+  in: getEvent('product view', { timestamp: 1700000121000 }),
   respond: { error: 'network' },
   out: [],
   outcome: { status: 'failed', code: 'vendor-not-ready', retryable: true },

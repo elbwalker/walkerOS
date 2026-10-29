@@ -11,10 +11,7 @@ const noop = () => {};
  * Create a properly typed elb/push function mock
  */
 export const createMockElbFn = (): Elb.Fn => {
-  const fn = (() =>
-    Promise.resolve({
-      ok: true,
-    })) as Elb.Fn;
+  const fn: Elb.Fn = () => Promise.resolve({ ok: true });
   return fn;
 };
 

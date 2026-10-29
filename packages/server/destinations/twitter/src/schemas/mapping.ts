@@ -16,7 +16,9 @@ export const MappingSchema = z.object({
     .optional(),
   currency: z
     .string()
-    .describe('ISO 4217 currency code (like USD, EUR)')
+    .describe(
+      'Has no effect: the destination sends no currency to X (accepts an ISO 4217 code like USD or EUR)',
+    )
     .optional(),
   number_items: z
     .number()

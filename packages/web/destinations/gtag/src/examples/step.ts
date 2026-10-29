@@ -258,7 +258,7 @@ export const purchase: Flow.StepExample = {
 export const consentModeV2: Flow.StepExample = {
   title: 'Consent Mode v2',
   description:
-    'A walker consent command with marketing and analytics granted updates gtag Consent Mode v2 parameters.',
+    'A walker consent command with marketing and analytics granted updates gtag Consent Mode v2 parameters. Without config.consent, as here, the first consent command sends the denied default before the update; with config.consent, the denied default goes out before config, as the destination starts.',
   command: 'consent',
   in: { marketing: true, analytics: true },
   out: [
@@ -431,7 +431,7 @@ export const ga4WithIncludeAll: Flow.StepExample = {
     'Include flattens every event section into prefixed GA4 params, exposing data, context, user, source, and event fields.',
   in: getEvent('page view', {
     id: 'ev-1700000106',
-    timestamp: 1700000106,
+    timestamp: 1700000106000,
     source: {
       type: 'collector',
       schema: '4',
@@ -476,7 +476,7 @@ export const ga4WithIncludeAll: Flow.StepExample = {
         event_trigger: 'load',
         event_id: 'ev-1700000106',
         event_name: 'page view',
-        event_timestamp: 1700000106,
+        event_timestamp: 1700000106000,
         event_timing: 3.14,
         // send_to is always set for GA4
         send_to: 'G-XXXXXXXXXX',

@@ -105,8 +105,9 @@ Each record is one JSON object followed by a newline (`\n`):
 :::warning Turn one of the two newlines off
 A Firehose stream can add its own delimiter (the "New line delimiter" option of
 its S3 destination settings). When that option is on, `newline: false` is
-required: two newlines per record make Athena read a NULL row after every
-record, or fail the query.
+required: two newlines per record leave an empty line after every record, and
+Athena's [OpenX JSON SerDe](https://github.com/rcongiu/Hive-JSON-Serde#json-data-files)
+reads each empty line as a NULL row.
 :::
 
 A mapping that keeps the id and a few fields:
@@ -130,10 +131,10 @@ A mapping that keeps the id and a few fields:
 
 ### Snowflake
 
-Firehose delivers to Snowflake row by row and needs no delimiter, so set
-`newline: false` for a stream with a Snowflake destination. With the stream's
-option to use JSON keys as table column names, map `data` to an object whose
-keys match the table columns:
+Firehose inserts records into Snowflake through Snowflake's streaming API and
+takes a single JSON object per record, so set `newline: false` for a stream with
+a Snowflake destination. With the stream's option to use JSON keys as table
+column names, map `data` to an object whose keys match the table columns:
 
 ```json
 "config": {
@@ -214,7 +215,7 @@ closed.
 | `ResourceNotFoundException`                                                                         | The stream does not exist in that region. Check `settings.streamName` and the region the message names.                  |
 | `AccessDeniedException`                                                                             | The credentials lack `firehose:PutRecordBatch` on the stream. See [IAM policy](#iam-policy).                             |
 | `UnrecognizedClientException`, `InvalidSignatureException`, `ExpiredTokenException`, no credentials | The keys are wrong, expired or missing. Check `config.credentials` or the AWS credentials in the environment.            |
-| NULL rows in Athena, or failed queries                                                              | Records end with two newlines. Turn one of the two newlines off: set `newline: false` or the stream's delimiter off.     |
+| NULL rows in Athena                                                                                 | Records end with two newlines. Turn one of the two newlines off: set `newline: false` or the stream's delimiter off.     |
 | S3 objects contain `}{`                                                                             | Records have no delimiter at all. Leave `newline` at its default `true`.                                                 |
 | The destination refuses to start                                                                    | A configuration error found offline: missing `streamName`, a flat field and `settings.firehose` disagree, or malformed credentials. The message names the field. |
 

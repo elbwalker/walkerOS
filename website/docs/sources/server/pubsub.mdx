@@ -184,11 +184,11 @@ In a flow file the step names the pull export with `"import"`, because the packa
 `walkeros setup source.pubsub` stops with `Package @walkeros/server-source-gcp has no export "sourcePubSubPull"` (or `has no default export` without `"import"`) and creates nothing. Create the subscription with `gcloud pubsub subscriptions create` or your infrastructure code. The rest of this section describes the source's own setup function.
 :::
 
-Idempotent. Defaults: Pub/Sub's own (10-second ack deadline), project-default retention, no filter, no dead-letter policy. Drift on `ackDeadlineSeconds`, `messageRetentionDuration`, `deadLetterPolicy`, or `filter` emits `WARN setup.drift {...}` and never auto-mutates.
+Idempotent. Defaults: Pub/Sub's own (10-second ack deadline), project-default retention, no filter, no dead-letter policy. Drift on `ackDeadlineSeconds`, `messageRetentionDuration`, `deadLetterPolicy`, `enableMessageOrdering`, or `filter` logs one `setup.drift` warning per field (`{ field, declared, actual }`) on the logger the setup function receives, and never auto-mutates.
 
 `config.setup`:
 
-- `false` (default): no provisioning.
+- omitted or `false` (default): no provisioning.
 - `true`: provisions the subscription on `settings.topic` (an existing topic) with safe defaults. Without `settings.topic` setup creates nothing, and `walkeros setup` still reports `setup: ok`.
 - `{ ackDeadlineSeconds, messageRetentionDuration, filter, deadLetterPolicy, retryPolicy, ... }`: object form for explicit overrides.
 

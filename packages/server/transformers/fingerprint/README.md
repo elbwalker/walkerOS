@@ -46,7 +46,9 @@ The source must extract `ip` and `userAgent` into `ingest` (its
 `config.ingest`). The event then carries the hash at `user.hash`. The salt is
 required: without it the hash could be reversed to the IP, so the flow does not
 start. An event whose IP and user agent both resolve empty fails with
-`missing-input`, since every visitor would get the same hash.
+`missing-input`, since every visitor would get the same hash. An empty IP alone
+still gets a hash and logs one WARN line, which the default log level does not
+show.
 
 ## Documentation
 

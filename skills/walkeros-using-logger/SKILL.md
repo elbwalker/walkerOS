@@ -359,19 +359,20 @@ every line, so forwarding to a monitoring service needs no parsing.
 A server source endpoint is exposed to the open internet. Level choice decides
 whether ambient scanner noise turns into pages.
 
-| Situation                                       | Level                  | Also                                                                                |
-| ----------------------------------------------- | ---------------------- | ----------------------------------------------------------------------------------- |
-| Unparseable body, oversized payload             | `debug`                | count on `collector.status.sources.<id>.rejected`                                   |
-| Unknown path                                    | no line                | answered `404`                                                                      |
-| Event the collector rejects as invalid          | `warn` with the reason | counted as `rejected`; answered 400 only when the source waits for delivery         |
-| Settled `ok: false` arriving after the HTTP ack | `debug`                | the collector's failure line reports the cause at `error`; the ack already went out |
-| Handler fault, rejected push promise            | `error`                | answered 500                                                                        |
+| Situation                                       | Level                                                             | Also                                                                                |
+| ----------------------------------------------- | ----------------------------------------------------------------- | ----------------------------------------------------------------------------------- |
+| Unparseable body, oversized payload             | `debug`                                                           | count on `collector.status.sources.<id>.rejected`                                   |
+| Unknown path                                    | no line                                                           | answered `404`                                                                      |
+| Event the collector rejects as invalid          | `error` with the reason, one line per source and minute, no stack | counted as `rejected`; answered 400 only when the source waits for delivery         |
+| Settled `ok: false` arriving after the HTTP ack | `debug`                                                           | the collector's failure line reports the cause at `error`; the ack already went out |
+| Handler fault, rejected push promise            | `error`                                                           | answered 500                                                                        |
 
 Rules that follow from the table:
 
-- **Never `error` for anything a stranger can trigger.** On Cloud Run an
-  error-level stack trace on stderr opens an Error Reporting issue, so scanner
-  traffic becomes an alert.
+- **Never `error` for anything a stranger can trigger,** apart from the
+  collector's invalid-event line, which the source does not repeat. On Cloud Run
+  an error-level stack trace on stderr opens an Error Reporting issue, so
+  scanner traffic becomes an alert; the invalid-event line carries no stack.
 - **Do not duplicate the collector's error logs.** The collector already logs
   thrown pipeline failures at error. A source that logs them again doubles every
   real fault.

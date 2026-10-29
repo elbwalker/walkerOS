@@ -2558,7 +2558,7 @@
           "package": "@walkeros/server-transformer-fingerprint",
           "config": {
             "settings": {
-              "salt": "$env.FINGERPRINT_SALT",
+              "salt": "$secret.FINGERPRINT_SALT",
               "length": 16,
               "site": ["event.source.url", "ingest.origin"]
             }
@@ -4042,7 +4042,7 @@
           "package": "@walkeros/server-transformer-fingerprint",
           "config": {
             "settings": {
-              "salt": "$env.EMAIL_SALT",
+              "salt": "$secret.EMAIL_SALT",
               "rotate": "none",
               "output": "user.email",
               "fields": [
@@ -4304,7 +4304,7 @@
             },
             "settings": {
               "pixelId": "$env.META_PIXEL_ID:1234567890",
-              "accessToken": "$env.META_ACCESS_TOKEN",
+              "accessToken": "$secret.META_ACCESS_TOKEN",
               "action_source": "website",
               "user_data": {
                 "em": {

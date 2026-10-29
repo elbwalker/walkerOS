@@ -6,6 +6,6 @@ import type { Flow } from '@walkeros/core';
 export const minimal: Flow.MinimalExample = {
   settings: {
     url: 'https://your_account_name.piwik.pro/',
-    appId: 'e8f3a1c2-0b4d-4e5f-9a6b-7c8d9e0f1a2b',
+    appId: 'XXX-XXX-XXX-XXX-XXX',
   },
 };

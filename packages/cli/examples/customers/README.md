@@ -14,7 +14,7 @@ folder's absolute path (always for `runneros start`, which runs inside the
 artifact folder). From any other directory the lookup finds no file and the user
 gets no `ltv` or `segment`, without an error. A server flow simulation also
 needs the variables the setup in `flow-complete.md` exports (`GCP_SA`,
-`FINGERPRINT_SALT`, `EMAIL_SALT`).
+`FINGERPRINT_SALT`, `EMAIL_SALT`, `META_ACCESS_TOKEN`).
 
 In production the store is swapped for a real one, e.g.
 `@walkeros/server-store-sheets` or a GCS store; the `loadUser` step does not

@@ -13,7 +13,7 @@ Add `examples` to any step in your flow config to document what it expects and p
   "purchase": {
     "in": { "name": "order complete", "data": { "id": "ORD-123", "value": 149.97 } },
     "mapping": { "name": "purchase", "data": { "map": { "transaction_id": "data.id", "value": "data.value" } } },
-    "out": [["gtag", "event", "purchase", { "transaction_id": "ORD-123", "value": 149.97, "send_to": "G-DEMO123456" }]]
+    "out": [["window.gtag", "event", "purchase", { "transaction_id": "ORD-123", "value": 149.97, "send_to": "G-DEMO123456" }]]
   }
 }
 ```
@@ -45,7 +45,7 @@ Each example has a human-readable name and two fields:
         "name": "page view",
         "data": { "title": "Home", "path": "/" }
       },
-      "out": [["gtag", "event", "page_view", { "send_to": "G-DEMO123456" }]]
+      "out": [["window.gtag", "event", "page_view", { "send_to": "G-DEMO123456" }]]
     },
     "purchase": {
       "in": {
@@ -64,7 +64,7 @@ Each example has a human-readable name and two fields:
       },
       "out": [
         [
-          "gtag",
+          "window.gtag",
           "event",
           "purchase",
           {
@@ -85,7 +85,7 @@ Each example has a human-readable name and two fields:
 |-------|------|-------------|
 | `in` | any | The data the step receives |
 | `mapping` | object | The mapping rule applied to this event (destinations only) |
-| `out` | array | The effects the step produces, in order. Each entry is a tuple `[callable, ...args]`: a vendor call such as `["gtag", ...]` for a destination, `["elb", event]` for a source, `["return", value]` for a transformer. `[]` means no observable effect |
+| `out` | array | The effects the step produces, in order. Each entry is a tuple `[callable, ...args]`: a vendor call such as `["window.gtag", ...]` for a destination, `["elb", event]` for a source, `["return", value]` for a transformer. `[]` means no observable effect |
 | `out: [["return", false]]` | array | The transformer rejects or filters this event |
 | `trigger` | object | Sources only: how the example fires the source (`type`, such as `load`, `click` or `POST`, and `options`). This is simulation and test input, not the event's `trigger` field, which is a string |
 | `command` | string | Route `in` through a walker command instead of pushing it as an event (`config`, `consent`, `user`, `run`) |
@@ -105,7 +105,7 @@ Some destinations need to react to walker commands (consent updates, user identi
   "in": { "marketing": true, "analytics": true },
   "out": [
     [
-      "gtag",
+      "window.gtag",
       "consent",
       "default",
       {
@@ -116,7 +116,7 @@ Some destinations need to react to walker commands (consent updates, user identi
       }
     ],
     [
-      "gtag",
+      "window.gtag",
       "consent",
       "update",
       {
@@ -257,7 +257,7 @@ Here is a complete flow config with examples on a source, transformer, and desti
               },
               "out": [
                 [
-                  "gtag",
+                  "window.gtag",
                   "event",
                   "page_view",
                   { "page_title": "Home", "send_to": "G-DEMO123456" }
@@ -332,7 +332,7 @@ it.each(Object.entries(examples))(
     const env = {
       window: {
         dataLayer: [],
-        gtag: (...args: unknown[]) => calls.push(['gtag', ...args]),
+        gtag: (...args: unknown[]) => calls.push(['window.gtag', ...args]),
       },
     };
     const [entity, action] = example.in.name.split(' ');

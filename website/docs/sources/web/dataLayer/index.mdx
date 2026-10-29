@@ -103,6 +103,16 @@ dataLayer.push({ event: 'purchase', value: 99.99 });
   language="javascript"
 />
 
+An event carries only the values of its entry: strings, numbers, booleans,
+`null`, and objects and arrays of them, with a date as its timestamp in
+milliseconds. Functions such as `eventCallback`, DOM elements such as
+`gtm.element`, `undefined` and keys whose getter throws are left out. A value
+reached again through a cycle is left out, and once an entry contains a cycle,
+every later repeated reference in it is dropped too (`items: [p, p]` becomes
+`[p]`); in an entry without a cycle, an object referenced twice is kept twice,
+as JSON keeps it. The page's own `dataLayer.push` always runs and never throws
+because of the source.
+
 The source reads the page's `window` and needs no `env`, in integrated and
 bundled mode alike. In tests, `env.window` replaces it.
 

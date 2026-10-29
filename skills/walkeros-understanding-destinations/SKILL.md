@@ -164,8 +164,11 @@ destination whose retries need longer than that loses them on shutdown.
 A push ends in one place per destination in the `PushResult`: `done`, `queued`
 (reason `consent`, `batch` or `held`) or `failed`. A failed entry carries a
 `reason` `{ code, message, retryable, status? }` that the collector derives from
-the thrown value: a `StepError` keeps its `code`, any other throw is
-`transport`. Codes the collector assigns itself: `timeout`, `not-ready` (a
+the thrown value: a `StepError` keeps its `code`; a `TypeError`, `RangeError` or
+`ReferenceError` is `runtime` (not retryable), except Node's `fetch failed` with
+a `cause.code`; any other throw is `transport`. A failed browser `fetch` is a
+`TypeError` too, so throw network failures as a `StepError` (`sendWeb` and
+`sendServer` do). Codes the collector assigns itself: `timeout`, `not-ready` (a
 destination whose `init` could not start or returned `false`), `breaker-open`,
 `blocked` (held past one retry window), `queue-full`, `mapping` (a rule
 `condition` threw), `transformer`. Codes a destination throws: `config`,

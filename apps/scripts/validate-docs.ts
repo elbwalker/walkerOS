@@ -33,8 +33,17 @@ interface Issue {
 const ROOT = process.cwd();
 const issues: Issue[] = [];
 
+// Pages that document `elb('walker destination', ...)` itself, with the reason.
+const LEGACY_PATTERN_ALLOWED: Record<string, string> = {
+  'website/docs/collector/commands.mdx':
+    'owns the walker commands, documents walker destination',
+  'website/docs/migrating/v3-to-v4.mdx':
+    'migration guide, quotes the v3 and v4 forms of the command',
+};
+
 // Check for legacy API patterns
 function checkLegacyPatterns(file: string, content: string): void {
+  if (relative(ROOT, file) in LEGACY_PATTERN_ALLOWED) return;
   const lines = content.split('\n');
 
   lines.forEach((line, index) => {
@@ -66,9 +75,19 @@ function checkDomainRefs(file: string, content: string): void {
   }
 }
 
+// READMEs that are not a package's README, with the reason they need no
+// Installation or Usage section.
+const README_STRUCTURE_EXEMPT: Record<string, string> = {
+  'skills/README.md': 'skills index; installing the plugin is under Usage',
+  'packages/core/src/schemas/README.md': 'internal source folder README',
+  'packages/cli/examples/shared/README.md': 'example data folder of the cli',
+  'packages/cli/examples/customers/README.md': 'example data folder of the cli',
+};
+
 // Check README structure
 function checkReadmeStructure(file: string, content: string): void {
   if (!file.endsWith('README.md')) return;
+  if (relative(ROOT, file) in README_STRUCTURE_EXEMPT) return;
 
   const hasInstallation = /^##?\s+Installation/im.test(content);
   const hasUsage = /^##?\s+(Usage|Quick Start)/im.test(content);
@@ -166,7 +185,7 @@ function checkBundledSnippets(): void {
 function extractCodeRegions(content: string): string {
   const regions: string[] = [];
 
-  // <CodeSnippet ... code={`...`} ... /> — capture the template-literal body.
+  // <CodeSnippet ... code={`...`} ... />: capture the template-literal body.
   const snippetRe = /code=\{`([\s\S]*?)`\}/g;
   let m: RegExpExecArray | null;
   while ((m = snippetRe.exec(content)) !== null)

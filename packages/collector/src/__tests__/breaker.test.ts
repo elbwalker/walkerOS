@@ -92,6 +92,33 @@ describe('circuit breaker', () => {
     expect(push).toHaveBeenCalledTimes(3);
   });
 
+  // A runtime error is a fault in step code, not a transport that recovers:
+  // a retry fails the same way, so it never opens the breaker.
+  test.each([
+    ['a TypeError', new TypeError('x'), 'runtime', false, 6],
+    ['an Error', new Error('x'), 'transport', true, 3],
+  ])(
+    '%s fails as %s (retryable %s); %d of 6 events reach the destination at threshold 3',
+    async (_label, thrown, code, retryable, pushed) => {
+      const push = jest.fn();
+      const destination: Destination.Instance = {
+        type: 'mock',
+        config: { breaker: 3 },
+        push: push.mockImplementation(() => {
+          throw thrown;
+        }),
+      };
+      const c = await makeCollector();
+      c.destinations.d1 = destination;
+
+      const first = await pushToDestinations(c, createEvent());
+      for (let i = 0; i < 5; i++) await pushToDestinations(c, createEvent());
+
+      expect(first.failed?.d1?.reason).toMatchObject({ code, retryable });
+      expect(push).toHaveBeenCalledTimes(pushed);
+    },
+  );
+
   test('CONSECUTIVE not cumulative: fail, fail, success, fail does NOT open at threshold 3', async () => {
     const push = jest.fn();
     let outcome: 'ok' | 'throw' = 'throw';

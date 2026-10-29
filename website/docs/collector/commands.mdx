@@ -42,6 +42,7 @@ const { collector, elb } = await startFlow({
     gtag: {
       code: destinationGtag,
       config: {
+        loadScript: true,
         settings: {
           ga4: { measurementId: 'G-XXXXXXXXXX' },
         },
@@ -55,7 +56,7 @@ const { collector, elb } = await startFlow({
 :::tip
 
 To add a destination at runtime, use the `walker destination` command,
-`elb('walker destination', { code: destinationGtag, config: { settings: { ga4: { measurementId: 'G-XXXXXXXXXX' } } } })`, or
+`elb('walker destination', { code: destinationGtag, config: { loadScript: true, settings: { ga4: { measurementId: 'G-XXXXXXXXXX' } } } })`, or
 `collector.addDestination()`. See destination-specific documentation for
 configuration options.
 

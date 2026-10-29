@@ -53,17 +53,19 @@ export interface DroppedCounters {
 
 /**
  * Circuit-breaker state for a single step (keyed by `stepId()` in
- * `Status.breakers`). Tracks consecutive transport failures so a step whose
- * transport is down can be skipped (gated) until a cooldown elapses, instead
+ * `Status.breakers`). Tracks consecutive transport failures so events for a
+ * step whose transport is down fail fast until a cooldown elapses, instead
  * of every event hammering a known-broken writer.
  *
  * - `closed`: healthy; events pass through. `consecutiveFailures` accrues on
  *   transport failures and resets to 0 on any success.
- * - `open`: tripped; events are skipped until `openUntil`. The first event at
- *   or after `openUntil` transitions to `half-open` and becomes the probe.
+ * - `open`: tripped; events fail with `breaker-open` until `openUntil`. The
+ *   first event at or after `openUntil` transitions to `half-open` and becomes
+ *   the probe.
  * - `half-open`: a single probe event is allowed through; `probing` marks that
- *   the probe slot is taken so concurrent events still skip. A probe success
- *   closes the breaker; a probe failure re-opens it with a fresh `openUntil`.
+ *   the probe slot is taken so concurrent events still fail with
+ *   `breaker-open`. A probe success closes the breaker; a probe failure
+ *   re-opens it with a fresh `openUntil`.
  *
  * `consecutiveFailures` is CONSECUTIVE, not cumulative: a single success
  * resets it, so only an unbroken run reaching the threshold opens the breaker.
@@ -457,7 +459,7 @@ export interface Instance {
   /**
    * Per-cell change version: the `stateVersion` at which each state cell
    * (`consent`/`user`/`globals`/`custom`) last changed. Lets delivery dedup be
-   * per-cell — a subscriber owed two cells at the same `stateVersion` receives
+   * per-cell: a subscriber owed two cells at the same `stateVersion` receives
    * both, because each cell's freshness is tracked independently rather than
    * against the single global `stateVersion`. A missing entry reads as 0.
    */
@@ -472,8 +474,8 @@ export interface Instance {
    * cell iff `stateVersion > mark[cell]` AND `allowed === true`.
    *
    * Per-cell (not a single scalar per subscriber) so a handler owed two
-   * distinct cells at the same `stateVersion` — e.g. consent and user both
-   * bumped before run — receives both at the run barrier instead of the first
+   * distinct cells at the same `stateVersion` (e.g. consent and user both
+   * bumped before run) receives both at the run barrier instead of the first
    * delivery advancing one mark and swallowing the second cell's edge.
    */
   delivery: WeakMap<object, Record<string, number>>;

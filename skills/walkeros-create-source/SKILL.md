@@ -712,9 +712,7 @@ with nft, which copies every file the bundle reaches at runtime. Do not add a
 | `__tests__/conformance.test.ts`  | Conformance kit (profile `source`)  | [conformance.test.ts](./templates/server/conformance.test.ts)  |
 
 The server template is an HTTP handler that turns a platform's webhook body into
-walkerOS events and answers the producer from the push result. Its `examples/`
-folder also holds `inputs.ts`, `outputs.ts`, `requests.ts` and `mapping.ts`,
-which are not part of the layout: do not copy them.
+walkerOS events and answers the producer from the push result.
 
 ### Key Patterns
 

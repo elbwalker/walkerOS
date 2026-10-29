@@ -352,6 +352,14 @@ warning.
   language="json"
 />
 
+With `'queue'` on a server, which is also the default of a collector you start
+with `startFlow` in your own code, every user's denied events wait in the same
+destination queue. A later event whose own consent allows the destination is
+sent while the same user's earlier denied event stays queued, and one
+`walker consent` command sends the queued events of every user, including
+users who never consented. Pass `consentDenied: 'skip'` to `startFlow` on a
+server to skip these events instead.
+
 A held event keeps the consent it was admitted with: when its destination's
 hold ends it is delivered even if the collector's consent changed meanwhile.
 

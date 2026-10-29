@@ -68,7 +68,7 @@ function rotationWindow(rotate: FingerprintSettings['rotate']): string {
  * @example
  * transformerFingerprint({
  *   config: {
- *     settings: { salt: '$env.FINGERPRINT_SALT' },
+ *     settings: { salt: process.env.FINGERPRINT_SALT },
  *   },
  * })
  */

@@ -70,7 +70,12 @@ export const ConfigSchema = z
       .describe(
         'Declarative store get/set operations applied around this transformer',
       ),
-    init: z.boolean().describe('Whether to initialize immediately').optional(),
+    init: z
+      .boolean()
+      .describe(
+        'Whether the transformer is already initialized; true skips its init(). The collector sets it after init runs.',
+      )
+      .optional(),
     disabled: z
       .boolean()
       .describe('Completely skip this transformer in chains')

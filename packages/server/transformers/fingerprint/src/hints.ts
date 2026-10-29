@@ -27,7 +27,7 @@ export const hints: Hint.Hints = {
               fingerprint: {
                 package: '@walkeros/server-transformer-fingerprint',
                 config: {
-                  settings: { salt: '$env.FINGERPRINT_SALT' },
+                  settings: { salt: '$secret.FINGERPRINT_SALT' },
                 },
               },
             },
@@ -39,7 +39,7 @@ export const hints: Hint.Hints = {
     ],
   },
   'salt-and-rotation': {
-    text: 'The salt keys the hash (HMAC), so it cannot be recomputed or reversed to the IP without it. Pass it via $env so it stays out of the flow file, and use one salt per deployment. The salt is required: without it the flow does not start (Config settings salt missing). Rotation is built in (daily by default, UTC windows): do not add a date field for it. For another window, set rotate: "none" and add the window as a field. Setting fields switches the default inputs off, so name them too: { rotate: "none", ip: "ingest.ip", userAgent: "ingest.userAgent", site: "event.source.url", fields: [{ fn: () => new Date().toISOString().slice(0, 7) }] } rotates monthly. rotate: "none" without such a field keeps one hash per visitor indefinitely, which is a privacy decision, not a default.',
+    text: 'The salt keys the hash (HMAC), so it cannot be recomputed or reversed to the IP without it. Pass it via $secret so it stays out of the flow file, and use one salt per deployment. The salt is required: without it the flow does not start (Config settings salt missing). Rotation is built in (daily by default, UTC windows): do not add a date field for it. For another window, set rotate: "none" and add the window as a field. Setting fields switches the default inputs off, so name them too: { rotate: "none", ip: "ingest.ip", userAgent: "ingest.userAgent", site: "event.source.url", fields: [{ fn: () => new Date().toISOString().slice(0, 7) }] } rotates monthly. rotate: "none" without such a field keeps one hash per visitor indefinitely, which is a privacy decision, not a default.',
   },
   'site-sources': {
     text: 'site defaults to the hostname of event.source.url, which the walkerOS browser and dataLayer sources set on every event and transformer-ga4 sets from the page URL of the hit (dl). Events without source.url (server-side events, GA4 hits without dl) need site pointed elsewhere: an ingest path such as ingest.property (a path parameter) or ingest.origin (map it in config.ingest first, e.g. origin: { key: "headers.origin" }), or a static { value: "example.com" }. site keeps one visitor apart across sites when one collector with one salt serves several of them; a single-site deployment with its own salt is already separated by the salt.',

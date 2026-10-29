@@ -35,6 +35,12 @@ GA4 gtag-style `d8a()` API, so existing GA4 mappings translate directly.
 
 <Quickstart data={data} />
 
+The quickstart above sets no consent, so d8a starts and receives every event
+without `analytics` consent, and a denial only updates d8a's consent mode while
+the events keep going out. Add `consent: { analytics: true }` to `config`, next
+to `settings`, before you go live (see [Consent Mode](#consent-mode) and
+[gate a destination](/docs/guides/consent#gate-a-destination-with-consent)).
+
 ## Event Mapping
 
 By default, walkerOS event names are converted to snake_case and sent with the

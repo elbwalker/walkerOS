@@ -34,7 +34,7 @@ export const eventFormatSchema = Object.freeze({
     WalkerOSPropertyType: {
       title: 'WalkerOS.PropertyType',
       description:
-        'Base property value types (boolean, string, number, or nested Property record).',
+        'Base property value types (boolean, string, number, null for a value that is present but cleared, or nested Property record).',
       anyOf: [
         {
           type: 'boolean',
@@ -44,6 +44,9 @@ export const eventFormatSchema = Object.freeze({
         },
         {
           type: 'number',
+        },
+        {
+          type: 'null',
         },
         {
           type: 'object',

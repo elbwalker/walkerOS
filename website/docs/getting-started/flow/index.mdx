@@ -278,7 +278,7 @@ Transformers process events between sources and destinations. They validate, enr
     "fingerprint": {
       "package": "@walkeros/server-transformer-fingerprint",
       "config": {
-        "settings": { "salt": "$env.FINGERPRINT_SALT" }
+        "settings": { "salt": "$secret.FINGERPRINT_SALT" }
       }
     }
   }
@@ -314,7 +314,7 @@ Link transformers together using `next`:
     "fingerprint": {
       "package": "@walkeros/server-transformer-fingerprint",
       "config": {
-        "settings": { "salt": "$env.FINGERPRINT_SALT" }
+        "settings": { "salt": "$secret.FINGERPRINT_SALT" }
       }
     }
   }
@@ -338,7 +338,7 @@ For explicit control over the order, use an array instead of a string. Its entri
     "fingerprint": {
       "package": "@walkeros/server-transformer-fingerprint",
       "config": {
-        "settings": { "salt": "$env.FINGERPRINT_SALT" }
+        "settings": { "salt": "$secret.FINGERPRINT_SALT" }
       }
     },
     "enrich": {

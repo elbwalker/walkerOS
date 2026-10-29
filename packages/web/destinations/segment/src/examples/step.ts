@@ -44,8 +44,8 @@ export const defaultEventForwarding: SegmentStepExample = {
   title: 'Default track',
   description:
     'A walker event becomes a Segment analytics.track call with the event name and empty properties.',
-  in: getEvent('product view', { timestamp: 1700000100 }),
-  out: [['analytics.track', 'product view', {}]],
+  in: getEvent('product view', { timestamp: 1700000100000 }),
+  out: [['analytics.load.track', 'product view', {}]],
 };
 
 /**
@@ -54,7 +54,7 @@ export const defaultEventForwarding: SegmentStepExample = {
  */
 export const wildcardIgnored: SegmentStepExample = {
   public: false,
-  in: createEvent({ name: 'debug noise', timestamp: 1700000101 }),
+  in: createEvent({ name: 'debug noise', timestamp: 1700000101000 }),
   mapping: { ignore: true },
   out: [],
 };
@@ -67,11 +67,11 @@ export const destinationLevelInclude: SegmentStepExample = {
   title: 'Include data',
   description:
     "With include: ['data'] in the destination config, the event data section is flattened into prefixed Segment track properties.",
-  in: getEvent('product view', { timestamp: 1700000102 }),
+  in: getEvent('product view', { timestamp: 1700000102000 }),
   configInclude: ['data'],
   out: [
     [
-      'analytics.track',
+      'analytics.load.track',
       'product view',
       {
         data_id: 'ers',
@@ -94,14 +94,14 @@ export const ruleIncludeReplaces: SegmentStepExample = {
   title: 'Rule include overrides',
   description:
     "With include: ['data'] in the destination config, the rule's include: ['globals'] replaces it, so this event forwards only globals.",
-  in: getEvent('order complete', { timestamp: 1700000103 }),
+  in: getEvent('order complete', { timestamp: 1700000103000 }),
   configInclude: ['data'],
   mapping: {
     include: ['globals'],
   },
   out: [
     [
-      'analytics.track',
+      'analytics.load.track',
       'order complete',
       {
         globals_pagegroup: 'shop',
@@ -120,7 +120,7 @@ export const destinationLevelIdentify: SegmentStepExample = {
   title: 'Destination identify',
   description:
     "With settings.identify mapping userId to 'user.id', the destination calls analytics.identify before the default track.",
-  in: getEvent('page view', { timestamp: 1700000104 }),
+  in: getEvent('page view', { timestamp: 1700000104000 }),
   settings: {
     identify: {
       map: {
@@ -129,8 +129,8 @@ export const destinationLevelIdentify: SegmentStepExample = {
     },
   },
   out: [
-    ['analytics.identify', 'us3r', {}],
-    ['analytics.track', 'page view', {}],
+    ['analytics.load.identify', 'us3r', {}],
+    ['analytics.load.track', 'page view', {}],
   ],
 };
 
@@ -146,7 +146,7 @@ export const userLoginIdentify: SegmentStepExample = {
     'A user login fires Segment analytics.identify with userId and reserved traits such as email, name, and plan.',
   in: createEvent({
     name: 'user login',
-    timestamp: 1700000105,
+    timestamp: 1700000105000,
     data: {
       user_id: 'new-user-123',
       email: 'user@acme.com',
@@ -181,7 +181,7 @@ export const userLoginIdentify: SegmentStepExample = {
   },
   out: [
     [
-      'analytics.identify',
+      'analytics.load.identify',
       'new-user-123',
       {
         email: 'user@acme.com',
@@ -203,7 +203,7 @@ export const profileUpdateTraitsOnly: SegmentStepExample = {
     'A profile update calls Segment analytics.identify with traits and no userId to merge traits into the current profile.',
   in: createEvent({
     name: 'profile update',
-    timestamp: 1700000106,
+    timestamp: 1700000106000,
     data: {
       name: 'Jane Q. Doe',
       avatar_url: 'https://example.com/avatar.png',
@@ -228,7 +228,7 @@ export const profileUpdateTraitsOnly: SegmentStepExample = {
   },
   out: [
     [
-      'analytics.identify',
+      'analytics.load.identify',
       undefined,
       {
         name: 'Jane Q. Doe',
@@ -248,14 +248,14 @@ export const userLogoutReset: SegmentStepExample = {
   title: 'User logout reset',
   description:
     'A user logout calls analytics.reset to clear userId, anonymousId, and traits then generate a new anonymous id.',
-  in: createEvent({ name: 'user logout', timestamp: 1700000107 }),
+  in: createEvent({ name: 'user logout', timestamp: 1700000107000 }),
   mapping: {
     silent: true,
     settings: {
       reset: true,
     },
   },
-  out: [['analytics.reset']],
+  out: [['analytics.load.reset']],
 };
 
 /**
@@ -268,7 +268,7 @@ export const companyUpdateGroup: SegmentStepExample = {
     'A company update fires Segment analytics.group with a groupId and traits for account-level tracking.',
   in: createEvent({
     name: 'company update',
-    timestamp: 1700000108,
+    timestamp: 1700000108000,
     data: {
       company_id: 'comp-456',
       company_name: 'Acme',
@@ -297,7 +297,7 @@ export const companyUpdateGroup: SegmentStepExample = {
   },
   out: [
     [
-      'analytics.group',
+      'analytics.load.group',
       'comp-456',
       {
         name: 'Acme',
@@ -319,7 +319,7 @@ export const pageViewAsPage: SegmentStepExample = {
   description:
     'A page view fires Segment analytics.page with category, name, and properties instead of a generic track.',
   in: getEvent('page view', {
-    timestamp: 1700000109,
+    timestamp: 1700000109000,
     data: {
       category: 'docs',
       title: 'Getting Started',
@@ -344,7 +344,7 @@ export const pageViewAsPage: SegmentStepExample = {
   },
   out: [
     [
-      'analytics.page',
+      'analytics.load.page',
       'docs',
       'Getting Started',
       {
@@ -362,14 +362,14 @@ export const pageViewMinimal: SegmentStepExample = {
   title: 'Page view minimal',
   description:
     "A mapping with page: true fires an empty analytics.page call relying on Segment's auto-collection.",
-  in: getEvent('page view', { timestamp: 1700000110 }),
+  in: getEvent('page view', { timestamp: 1700000110000 }),
   mapping: {
     silent: true,
     settings: {
       page: true,
     },
   },
-  out: [['analytics.page']],
+  out: [['analytics.load.page']],
 };
 
 /**
@@ -382,7 +382,7 @@ export const orderCompletedEcommerce: SegmentStepExample = {
   title: 'Order completed',
   description:
     'A completed order is mapped to the Segment Spec Order Completed event with a nested products array.',
-  in: getEvent('order complete', { timestamp: 1700000111 }),
+  in: getEvent('order complete', { timestamp: 1700000111000 }),
   mapping: {
     name: 'Order Completed',
     data: {
@@ -415,7 +415,7 @@ export const orderCompletedEcommerce: SegmentStepExample = {
   },
   out: [
     [
-      'analytics.track',
+      'analytics.load.track',
       'Order Completed',
       {
         order_id: '0rd3r1d',
@@ -455,7 +455,7 @@ export const consentContextForwarded: SegmentStepExample = {
   description:
     'With settings.consent mapping analytics to Analytics and marketing to Advertising, the event consent is stamped on every Segment call via context.consent.categoryPreferences for downstream filtering.',
   in: getEvent('product view', {
-    timestamp: 1700000112,
+    timestamp: 1700000112000,
     consent: { analytics: true, marketing: true },
   }),
   settings: {
@@ -466,7 +466,7 @@ export const consentContextForwarded: SegmentStepExample = {
   },
   out: [
     [
-      'analytics.track',
+      'analytics.load.track',
       'product view',
       {},
       {
@@ -493,7 +493,7 @@ export const consentContextOmitted: SegmentStepExample = {
     timestamp: 1700000113000,
     consent: { analytics: true, marketing: false },
   }),
-  out: [['analytics.track', 'product view', {}]],
+  out: [['analytics.load.track', 'product view', {}]],
 };
 
 /**
@@ -514,7 +514,7 @@ export const consentRevokeNoOp: SegmentStepExample = {
 export const silentRule: SegmentStepExample = {
   public: false,
   description: 'A rule with silent: true and no settings calls nothing.',
-  in: getEvent('page view', { timestamp: 1700000140 }),
+  in: getEvent('page view', { timestamp: 1700000140000 }),
   mapping: { silent: true },
   out: [],
 };

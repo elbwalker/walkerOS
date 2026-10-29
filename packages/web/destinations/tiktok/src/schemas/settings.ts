@@ -8,8 +8,7 @@ export const SettingsSchema = z
       .describe(
         'Your TikTok Pixel ID. Find it in TikTok Ads Manager under "Assets" → "Events" → "Web Events" → select your pixel → "Setup Web Event" → "Pixel ID".',
       ),
-    // `pageview` removed 2026-04-09: TikTok's SDK fires auto page view and
-    // the knob was unreliable. Let it fire; don't expose a toggle.
+    // No page view setting: the destination calls no ttq.page().
     auto_config: z
       .boolean()
       .describe(

@@ -200,13 +200,22 @@ Type checking functions:
 * `isString(value)`, `isNumber(value)`, `isBoolean(value)`
 * `isArray(value)`, `isObject(value)`, `isFunction(value)`
 * `isDefined(value)`, `isSameType(a, b)`
-* `isPropertyType(value)` - Checks if value is valid walkerOS property
+* `isPropertyType(value)` - Checks if value is valid walkerOS property:
+  a string, number, boolean, `null` or `undefined`, or an object or array of
+  them
 
 ### Property utilities
 
 * `castToProperty(value)` - Returns the value when it is a valid property,
-  otherwise `undefined`
-* `filterValues(object)` - Filters object to valid properties only
+  otherwise `undefined`. As in mapping, a value that is or contains `null` is
+  `undefined`
+* `filterValues(value)` - Copies only valid property values: it keeps `null`,
+  turns a date into its timestamp in milliseconds, and leaves out everything
+  else (functions, DOM elements, `undefined`, `NaN`, symbols, objects such as
+  `Map`, keys whose getter throws and `__proto__` keys). In a value without a
+  cycle, an object referenced twice is kept twice, as JSON keeps it. Once a
+  cycle is found, the back-reference and every later repeated reference in
+  that call are left out
 
 ## Request handling
 

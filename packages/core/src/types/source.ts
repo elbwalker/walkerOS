@@ -140,13 +140,15 @@ export interface Config<
    *
    * @example
    * ingest: {
-   *   ip: 'ip',
-   *   ua: 'headers.user-agent',
-   *   origin: 'headers.origin'
+   *   map: {
+   *     ip: { key: 'ip' },
+   *     ua: { key: 'headers.user-agent' },
+   *     origin: { key: 'headers.origin' }
+   *   }
    * }
    */
   ingest?: WalkerOSMapping.Data;
-  /** Completely skip this source — no init, no event capture. */
+  /** Completely skip this source: no init, no event capture. */
   disabled?: boolean;
   /**
    * Init lifecycle flag. Set by the collector to `true` after `Instance.init()`

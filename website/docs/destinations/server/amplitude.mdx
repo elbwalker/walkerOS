@@ -33,7 +33,7 @@ Server-side event delivery to [Amplitude](https://amplitude.com/) for product an
 
 ## Identity
 
-Without `settings.identify` the destination sends no `user_id` or `device_id`, so the quickstart's events carry neither. Map them from the event in `settings.identify`, as the Identify per event example above does, or per rule.
+Without `settings.identify` the destination sends no `user_id` or `device_id`, so the quickstart's events carry neither. Amplitude's [HTTP V2 API](https://amplitude.com/docs/apis/analytics/http-v2) requires one of them on every event, and a 400 answer fails the push with `transport` and status 400. Map them from the event in `settings.identify`, as the Identify per event example above does, or per rule.
 
 ## Batching and delivery
 

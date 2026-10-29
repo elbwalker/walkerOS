@@ -42,7 +42,7 @@ export const productView: Flow.StepExample = {
   title: 'Product view',
   description:
     'A product view fires a Snowplow ecommerce action with a product context schema and pricing fields.',
-  in: getEvent('product view', { timestamp: 1700000400 }),
+  in: getEvent('product view', { timestamp: 1700000400000 }),
   mapping: {
     name: ACTIONS.PRODUCT_VIEW,
     settings: {
@@ -94,7 +94,7 @@ export const addToCart: Flow.StepExample = {
   title: 'Add to cart',
   description:
     'A product add fires a Snowplow ecommerce add_to_cart action with product, cart, page, and user contexts.',
-  in: getEvent('product add', { timestamp: 1700000401 }),
+  in: getEvent('product add', { timestamp: 1700000401000 }),
   mapping: {
     name: ACTIONS.ADD_TO_CART,
     settings: {
@@ -193,7 +193,7 @@ export const transaction: Flow.StepExample = {
   title: 'Transaction',
   description:
     'A completed order fires a Snowplow ecommerce transaction action with transaction id, revenue, tax, and shipping.',
-  in: getEvent('order complete', { timestamp: 1700000402 }),
+  in: getEvent('order complete', { timestamp: 1700000402000 }),
   mapping: {
     name: ACTIONS.TRANSACTION,
     settings: {
@@ -246,7 +246,7 @@ export const promoView: Flow.StepExample = {
   title: 'Promo view',
   description:
     'A promotion visible event fires a Snowplow promo_view action with a promotion context.',
-  in: getEvent('promotion visible', { timestamp: 1700000403 }),
+  in: getEvent('promotion visible', { timestamp: 1700000403000 }),
   mapping: {
     name: ACTIONS.PROMO_VIEW,
     settings: {
@@ -296,7 +296,7 @@ export const pageView: Flow.StepExample = {
   title: 'Page view',
   description:
     'A page view calls Snowplow trackPageView directly instead of a self-describing event.',
-  in: getEvent('page view', { timestamp: 1700000404 }),
+  in: getEvent('page view', { timestamp: 1700000404000 }),
   mapping: undefined,
   out: [['snowplow.trackPageView']],
 };
@@ -305,7 +305,7 @@ export const checkoutStep: Flow.StepExample = {
   title: 'Checkout step',
   description:
     'A checkout start fires a Snowplow checkout_step action with the checkout step, 1 when the event carries none.',
-  in: getEvent('checkout start', { timestamp: 1700000405 }),
+  in: getEvent('checkout start', { timestamp: 1700000405000 }),
   mapping: {
     name: ACTIONS.CHECKOUT_STEP,
     settings: {
@@ -349,7 +349,7 @@ export const structuredEvent: Flow.StepExample = {
   title: 'Struct event',
   description:
     'A custom event is tracked via Snowplow trackStructEvent with category, action, label, property, and value.',
-  in: getEvent('product visible', { timestamp: 1700000406 }),
+  in: getEvent('product visible', { timestamp: 1700000406000 }),
   mapping: {
     settings: {
       struct: {
@@ -379,7 +379,7 @@ export const contextLoop: Flow.StepExample = {
   title: 'Transaction with products',
   description:
     'A transaction event adds one Snowplow product context per nested product via a loop mapping.',
-  in: getEvent('order complete', { timestamp: 1700000407 }),
+  in: getEvent('order complete', { timestamp: 1700000407000 }),
   mapping: {
     name: ACTIONS.TRANSACTION,
     settings: {
@@ -466,7 +466,7 @@ export const contextLoop: Flow.StepExample = {
 export const silentRule: Flow.StepExample = {
   public: false,
   description: 'A rule with silent: true sends no Snowplow event.',
-  in: getEvent('product view', { timestamp: 1700000405 }),
+  in: getEvent('product view', { timestamp: 1700000405000 }),
   mapping: { name: ACTIONS.PRODUCT_VIEW, silent: true },
   out: [],
 };

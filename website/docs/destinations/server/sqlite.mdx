@@ -210,7 +210,7 @@ Sync native driver, fastest option for single-host deployments. The URL is treat
 
 ### Remote, `@libsql/client`
 
-Async HTTP/WSS driver for [Turso](https://turso.tech/), self-hosted [sqld](https://github.com/tursodatabase/libsql), or any libSQL-compatible endpoint. Auth via `authToken`. The remote server controls journaling, so a client-side `journal_mode` pragma is silently ignored. The other pragmas (`synchronous`, `foreign_keys`, `temp_store`) still apply.
+Async HTTP/WSS driver for [Turso](https://turso.tech/), self-hosted [sqld](https://github.com/tursodatabase/libsql), or any libSQL-compatible endpoint. Auth via `authToken`. Setup sends the same four pragmas over this driver. Turso Cloud manages journaling itself and does not allow changing the journal mode (see [Turso Cloud limitations](https://docs.turso.tech/cloud/limitations)).
 
 <CodeSnippet
   code={`{

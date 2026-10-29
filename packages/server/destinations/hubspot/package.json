@@ -1,6 +1,6 @@
 {
   "name": "@walkeros/server-destination-hubspot",
-  "description": "HubSpot CRM server destination for walkerOS (@hubspot/api-client, custom events + contact upsert)",
+  "description": "HubSpot CRM server destination for walkerOS (@hubspot/api-client, custom events + contact update)",
   "version": "4.8.2",
   "license": "MIT",
   "exports": {

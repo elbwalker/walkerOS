@@ -111,7 +111,7 @@ The GCS create call requires a project. Resolution order:
 ### Behavior
 
 - **Idempotent**: HTTP 409 (bucket exists) is treated as success. The setup never patches or mutates an existing bucket.
-- **Drift detection**: when the bucket already exists, setup performs a `GET /b/<bucket>` and logs `WARN setup.drift { field, declared, actual }` for any of `location`, `storageClass`, `versioning`, `iamConfiguration` (uniform bucket-level access, public access prevention), and `labels` that do not match. Drift is logged, never auto-fixed.
+- **Drift detection**: when the bucket already exists, setup performs a `GET /b/<bucket>` and logs one `setup.drift` warning (`{ field, declared, actual }`) on the logger it receives for each differing field among `location`, `storageClass`, `versioning`, `iamConfiguration` (uniform bucket-level access, public access prevention) and `labels`. Drift is logged, never auto-fixed.
 - **Defaults enforced at create**: uniform bucket-level access on, public access prevention enforced. The package sets both on every bucket it creates.
 
 ### Runtime hard-fail

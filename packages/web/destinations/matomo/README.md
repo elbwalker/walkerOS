@@ -46,6 +46,10 @@ npm install @walkeros/web-destination-matomo
 }
 ```
 
+This quick start sets no consent, so `matomo.js` loads and Matomo receives every
+event without consent, and a revocation changes nothing: add
+`consent: { analytics: true }` to `config` before you go live, see the docs.
+
 ## Documentation
 
 Full configuration, mapping, and examples live in the docs:

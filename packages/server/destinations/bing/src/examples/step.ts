@@ -36,7 +36,7 @@ const OPTIONS = {
 export const purchase: Flow.StepExample = {
   title: 'Purchase',
   description:
-    'A completed order is sent to the Bing UET CAPI with transaction id, value, items, and hashed user data.',
+    "A completed order is sent to the Bing UET CAPI with transaction id, value, items and the visitor's anonymous ID.",
   in: getEvent('order complete', {
     id: 'b1c2d3e4f5a60001',
     timestamp: 1700000900000,
@@ -86,7 +86,7 @@ export const purchase: Flow.StepExample = {
         },
         userData: {
           map: {
-            externalId: 'user.id',
+            anonymousId: 'user.device',
           },
         },
       },
@@ -104,7 +104,7 @@ export const purchase: Flow.StepExample = {
             eventTime: 1700000900,
             adStorageConsent: 'G',
             userData: {
-              externalId: 'user-123',
+              anonymousId: 'device-456',
             },
             eventName: 'purchase',
             eventSourceUrl: 'https://shop.example.com/checkout/complete',
@@ -134,10 +134,11 @@ export const purchase: Flow.StepExample = {
 export const pageView: Flow.StepExample = {
   title: 'Page view',
   description:
-    'A page view is sent to the Bing UET CAPI with eventType pageLoad and the source URL.',
+    "A page view is sent to the Bing UET CAPI with eventType pageLoad, the visitor's anonymous ID and the source URL.",
   in: getEvent('page view', {
     id: 'b1c2d3e4f5a60002',
     timestamp: 1700000901000,
+    user: { device: 'device-456' },
     source: {
       type: 'browser',
       platform: 'web',
@@ -146,6 +147,15 @@ export const pageView: Flow.StepExample = {
   }),
   mapping: {
     settings: { eventType: 'pageLoad' },
+    data: {
+      map: {
+        userData: {
+          map: {
+            anonymousId: 'user.device',
+          },
+        },
+      },
+    },
   },
   out: [
     [
@@ -158,7 +168,9 @@ export const pageView: Flow.StepExample = {
             eventId: 'b1c2d3e4f5a60002',
             eventTime: 1700000901,
             adStorageConsent: 'G',
-            userData: {},
+            userData: {
+              anonymousId: 'device-456',
+            },
             eventSourceUrl: 'https://example.com/docs/',
           },
         ],
@@ -226,7 +238,7 @@ export const lead: Flow.StepExample = {
 export const addToCart: Flow.StepExample = {
   title: 'Add to cart',
   description:
-    'A product add is sent to Bing UET as an add_to_cart event with value, currency, and item details.',
+    "A product add is sent to Bing UET as an add_to_cart event with value, currency, item details and the visitor's anonymous ID.",
   in: getEvent('product add', {
     id: 'b1c2d3e4f5a60004',
     timestamp: 1700000903000,
@@ -247,6 +259,7 @@ export const addToCart: Flow.StepExample = {
         },
       },
     ],
+    user: { device: 'device-456' },
     source: {
       type: 'browser',
       platform: 'web',
@@ -281,6 +294,11 @@ export const addToCart: Flow.StepExample = {
             },
           },
         },
+        userData: {
+          map: {
+            anonymousId: 'user.device',
+          },
+        },
       },
     },
   },
@@ -295,7 +313,9 @@ export const addToCart: Flow.StepExample = {
             eventId: 'b1c2d3e4f5a60004',
             eventTime: 1700000903,
             adStorageConsent: 'G',
-            userData: {},
+            userData: {
+              anonymousId: 'device-456',
+            },
             eventName: 'add_to_cart',
             eventSourceUrl: 'https://shop.example.com/products/running-shoes',
             customData: {

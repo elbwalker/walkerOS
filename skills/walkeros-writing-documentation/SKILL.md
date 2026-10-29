@@ -153,6 +153,22 @@ package's `walkerOS.json`; never a hand-written copy of them:
   `description` in the package instead of a hand-written list on the page; the
   docs build fails on a failure example without a `description`.
 
+Hand-written examples (source, transformer, store and guide pages, READMEs)
+follow the same bar:
+
+- **A flow runs.** Every complete JSON flow example (`"version": 4`) passes
+  `walkeros validate --strict` and runs with `walkeros push --simulate`;
+  `validate` alone does not prove a config does what the page says.
+- **Values satisfy the schema.** Placeholders match the setting's pattern (a
+  numeric pixel id where the schema asks for digits), and timestamps are
+  milliseconds wherever the code reads milliseconds.
+- **Output carries no real version.** Example output uses a stand-in such as
+  `release: { web: '3' }`; a real version number goes stale with the next
+  release.
+- **Renamed headings keep their anchor.** A heading's slug is a public URL. When
+  its text changes, pin the old slug (`## New title {#old-slug}`) and update
+  inbound links.
+
 The package side (`minimal`, `withoutMinimal`, failure examples) is in
 [using-step-examples](../walkeros-using-step-examples/SKILL.md).
 

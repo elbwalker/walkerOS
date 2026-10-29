@@ -310,7 +310,7 @@ export const customEvent: Flow.StepExample = {
   mapping: {
     name: 'trackEvent',
     settings: {
-      goalId: 'goal_1',
+      goalId: '6a0f4c1e-3b2d-4e8f-a7c9-1d2e3f4a5b6c',
     },
     data: {
       set: ['data.name', 'data.slot'],
@@ -318,7 +318,7 @@ export const customEvent: Flow.StepExample = {
   },
   out: [
     ['window._paq.push', ['trackEvent', 'Setting up tracking easily', 'hero']],
-    ['window._paq.push', ['trackGoal', 'goal_1']],
+    ['window._paq.push', ['trackGoal', '6a0f4c1e-3b2d-4e8f-a7c9-1d2e3f4a5b6c']],
   ],
 };
 
@@ -342,12 +342,12 @@ export const pageViewWithGoal: Flow.StepExample = {
   in: getEvent('page view'),
   mapping: {
     settings: {
-      goalId: 'goal_1',
+      goalId: '6a0f4c1e-3b2d-4e8f-a7c9-1d2e3f4a5b6c',
     },
   },
   out: [
     ['window._paq.push', ['trackPageView', 'walkerOS documentation']],
-    ['window._paq.push', ['trackGoal', 'goal_1']],
+    ['window._paq.push', ['trackGoal', '6a0f4c1e-3b2d-4e8f-a7c9-1d2e3f4a5b6c']],
   ],
 };
 
@@ -363,13 +363,16 @@ export const eventWithGoalValue: Flow.StepExample = {
       set: [{ value: 'order' }, { value: 'complete' }, 'data.id'],
     },
     settings: {
-      goalId: 'goal_1',
+      goalId: '6a0f4c1e-3b2d-4e8f-a7c9-1d2e3f4a5b6c',
       goalValue: 'data.value',
     },
   },
   out: [
     ['window._paq.push', ['trackEvent', 'order', 'complete', '0rd3r1d']],
-    ['window._paq.push', ['trackGoal', 'goal_1', 462]],
+    [
+      'window._paq.push',
+      ['trackGoal', '6a0f4c1e-3b2d-4e8f-a7c9-1d2e3f4a5b6c', 462],
+    ],
   ],
 };
 
@@ -380,7 +383,7 @@ export const ecommerceRemoveFromCart: Flow.StepExample = {
     'A product remove fires Piwik PRO ecommerceRemoveFromCart with the removed item and the currency code.',
   in: createEvent({
     name: 'product remove',
-    timestamp: 1700000308,
+    timestamp: 1700000308000,
     data: {
       id: 'ers',
       name: 'Everyday Ruck Snack',
@@ -437,7 +440,7 @@ export const siteSearch: Flow.StepExample = {
     'A search submit fires Piwik PRO trackSiteSearch with the keyword, category, and result count.',
   in: createEvent({
     name: 'search submit',
-    timestamp: 1700000309,
+    timestamp: 1700000309000,
     data: { term: 'rucksack', category: 'bags', results: 12 },
   }),
   mapping: {
@@ -456,7 +459,7 @@ export const linkDownload: Flow.StepExample = {
     'A file download fires Piwik PRO trackLink with the file URL and the download link type.',
   in: createEvent({
     name: 'file download',
-    timestamp: 1700000310,
+    timestamp: 1700000310000,
     data: { url: 'https://www.example.com/whitepaper.pdf' },
   }),
   mapping: {
@@ -480,7 +483,7 @@ export const ping: Flow.StepExample = {
     'A pulse-triggered event fires Piwik PRO ping to extend the time spent on the page.',
   in: createEvent({
     name: 'page ping',
-    timestamp: 1700000311,
+    timestamp: 1700000311000,
     trigger: 'pulse',
   }),
   mapping: {

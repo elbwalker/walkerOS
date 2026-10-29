@@ -280,7 +280,7 @@ function:
     "fingerprint": {
       "before": "bot",
       "package": "@walkeros/server-transformer-fingerprint",
-      "config": { "settings": { "salt": "$env.FINGERPRINT_SALT" } }
+      "config": { "settings": { "salt": "$secret.FINGERPRINT_SALT" } }
     },
     "bot": {
       "package": "@walkeros/server-transformer-bot"
@@ -494,7 +494,7 @@ ASCII diagram and detailed explanation.
           },
           "out": [
             [
-              "gtag",
+              "window.gtag",
               "event",
               "purchase",
               {

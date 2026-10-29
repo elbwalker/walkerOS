@@ -42,7 +42,7 @@ This server flow turns raw request signals into a privacy-friendly identifier be
         "fingerprint": {
           "package": "@walkeros/server-transformer-fingerprint",
           "config": {
-            "settings": { "salt": "$env.FINGERPRINT_SALT", "length": 16 }
+            "settings": { "salt": "$secret.FINGERPRINT_SALT", "length": 16 }
           }
         }
       },
@@ -71,7 +71,7 @@ Replace `x-client-ip` with the single-address header your proxy sets or overwrit
 
 ## Run it
 
-Save the config as `flow.json` and run the fingerprint transformer of the built flow on an event. `--ingest` passes the request context the Express source extracts, the client IP and user agent, and the salt comes from the environment (without `FINGERPRINT_SALT` the step fails with `Config settings salt missing`). Nothing is written to BigQuery:
+Save the config as `flow.json` and run the fingerprint transformer of the built flow on an event. `--ingest` passes the request context the Express source extracts, the client IP and user agent, and the salt comes from the environment as a secret (without `FINGERPRINT_SALT` the simulation stops with `required secret "FINGERPRINT_SALT" is not set`). Nothing is written to BigQuery:
 
 <CodeSnippet
   code={`FINGERPRINT_SALT=change-me npx walkeros push flow.json -e '{"name":"page view"}' --simulate transformer.fingerprint \\

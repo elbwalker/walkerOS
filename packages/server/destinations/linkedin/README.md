@@ -6,8 +6,7 @@
 
 # @walkeros/server-destination-linkedin
 
-Server-side event delivery to LinkedIn's Conversions API for enhanced ad
-attribution and privacy-compliant conversion tracking.
+Server-side event delivery to LinkedIn's Conversions API for ad attribution.
 
 [Documentation](https://www.walkeros.io/docs/destinations/server/linkedin)
 &bull;
@@ -34,8 +33,8 @@ npm install @walkeros/server-destination-linkedin
           "package": "@walkeros/server-destination-linkedin",
           "config": {
             "settings": {
-              "accessToken": "YOUR_ACCESS_TOKEN",
-              "conversionRuleId": "YOUR_CONVERSION_RULE_ID"
+              "accessToken": "$secret.LINKEDIN_ACCESS_TOKEN",
+              "conversionRuleId": "12345678"
             }
           }
         }

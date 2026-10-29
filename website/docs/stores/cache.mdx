@@ -121,7 +121,7 @@ The collector ships a single shared `__cache` instance used as the default cache
 - **Batched eviction:** on overflow, evict down to 80% (`8000`) in one pass.
 - **Active TTL sweep:** a periodic sweeper drops expired entries every 60 seconds.
 
-Each wrapped store gets an automatic namespace prefix (the store id by default) so multiple stores sharing `__cache` do not collide. Override with `cache.namespace: "myns"` for an explicit prefix. The collector logs the resolved namespace at startup, one line per wrapped store.
+Each wrapped store gets an automatic namespace prefix (the store id by default) so multiple stores sharing `__cache` do not collide. Override with `cache.namespace: "myns"` for an explicit prefix. The collector logs the resolved namespace at startup, one INFO line per wrapped store (`[store-cache:<id>]`), which the default log level does not show.
 
 ## Coherence model
 

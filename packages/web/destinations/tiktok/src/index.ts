@@ -153,7 +153,7 @@ export const destinationTikTok: Destination = {
       ...passthrough
     } = settings;
 
-    // TikTok's SDK auto-fires ttq.page() on load; we let it fire (no knob).
+    // The destination calls no ttq.page().
     const loadOptions: Record<string, unknown> = { ...passthrough };
 
     await stepCall(

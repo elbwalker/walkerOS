@@ -41,9 +41,8 @@ A collector endpoint is exposed to the open internet, so log level decides
 whether ambient noise becomes an alert. The levels follow one contract:
 
 * `ERROR`: the intent is not met. An event was not delivered, a setting has no
-  effect, a producer was told something false.
-* `WARN`: walkerOS acted and the intent is still met, for example an invalid
-  event it rejected.
+  effect, a producer was told something false, an invalid event was rejected.
+* `WARN`: walkerOS acted and the intent is still met.
 * `INFO`: lifecycle and self-healing.
 * `DEBUG`: the trace of each event and deliberate decisions. A skipped event
   writes a `DEBUG` line. A consent wait writes no line: the push result lists
@@ -54,12 +53,13 @@ whether ambient noise becomes an alert. The levels follow one contract:
 |-----------|-------|
 | Ambient internet noise: unparseable bodies, oversized payloads | `debug`, plus the source's `rejected` counter |
 | Ambient internet noise: unknown paths | answered with `404`, no line |
-| An event the pipeline rejects as invalid | `warn` with the reason, counted as `rejected` |
+| An event the pipeline rejects as invalid | `error` with the reason, one line per source and minute, counted as `rejected` |
 | A settled `ok: false` arriving after an HTTP ack was already sent | `debug`; the collector's failure line reports the cause at `error` |
 | Handler faults and rejected push promises | `error` |
 
 The collector already logs thrown pipeline failures at error, so sources do
-not duplicate that. Nothing a scanner can trigger should reach `error`.
+not duplicate that. Apart from the invalid-event line, nothing a scanner can
+trigger should reach `error`.
 
 
 ## In the complete example
@@ -206,6 +206,7 @@ see each line.
 | Code | Cause | Retryable | Fix |
 | ---- | ----- | --------- | --- |
 | `transport` | A destination's request failed or threw an unknown error | yes, except a `4xx` other than `429` | Check the endpoint and credentials; the status is on the line |
+| `runtime` | Step or flow code threw a `TypeError`, `RangeError` or `ReferenceError` | no | Fix the code the message names; a retry fails the same way |
 | `timeout` | A destination or transformer push or `init` did not settle within its `config.timeout` (10 s by default) | yes | Raise `config.timeout` or check the vendor |
 | `not-ready` | The destination or transformer could not start | no | Fix the cause its message names |
 | `breaker-open` | `config.breaker` is set and `threshold` retryable failures in a row opened it; events fail at once | yes | Fix the outage. After `breaker.cooldown` (30 s) the next event probes the destination and a success closes the breaker; events failed while it was open stay in the dead-letter queue |
@@ -223,7 +224,7 @@ see each line.
 | `dlq-overflow` | A destination's dead-letter queue was full and evicted its oldest entry | n/a | Raise `dlqMax` or fix the failing destination; counted in `status.dropped` |
 | `on-overflow` | A destination's queue of waiting `on()` deliveries was full and dropped the oldest | n/a | Raise the destination's own `config.queueMax`; counted in `status.dropped` |
 | `decode` | A store holds a value that cannot be decoded | no | Repair or delete the stored value; the read counts as a miss for that event |
-| `invalid` | An event was rejected as invalid input (a `WARN`) | no | Fix the producer |
+| `invalid` | An event was rejected as invalid input: a missing or malformed `name`, or an event that cannot be serialized to JSON (an `ERROR`) | no | Fix the producer |
 
 A step's own `StepError.code` wins over these. A code outside this table with
 neither a status nor a `retryable` option is not retryable. Unmet consent is

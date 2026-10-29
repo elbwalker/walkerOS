@@ -23,7 +23,10 @@ export const defaultEventForwarding: AmplitudeStepExample = {
   title: 'Default event',
   description:
     'A walkerOS event forwarded as an Amplitude track call with the event name and empty properties.',
-  in: getEvent('product view', { id: 'ev1700000100', timestamp: 1700000100 }),
+  in: getEvent('product view', {
+    id: 'ev1700000100',
+    timestamp: 1700000100000,
+  }),
   out: [['amplitude.track', 'product view', {}, { insert_id: 'ev1700000100' }]],
 };
 
@@ -33,7 +36,7 @@ export const defaultEventForwarding: AmplitudeStepExample = {
  */
 export const wildcardIgnored: AmplitudeStepExample = {
   public: false,
-  in: createEvent({ name: 'debug noise', timestamp: 1700000101 }),
+  in: createEvent({ name: 'debug noise', timestamp: 1700000101000 }),
   mapping: { ignore: true },
   out: [],
 };
@@ -46,7 +49,10 @@ export const destinationLevelInclude: AmplitudeStepExample = {
   title: 'Include data section',
   description:
     "With include: ['data'] in the destination config, the event data section is flattened into prefixed event_properties on every track call.",
-  in: getEvent('product view', { id: 'ev1700000102', timestamp: 1700000102 }),
+  in: getEvent('product view', {
+    id: 'ev1700000102',
+    timestamp: 1700000102000,
+  }),
   configInclude: ['data'],
   out: [
     [
@@ -78,7 +84,7 @@ export const destinationLevelIdentify: AmplitudeStepExample = {
   title: 'Identify per event',
   description:
     "With settings.identify mapping user_id, device_id, and session_id to 'user.id', 'user.device', and 'user.session', every call carries them in its Amplitude EventOptions. A non-numeric session string is hashed to a stable number.",
-  in: getEvent('page view', { id: 'ev1700000104', timestamp: 1700000104 }),
+  in: getEvent('page view', { id: 'ev1700000104', timestamp: 1700000104000 }),
   settings: {
     identify: {
       map: {
@@ -192,7 +198,7 @@ export const subscriptionRenewRevenue: AmplitudeStepExample = {
   in: createEvent({
     name: 'subscription renew',
     id: 'ev1700000107',
-    timestamp: 1700000107,
+    timestamp: 1700000107000,
     data: {
       plan_id: 'plan-pro',
       amount: 9.99,
@@ -241,7 +247,10 @@ export const orderCompleteMultiProduct: AmplitudeStepExample = {
   title: 'Multi-product order',
   description:
     'An order with multiple nested products fires one amplitude.revenue per product plus a single track for the order.',
-  in: getEvent('order complete', { id: 'ev1700000108', timestamp: 1700000108 }),
+  in: getEvent('order complete', {
+    id: 'ev1700000108',
+    timestamp: 1700000108000,
+  }),
   mapping: {
     include: ['data', 'globals'],
     settings: {
@@ -316,7 +325,7 @@ export const groupAssignmentWithProperties: AmplitudeStepExample = {
   in: createEvent({
     name: 'company update',
     id: 'ev1700000109',
-    timestamp: 1700000109,
+    timestamp: 1700000109000,
     data: {
       company: 'Acme',
       industry: 'tech',
@@ -456,7 +465,7 @@ export const silentRule: AmplitudeStepExample = {
   public: false,
   description:
     'A rule with silent: true and no identify, group or revenue mapping sends nothing to Amplitude.',
-  in: getEvent('page view', { timestamp: 1700000110 }),
+  in: getEvent('page view', { timestamp: 1700000110000 }),
   mapping: { silent: true },
   out: [],
 };
@@ -474,7 +483,7 @@ export const groupAssignmentWithoutData: AmplitudeStepExample = {
     name: 'company update',
     entity: 'company',
     action: 'update',
-    timestamp: 1700000111,
+    timestamp: 1700000111000,
   },
   mapping: groupAssignmentWithProperties.mapping,
   out: [],

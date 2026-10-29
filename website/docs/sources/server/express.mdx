@@ -201,9 +201,10 @@ responded first, because an image endpoint cannot carry a useful 400. Rejected p
 `rejected` counter instead.
 
 Unparseable bodies and invalid events are counted on
-`collector.status.sources.<id>.rejected` and logged at debug or warn with the
-reason. A batch over `maxBatchSize` is answered 400 and not counted. Ambient
-scanner traffic never reaches the error log level.
+`collector.status.sources.<id>.rejected`. An unparseable body is logged at
+debug, an invalid event at error with the reason, once per source and minute.
+A batch over `maxBatchSize` is answered 400 and not counted. Apart from the
+invalid-event line, ambient scanner traffic never reaches the error log level.
 
 Responses carry `X-Content-Type-Options: nosniff`, and the source does not send
 `X-Powered-By`.

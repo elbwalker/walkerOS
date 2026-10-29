@@ -46,7 +46,7 @@ export const pageView: StepExample = {
   title: 'Page view',
   description:
     'A page view is tracked in Matomo via trackPageView with the page title from event data.',
-  in: getEvent('page view', { timestamp: 1700000400 }),
+  in: getEvent('page view', { timestamp: 1700000400000 }),
   mapping: {
     data: 'data.title',
   },
@@ -61,7 +61,7 @@ export const pageViewWithGoal: StepExample = {
   title: 'Page view with goal',
   description:
     'A page view rule with a goal keeps the default trackPageView and adds a trackGoal conversion.',
-  in: getEvent('page view', { timestamp: 1700000407 }),
+  in: getEvent('page view', { timestamp: 1700000407000 }),
   mapping: {
     settings: {
       goalId: '1',
@@ -81,7 +81,7 @@ export const customEvent: StepExample = {
   title: 'Custom event with goal',
   description:
     'A promotion visible event fires Matomo trackEvent and then trackGoal to record a goal conversion.',
-  in: getEvent('promotion visible', { timestamp: 1700000401 }),
+  in: getEvent('promotion visible', { timestamp: 1700000401000 }),
   mapping: {
     name: 'trackEvent',
     settings: {
@@ -108,7 +108,7 @@ export const ecommerceOrder: StepExample = {
   title: 'Ecommerce order',
   description:
     "Test fixture for nested product mapping, not a valid Matomo call: Matomo records an order's products only after an addEcommerceItem call per product.",
-  in: getEvent('order complete', { timestamp: 1700000402 }),
+  in: getEvent('order complete', { timestamp: 1700000402000 }),
   mapping: {
     name: 'trackEcommerceOrder',
     data: {
@@ -185,7 +185,7 @@ export const ecommerceCartUpdate: StepExample = {
   title: 'Cart update',
   description:
     'Test fixture for nested product mapping, not a valid Matomo call: Matomo takes trackEcommerceCartUpdate(grandTotal) after an addEcommerceItem call per product.',
-  in: getEvent('cart view', { timestamp: 1700000403 }),
+  in: getEvent('cart view', { timestamp: 1700000403000 }),
   mapping: {
     name: 'trackEcommerceCartUpdate',
     data: {
@@ -243,7 +243,7 @@ export const productDetailView: StepExample = {
   title: 'Product detail view',
   description:
     'Test fixture for a single-product mapping, not a valid Matomo call: Matomo tracks a product view with setEcommerceView followed by trackPageView.',
-  in: getEvent('product view', { timestamp: 1700000404 }),
+  in: getEvent('product view', { timestamp: 1700000404000 }),
   mapping: {
     name: 'ecommerceProductDetailView',
     data: {
@@ -290,7 +290,7 @@ export const siteSearch: StepExample = {
     'A search submit fires Matomo trackSiteSearch with the keyword, category, and number of results.',
   in: createEvent({
     name: 'search submit',
-    timestamp: 1700000405,
+    timestamp: 1700000405000,
     data: { term: 'shoes', category: 'products', results: 42 },
   }),
   mapping: {
@@ -314,7 +314,7 @@ export const goalTracking: StepExample = {
   description:
     'A promotion event fires Matomo trackEvent and then trackGoal with a monetary goal value from event data.',
   in: getEvent('promotion visible', {
-    timestamp: 1700000406,
+    timestamp: 1700000406000,
     data: { name: 'Setting up tracking easily', slot: 'hero', value: 50 },
   }),
   mapping: {
@@ -343,7 +343,7 @@ export const customDimensions: StepExample = {
   description:
     'Destination and rule custom dimensions are set right before the page view; afterwards the rule-only dimension is deleted and the destination value is set again.',
   public: false,
-  in: getEvent('page view', { timestamp: 1700000408 }),
+  in: getEvent('page view', { timestamp: 1700000408000 }),
   settings: {
     customDimensions: { '1': 'globals.pagegroup' },
   },
@@ -366,7 +366,7 @@ export const silentRule: StepExample = {
   public: false,
   description:
     'A rule with silent: true and no goal sends no command, its dimensions included.',
-  in: getEvent('page view', { timestamp: 1700000300 }),
+  in: getEvent('page view', { timestamp: 1700000300000 }),
   mapping: { silent: true },
   out: [],
 };
@@ -379,7 +379,7 @@ export const unmappedEvent: StepExample = {
   public: false,
   description:
     'An event without a rule name, a tracking flag or a goal, and not a page view, has no Matomo command: the push fails with missing-input.',
-  in: getEvent('product view', { timestamp: 1700000301 }),
+  in: getEvent('product view', { timestamp: 1700000301000 }),
   out: [],
   outcome: { status: 'failed', code: 'missing-input', retryable: false },
 };

@@ -145,7 +145,7 @@ describe('buffer policy (design Q4)', () => {
     expect(collector.status.dropped['destination.d']).toBeUndefined();
   });
 
-  it('invalid input is WARN through the cause log, once per source per window', async () => {
+  it('invalid input is ERROR through the cause log, once per source per window', async () => {
     const { at, logger } = capture();
     const probe: Source.Init<
       Source.Types<unknown, unknown, Collector.PushFn>
@@ -165,13 +165,14 @@ describe('buffer policy (design Q4)', () => {
     expect(r1).toMatchObject({ ok: false, invalid: true });
     expect(r2).toMatchObject({ ok: false, invalid: true });
     expect(collector.status.sources.probe.rejected).toBe(2);
-    const warns = at(Level.WARN);
-    expect(warns).toHaveLength(1);
-    expect(warns[0].context).toMatchObject({
+    const errors = at(Level.ERROR);
+    expect(errors).toHaveLength(1);
+    expect(errors[0].context).toMatchObject({
       step: 'source.probe',
       code: 'invalid',
     });
-    expect(warns[0].message).toContain('status.sources.probe.rejected');
+    expect(errors[0].message).toContain('status.sources.probe.rejected');
+    expect(at(Level.WARN)).toHaveLength(0);
   });
 });
 

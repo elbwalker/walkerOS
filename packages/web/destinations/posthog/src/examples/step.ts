@@ -23,7 +23,7 @@ export const defaultEventForwarding: PostHogStepExample = {
   title: 'Default capture',
   description:
     'A walker event becomes a PostHog capture call with the event name and empty properties.',
-  in: getEvent('product view', { timestamp: 1700000100 }),
+  in: getEvent('product view', { timestamp: 1700000100000 }),
   out: [['posthog.capture', 'product view', {}]],
 };
 
@@ -33,7 +33,7 @@ export const defaultEventForwarding: PostHogStepExample = {
  */
 export const wildcardIgnored: PostHogStepExample = {
   public: false,
-  in: createEvent({ name: 'debug noise', timestamp: 1700000101 }),
+  in: createEvent({ name: 'debug noise', timestamp: 1700000101000 }),
   mapping: { ignore: true },
   out: [],
 };
@@ -46,7 +46,7 @@ export const destinationLevelInclude: PostHogStepExample = {
   title: 'Include data',
   description:
     "With include: ['data'] in the destination config, the event data section is flattened into prefixed PostHog capture properties.",
-  in: getEvent('product view', { timestamp: 1700000102 }),
+  in: getEvent('product view', { timestamp: 1700000102000 }),
   configInclude: ['data'],
   out: [
     [
@@ -73,7 +73,7 @@ export const ruleIncludeReplaces: PostHogStepExample = {
   title: 'Rule include overrides',
   description:
     "With include: ['data'] in the destination config, the rule's include: ['globals'] replaces it, so this event forwards only globals.",
-  in: getEvent('order complete', { timestamp: 1700000103 }),
+  in: getEvent('order complete', { timestamp: 1700000103000 }),
   configInclude: ['data'],
   mapping: {
     include: ['globals'],
@@ -102,7 +102,7 @@ export const destinationLevelIdentify: PostHogStepExample = {
   title: 'Destination identify',
   description:
     "With settings.identify mapping distinctId to 'user.id', the destination calls posthog.identify before the default capture.",
-  in: getEvent('page view', { timestamp: 1700000104 }),
+  in: getEvent('page view', { timestamp: 1700000104000 }),
   settings: {
     identify: {
       map: {
@@ -195,7 +195,7 @@ export const profileUpdateSetPersonProperties: PostHogStepExample = {
     'A profile update calls setPersonProperties to enrich the PostHog profile without changing identity.',
   in: createEvent({
     name: 'profile update',
-    timestamp: 1700000106,
+    timestamp: 1700000106000,
     data: {
       name: 'Jane Doe',
       avatar_url: 'https://example.com/avatar.png',
@@ -237,7 +237,7 @@ export const userLogoutReset: PostHogStepExample = {
   title: 'User logout reset',
   description:
     'A user logout calls posthog.reset to clear the distinct id and generate a new anonymous one.',
-  in: createEvent({ name: 'user logout', timestamp: 1700000107 }),
+  in: createEvent({ name: 'user logout', timestamp: 1700000107000 }),
   mapping: {
     silent: true,
     settings: {
@@ -260,7 +260,7 @@ export const groupAssignmentWithProperties: PostHogStepExample = {
     'A company update assigns the user to a PostHog group and sets group properties via posthog.group.',
   in: createEvent({
     name: 'company update',
-    timestamp: 1700000108,
+    timestamp: 1700000108000,
     data: {
       company_id: 'company_123',
       company_name: 'Acme',
@@ -311,7 +311,7 @@ export const orderCompleteWithInclude: PostHogStepExample = {
   title: 'Order complete',
   description:
     'An order complete captures order data and globals as prefixed properties for revenue analysis in PostHog.',
-  in: getEvent('order complete', { timestamp: 1700000109 }),
+  in: getEvent('order complete', { timestamp: 1700000109000 }),
   mapping: {
     include: ['data', 'globals'],
   },
@@ -371,7 +371,7 @@ export const consentGrantOptIn: PostHogStepExample = {
 export const pageViewSilent: PostHogStepExample = {
   public: false,
   description: 'A rule with silent: true sends no PostHog capture call.',
-  in: getEvent('page view', { timestamp: 1700000109 }),
+  in: getEvent('page view', { timestamp: 1700000109000 }),
   mapping: { silent: true },
   out: [],
 };

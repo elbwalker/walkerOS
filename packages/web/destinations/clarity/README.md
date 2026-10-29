@@ -48,6 +48,11 @@ npm install @walkeros/web-destination-clarity
 }
 ```
 
+This quick start sets no `config.consent`, so the Clarity script loads and
+receives every event without consent: `settings.consent` only passes the consent
+state on to Clarity. Add `consent: { analytics: true }` to `config` before you
+go live, see the docs.
+
 ## Documentation
 
 Full configuration, mapping, and examples live in the docs:

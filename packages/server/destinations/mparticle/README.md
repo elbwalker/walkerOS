@@ -34,8 +34,8 @@ npm install @walkeros/server-destination-mparticle
           "package": "@walkeros/server-destination-mparticle",
           "config": {
             "settings": {
-              "apiKey": "YOUR_API_KEY",
-              "apiSecret": "YOUR_API_SECRET"
+              "apiKey": "$secret.MPARTICLE_API_KEY",
+              "apiSecret": "$secret.MPARTICLE_API_SECRET"
             }
           }
         }

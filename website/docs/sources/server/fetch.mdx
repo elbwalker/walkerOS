@@ -105,8 +105,9 @@ A per-event "not processed" in a batch logs at DEBUG, because the collector's ER
 
 Invalid input, a body over `maxRequestSize` and a batch over `maxBatchSize` are
 counted on `collector.status.sources.<id>.rejected` rather than inflating
-`status.failed`. An invalid event is logged at warn with the reason instead of
-as an error with a stack trace; an oversized request is logged at debug.
+`status.failed`. An invalid event is logged at error with the reason and no
+stack trace, once per source and minute; an oversized request is logged at
+debug.
 
 ## Ingest metadata
 

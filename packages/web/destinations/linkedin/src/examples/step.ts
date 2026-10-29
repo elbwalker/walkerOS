@@ -22,7 +22,7 @@ export type LinkedInStepExample = Flow.StepExample & {
  */
 export const unmappedEventIgnored: LinkedInStepExample = {
   public: false,
-  in: getEvent('product view', { timestamp: 1700000100 }),
+  in: getEvent('product view', { timestamp: 1700000100000 }),
   out: [],
 };
 
@@ -37,7 +37,7 @@ export const simpleConversionId: LinkedInStepExample = {
   title: 'Simple conversion',
   description:
     'A form submit fires a LinkedIn lintrk track with only a conversion_id from Campaign Manager.',
-  in: createEvent({ name: 'form submit', timestamp: 1700000101 }),
+  in: createEvent({ name: 'form submit', timestamp: 1700000101000 }),
   mapping: {
     settings: {
       conversion: {
@@ -70,7 +70,7 @@ export const orderCompleteFullConversion: LinkedInStepExample = {
   description:
     'A completed order fires a LinkedIn lintrk track with conversion_id, value, currency, and event_id for deduplication.',
   in: getEvent('order complete', {
-    timestamp: 1700000102,
+    timestamp: 1700000102000,
     id: '1700000102abcdef',
   }),
   mapping: {
@@ -114,7 +114,7 @@ export const pageViewConversion: LinkedInStepExample = {
   description:
     'A page view fires an explicit lintrk track mapped to a LinkedIn KEY_PAGE_VIEW conversion rule.',
   in: getEvent('page view', {
-    timestamp: 1700000103,
+    timestamp: 1700000103000,
     id: '1700000103abcdef',
   }),
   mapping: {
@@ -153,7 +153,7 @@ export const demoRequestLead: LinkedInStepExample = {
     'A demo request fires a LinkedIn lintrk track for a lead conversion with id and event_id only.',
   in: createEvent({
     name: 'demo request',
-    timestamp: 1700000104,
+    timestamp: 1700000104000,
     id: '1700000104abcdef',
   }),
   mapping: {
@@ -188,7 +188,7 @@ export const demoRequestLead: LinkedInStepExample = {
  */
 export const conversionSilenced: LinkedInStepExample = {
   public: false,
-  in: createEvent({ name: 'form submit', timestamp: 1700000105 }),
+  in: createEvent({ name: 'form submit', timestamp: 1700000105000 }),
   mapping: {
     silent: true,
     settings: {
@@ -216,7 +216,7 @@ export const missingConversionIdIgnored: LinkedInStepExample = {
   public: false,
   description:
     'A conversion mapping whose id resolves to nothing makes no lintrk call, so the push fails with missing-input instead of counting as delivered.',
-  in: createEvent({ name: 'form submit', timestamp: 1700000106 }),
+  in: createEvent({ name: 'form submit', timestamp: 1700000106000 }),
   mapping: {
     settings: {
       conversion: {
@@ -240,7 +240,7 @@ export const missingConversionIdIgnored: LinkedInStepExample = {
 export const partialFieldsOmitted: LinkedInStepExample = {
   public: false,
   in: getEvent('order complete', {
-    timestamp: 1700000107,
+    timestamp: 1700000107000,
     id: '1700000107abcdef',
   }),
   mapping: {

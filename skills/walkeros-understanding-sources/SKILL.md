@@ -459,6 +459,14 @@ creating a Pub/Sub subscription, or pre-allocating queue resources. Setup is
 **never** invoked by the runtime, push, init, or deploy. It runs only when an
 operator explicitly types `walkeros setup source.<name>`.
 
+**Today the command cannot run a source's setup.** It reads the package's export
+as an object with a `setup` method, while a source exports its init function, so
+it stops with `Package <name> has no default export` (or
+`has no export "<name>"` when the step sets `import`) and creates nothing.
+Provision a source's resources with the platform's own tooling;
+[walkeros-create-source](../walkeros-create-source/SKILL.md#adding-setup-optional)
+names the packages affected.
+
 The signature is
 `(ctx: LifecycleContext<Config<T>, Env<T>>) => Promise<unknown>`, where
 `LifecycleContext` carries `{ id, config, env, logger }`. Idempotency is the

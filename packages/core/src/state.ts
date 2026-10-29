@@ -7,7 +7,7 @@ import { createMappingRoot } from './cache';
 import { clone } from './clone';
 import { deepMerge } from './deepMerge';
 import { isArray, isDefined, isObject, isString } from './is';
-import { isPropertyType } from './property';
+import { castToProperty } from './property';
 import { tryCatchAsync } from './tryCatch';
 import { reportCause } from './causeLog';
 import type { CauseKey } from './causeLog';
@@ -243,7 +243,7 @@ export async function applyState<E extends WalkerOS.DeepPartialEvent>(
         }
 
         // The engine drops null and non-JSON leaves, this is the only signal.
-        if (isDefined(fetched) && !isPropertyType(fetched))
+        if (isDefined(fetched) && castToProperty(fetched) === undefined)
           collector.logger?.warn?.(
             '[state] stored value has null or non-JSON values, mapping drops them',
             { store: entry.store },

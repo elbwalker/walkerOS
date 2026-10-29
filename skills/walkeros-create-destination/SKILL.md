@@ -209,8 +209,7 @@ vendor output together in one `Flow.StepExample`.
 
 The skill's [examples/](./examples/) folder holds these four files for the
 template destination ([templates/simple/](./templates/simple/)): copy them to
-`src/examples/` (its `events.ts`, `outputs.ts` and `mapping.ts` are not part of
-this layout; do not copy them).
+`src/examples/`.
 
 ### 3.3 Typing Rules (strict)
 

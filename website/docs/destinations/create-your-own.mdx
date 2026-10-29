@@ -63,7 +63,11 @@ The push context contains:
 This example destination sends events to a webhook URL.
 
 <CodeSnippet
-  code={`import { StepError, type Destination } from '@walkeros/core';
+  code={`import {
+  networkErrorMessage,
+  StepError,
+  type Destination,
+} from '@walkeros/core';
 
 // 1. Define your settings and bundle your types
 interface WebhookSettings {
@@ -93,12 +97,21 @@ export const destinationWebhook: Destination.Instance<Types> = {
   async push(event, { config, rule }) {
     // A rule with silent: true sends nothing; the push still returns normally
     if (!rule?.silent) {
-      // 4. Send the event and await it; fetch resolves on an error status
-      const response = await fetch(requireUrl(config), {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(event),
-      });
+      // 4. Send the event and await it: a network failure is a StepError,
+      //    and fetch resolves on an error status
+      let response: Response;
+      try {
+        response = await fetch(requireUrl(config), {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(event),
+        });
+      } catch (err) {
+        throw new StepError(networkErrorMessage(err), {
+          code: 'transport',
+          cause: err,
+        });
+      }
       if (!response.ok)
         throw new StepError(\`HTTP \${response.status}\`, {
           code: 'transport',
@@ -129,6 +142,17 @@ event to the dead-letter queue and writes one ERROR line per cause and minute.
   vendor script is missing, not ready yet or too slow
 * **`transport`** - the request failed; a `429` and a `5xx` status are
   retryable, other `4xx` statuses are not
+
+A `TypeError`, `RangeError` or `ReferenceError` is a `runtime` failure: a
+fault in step or flow code that a retry repeats, so it is not retryable.
+Node's `fetch failed` error stays a retryable `transport` failure, because it
+carries the network error's code on its `cause`. A failed `fetch` in the
+browser is a `TypeError` without that code, so throw network failures as a
+`StepError` with the code `transport`, as
+[`sendWeb`](/docs/core/web#sendweb) and
+[`sendServer`](/docs/core/server#sendserver) do. The conformance kit checks
+this: a destination that lets a raw `fetch` error escape fails its network
+check.
 
 Any other throw is a `transport` failure. `retryable` tells a server source
 whether to ask the producer to resend the message. Keep payload data out of the

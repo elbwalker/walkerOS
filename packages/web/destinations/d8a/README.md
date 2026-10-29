@@ -35,6 +35,10 @@ await startFlow({
 });
 ```
 
+This quick start sets no consent, so d8a receives every event without consent,
+and a denial only updates d8a's consent mode: add `consent: { analytics: true }`
+to `config` before you go live, see the docs.
+
 ## Configuration
 
 | Name                   | Type                | Required | Description                                 |

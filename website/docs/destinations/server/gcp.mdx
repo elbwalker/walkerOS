@@ -95,8 +95,9 @@ queries. Always include a `timestamp` filter.
 ### Drift handling
 
 If the existing table's partitioning, clustering, or schema differs from the
-declared configuration, setup logs `WARN setup.drift {...}` and continues. There
-is no auto-mutation. Migrations are an operator decision.
+declared configuration, setup logs `[destination:<id>] setup.drift {...}` (a
+warning line) and continues. There is no auto-mutation. Migrations are an
+operator decision.
 
 ## GCP setup
 

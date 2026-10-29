@@ -68,7 +68,7 @@ export {
   EventCacheRuleSchema,
   StoreCacheSchema,
   StoreCacheRuleSchema,
-  // Deprecated aliases — remove once external callers migrate.
+  // Deprecated aliases: remove once external callers migrate.
   CacheSchema,
   CacheRuleSchema,
 } from './cache';
@@ -202,7 +202,7 @@ export { validateFlowConfig } from './validate-flow-config';
 export * from './schema-builder';
 
 /**
- * Re-export Zod and zod-to-json-schema for destinations
+ * Re-export Zod for destinations
  *
  * Destinations can import Zod from @walkeros/core instead of adding
  * their own dependency. This ensures version consistency and reduces

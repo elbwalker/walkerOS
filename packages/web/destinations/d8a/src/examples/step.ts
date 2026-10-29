@@ -31,7 +31,7 @@ export const init: Flow.StepExample = {
 export const pageView: Flow.StepExample = {
   title: 'Page view',
   description: 'A page view event is forwarded as a d8a page_view event.',
-  in: getEvent('page view', { timestamp: 1700000300 }),
+  in: getEvent('page view', { timestamp: 1700000300000 }),
   mapping: undefined,
   out: [['d8a', 'event', 'page_view', { send_to: PROPERTY_ID }]],
 };
@@ -40,7 +40,7 @@ export const addToCart: Flow.StepExample = {
   title: 'Add to cart',
   description:
     'A product add event is mapped to the d8a add_to_cart event with item details and value.',
-  in: getEvent('product add', { timestamp: 1700000301 }),
+  in: getEvent('product add', { timestamp: 1700000301000 }),
   mapping: {
     name: 'add_to_cart',
     include: ['data'],
@@ -89,7 +89,7 @@ export const purchase: Flow.StepExample = {
   title: 'Purchase',
   description:
     'An order complete event is mapped to the d8a purchase event with transaction details and nested product items.',
-  in: getEvent('order complete', { timestamp: 1700000302 }),
+  in: getEvent('order complete', { timestamp: 1700000302000 }),
   mapping: {
     name: 'purchase',
     include: ['data', 'context'],
@@ -184,7 +184,7 @@ export const consentMode: Flow.StepExample = {
 export const silentRule: Flow.StepExample = {
   public: false,
   description: 'A rule with silent: true sends no d8a event.',
-  in: getEvent('page view', { timestamp: 1700000302 }),
+  in: getEvent('page view', { timestamp: 1700000302000 }),
   mapping: { silent: true },
   out: [],
 };

@@ -199,7 +199,7 @@ export namespace Flow {
     /**
      * Platform identity for this flow.
      * - `web` builds to IIFE format, ES2020 target, browser platform.
-     * - `server` builds to ESM format, Node18 target, node platform.
+     * - `server` builds to ESM format, Node 20 target, node platform.
      */
     platform: 'web' | 'server';
 
@@ -216,12 +216,11 @@ export namespace Flow {
      * assigned to (default `walkerOS`); it must be a JavaScript identifier.
      * For server: reserved for future server-specific options.
      *
-     * The `windowElb` key is deprecated: the browser source is the single writer
-     * of `window[settings.elb]`, so set the browser source's
-     * `config.settings.elb` instead. The CLI forwards a `windowElb` value onto
-     * that field during bundling for backward compatibility.
+     * The browser source is the single writer of `window[settings.elb]`: name
+     * the `elb` global with the browser source's `config.settings.elb`. A
+     * `windowElb` key here is forwarded onto that field during bundling.
      *
-     * This is a free-form bag — type promotion happens later if patterns emerge.
+     * This is a free-form bag.
      */
     settings?: Settings;
 
@@ -233,12 +232,11 @@ export namespace Flow {
     bundle?: Bundle;
 
     /**
-     * Observability configuration. Controls whether the runtime emits
-     * FlowState records to a remote observer, and at what verbosity.
-     *
-     * When omitted, the runtime defaults to `{ level: 'standard' }` for
-     * managed deployments. When `level: 'off'`, the bundle ships no
-     * telemetry plumbing at all.
+     * Observability configuration of a web flow: `url` and `binding` connect
+     * the bundle to an observer, `level` and `sample` set what it captures.
+     * Without both `url` and `binding` the bundle gets no observe wiring. A
+     * server flow's `observe` has no effect: the server bundle never receives
+     * it, and `runneros start` reads `WALKEROS_OBSERVE_LEVEL` instead.
      */
     observe?: Observe;
   }
@@ -246,11 +244,10 @@ export namespace Flow {
   /**
    * Observability configuration block.
    *
-   * - `off` disables telemetry entirely (no hooks installed, no fetch).
+   * - `off` emits no records.
    * - `standard` emits structural FlowState records (no inEvent/outEvent).
    * - `trace` emits full payloads on every hop. Use only for short debug
-   *   windows; the operator can also flip the deployment's `trace_until`
-   *   timestamp at runtime to enable trace without a redeploy.
+   *   windows.
    */
   export interface Observe {
     level?: 'off' | 'standard' | 'trace';
@@ -703,7 +700,7 @@ export namespace Flow {
   /**
    * Union of the four step interfaces.
    *
-   * Use this where a function accepts "any step in a flow" — e.g. a
+   * Use this where a function accepts "any step in a flow", e.g. a
    * shared `validateReference` that branches on `StepKind` without
    * narrowing to one specific shape.
    */

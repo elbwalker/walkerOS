@@ -17,7 +17,7 @@ export const defaultEventForwarding: HotjarStepExample = {
   title: 'Default event',
   description:
     'A walker event becomes a Hotjar.event call with the event name as the custom Hotjar event.',
-  in: getEvent('product view', { timestamp: 1700000100 }),
+  in: getEvent('product view', { timestamp: 1700000100000 }),
   out: [['hotjar.event', 'product view']],
 };
 
@@ -27,7 +27,7 @@ export const defaultEventForwarding: HotjarStepExample = {
  */
 export const wildcardIgnored: HotjarStepExample = {
   public: false,
-  in: createEvent({ name: 'debug noise', timestamp: 1700000101 }),
+  in: createEvent({ name: 'debug noise', timestamp: 1700000101000 }),
   mapping: { ignore: true },
   out: [],
 };
@@ -39,7 +39,7 @@ export const renamedEvent: HotjarStepExample = {
   title: 'Renamed event',
   description:
     'A mapping renames the event so the Hotjar custom event uses a canonical name like completed_purchase.',
-  in: getEvent('order complete', { timestamp: 1700000102 }),
+  in: getEvent('order complete', { timestamp: 1700000102000 }),
   mapping: {
     name: 'completed_purchase',
   },
@@ -57,7 +57,7 @@ export const userLoginIdentify: HotjarStepExample = {
     'A user login fires Hotjar.identify with userId and attributes before firing the event.',
   in: createEvent({
     name: 'user login',
-    timestamp: 1700000103,
+    timestamp: 1700000103000,
     data: { id: 'u-123', email: 'jane@example.com', plan: 'premium' },
   }),
   mapping: {
@@ -89,7 +89,7 @@ export const destinationLevelIdentify: HotjarStepExample = {
   title: 'Destination identify',
   description:
     "With settings.identify mapping userId to 'user.id', the destination calls Hotjar.identify on every push, as Hotjar recommends, before the event.",
-  in: getEvent('page view', { timestamp: 1700000104 }),
+  in: getEvent('page view', { timestamp: 1700000104000 }),
   settings: {
     identify: {
       map: {
@@ -111,7 +111,7 @@ export const pageViewStateChange: HotjarStepExample = {
   title: 'State change',
   description:
     'An SPA navigation fires Hotjar.stateChange with the new path instead of a Hotjar custom event.',
-  in: getEvent('page view', { timestamp: 1700000105 }),
+  in: getEvent('page view', { timestamp: 1700000105000 }),
   mapping: {
     silent: true,
     settings: {
@@ -129,7 +129,7 @@ export const combinedFeatures: HotjarStepExample = {
   title: 'Combined features',
   description:
     'A purchase fires Hotjar.identify then the renamed custom event in the canonical execution order.',
-  in: getEvent('order complete', { timestamp: 1700000106 }),
+  in: getEvent('order complete', { timestamp: 1700000106000 }),
   mapping: {
     name: 'completed_purchase',
     settings: {
@@ -148,7 +148,7 @@ export const combinedFeatures: HotjarStepExample = {
  */
 export const pageViewSilent: HotjarStepExample = {
   public: false,
-  in: getEvent('page view', { timestamp: 1700000107 }),
+  in: getEvent('page view', { timestamp: 1700000107000 }),
   mapping: {
     silent: true,
   },

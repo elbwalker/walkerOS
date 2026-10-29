@@ -38,6 +38,11 @@ event as `plausible(name, data)`.
 
 <Quickstart data={data} />
 
+The quickstart above sets no consent, so the Plausible script loads and receives
+every event without `analytics` consent, and a revocation changes nothing. Add
+`consent: { analytics: true }` to `config`, next to `settings`, before you go
+live (see [gate a destination](/docs/guides/consent#gate-a-destination-with-consent)).
+
 Plausible counts a page view only for an event named `pageview`, and the manual
 script records none by itself: add
 `"mapping": { "page": { "view": { "name": "pageview" } } }` to the destination's

@@ -281,9 +281,16 @@ describe('flow-complete.json', () => {
     }
   });
 
-  it('uses $secret only for the GCP service account', () => {
+  it('uses $secret for credentials and salts, never in the web flow', () => {
     const secrets = raw.match(/\$secret\.[A-Z0-9_]+/g) ?? [];
-    expect(new Set(secrets)).toEqual(new Set(['$secret.GCP_SA']));
+    expect(new Set(secrets)).toEqual(
+      new Set([
+        '$secret.GCP_SA',
+        '$secret.FINGERPRINT_SALT',
+        '$secret.EMAIL_SALT',
+        '$secret.META_ACCESS_TOKEN',
+      ]),
+    );
     expect(JSON.stringify(flowComplete.flows.web)).not.toContain('$secret.');
   });
 

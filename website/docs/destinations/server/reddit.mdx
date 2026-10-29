@@ -22,7 +22,7 @@ Server-side event delivery to Reddit's Conversions API v2.0 for enhanced convers
   flowMap={{
     destinations: { default: { label: 'Destination', text: 'Reddit CAPI', highlight: true } },
   }}
-  post={<>Sends events server-side to Reddit's Conversions API using raw HTTP (no SDK). Identity fields (`email`, `external_id`, `ip_address`, `user_agent`, `idfa`, `aaid`) are SHA-256 hashed, as mapped, before sending. Events include a stable `event_metadata.conversion_id` for deduplication with the Reddit Pixel.</>}
+  post={<>Sends events server-side to Reddit's Conversions API using raw HTTP (no SDK). Identity fields (`email`, `external_id`, `ip_address`, `user_agent`, `idfa`, `aaid`) are SHA-256 hashed, as mapped, before sending. Events include a stable `event_metadata.conversion_id`, the walkerOS event id.</>}
 />
 
 ## Installation
@@ -111,7 +111,7 @@ If a value is already hashed or you want to skip hashing for a specific field, u
 
 ## Deduplication
 
-Each event is sent with `event_metadata.conversion_id` set to the walkerOS event `id`. If you also run the Reddit Pixel in the browser, Reddit deduplicates server and browser events that share the same `conversion_id`, so conversions are not double-counted.
+Each event is sent with `event_metadata.conversion_id` set to the walkerOS event `id`. A `conversion_id` that your mapping sets under `event_metadata` replaces it.
 
 ## Test mode
 

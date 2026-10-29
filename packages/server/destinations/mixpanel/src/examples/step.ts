@@ -41,7 +41,7 @@ export const defaultEventForwarding: MixpanelStepExample = {
   title: 'Default track',
   description:
     "With settings.identify mapping distinctId to 'user.id', a walkerOS event is forwarded to Mixpanel as a track call with that distinct_id. Without identify the track call carries no distinct_id.",
-  in: getEvent('product view', { timestamp: 1700000100 }),
+  in: getEvent('product view', { timestamp: 1700000100000 }),
   settings: {
     identify: {
       map: {
@@ -60,7 +60,7 @@ export const trackWithInclude: MixpanelStepExample = {
   title: 'Track with include',
   description:
     "With settings.identify mapping distinctId to 'user.id' and include: ['data'] in the destination config, the event data section is flattened into prefixed Mixpanel track properties.",
-  in: getEvent('product view', { timestamp: 1700000101 }),
+  in: getEvent('product view', { timestamp: 1700000101000 }),
   settings: {
     identify: {
       map: {
@@ -96,7 +96,7 @@ export const perEventIdentify: MixpanelStepExample = {
     'A mapping-level identify overrides settings.identify and resolves the distinct_id from event data.',
   in: createEvent({
     name: 'user login',
-    timestamp: 1700000102,
+    timestamp: 1700000102000,
     data: {
       user_id: 'resolved-id',
       plan: 'premium',
@@ -130,7 +130,7 @@ export const trackWithGroup: MixpanelStepExample = {
   description:
     "With settings.identify mapping distinctId to 'user.id', a group key and id are attached as a Mixpanel track property so the event is associated with a company or account.",
   in: getEvent('page view', {
-    timestamp: 1700000103,
+    timestamp: 1700000103000,
     data: {
       company_id: 'acme',
     },
@@ -235,7 +235,7 @@ export const allPeopleOperations: MixpanelStepExample = {
     'A profile update exercises the common Mixpanel people vocabulary: set, set_once, increment, append, union, remove, and unset. delete_user is not covered by this example.',
   in: createEvent({
     name: 'profile update',
-    timestamp: 1700000105,
+    timestamp: 1700000105000,
     data: {
       name: 'Jane Doe',
       email: 'jane@acme.com',
@@ -310,7 +310,7 @@ export const companyGroupProfile: MixpanelStepExample = {
     'A company update sets Mixpanel group profile properties via groups.set and groups.set_once.',
   in: createEvent({
     name: 'company update',
-    timestamp: 1700000106,
+    timestamp: 1700000106000,
     data: {
       company_id: 'acme-inc',
       company_name: 'Acme, Inc.',
@@ -388,7 +388,7 @@ export const aliasBeforeTrack: MixpanelStepExample = {
     'A user login merges a prior anonymous id into the new user id via mp.alias before sending the track event.',
   in: createEvent({
     name: 'user login',
-    timestamp: 1700000108,
+    timestamp: 1700000108000,
     data: {
       user_id: 'new-user-456',
       anon_id: 'anon-789',
@@ -415,7 +415,7 @@ export const aliasBeforeTrack: MixpanelStepExample = {
  */
 export const wildcardIgnored: MixpanelStepExample = {
   public: false,
-  in: createEvent({ name: 'debug noise', timestamp: 1700000109 }),
+  in: createEvent({ name: 'debug noise', timestamp: 1700000109000 }),
   mapping: { ignore: true },
   out: [],
 };

@@ -1,8 +1,13 @@
 import path from 'path';
-import { conformance } from '@walkeros/collector/dev';
+import { conformance, runExamples } from '@walkeros/collector/dev';
 import { page } from '@walkeros/web-core/dev';
 import { destinationPlausible } from '..';
 import { examples, schemas } from '../dev';
+
+const env = { push: examples.env.push, simulation: examples.env.simulation };
+
+// The push examples; the init example runs in stepExamples.test.ts.
+const { init: _init, ...events } = examples.step;
 
 describe('plausible conformance', () => {
   beforeEach(() => {
@@ -17,8 +22,17 @@ describe('plausible conformance', () => {
       schema: schemas.settings,
       settings: examples.minimal.settings,
       minimal: examples.minimal,
-      env: { push: examples.env.push, simulation: examples.env.simulation },
+      env,
       root: path.join(__dirname, '..', '..'),
+    });
+  });
+
+  it('records the calls each example names', async () => {
+    await runExamples('destination', destinationPlausible, events, {
+      settings: examples.minimal.settings,
+      config: examples.minimal.config,
+      env,
+      page,
     });
   });
 });

@@ -101,10 +101,11 @@ the destination then only sets the partner ID and, if the page has none yet,
 the `lintrk` queue, and sends its calls through the page's tag. With both, the
 tag loads twice.
 
-:::note Auto page view + retargeting
-The Insight Tag fires its own page view on load and drops first-party cookies
-for audience building. The destination has no setting to suppress this. The
-page view serves retargeting and is separate from the conversions you map.
+:::note Automatic page-load conversion
+Each time the Insight Tag loads, it tracks a page-load conversion by calling
+`window.lintrk()` itself, and it sets first-party cookies for audience
+building. The destination has no setting to suppress this. These calls come
+from the tag, separate from the conversions you map.
 :::
 
 ## No identity tracking

@@ -95,8 +95,9 @@ export async function initializeWalker() {
       ga4: {
         code: destinationGtag,
         config: {
+          loadScript: true,
           settings: {
-            ga4: { measurementId: 'G-XXXXXXXXXX' },
+            ga4: { measurementId: 'G-XXXXXXXXXX', pageview: false },
           },
         },
       },
@@ -107,6 +108,10 @@ export async function initializeWalker() {
 }`}
   language="javascript"
 />
+
+`loadScript: true` adds gtag.js to the page; without it, events reach GA4 only
+if your page loads gtag.js itself. `pageview: false` stops gtag from sending a
+page view of its own, because the browser source already sends one.
 
 ## 4. Add consent management
 
@@ -158,8 +163,9 @@ async function startWalker() {
       ga4: {
         code: destinationGtag,
         config: {
+          loadScript: true,
           settings: {
-            ga4: { measurementId: 'G-XXXXXXXXXX' },
+            ga4: { measurementId: 'G-XXXXXXXXXX', pageview: false },
           },
           consent: {
             analytics: true,

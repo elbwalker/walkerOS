@@ -64,4 +64,4 @@ If your data is already hashed or you want to skip hashing for specific fields, 
 
 ## Deduplication
 
-Each event is sent with `event_id` set to the walkerOS event `id`. If you also run the [TikTok browser pixel](/docs/destinations/web/tiktok), TikTok deduplicates server and browser events that share the same `event_id`, so conversions are not double-counted.
+Each event is sent with `event_id` set to the walkerOS event `id`. If you also run the [TikTok browser pixel](/docs/destinations/web/tiktok), TikTok deduplicates server and browser events that share the same event name and `event_id`, so conversions are not double-counted (see TikTok's [event deduplication](https://ads.tiktok.com/help/article/event-deduplication)).

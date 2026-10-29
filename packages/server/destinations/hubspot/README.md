@@ -33,7 +33,7 @@ npm install @walkeros/server-destination-hubspot
           "package": "@walkeros/server-destination-hubspot",
           "config": {
             "settings": {
-              "accessToken": "YOUR_HUBSPOT_ACCESS_TOKEN",
+              "accessToken": "$secret.HUBSPOT_ACCESS_TOKEN",
               "eventNamePrefix": "YOUR_EVENT_NAME_PREFIX"
             }
           }

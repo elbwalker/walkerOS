@@ -114,7 +114,7 @@ Idempotent: re-running on a queue whose attributes match is a no-op. If they dif
 
 `config.setup`:
 
-- `false` (default): no provisioning. Operator must run setup explicitly.
+- omitted or `false` (default): no provisioning.
 - `true`: provisions with safe defaults (`eu-central-1`, standard queue, 30-second visibility timeout).
 - Object form: explicit overrides: `region`, `fifoQueue`, `visibilityTimeoutSeconds` (30), `messageRetentionSeconds` (345600, 4 days), `maximumMessageSize` (262144), `kmsMasterKeyId`, `tags`, and the two helpers below.
 

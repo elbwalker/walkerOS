@@ -1,6 +1,6 @@
 ---
 title: X (Twitter) Conversions API
-description: "Server-side conversion event delivery to X (Twitter) for enhanced ad attribution"
+description: "Server-side conversion event delivery to X (Twitter) for ad attribution"
 path: /docs/destinations/server/twitter
 sidebar_position: 22
 package: '@walkeros/server-destination-twitter'
@@ -15,14 +15,14 @@ import WhereThisFits from '@site/src/components/snippets/_where-this-fits.mdx';
 
 <PackageLink env="server" github="packages/server/destinations/twitter" npm="@walkeros/server-destination-twitter" status="beta" />
 
-Server-side event delivery to X's (Twitter's) Conversions API for enhanced ad attribution and privacy-compliant conversion tracking.
+Server-side event delivery to X's (Twitter's) Conversions API for ad attribution.
 
 <WhereThisFits
   pre={<>X Conversions API is a <strong>server destination</strong> in the walkerOS flow:</>}
   flowMap={{
     destinations: { default: { label: 'Destination', text: 'X CAPI', highlight: true } },
   }}
-  post={<>Sends conversion events server-side to X's Conversions API, bypassing browser limitations for improved data quality. Deduplicates with the browser-side X Pixel via `conversion_id`.</>}
+  post={<>Sends conversion events server-side to X's Conversions API, bypassing browser limitations for improved data quality. Sends the event's `id` as `conversion_id`, so X can deduplicate it against the X Pixel.</>}
 />
 
 ## Installation
@@ -31,9 +31,17 @@ Server-side event delivery to X's (Twitter's) Conversions API for enhanced ad at
 
 <Configuration type="destination" data={data} />
 
+## Failures
+
+A response outside the 2xx range, a network error, or no answer within 5 seconds fails the event: the push answers `failed` with the code `transport` (with the HTTP status) or `timeout`, the event goes to the dead-letter queue, and the collector logs one ERROR line. Any 2xx answer counts as delivered: the destination does not read the response body. Without `pixelId`, `eventId` or one of the four OAuth settings (`consumerKey`, `consumerSecret`, `accessToken`, `accessTokenSecret`) the destination does not start: every push answers `failed` with the code `config`, and the collector logs `destination init failed`. A rule with `silent: true` sends nothing.
+
 ## Client IP and user agent
 
 The destination sends the client IP as the `ip_address` identifier and the user agent as the `user_agent` identifier by default. The `ip` and `userAgent` settings resolve against `{ ingest, event }` and default to `["ingest.ip", "event.user.ip"]` and `["ingest.userAgent", "event.user.userAgent"]`, so they fill in whenever the source provides them (see the `config.ingest` recipe on the [Express source](/docs/sources/server/express#ingest-metadata)). A value your mapping sets for `user_data.ip_address` or `user_data.user_agent` wins. A value that resolves to nothing is not sent. Set either setting to `false` to turn it off, or to another mapping value to read it elsewhere.
+
+## Consent
+
+The quickstart sets no `config.consent`, so X receives every event, whatever consent the event carries. To send only events with consent, add `consent: { marketing: true }` to `config`, next to `settings` (with several keys listed, one granted key is enough). An event without that consent is skipped or queued, depending on the collector's `consentDenied`. Server flows built by the CLI skip it and count it in `skipped`. With `startFlow` it waits in the destination's queue by default: a later event that carries consent does not release it, and only a `walker consent` command does, which then sends the waiting events of every user at once. Pass `consentDenied: 'skip'` to `startFlow` to skip such events instead (see [Gate a destination with consent](/docs/guides/consent#gate-a-destination-with-consent) and [consent-denied events on a server](/docs/collector#consent-denied-events-on-a-server)).
 
 ## User identification
 
@@ -41,14 +49,18 @@ The destination builds an `identifiers` array. Each identifier is a separate sin
 
 **Primary identifiers:**
 
-- **`hashed_email`**: resolved from `event.user.email` or a `user_data.email` mapping. The email is normalized (trimmed, lowercased) and SHA-256 hashed before sending. Set `doNotHash: ['email']` if you are pre-hashing upstream.
-- **`hashed_phone_number`**: resolved from `event.user.phone` or a `user_data.phone` mapping. SHA-256 hashed. Use `doNotHash: ['phone']` to skip.
-- **`twclid`**: X click ID (pass-through, **not** hashed). Typically forwarded from the browser session:
+- **`hashed_email`**: resolved from `event.user.email` or a `user_data.email` mapping. The email is normalized (trimmed, lowercased) and SHA-256 hashed before sending. Set `doNotHash: ['email']` if you are pre-hashing upstream: the email is then sent trimmed and lowercased, but not hashed.
+- **`hashed_phone_number`**: resolved from `event.user.phone` or a `user_data.phone` mapping, trimmed and SHA-256 hashed as mapped. X expects the number in E.164 format (`+491701234567`), so map it in that form: the destination does not remove spaces, brackets or dashes. Use `doNotHash: ['phone']` to skip hashing: the number is then sent trimmed, but not hashed, so use it only for a value you hash upstream.
+- **`twclid`**: X click ID (pass-through, **not** hashed). The [session source](/docs/sources/web/session#session-start-event) reads it from the landing page URL into its `session start` event only, so carry it to your conversion events yourself (the snippet reads `context.twclid`):
 
 <CodeSnippet
   code={`"settings": {
-  "pixelId": "$env.TWITTER_PIXEL_ID",
-  "eventId": "$env.TWITTER_EVENT_ID",
+  "pixelId": "o8z6j",
+  "eventId": "tw-o8z6j-o8z21",
+  "consumerKey": "$secret.TWITTER_CONSUMER_KEY",
+  "consumerSecret": "$secret.TWITTER_CONSUMER_SECRET",
+  "accessToken": "$secret.TWITTER_ACCESS_TOKEN",
+  "accessTokenSecret": "$secret.TWITTER_ACCESS_TOKEN_SECRET",
   "user_data": {
     "twclid": "context.twclid"
   }
@@ -56,7 +68,9 @@ The destination builds an `identifiers` array. Each identifier is a separate sin
   language="json"
 />
 
-**Secondary identifiers** (optional): `ip_address`, `user_agent`, pass-through.
+**Secondary identifiers**: `ip_address` and `user_agent` are optional and sent unhashed (see [Client IP and user agent](#client-ip-and-user-agent)).
+
+Every other key in `user_data` (for example `phone_number`, `hashed_email` or `em`) is dropped without a log line, and a list mapped to `email` is ignored in favour of `event.user.email`.
 
 ## Per-event overrides
 
@@ -69,7 +83,6 @@ The default `eventId` from settings applies to all events. Override it per event
       "settings": {
         "eventId": { "value": "tw-o8z6j-purchase01" },
         "value": "data.value",
-        "currency": { "key": "data.currency", "value": "EUR" },
         "number_items": "data.count"
       }
     }
@@ -80,4 +93,4 @@ The default `eventId` from settings applies to all events. Override it per event
 
 ## Browser deduplication
 
-When running both the browser-side X Pixel and this server destination, the walkerOS event `id` is sent as `conversion_id` on both sides. X deduplicates conversions that share the same `conversion_id` and conversion event, so only one conversion is counted.
+This destination sends the event's `id` as `conversion_id`. If the X Pixel in the browser tracks the same conversion, use the conversion event you created for the pixel as `eventId` here, and give the pixel the walkerOS event `id` as its `conversion_id`: X counts a conversion that the pixel and the Conversions API send with the same `conversion_id` once ([web conversions](https://docs.x.com/x-ads-api/measurement/web-conversions)). walkerOS has no X Pixel destination, so the pixel side is set up outside walkerOS.

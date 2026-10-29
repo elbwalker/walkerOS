@@ -36,6 +36,11 @@ analytics and audience platform. The destination configures the official Piano
 
 <Quickstart data={data} />
 
+The quickstart above sets no consent, so the Piano SDK loads and receives every
+event without `analytics` consent, and a revocation changes nothing. Add
+`consent: { analytics: true }` to `config`, next to `settings`, before you go
+live (see [gate a destination](/docs/guides/consent#gate-a-destination-with-consent)).
+
 <Configuration type="destination" data={data} />
 
 ## Loading the SDK

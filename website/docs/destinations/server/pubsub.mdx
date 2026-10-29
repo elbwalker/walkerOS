@@ -66,7 +66,7 @@ When `settings.projectId` and the credentials' `project_id` both resolve, the to
 
 Per-rule overrides live under `mapping.<entity>.<action>.settings.orderingKey`.
 
-If a publish fails for an ordered key, Pub/Sub permanently halts subsequent publishes for that key until `topic.resumePublishing(key)` is called. The destination handles this automatically: on publish failure for an ordered key it calls `resumePublishing` immediately; the push still fails, with the SDK's error as its cause.
+If a publish fails for an ordered key, the Pub/Sub client fails every later publish with that key until `topic.resumePublishing(key)` is called. The destination handles this automatically: on publish failure for an ordered key it calls `resumePublishing` immediately; the push still fails, with the SDK's error as its cause.
 
 ## Attributes
 
@@ -94,7 +94,7 @@ Provision the topic once per environment:
   language="bash"
 />
 
-Setup runs only when `config.setup` is `true` or an object; without it the command provisions nothing and prints `setup: skipped destination.pubsub (config.setup is unset)`. The command is idempotent: re-running it on an existing topic runs drift detection (with `--verbose` it also prints `setup: topic exists`). Drift on `messageStoragePolicy.allowedPersistenceRegions`, `messageRetentionDuration`, `kmsKeyName`, or `labels` emits `WARN setup.drift {...}` and never auto-mutates. Migrations are an operator decision.
+Setup runs only when `config.setup` is `true` or an object; without it the command provisions nothing and prints `[destination:pubsub] setup: skipped destination.pubsub (config.setup is unset)`. The command is idempotent: re-running it on an existing topic runs drift detection (with `--verbose` it also prints `setup: topic exists`). Drift on `messageStoragePolicy.allowedPersistenceRegions`, `messageRetentionDuration`, `kmsKeyName`, or `labels` logs `[destination:<id>] setup.drift {...}` (a warning line) and never auto-mutates. Migrations are an operator decision.
 
 `config.setup`:
 

@@ -58,7 +58,7 @@ Add to your `flow.json`:
   "fingerprint": {
     "package": "@walkeros/server-transformer-fingerprint",
     "config": {
-      "settings": { "salt": "$env.FINGERPRINT_SALT" }
+      "settings": { "salt": "$secret.FINGERPRINT_SALT" }
     }
   }
 }`}
@@ -101,11 +101,11 @@ The source must extract `ip` and `userAgent` into `ingest`:
 
 Replace `x-client-ip` with the single-address header your proxy sets or overwrites with the visitor's address; [Client IP behind a proxy](/docs/sources/server/express#client-ip-behind-a-proxy) lists the common ones and the pattern for proxies that only append to `X-Forwarded-For`. An `ip` that is not one address, for example a forwarded chain, is reported as an error and left out of the hash. An IPv4 client on a dual-stack server (`::ffff:203.0.113.7`) is treated as its IPv4 address.
 
-Set an input to another [mapping value](/docs/mapping/value) to read it from elsewhere, or to `false` to leave it out. With both `ip` and `userAgent` off and no `fields`, the flow does not start (`Fingerprint has no input that tells visitors apart`). When one input resolves empty, the transformer hashes without it; when the IP, the user agent and every field resolve empty (the site does not count), the event fails with `missing-input`.
+Set an input to another [mapping value](/docs/mapping/value) to read it from elsewhere, or to `false` to leave it out. With both `ip` and `userAgent` off and no `fields`, the flow does not start (`Fingerprint has no input that tells visitors apart`). When one input resolves empty, the transformer hashes without it and logs one WARN line for that input, which the default log level does not show. When the IP, the user agent and every field resolve empty (the site does not count), the event fails with `missing-input`.
 
 ## Salt
 
-The salt is the HMAC key. Keep it secret and out of the config file (`$env.FINGERPRINT_SALT`), and give each deployment its own. Without a salt, anyone who knows the inputs can recompute the hash, and an IP hash can be reversed by trying every address. `settings.salt` is required: without it the flow does not start (`Config settings salt missing`).
+The salt is the HMAC key. Keep it secret and out of the config file (`$secret.FINGERPRINT_SALT` in a flow file), and give each deployment its own. Without a salt, anyone who knows the inputs can recompute the hash, and an IP hash can be reversed by trying every address. `settings.salt` is required: without it the flow does not start (`Config settings salt missing`).
 
 ## Rotation
 

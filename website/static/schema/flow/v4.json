@@ -168,7 +168,7 @@
       "type": "object",
       "properties": {
         "level": {
-          "description": "Managed-telemetry verbosity. 'off' disables telemetry entirely, 'standard' emits structural records, 'trace' emits full payloads.",
+          "description": "Telemetry verbosity. 'off' emits no records, 'standard' emits structural records, 'trace' emits full payloads.",
           "type": "string",
           "enum": ["off", "standard", "trace"]
         },
@@ -191,7 +191,7 @@
       },
       "additionalProperties": false,
       "title": "Flow.Observe",
-      "description": "Observability configuration: public web connect pair (url + binding) and managed-telemetry knobs (level + sample)."
+      "description": "Observability configuration of a web flow: public connect pair (url + binding), telemetry level and sample. A server flow ignores it."
     },
     "FlowConfig": {
       "type": "object",
@@ -223,7 +223,7 @@
           ]
         },
         "observe": {
-          "description": "Observability configuration: public web connect pair, managed-telemetry level and sample.",
+          "description": "Observability configuration of a web flow: public connect pair, telemetry level and sample. A server flow ignores it.",
           "allOf": [
             {
               "$ref": "#/definitions/FlowObserve"

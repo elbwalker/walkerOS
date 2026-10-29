@@ -3,7 +3,7 @@ import { isObject } from './is';
 /**
  * Deep merges source into target, mutating target in-place.
  * Recurses into plain objects; everything else is a leaf (replaced).
- * Skips undefined source values; null overwrites.
+ * Skips undefined source values and a `__proto__` key; null overwrites.
  */
 export function deepMerge<T extends Record<string, unknown>>(
   target: T,
@@ -12,6 +12,7 @@ export function deepMerge<T extends Record<string, unknown>>(
   if (!isObject(source)) return target;
 
   for (const key of Object.keys(source)) {
+    if (key === '__proto__') continue;
     const val = source[key];
     if (val === undefined) continue;
 

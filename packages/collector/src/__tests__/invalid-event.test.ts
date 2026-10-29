@@ -1,4 +1,4 @@
-import type { Collector, Logger, WalkerOS } from '@walkeros/core';
+import type { Collector, Destination, Logger, WalkerOS } from '@walkeros/core';
 import { Level } from '@walkeros/core';
 import { startFlow } from '../flow';
 
@@ -9,23 +9,37 @@ interface LogRecord {
 }
 
 /**
- * A real collector whose emitted log records are captured through the public
+ * A real flow whose emitted log records are captured through the public
  * logger handler, so assertions read actual output instead of a mock's shape.
- * WARN level keeps both warns and errors visible.
+ * WARN level keeps both warns and errors visible. A capture destination
+ * records what is delivered.
  */
-async function createTestCollector(
-  records: LogRecord[],
-): Promise<Collector.Instance> {
-  const { collector } = await startFlow({
+async function createTestFlow(records: LogRecord[]) {
+  const delivered: WalkerOS.Event[] = [];
+  const capture: Destination.Instance = {
+    type: 'capture',
+    config: {},
+    push: (event) => {
+      delivered.push(event);
+    },
+  };
+  const flow = await startFlow({
     logger: {
       level: Level.WARN,
       handler: (level, message, context) => {
         records.push({ level, message, context });
       },
     },
+    destinations: { capture: { code: capture } },
   });
 
-  return collector;
+  return { ...flow, delivered };
+}
+
+async function createTestCollector(
+  records: LogRecord[],
+): Promise<Collector.Instance> {
+  return (await createTestFlow(records)).collector;
 }
 
 const invalidEvents: Array<[WalkerOS.DeepPartialEvent, string]> = [
@@ -53,7 +67,7 @@ describe('invalid inbound events', () => {
     },
   );
 
-  it('logs one warn per source and window, carrying only the reason', async () => {
+  it('logs one error per source and window, carrying only the reason', async () => {
     const collector = await createTestCollector(records);
 
     await collector.push({}, { id: 'web' });
@@ -61,7 +75,7 @@ describe('invalid inbound events', () => {
 
     expect(records).toEqual([
       {
-        level: Level.WARN,
+        level: Level.ERROR,
         message:
           'invalid event rejected (repeats within a minute are counted in status.sources.web.rejected)',
         context: {
@@ -71,6 +85,47 @@ describe('invalid inbound events', () => {
         },
       },
     ]);
+  });
+
+  it('refuses an event that cannot be serialized', async () => {
+    const { elb, delivered } = await createTestFlow(records);
+    const data: WalkerOS.Properties = {};
+    Reflect.set(data, 'self', data);
+
+    const result = await elb('product view', data);
+
+    expect(result).toEqual(
+      expect.objectContaining({ ok: false, invalid: true }),
+    );
+    expect(result.error).toMatch(/^Event cannot be serialized: /);
+    expect(delivered).toHaveLength(0);
+    expect(records).toEqual([
+      expect.objectContaining({
+        level: Level.ERROR,
+        context: expect.objectContaining({ code: 'invalid' }),
+      }),
+    ]);
+  });
+
+  // The refusal is for events JSON cannot carry at all. Values JSON drops or
+  // converts on its own pass the collector unchanged.
+  it('passes values JSON can carry', async () => {
+    class P {
+      x = 1;
+    }
+    const { elb, delivered } = await createTestFlow(records);
+    const data: WalkerOS.Properties = { coupon: null };
+    Reflect.set(data, 'date', new Date(0));
+    Reflect.set(data, 'instance', new P());
+    Reflect.set(data, 'callback', () => undefined);
+    Reflect.set(data, 'missing', undefined);
+
+    const result = await elb('product view', data);
+
+    expect(result.ok).toBe(true);
+    expect(delivered).toHaveLength(1);
+    expect(delivered[0].data).toEqual(data);
+    expect(records).toEqual([]);
   });
 
   it('counts invalid events as source rejections, not failures', async () => {

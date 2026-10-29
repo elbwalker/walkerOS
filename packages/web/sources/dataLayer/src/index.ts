@@ -16,7 +16,7 @@ export const sourceDataLayer: Source.Init<Types> = async (context) => {
   // Events exit via `push` (the collector's source pipeline, so this source's
   // `next`/`before`/mapping/cache/state and status apply); `elb` stays the
   // outward-facing slot on the instance below. This source emits no commands.
-  const { elb, push } = env;
+  const { elb, push, logger } = env;
   // The collector passes no `window`: an injected one (tests, simulation)
   // wins, else the page's own.
   const envWindow =
@@ -45,7 +45,7 @@ export const sourceDataLayer: Source.Init<Types> = async (context) => {
     pendingReplayCount = Array.isArray(dl) ? dl.length : 0;
 
     const win = envWindow as unknown as Record<string, unknown>;
-    interceptDataLayer(push, fullConfig, win);
+    interceptDataLayer(push, fullConfig, logger, win);
   };
 
   // Replay pre-existing entries when the run signal lands. The collector
@@ -56,7 +56,7 @@ export const sourceDataLayer: Source.Init<Types> = async (context) => {
   const handleEvent = async (event: On.Types) => {
     if (event === 'run' && envWindow && pendingReplayCount > 0) {
       const win = envWindow as unknown as Record<string, unknown>;
-      processExistingEvents(push, fullConfig, pendingReplayCount, win);
+      processExistingEvents(push, fullConfig, logger, pendingReplayCount, win);
       pendingReplayCount = 0;
     }
   };

@@ -203,11 +203,13 @@ await sendWeb(url, data, { transport: 'xhr' });
 
 // With custom headers (fetch and xhr)
 await sendWeb(url, data, {
-  headers: { Authorization: 'Bearer token' },
+  headers: { 'X-Site': 'shop' },
   method: 'PUT',
 });`}
   language="javascript"
 />
+
+Headers set in browser code reach every visitor: never put a secret in them.
 
 ### Transport-Specific Functions
 

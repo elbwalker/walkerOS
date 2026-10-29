@@ -2,7 +2,7 @@ import type { StandardEventName } from '@walkeros/core';
 import path from 'path';
 import { startFlow } from '@walkeros/collector';
 import { conformance, runExamples } from '@walkeros/collector/dev';
-import { clone, createLogger, observeEnv } from '@walkeros/core';
+import { clone, createLogger, isObject, observeEnv } from '@walkeros/core';
 import { expectSimulationResolves } from '@walkeros/core/dev';
 import { page } from '@walkeros/web-core/dev';
 import type { Config } from '../types';
@@ -83,6 +83,27 @@ describe('piwikpro conformance', () => {
     expect(observed.calls.map(({ fn, args }) => [fn, ...args])).toEqual(
       init.out,
     );
+  });
+
+  // Piwik PRO takes a goal UUID or a legacy integer id.
+  it('names every goal by UUID or integer', () => {
+    const goalIds = Object.values(examples.step).flatMap((example) => {
+      const settings = isObject(example.mapping)
+        ? example.mapping.settings
+        : undefined;
+      return isObject(settings) && settings.goalId !== undefined
+        ? [settings.goalId]
+        : [];
+    });
+    expect(goalIds.length).toBeGreaterThan(0);
+    const invalid = goalIds.filter(
+      (goalId) =>
+        !Number.isInteger(goalId) &&
+        !/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/.test(
+          String(goalId),
+        ),
+    );
+    expect(invalid).toEqual([]);
   });
 
   it('declares simulation paths that resolve', () =>

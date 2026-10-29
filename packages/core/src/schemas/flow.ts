@@ -778,7 +778,8 @@ export const ContractSchema = z
  * @remarks
  * Observability configuration block. `url` + `binding` form the public web
  * connect pair (safe to commit; the per-session credential arrives
- * out-of-band). `level` and `sample` are managed-telemetry knobs.
+ * out-of-band). `level` and `sample` set what a web flow captures. A server
+ * flow's block has no effect.
  */
 export const ObserveSchema = z
   .object({
@@ -786,7 +787,7 @@ export const ObserveSchema = z
       .enum(['off', 'standard', 'trace'])
       .optional()
       .describe(
-        "Managed-telemetry verbosity. 'off' disables telemetry entirely, 'standard' emits structural records, 'trace' emits full payloads.",
+        "Telemetry verbosity. 'off' emits no records, 'standard' emits structural records, 'trace' emits full payloads.",
       ),
     sample: z
       .number()
@@ -813,7 +814,7 @@ export const ObserveSchema = z
     id: 'FlowObserve',
     title: 'Flow.Observe',
     description:
-      'Observability configuration: public web connect pair (url + binding) and managed-telemetry knobs (level + sample).',
+      'Observability configuration of a web flow: public connect pair (url + binding), telemetry level and sample. A server flow ignores it.',
   })
   .describe('Observability configuration block');
 
@@ -845,7 +846,7 @@ export const ConfigSchema = z
       'Bundle configuration: NPM packages, transitive dependency overrides.',
     ),
     observe: ObserveSchema.optional().describe(
-      'Observability configuration: public web connect pair, managed-telemetry level and sample.',
+      'Observability configuration of a web flow: public connect pair, telemetry level and sample. A server flow ignores it.',
     ),
   })
   .meta({

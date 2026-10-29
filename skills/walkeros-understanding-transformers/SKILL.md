@@ -255,13 +255,23 @@ destinations: {
 
 ### Chain Linking
 
-Transformers link together via `next`:
+Transformers link together via `next`. The chain starts at the step that names
+its first transformer, here the source:
 
 ```typescript
+sources: {
+  express: {
+    code: sourceExpress,
+    next: 'fingerprint'  // Chain head
+  }
+},
 transformers: {
   fingerprint: {
     code: transformerFingerprint,
-    config: { next: 'enrich' }  // Chain to next transformer
+    config: {
+      settings: { salt: process.env.FINGERPRINT_SALT }, // Required
+      next: 'enrich'  // Chain to next transformer
+    }
   },
   enrich: {
     code: transformerEnrich,

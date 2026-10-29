@@ -104,6 +104,11 @@ docker run --rm \
   walkeros/flow:<version>
 ```
 
+The image runs as the user `walker` (uid 1001), which must be able to read the
+mounted key. On a Linux host, a key file only your user can read (mode 600) is
+unreadable in the container; for this local test, make it readable with
+`chmod 644 sa-bigquery.json`, and delete it when you clean up.
+
 In another terminal, send a test event:
 
 ```bash

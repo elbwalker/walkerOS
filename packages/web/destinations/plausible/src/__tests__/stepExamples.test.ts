@@ -16,7 +16,10 @@ const initOut = (examples.step.init.out ?? []) as ReadonlyArray<CallRecord>;
 
 const noopLogger = createLogger();
 
-/** Spy: captures push-side `plausible(...)` calls into an ordered array. */
+/**
+ * Spy: captures push-side `plausible(...)` calls into an ordered array, under
+ * their simulation path (window.plausible).
+ */
 function spyEnv(): { env: Env; collected: () => CallRecord[] } {
   const calls: CallRecord[] = [];
   const spy = (
@@ -25,7 +28,7 @@ function spyEnv(): { env: Env; collected: () => CallRecord[] } {
   ) => {
     const args: unknown[] = [event];
     if (options !== undefined) args.push(options);
-    calls.push(['plausible', ...args]);
+    calls.push(['window.plausible', ...args]);
   };
   const env: Env = {
     window: {
@@ -78,7 +81,7 @@ describe('plausible destination -- step examples', () => {
   it('sends scalar props and a { currency, amount } revenue', () => {
     const invalid = Object.entries(examples.step).flatMap(([name, example]) =>
       (example.out ?? []).flatMap(([callable, , options]) => {
-        if (callable !== 'plausible' || !isObject(options)) return [];
+        if (callable !== 'window.plausible' || !isObject(options)) return [];
         const { props, revenue } = options;
         const scalarProps =
           props === undefined ||

@@ -39,6 +39,11 @@ SPA state changes.
 
 <Quickstart data={data} />
 
+The quickstart above sets no consent, so Hotjar starts and receives every event
+without `marketing` consent, and a revocation changes nothing. Add
+`consent: { marketing: true }` to `config`, next to `settings`, before you go
+live (see [gate a destination](/docs/guides/consent#gate-a-destination-with-consent)).
+
 <Configuration type="destination" data={data} />
 
 ## Consent
@@ -62,5 +67,5 @@ The Hotjar SDK has no consent API. Consent is gated at the walkerOS level via
 Until a listed consent state is granted, the destination does not load Hotjar
 and the collector holds its events in a queue. They are sent once consent is
 granted, see [consent management](/docs/guides/consent). After a revocation, no
-further events reach Hotjar, but the Hotjar script loaded before stays on the
-page until the next page load.
+further walkerOS events reach Hotjar, but the Hotjar script loaded before stays
+on the page until the next page load.

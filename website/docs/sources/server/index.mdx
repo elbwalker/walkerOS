@@ -70,10 +70,10 @@ default answers 200 on receipt, see
 [Response modes](/docs/sources/server/express#response-modes-async)), and a GET
 pixel always answers 200 with the GIF.
 
-SQS and Pub/Sub pull report an acknowledged invalid message only through the
-`rejected` counter and a WARN line (once a minute per source), which the default
-log level does not show. A decoder or producer that sends messages without an
-event name therefore drops every message: check `rejected` after a change.
+SQS and Pub/Sub pull report an acknowledged invalid message through the
+`rejected` counter and one ERROR line per source and minute. A decoder or
+producer that sends messages without an event name therefore drops every
+message: check `rejected` and the log after a change.
 
 A deterministic failure is acknowledged on purpose: resending the message would
 fail the same way and loop. It is visible in the destination's `failed`

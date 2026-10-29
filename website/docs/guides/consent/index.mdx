@@ -101,7 +101,8 @@ checks every event against it before the destination sees the event:
 - Events without the required consent wait in the destination's queue (the
   push answers `queued` with the reason `consent`). Once consent is granted,
   they are delivered in their original order. Server flows built by the CLI
-  skip these events instead (`consentDenied: 'skip'`), see
+  skip these events instead (`consentDenied: 'skip'`). On a server collector
+  that queues, one `walker consent` sends every user's waiting events, see
   [consent-denied events on a server](/docs/collector#consent-denied-events-on-a-server).
 - The collector initializes the destination only after its required consent
   is granted: at the first event that passes the check or, for a destination
@@ -352,8 +353,8 @@ The [gtag destination](/docs/destinations/web/gtag) supports Google Consent
 Mode v2 through its `como` setting, which is on by default. When the
 destination has a `config.consent` requirement (or `como_advanced` is set), it
 first sets every mapped parameter to `denied` with `gtag('consent', 'default', ...)`
-before loading any tool; otherwise it sends that default right before its first
-update. It turns consent commands into
+before it loads or configures any Google tag (GA4, Google Ads, GTM); otherwise
+it sends that default right before its first update. It turns consent commands into
 `gtag('consent', 'update', ...)` calls, and holds commands sent before it
 initializes until initialization. The default mapping is:
 

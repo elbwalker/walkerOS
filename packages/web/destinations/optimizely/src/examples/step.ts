@@ -19,7 +19,7 @@ export const defaultEventForwarding: OptimizelyStepExample = {
   title: 'Default event',
   description:
     'A walker event becomes an Optimizely trackEvent call with the event name and empty eventTags.',
-  in: getEvent('page view', { timestamp: 1700000100 }),
+  in: getEvent('page view', { timestamp: 1700000100000 }),
   out: [['optimizely.trackEvent', 'page view', {}]],
 };
 
@@ -31,7 +31,7 @@ export const mappedEventName: OptimizelyStepExample = {
   title: 'Mapped event key',
   description:
     'A mapping renames the walker event to an Optimizely event key defined in the project.',
-  in: getEvent('product view', { timestamp: 1700000101 }),
+  in: getEvent('product view', { timestamp: 1700000101000 }),
   mapping: {
     name: 'product_viewed',
   },
@@ -48,7 +48,7 @@ export const orderCompleteRevenue: OptimizelyStepExample = {
   description:
     'An order fires an Optimizely purchase event with revenue in cents, value, and additional event tags.',
   in: getEvent('order complete', {
-    timestamp: 1700000102,
+    timestamp: 1700000102000,
     data: {
       revenue_cents: 55500,
       value: 555,
@@ -88,7 +88,7 @@ export const signupWithAttributes: OptimizelyStepExample = {
     'A user signup sets per-event Optimizely attributes via setAttribute before firing the trackEvent.',
   in: createEvent({
     name: 'user signup',
-    timestamp: 1700000103,
+    timestamp: 1700000103000,
     data: {
       method: 'google',
       source: 'referral',
@@ -118,7 +118,7 @@ export const signupWithAttributes: OptimizelyStepExample = {
  */
 export const wildcardIgnored: OptimizelyStepExample = {
   public: false,
-  in: createEvent({ name: 'debug noise', timestamp: 1700000104 }),
+  in: createEvent({ name: 'debug noise', timestamp: 1700000104000 }),
   mapping: { ignore: true },
   out: [],
 };
@@ -133,7 +133,7 @@ export const attributesOnlySilent: OptimizelyStepExample = {
     'A profile update sets Optimizely user attributes without firing a trackEvent for user enrichment.',
   in: createEvent({
     name: 'profile update',
-    timestamp: 1700000105,
+    timestamp: 1700000105000,
     data: {
       plan: 'premium',
       country: 'DE',
@@ -163,7 +163,7 @@ export const attributesOnlySilent: OptimizelyStepExample = {
 export const consentRevoked: OptimizelyStepExample = {
   title: 'Consent revoked',
   description:
-    'A walker consent command with analytics denied makes no Optimizely call: walkerOS stops tracking for the consent-gated destination, and the client stays ready for the next grant.',
+    'For a destination with config.consent { analytics: true }, a walker consent command with analytics denied makes no Optimizely call: walkerOS stops tracking for the destination, and the client stays ready for the next grant.',
   command: 'consent',
   before: { analytics: true },
   in: { analytics: false },
@@ -188,7 +188,7 @@ export const silentRule: OptimizelyStepExample = {
   public: false,
   description:
     'A rule with silent: true sends no trackEvent call; the user context the rule settings run on is still created.',
-  in: getEvent('page view', { timestamp: 1700000106 }),
+  in: getEvent('page view', { timestamp: 1700000106000 }),
   mapping: { silent: true },
   out: [['optimizely.createInstance.createUserContext', 'us3r', {}]],
 };

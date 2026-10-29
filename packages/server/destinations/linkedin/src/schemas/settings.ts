@@ -28,7 +28,7 @@ export const SettingsSchema = z
       .string()
       .url()
       .describe(
-        'Custom URL for LinkedIn Conversions API endpoint (like https://api.linkedin.com/rest/)',
+        'Custom URL for the LinkedIn Conversions API, ending in / (like https://api.linkedin.com/rest/)',
       )
       .optional(),
     user_data: z

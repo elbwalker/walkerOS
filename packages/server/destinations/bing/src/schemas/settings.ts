@@ -18,7 +18,7 @@ export const SettingsSchema = z
       .string()
       .url()
       .describe(
-        'Custom Bing UET CAPI base URL (default https://capi.uet.microsoft.com/v1/)',
+        'Custom Bing UET CAPI base URL, ending in / (default https://capi.uet.microsoft.com/v1/)',
       )
       .optional(),
     doNotHash: z
@@ -27,7 +27,9 @@ export const SettingsSchema = z
       .optional(),
     user_data: z
       .record(z.string(), z.string())
-      .describe("Mapping for user data fields (like { em: 'user.email' })")
+      .describe(
+        "Mapping for user data fields with Microsoft's key names (em, ph, anonymousId, externalId, msclkid, idfa, gaid), like { em: 'user.email' }. Only em and ph are hashed; any other key is sent unhashed",
+      )
       .optional(),
     dataProvider: z
       .string()

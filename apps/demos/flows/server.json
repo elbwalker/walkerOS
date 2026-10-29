@@ -2,20 +2,15 @@
   "version": 4,
   "flows": {
     "server": {
-      "packages": {
-        "@walkeros/server-source-express": {},
-        "@walkeros/destination-demo": {},
-        "@walkeros/server-destination-gcp": {}
-      },
+      "config": { "platform": "server" },
       "sources": {
         "express": {
           "package": "@walkeros/server-source-express",
           "import": "sourceExpress",
           "config": {
             "settings": {
-              "path": "/collect",
-              "port": 8080,
-              "status": true
+              "paths": ["/collect"],
+              "port": 8080
             }
           }
         }
@@ -35,17 +30,14 @@
           "package": "@walkeros/server-destination-gcp",
           "import": "destinationBigQuery",
           "config": {
+            "setup": { "location": "EU" },
             "settings": {
-              "projectId": "$PROJECT_ID",
-              "datasetId": "$DATASET_ID",
-              "tableId": "$TABLE_ID",
-              "location": "EU"
+              "projectId": "$env.PROJECT_ID",
+              "datasetId": "$env.DATASET_ID",
+              "tableId": "$env.TABLE_ID"
             }
           }
         }
-      },
-      "config": {
-        "platform": "server"
       }
     }
   }

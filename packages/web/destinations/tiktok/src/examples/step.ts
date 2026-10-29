@@ -30,7 +30,9 @@ export const defaultEventForwarding: TikTokStepExample = {
   description:
     'Without a mapping the walker event name is forwarded to ttq.track with an event_id for TikTok dedup.',
   in: getEvent('product view', { id: '0123456789abcdef' }),
-  out: [['ttq.track', 'product view', {}, { event_id: '0123456789abcdef' }]],
+  out: [
+    ['window.ttq.track', 'product view', {}, { event_id: '0123456789abcdef' }],
+  ],
 };
 
 /**
@@ -72,7 +74,7 @@ export const productViewContent: TikTokStepExample = {
   },
   out: [
     [
-      'ttq.track',
+      'window.ttq.track',
       'ViewContent',
       {
         content_type: 'product',
@@ -89,7 +91,7 @@ export const productViewContent: TikTokStepExample = {
 };
 
 /**
- * Destination-level settings.include flattens the walkerOS `data` section
+ * Destination-level config.include flattens the walkerOS `data` section
  * into prefixed TikTok event parameters on every push. This is the
  * "dump everything" mode - useful for custom events where TikTok won't
  * do optimization anyway, and no mapping.data is needed.
@@ -97,12 +99,12 @@ export const productViewContent: TikTokStepExample = {
 export const destinationLevelInclude: TikTokStepExample = {
   title: 'Include data',
   description:
-    'Destination-level include flattens the event data section into prefixed TikTok event parameters.',
+    'With config.include set to data, the event data section is flattened into prefixed TikTok event parameters.',
   in: getEvent('product view', { id: '22222222bbbbbbbb' }),
   configInclude: ['data'],
   out: [
     [
-      'ttq.track',
+      'window.ttq.track',
       'product view',
       {
         data_id: 'ers',
@@ -118,14 +120,13 @@ export const destinationLevelInclude: TikTokStepExample = {
 };
 
 /**
- * Per-rule settings.include REPLACES destination-level include for the
- * matched rule (design doc §6: mapping-level include replaces, not
- * merges with, destination-level include).
+ * A rule's include REPLACES the destination-level config.include for the
+ * matched rule; the two are not merged.
  */
 export const ruleIncludeReplaces: TikTokStepExample = {
   title: 'Rule include overrides',
   description:
-    'A per-rule include replaces the destination-level include so this event forwards only globals.',
+    'With config.include set to data, a rule include of globals replaces it, so this event forwards only globals.',
   in: getEvent('order complete', { id: '33333333cccccccc' }),
   configInclude: ['data'],
   mapping: {
@@ -133,7 +134,7 @@ export const ruleIncludeReplaces: TikTokStepExample = {
   },
   out: [
     [
-      'ttq.track',
+      'window.ttq.track',
       'order complete',
       {
         globals_pagegroup: 'shop',
@@ -146,10 +147,9 @@ export const ruleIncludeReplaces: TikTokStepExample = {
 /**
  * Destination-level settings.identify fires on the first push (once the
  * state cache is empty). Advanced Matching parameters (email,
- * phone_number, external_id) are passed to ttq.identify() which
- * auto-hashes them SHA256 before sending. Subsequent pushes with
- * unchanged values do NOT re-fire ttq.identify() - runtime state tracks
- * the last-resolved identity.
+ * phone_number, external_id) are passed to ttq.identify() unhashed.
+ * Subsequent pushes with unchanged values do NOT re-fire ttq.identify() -
+ * runtime state tracks the last-resolved identity.
  *
  * walkerOS's default user fixture has user.id='us3r' and no email/phone,
  * so the example injects data and maps from there.
@@ -157,7 +157,7 @@ export const ruleIncludeReplaces: TikTokStepExample = {
 export const destinationLevelIdentify: TikTokStepExample = {
   title: 'Advanced matching',
   description:
-    'Destination-level identify calls ttq.identify with email, phone, and external id for TikTok advanced matching.',
+    'With settings.identify mapping email, phone and external id, the first push calls ttq.identify for TikTok advanced matching before the track call.',
   in: getEvent('page view', {
     id: '44444444dddddddd',
     data: {
@@ -176,14 +176,14 @@ export const destinationLevelIdentify: TikTokStepExample = {
   },
   out: [
     [
-      'ttq.identify',
+      'window.ttq.identify',
       {
         email: 'user@acme.com',
         phone_number: '+14135552671',
         external_id: 'us3r',
       },
     ],
-    ['ttq.track', 'page view', {}, { event_id: '44444444dddddddd' }],
+    ['window.ttq.track', 'page view', {}, { event_id: '44444444dddddddd' }],
   ],
 };
 
@@ -226,7 +226,7 @@ export const userRegisterCompleteRegistration: TikTokStepExample = {
   },
   out: [
     [
-      'ttq.identify',
+      'window.ttq.identify',
       {
         email: 'new@acme.com',
         phone_number: '+14135551234',
@@ -234,7 +234,7 @@ export const userRegisterCompleteRegistration: TikTokStepExample = {
       },
     ],
     [
-      'ttq.track',
+      'window.ttq.track',
       'CompleteRegistration',
       {
         content_type: 'product',
@@ -245,7 +245,7 @@ export const userRegisterCompleteRegistration: TikTokStepExample = {
 };
 
 /**
- * Multi-product order → CompletePayment standard event. The canonical
+ * Multi-product order → Purchase standard event. The canonical
  * TikTok ecommerce pattern:
  *  - mapping.name flips the walkerOS event to TikTok's rigid taxonomy
  *  - mapping.data builds the TikTok-native parameter shape
@@ -257,13 +257,13 @@ export const userRegisterCompleteRegistration: TikTokStepExample = {
  * The default "order complete" fixture has 3 nested entries: two
  * products (ers, cc) and one gift (Surprise - no id, no price).
  */
-export const orderCompleteCompletePayment: TikTokStepExample = {
-  title: 'Complete payment',
+export const orderCompletePurchase: TikTokStepExample = {
+  title: 'Purchase',
   description:
-    'A completed order is mapped to TikTok CompletePayment with value, currency, and nested product contents.',
+    'A completed order is mapped to TikTok Purchase with value, currency, and nested product contents.',
   in: getEvent('order complete', { id: '66666666ffffffff' }),
   mapping: {
-    name: 'CompletePayment',
+    name: 'Purchase',
     data: {
       map: {
         content_type: { value: 'product' },
@@ -289,8 +289,8 @@ export const orderCompleteCompletePayment: TikTokStepExample = {
   },
   out: [
     [
-      'ttq.track',
-      'CompletePayment',
+      'window.ttq.track',
+      'Purchase',
       {
         content_type: 'product',
         value: 462,
@@ -349,7 +349,7 @@ export const searchSubmitSearch: TikTokStepExample = {
   },
   out: [
     [
-      'ttq.track',
+      'window.ttq.track',
       'Search',
       {
         query: 'hiking backpack',
@@ -371,11 +371,11 @@ export const searchSubmitSearch: TikTokStepExample = {
 export const consentGrantEnableCookie: TikTokStepExample = {
   title: 'Consent granted',
   description:
-    'A walker consent grant for marketing calls ttq.enableCookie so TikTok can set and read its attribution cookie.',
+    'With config.consent set to marketing, a walker consent grant for marketing calls ttq.enableCookie so TikTok can set and read its attribution cookie.',
   command: 'consent',
   in: { marketing: true } as WalkerOS.Consent,
-  settings: {} as Partial<Settings>, // consent key is derived from config.consent
-  out: [['ttq.enableCookie']],
+  settings: {} as Partial<Settings>, // the consent key comes from config.consent
+  out: [['window.ttq.enableCookie']],
 };
 
 /**
@@ -385,7 +385,7 @@ export const consentGrantEnableCookie: TikTokStepExample = {
 export const consentRevokeDisableCookie: TikTokStepExample = {
   title: 'Consent revoked',
   description:
-    'A walker consent revoke for marketing calls ttq.disableCookie so TikTok stops using its first-party cookie.',
+    'With config.consent set to marketing, a walker consent revoke for marketing calls ttq.disableCookie so TikTok stops using its first-party cookie.',
   command: 'consent',
   before: { marketing: true },
   in: { marketing: false } as WalkerOS.Consent,
@@ -397,7 +397,7 @@ export const consentRevokeDisableCookie: TikTokStepExample = {
 export const silentRule: TikTokStepExample = {
   public: false,
   description: 'A rule with silent: true sends no ttq.track call.',
-  in: getEvent('page view', { timestamp: 1700000600 }),
+  in: getEvent('page view', { timestamp: 1700000600000 }),
   mapping: { silent: true },
   out: [],
 };

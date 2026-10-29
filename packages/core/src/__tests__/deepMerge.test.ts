@@ -56,4 +56,22 @@ describe('deepMerge', () => {
     expect(result).toBe(target);
     expect(target).toStrictEqual({ a: 1, b: 2 });
   });
+
+  test('ignores a __proto__ key', () => {
+    const result = deepMerge(
+      { a: 1 },
+      JSON.parse('{"__proto__":{"polluted":true},"b":2}'),
+    );
+    expect(result).toEqual({ a: 1, b: 2 });
+    expect(Reflect.get({}, 'polluted')).toBeUndefined();
+    expect(Object.getPrototypeOf(result)).toBe(Object.prototype);
+  });
+
+  test('keeps constructor and prototype as own data', () => {
+    deepMerge(
+      {},
+      JSON.parse('{"constructor":{"prototype":{"polluted":true}}}'),
+    );
+    expect(Reflect.get({}, 'polluted')).toBeUndefined();
+  });
 });

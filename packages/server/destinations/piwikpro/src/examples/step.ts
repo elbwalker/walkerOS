@@ -21,10 +21,10 @@ declare const __VERSION__: string;
  * below is written out as sent, form-encoded.
  *
  * The examples run with `{ url: 'https://your_account_name.piwik.pro/',
- * appId: APP_ID }`, an example's optional `settings` merged on top. Each input
- * is a browser event relayed to the server: its page url and referrer, its
- * trace, and the request's IP and user agent on `user` (read by default when
- * no ingest carries them).
+ * appId: 'XXX-XXX-XXX-XXX-XXX' }`, an example's optional `settings` merged on
+ * top. Each input is a browser event relayed to the server: its page url and
+ * referrer, its trace, and the request's IP and user agent on `user` (read by
+ * default when no ingest carries them).
  *
  * Functions in mappings are published as source code, so they must not use
  * imported helpers.
@@ -56,7 +56,7 @@ const USER = {
 };
 
 /** Common parameters of every hit, as sent. */
-const COMMON = `idsite=e8f3a1c2-0b4d-4e5f-9a6b-7c8d9e0f1a2b&rec=1&send_image=0&ts_n=walkerOS&ts_v=${__VERSION__}`;
+const COMMON = `idsite=XXX-XXX-XXX-XXX-XXX&rec=1&send_image=0&ts_n=walkerOS&ts_v=${__VERSION__}`;
 
 /**
  * Context of an identified hit of the relayed event, as sent: _id is the
