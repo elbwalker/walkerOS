@@ -14,7 +14,7 @@ import WhereThisFits from '@site/src/components/snippets/_where-this-fits.mdx';
 
 # Express
 
-Turn-key HTTP event collection server with Express.js. Runs standalone or embeds inside an existing Express app, handles JSON POST events, pixel tracking via GET with a 1x1 transparent GIF, and configurable CORS.
+The Express source is an HTTP event collection server built on Express.js. It runs standalone or inside an existing Express app and handles JSON POST events, pixel tracking via GET with a 1x1 transparent GIF, and configurable CORS.
 
 <WhereThisFits
   pre={<>The Express source is a <strong>server source</strong> in the walkerOS flow:</>}
@@ -30,18 +30,6 @@ Turn-key HTTP event collection server with Express.js. Runs standalone or embeds
   code={`npm install @walkeros/server-source-express`}
   language="bash"
 />
-
-:::caution path setting renamed to paths
-The `path` setting has been renamed to `paths` (array). The old `path` still works but is deprecated and will be removed in the next major version.
-
-```typescript
-// Before (deprecated)
-settings: { path: '/events' }
-
-// After
-settings: { paths: ['/events'] }
-```
-:::
 
 <Tabs groupId="mode">
   <TabItem value="integrated" label="Integrated" default>
@@ -118,7 +106,7 @@ Add to your `flow.json` sources:
   language="json"
 />
 
-A bundled flow needs no `port`. The runtime (`runneros` or the `walkeros/flow` image) serves the flow on port 8080, or on `PORT` or `--port`. For containerized deployments, see the [runtime](/docs/apps/runtime).
+A bundled flow needs no `port`. The runtime (`runneros` or the `walkeros/flow` image) serves the flow on port 8080, or on `PORT` or `--port`; a `port` set in the flow has no effect there. For containerized deployments, see the [runtime](/docs/apps/runtime).
 
 [See bundled mode setup](/docs/getting-started/modes/bundled) | [CLI reference](/docs/apps/cli)
 
@@ -143,17 +131,18 @@ A bundled flow needs no `port`. The runtime (`runneros` or the `walkeros/flow` i
 | `text/plain` | Read as text, then parsed as JSON when it is JSON (a `navigator.sendBeacon` payload, which browsers always send as `text/plain;charset=UTF-8`). Any other text, such as a GA4 gtag batch of newline-separated hit lines, stays the raw string. |
 | anything else | Not read: `body` is `undefined`. |
 
-Both parsers apply the 1mb limit. A raw text body reaches `ingest.body` as the
-string and yields one empty event, so a `source.before` decoder such as
-[transformer-ga4](/docs/transformers/ga4) can turn it into events. Without a
-decoder that empty event is rejected as invalid input by the collector: 400 on
+Both parsers apply the 1mb limit. A raw text body stays the raw string and
+yields one empty event. When `config.ingest` maps it (`body: { key: 'body' }`),
+a `source.before` decoder such as [transformer-ga4](/docs/transformers/ga4)
+reads it from `ingest.body` and turns it into events. Without a decoder that
+empty event is rejected as invalid input by the collector: 400 on
 synchronous POST, counted as `rejected` after the ack in respond-first mode. It
 never reaches a destination. This follows the shared
 [request scope](/docs/sources/scope) contract, so fetch, GCP and AWS sources
 behave the same way.
 
 :::tip Health checks
-Health check endpoints (`/health` and `/ready`) are provided by the [runtime](/docs/apps/runtime#health-checks), not by individual sources. This means health checks work regardless of which source type you use.
+The [runtime](/docs/apps/runtime#health-checks) answers `/health` and `/ready` for an Express flow. Express run standalone (your own server, no runtime) has no health endpoint. Among the other server sources, AWS Lambda answers its own `healthPath`, and Fetch and GCP have none. See [Common features](/docs/sources/server#common-features).
 :::
 
 ### Response modes (`async`)
@@ -180,8 +169,9 @@ event settles in the pipeline, resolved per HTTP method:
 **Synchronous** awaits delivery before answering. On GET, a step (the file
 transformer, a cache destination) can respond with real content before the
 pixel GIF fallback applies, so asset serving works out of the box. On POST,
-the response reflects the outcome: 400 for invalid input, 500 for a processing
-failure, and batch envelopes answer per-index outcomes.
+the response reflects the outcome: 400 for invalid input, 500 for a failure a
+resend could fix, 200 for one it cannot fix (see Responses), and batch
+envelopes answer per-index outcomes.
 
 **Respond-first** answers immediately: a 2xx means "accepted", not
 "delivered". Delivery continues in the background and failures surface through
@@ -200,7 +190,7 @@ push.
 | 413 | Body exceeds the 1mb limit |
 | 415 | Unsupported charset |
 | 500 | On synchronous POST: the pipeline failed to process a valid event for a reason a resend could fix; the body is `Event was not processed`. Otherwise: unexpected server fault (`Internal server error`) |
-| 207 | On synchronous batch POST: some events failed and a resend could fix it; the body lists the failed indices |
+| 207 | On synchronous batch POST: at least one event was invalid or failed for a reason a resend could fix; the body lists the failed indices |
 
 A failed event is acknowledged or retried by one rule on every server source: see [Producer acknowledgement](/docs/sources/server#producer-acknowledgement).
 
@@ -210,9 +200,11 @@ GET pixel requests answer 200 with the GIF in every mode, unless a step
 responded first, because an image endpoint cannot carry a useful 400. Rejected pixel input is visible through the
 `rejected` counter instead.
 
-Rejected input, unparseable bodies and invalid events alike, is counted on
-`collector.status.sources.<id>.rejected` and logged at debug or warn with the
-reason. Ambient scanner traffic never reaches the error log level.
+Unparseable bodies and invalid events are counted on
+`collector.status.sources.<id>.rejected`. An unparseable body is logged at
+debug, an invalid event at error with the reason, once per source and minute.
+A batch over `maxBatchSize` is answered 400 and not counted. Apart from the
+invalid-event line, ambient scanner traffic never reaches the error log level.
 
 Responses carry `X-Content-Type-Options: nosniff`, and the source does not send
 `X-Powered-By`.
@@ -221,7 +213,7 @@ Responses carry `X-Content-Type-Options: nosniff`, and the source does not send
 
 Extract request metadata (IP, user agent, headers) and forward it through the pipeline to transformers and destinations.
 
-`config.ingest` must use the `map` operator. Keys are output field names; values are direct field paths on the request scope (no `req.` prefix). A bare object like `{ ip: 'ip' }` is silently inert: without the `map` operator the source passes the whole request through and no field is extracted.
+`config.ingest` must use the `map` operator. Keys are output field names; values are direct field paths on the request scope (no `req.` prefix). A bare object like `{ ip: 'ip' }` has no operator: `walkeros validate` and the bundle reject it, and if it still runs, the collector logs one ERROR line (`mapping value has no operator`) and no field is extracted.
 
 <CodeSnippet
   code={`import { startFlow } from '@walkeros/collector';
@@ -268,8 +260,8 @@ settings.
 | `body` | Parsed JSON body, the raw string for non-JSON `text/plain`, or `undefined` |
 | `raw` | The Express `Request` itself |
 
-These are the shared [request scope](/docs/sources/scope) fields. `protocol` and
-`hostname` are no longer top-level paths: use `headers.host`,
+These are the shared [request scope](/docs/sources/scope) fields. There are no
+top-level `protocol` and `hostname` paths: use `headers.host`,
 `headers.x-forwarded-proto`, or `raw.protocol` / `raw.hostname`.
 
 ## Client IP behind a proxy

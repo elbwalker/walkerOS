@@ -7,6 +7,7 @@ package: '@walkeros/server-destination-mixpanel'
 ---
 import data from '@walkeros/server-destination-mixpanel/walkerOS.json';
 import Configuration from '@site/src/components/snippets/_configuration.mdx';
+import Quickstart from '@site/src/components/snippets/_quickstart.mdx';
 
 import WhereThisFits from '@site/src/components/snippets/_where-this-fits.mdx';
 
@@ -26,56 +27,16 @@ Server-side event delivery to Mixpanel for product analytics, people profiles, a
 
 ## Installation
 
-<CodeSnippet
-  code={`npm install @walkeros/server-destination-mixpanel`}
-  language="bash"
-/>
-
-<Tabs groupId="mode">
-  <TabItem value="integrated" label="Integrated" default>
-
-<CodeSnippet
-  code={`import { startFlow } from '@walkeros/collector';
-import { destinationMixpanel } from '@walkeros/server-destination-mixpanel';
-
-await startFlow({
-  destinations: {
-    mixpanel: {
-      code: destinationMixpanel,
-      config: {
-        settings: {
-          apiKey: 'YOUR_PROJECT_TOKEN',
-        },
-      },
-    },
-  },
-});`}
-  language="typescript"
-/>
-
-  </TabItem>
-  <TabItem value="bundled" label="Bundled">
-
-Add to your `flow.json` destinations:
-
-<CodeSnippet
-  code={`"destinations": {
-  "mixpanel": {
-    "package": "@walkeros/server-destination-mixpanel",
-    "import": "destinationMixpanel",
-    "config": {
-      "settings": {
-        "apiKey": "YOUR_PROJECT_TOKEN"
-      }
-    }
-  }
-}`}
-  language="json"
-/>
-
-[See bundled mode setup](/docs/getting-started/modes/bundled) | [CLI reference](/docs/apps/cli)
-
-  </TabItem>
-</Tabs>
+<Quickstart data={data} />
 
 <Configuration type="destination" data={data} />
+
+## Identity
+
+Without `settings.identify` the track calls carry no `distinct_id`, so the quickstart's events are tied to no user. Map `distinctId` in `settings.identify`, for example to `user.id` as the examples above do, or per rule. People operations run only when a `distinctId` resolves.
+
+## Consent and delivery
+
+The quickstart sets no `config.consent`, so Mixpanel receives every event. Add `config.consent` to send only with consent ([consent management](/docs/guides/consent)).
+
+Each event is sent at once. This destination has no `pushBatch`, so `config.batch` has no effect and the collector logs one ERROR line saying so ([batch scheduling](/docs/mapping/rule#batch-scheduling)). A request that fails or that Mixpanel rejects fails the event with the code `transport`.

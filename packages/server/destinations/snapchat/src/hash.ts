@@ -4,7 +4,7 @@ import { getHashServer } from '@walkeros/server-core';
 /**
  * Snapchat Conversions API user data fields that must be SHA-256 hashed
  * before sending. Same 11 identity fields as Meta's CAPI.
- * https://businesshelp.snapchat.com/s/article/capi-parameters
+ * https://developers.snap.com/api/marketing-api/Conversions-API/Parameters
  */
 const keysToHash = [
   'em',

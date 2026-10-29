@@ -22,7 +22,7 @@ export type { Flow };
  *
  * Platform-derived defaults:
  * - web: format=iife, target=es2020, platform=browser
- * - server: format=esm, target=node18, platform=node
+ * - server: format=esm, target=node20, platform=node
  */
 export interface CLIBuildOptions extends Pick<
   ESBuildOptions,

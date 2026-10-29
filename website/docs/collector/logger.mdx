@@ -8,9 +8,8 @@ sidebar_position: 3
 
 # Logger
 
-walkerOS provides a centralized logging system that enables consistent logging
-across the collector, sources, and destinations. The logger supports four log
-levels and provides scoped logging for better debugging.
+walkerOS has one logger for the collector, sources, and destinations. It has
+four log levels and scoped loggers.
 
 ## Configuration
 
@@ -42,22 +41,25 @@ A collector endpoint is exposed to the open internet, so log level decides
 whether ambient noise becomes an alert. The levels follow one contract:
 
 * `ERROR`: the intent is not met. An event was not delivered, a setting has no
-  effect, a producer was told something false.
-* `WARN`: walkerOS acted and the intent is still met, for example an invalid
-  event it rejected.
+  effect, a producer was told something false, an invalid event was rejected.
+* `WARN`: walkerOS acted and the intent is still met.
 * `INFO`: lifecycle and self-healing.
-* `DEBUG`: the trace of each event and deliberate decisions. Unmet consent, a
-  skipped event and a consent wait are `DEBUG`, never a failure.
+* `DEBUG`: the trace of each event and deliberate decisions. A skipped event
+  writes a `DEBUG` line. A consent wait writes no line: the push result lists
+  the destination under `queued` with the reason `consent`. Neither is a
+  failure.
 
 | Situation | Level |
 |-----------|-------|
-| Ambient internet noise: unparseable bodies, unknown paths, oversized payloads | `debug`, plus a status counter |
-| An event the pipeline rejects as invalid | `warn` with the reason, counted as `rejected` |
-| A settled `ok: false` arriving after an HTTP ack was already sent | `warn` |
+| Ambient internet noise: unparseable bodies, oversized payloads | `debug`, plus the source's `rejected` counter |
+| Ambient internet noise: unknown paths | answered with `404`, no line |
+| An event the pipeline rejects as invalid | `error` with the reason, one line per source and minute, counted as `rejected` |
+| A settled `ok: false` arriving after an HTTP ack was already sent | `debug`; the collector's failure line reports the cause at `error` |
 | Handler faults and rejected push promises | `error` |
 
 The collector already logs thrown pipeline failures at error, so sources do
-not duplicate that. Nothing a scanner can trigger should reach `error`.
+not duplicate that. Apart from the invalid-event line, nothing a scanner can
+trigger should reach `error`.
 
 
 ## In the complete example
@@ -112,7 +114,7 @@ for `debug` traces and for notes that are not failures.
     type: 'my-source',
     config,
     push: async (event) => {
-      logger.debug('Received event', event);
+      logger.debug('Received event', { name: event.name });
       await env.push(event);
     },
   };
@@ -143,7 +145,8 @@ information:
   code={`try {
   await riskyOperation();
 } catch (error) {
-  // Error properties (message, name, stack, cause) are extracted automatically
+  // message, name and stack are extracted automatically, and of the cause
+  // only its name and code
   logger.error(error);
 
   // Or with additional context
@@ -186,14 +189,14 @@ occurrences are counted, and the next line of that key, or the one written at
 server shutdown, carries `suppressed: <n>`. If more than 100 different causes
 are active, the extra ones are logged on every occurrence rather than dropped.
 
-A line carries the step id, the cause `code`, the HTTP `status`, `retryable`,
-the event name, the mapping key, a count and the error message capped at 300
-characters. It never carries event data (`data`, `user`, `consent`, `globals`,
+A line carries the step id, the step type, the cause `code`, the HTTP
+`status`, `retryable`, the event name, the mapping key, a count and the error
+message capped at 300 characters. It never carries event data (`data`, `user`, `consent`, `globals`,
 `context`, `custom`), ingest values, vendor response bodies, setting values or
 an error's `cause`.
 
 The `handler` of the logger configuration receives every line, including these,
-with the structured fields (`scope`, `code`, `status`, `retryable`,
+with the structured fields (`step`, `code`, `status`, `retryable`,
 `suppressed`) in its context, so forwarding failures to a monitoring service
 needs no parsing. Handlers add up: a flow's own handler and the runtime's both
 see each line.
@@ -203,10 +206,11 @@ see each line.
 | Code | Cause | Retryable | Fix |
 | ---- | ----- | --------- | --- |
 | `transport` | A destination's request failed or threw an unknown error | yes, except a `4xx` other than `429` | Check the endpoint and credentials; the status is on the line |
+| `runtime` | Step or flow code threw a `TypeError`, `RangeError` or `ReferenceError` | no | Fix the code the message names; a retry fails the same way |
 | `timeout` | A destination or transformer push or `init` did not settle within its `config.timeout` (10 s by default) | yes | Raise `config.timeout` or check the vendor |
 | `not-ready` | The destination or transformer could not start | no | Fix the cause its message names |
 | `breaker-open` | `config.breaker` is set and `threshold` retryable failures in a row opened it; events fail at once | yes | Fix the outage. After `breaker.cooldown` (30 s) the next event probes the destination and a success closes the breaker; events failed while it was open stay in the dead-letter queue |
-| `blocked` | A state delivery to the destination (its `on` handler, for example consent) failed and did not recover within `config.timeout` | yes | Fix the destination's `on` handler (see its `consent-not-applied` line); later pushes retry the delivery, and events fail until one succeeds |
+| `blocked` | A state delivery to the destination (its `on` handler, for example consent) failed and did not recover within `config.timeout` | yes | Fix the destination's `on` handler (see its `consent-not-applied` line). A handler that failed is retried by a push after the window, one that timed out gets a new delivery once it settles, and one that never settles keeps the destination blocked; events fail until a delivery succeeds |
 | `queue-full` | A queue refused the event: the collector has not run yet, or a held destination's queue is full | yes | Start the collector sooner or raise `queueMax` |
 | `mapping` | A mapping rule `condition` threw, or a mapped value could not be built | no | Fix the condition or the value |
 | `transformer` | A transformer threw | no | Fix the transformer |
@@ -220,7 +224,7 @@ see each line.
 | `dlq-overflow` | A destination's dead-letter queue was full and evicted its oldest entry | n/a | Raise `dlqMax` or fix the failing destination; counted in `status.dropped` |
 | `on-overflow` | A destination's queue of waiting `on()` deliveries was full and dropped the oldest | n/a | Raise the destination's own `config.queueMax`; counted in `status.dropped` |
 | `decode` | A store holds a value that cannot be decoded | no | Repair or delete the stored value; the read counts as a miss for that event |
-| `invalid` | An event was rejected as invalid input (a `WARN`) | no | Fix the producer |
+| `invalid` | An event was rejected as invalid input: a missing or malformed `name`, or an event that cannot be serialized to JSON (an `ERROR`) | no | Fix the producer |
 
 A step's own `StepError.code` wins over these. A code outside this table with
 neither a status nor a `retryable` option is not retryable. Unmet consent is
@@ -231,7 +235,8 @@ not in this table because it is never a failure.
 By default lines print as text. On a server flow run by `runneros`, set
 `format` to `json` to print one JSON object per line, with `severity`,
 `message`, `time`, `scope` and `context`. Errors and warnings go to stderr, info and debug to stdout, which
-platforms such as Cloud Run read as structured logs.
+platforms such as Cloud Run read as structured logs. The runner's first lines,
+printed before it loads the flow (up to `Health server listening`), stay text.
 
 <CodeSnippet
   code={`"collector": {
@@ -242,12 +247,12 @@ platforms such as Cloud Run read as structured logs.
 
 Under `runneros`, a flow's own `logger` level (`DEBUG` included) and format apply to the collector's lines without `--verbose`; the runner's own `DEBUG` lines still need `--verbose`. A custom `handler` in the flow receives an `originalHandler` that does nothing under `runneros`, because the host prints every line once, masked and in the flow's format. A web flow has no output format, so `walkeros validate`
 rejects `logger.format` there (`WEB_LOGGER_FORMAT`). Secrets are masked in both
-formats, and a JSON line is capped at 32 KiB: a longer line truncates its context and, if still too long, its message (`messageTruncated: true`).
+formats, and a JSON line is capped at 32 KiB: a longer line keeps at most half the cap of its message (`messageTruncated: true`) and cuts its context to fit (`contextTruncated: true`).
 
 ## Scoped loggers
 
-Scoped loggers prefix log messages with context information, making it easier to
-trace logs to their origin:
+Scoped loggers prefix each message with its scope, so a line shows where it
+came from:
 
 <CodeSnippet
   code={`// In a destination, the logger is already scoped to its type: [google-gtag]
@@ -263,8 +268,7 @@ push(event, { logger }) {
 
 ## Custom handler
 
-For advanced use cases like sending logs to external services, configure a
-custom handler:
+To send logs to an external service, configure a custom handler:
 
 <CodeSnippet
   code={`import { startFlow } from '@walkeros/collector';
@@ -316,7 +320,9 @@ describe('MyDestination', () => {
       logger: mockLogger,
     });
 
-    expect(mockLogger.info).toHaveBeenCalledWith('Event sent successfully');
+    expect(mockLogger.debug).toHaveBeenCalledWith('Processing event', {
+      name: testEvent.name,
+    });
   });
 });`}
   language="typescript"

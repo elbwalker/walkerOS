@@ -138,12 +138,11 @@ Add the BigQuery destination to `server.json`:
           "package": "@walkeros/server-destination-gcp",
           "import": "destinationBigQuery",
           "config": {
-            "setup": true,
+            "setup": { "location": "EU" },
             "settings": {
               "projectId": "$env.PROJECT_ID",
               "datasetId": "$env.DATASET_ID",
-              "tableId": "$env.TABLE_ID",
-              "location": "EU"
+              "tableId": "$env.TABLE_ID"
             }
           }
         }
@@ -159,7 +158,8 @@ Add the BigQuery destination to `server.json`:
   your GCP project details
 - `$env.PROJECT_ID`, `$env.DATASET_ID` and `$env.TABLE_ID` are read from the
   environment when the flow runs
-- `"setup": true` lets `walkeros setup` create the dataset and table
+- `"setup"` lets `walkeros setup` create the table and the dataset, in the
+  region that `location` names (default `EU`)
 
 ### Deploy Step 2
 
@@ -181,6 +181,12 @@ gcloud run deploy walkeros-demo \
   --port 8080 \
   --set-env-vars PROJECT_ID=$PROJECT_ID,DATASET_ID=$DATASET_ID,TABLE_ID=$TABLE_ID
 ```
+
+The flow sets no `config.credentials`, so the service writes the rows with
+Application Default Credentials, which on Cloud Run are the service's runtime
+service account. Give that account the runtime role listed under
+[Create service accounts](https://www.walkeros.io/docs/destinations/server/gcp#create-service-accounts),
+or deploy with `--service-account`.
 
 ### Verify in BigQuery
 
@@ -254,7 +260,8 @@ Save the web flow as `web.json`:
             "loadScript": true,
             "settings": {
               "ga4": {
-                "measurementId": "G-XXXXXXXXXX"
+                "measurementId": "G-XXXXXXXXXX",
+                "pageview": false
               }
             }
           }
@@ -271,7 +278,8 @@ Save the web flow as `web.json`:
 - Demo destination logs to browser console
 - API destination sends to your Cloud Run endpoint, read from `$ENDPOINT` when
   you bundle; the `batch me` events of the demo page's batch boxes go in batches
-- GA4 destination sends to Google Analytics (optional)
+- GA4 destination sends to Google Analytics (optional); `"pageview": false`
+  leaves the page view to the browser source, so GA4 counts it once
 
 ### Deploy Step 3
 
@@ -309,27 +317,28 @@ Point the walker.js `<script>` at the end of `index.html` to
 
 ## Step 4: Load Test
 
-Load test the server flow with k6.
+Load test the server flow with k6. Pass your service's URL with `-e ENDPOINT`:
+without it, `load-test.js` stops with `ENDPOINT is not set` before it sends a
+request.
 
 ```bash
 cd pentest
 
 # Run load test with 200 concurrent users
 docker run --rm -v $(pwd):/scripts grafana/k6 run \
+  -e ENDPOINT=$ENDPOINT/collect \
   --vus 200 --duration 2m --no-color \
   /scripts/load-test.js
 
 # Heavy load: 500 users
 docker run --rm -v $(pwd):/scripts grafana/k6 run \
+  -e ENDPOINT=$ENDPOINT/collect \
   --vus 500 --duration 2m --no-color \
   /scripts/load-test.js
 ```
 
-**Expected Results:**
-
-- 300-500 req/s throughput
-- 0% HTTP failures
-- Cloud Run scales automatically
+`load-test.js` sets two thresholds: 95% of requests answer within 2 seconds, and
+fewer than 5% answer with a status other than 200.
 
 ---
 

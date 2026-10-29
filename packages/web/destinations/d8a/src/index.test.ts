@@ -29,7 +29,6 @@ jest.mock(
 
 import type { Destination, Mapping, WalkerOS } from '@walkeros/core';
 import type { D8aFn, InstallD8aOptions, InstallD8aResult } from '@d8a-tech/wt';
-import { runInNewContext } from 'vm';
 import { createMockLogger, isObject } from '@walkeros/core';
 import { startFlow } from '@walkeros/collector';
 import { examples } from './dev';
@@ -85,21 +84,6 @@ function createInstallD8a(calls: CallRecord[]): Env['installD8a'] {
       },
     };
   };
-}
-
-// Functions in examples are published as `{ $code: fn.toString() }` in
-// walkerOS.json and evaluated without the module scope they were written in.
-function asPublished(rule: unknown): Mapping.Rule | undefined {
-  if (!isObject(rule)) return undefined;
-  return JSON.parse(
-    JSON.stringify(rule, (_, value) =>
-      typeof value === 'function' ? { $code: value.toString() } : value,
-    ),
-    (_, value) =>
-      isObject(value) && typeof value.$code === 'string'
-        ? runInNewContext(`(${value.$code})`)
-        : value,
-  );
 }
 
 function makeTestEnv(): { env: Env; calls: CallRecord[] } {
@@ -211,7 +195,7 @@ describe('d8a web destination -- step examples', () => {
       const { elb } = await startFlow();
 
       const event = example.in as WalkerOS.Event;
-      const rule = asPublished(example.mapping);
+      const rule = isObject(example.mapping) ? example.mapping : undefined;
       const mapping = rule
         ? { [event.entity]: { [event.action]: rule } }
         : undefined;

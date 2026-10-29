@@ -25,7 +25,7 @@ export const defaultEventForwarding: AmplitudeStepExample = {
   title: 'Default track',
   description:
     'A walker event is forwarded to Amplitude as an amplitude.track call with the event name and empty properties.',
-  in: getEvent('product view', { timestamp: 1700000100 }),
+  in: getEvent('product view', { timestamp: 1700000100000 }),
   out: [['amplitude.track', 'product view', {}]],
 };
 
@@ -35,7 +35,7 @@ export const defaultEventForwarding: AmplitudeStepExample = {
  */
 export const wildcardIgnored: AmplitudeStepExample = {
   public: false,
-  in: createEvent({ name: 'debug noise', timestamp: 1700000101 }),
+  in: createEvent({ name: 'debug noise', timestamp: 1700000101000 }),
   mapping: { ignore: true },
   out: [],
 };
@@ -48,7 +48,7 @@ export const destinationLevelInclude: AmplitudeStepExample = {
   title: 'Include data',
   description:
     "With include: ['data'] in the destination config, the event data section is flattened into prefixed event_properties on every track call.",
-  in: getEvent('product view', { timestamp: 1700000102 }),
+  in: getEvent('product view', { timestamp: 1700000102000 }),
   configInclude: ['data'],
   out: [
     [
@@ -60,6 +60,7 @@ export const destinationLevelInclude: AmplitudeStepExample = {
         data_color: 'black',
         data_size: 'l',
         data_price: 420,
+        data_currency: 'EUR',
       },
     ],
   ],
@@ -74,7 +75,7 @@ export const ruleIncludeReplaces: AmplitudeStepExample = {
   title: 'Rule include overrides',
   description:
     "With include: ['data'] in the destination config, the rule's include: ['globals'] replaces it, so this event forwards only globals.",
-  in: getEvent('order complete', { timestamp: 1700000103 }),
+  in: getEvent('order complete', { timestamp: 1700000103000 }),
   configInclude: ['data'],
   mapping: {
     include: ['globals'],
@@ -108,7 +109,7 @@ export const destinationLevelIdentify: AmplitudeStepExample = {
   title: 'Destination identify',
   description:
     "With settings.identify mapping user, device, and session to 'user.id', 'user.device', and 'user.session', the destination sets userId, deviceId, and sessionId before the track call. A non-numeric session string is hashed to a stable number. Setters only re-fire when the resolved values change.",
-  in: getEvent('page view', { timestamp: 1700000104 }),
+  in: getEvent('page view', { timestamp: 1700000104000 }),
   settings: {
     identify: {
       map: {
@@ -203,7 +204,7 @@ export const userLogoutReset: AmplitudeStepExample = {
   title: 'User logout reset',
   description:
     'A user logout calls amplitude.reset to clear the userId and regenerate the deviceId.',
-  in: createEvent({ name: 'user logout', timestamp: 1700000106 }),
+  in: createEvent({ name: 'user logout', timestamp: 1700000106000 }),
   mapping: {
     silent: true,
     settings: {
@@ -226,7 +227,7 @@ export const subscriptionRenewRevenue: AmplitudeStepExample = {
     'A subscription renewal fires a single amplitude.revenue call with productId, price, and currency fallback.',
   in: createEvent({
     name: 'subscription renew',
-    timestamp: 1700000107,
+    timestamp: 1700000107000,
     data: {
       plan_id: 'plan-pro',
       amount: 9.99,
@@ -274,7 +275,7 @@ export const orderCompleteMultiProduct: AmplitudeStepExample = {
   title: 'Multi-product order',
   description:
     'An order fires one amplitude.revenue call per nested product plus a single track for the order totals.',
-  in: getEvent('order complete', { timestamp: 1700000108 }),
+  in: getEvent('order complete', { timestamp: 1700000108000 }),
   mapping: {
     include: ['data', 'globals'],
     settings: {
@@ -326,9 +327,10 @@ export const orderCompleteMultiProduct: AmplitudeStepExample = {
       {
         data_id: '0rd3r1d',
         data_currency: 'EUR',
+        data_value: 462,
+        data_tax: 73.76,
         data_shipping: 5.22,
-        data_taxes: 73.76,
-        data_value: 555,
+        data_total: 467.22,
         globals_pagegroup: 'shop',
       },
     ],
@@ -345,7 +347,7 @@ export const groupAssignmentWithProperties: AmplitudeStepExample = {
     'A company update assigns the user to a group and sets group properties via setGroup and groupIdentify.',
   in: createEvent({
     name: 'company update',
-    timestamp: 1700000109,
+    timestamp: 1700000109000,
     data: {
       company: 'Acme',
       industry: 'tech',
@@ -441,7 +443,7 @@ export const consentGrantOptIn: AmplitudeStepExample = {
 export const silentRule: AmplitudeStepExample = {
   public: false,
   description: 'A rule with silent: true and no settings calls nothing.',
-  in: getEvent('page view', { timestamp: 1700000120 }),
+  in: getEvent('page view', { timestamp: 1700000120000 }),
   mapping: { silent: true },
   out: [],
 };

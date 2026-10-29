@@ -20,7 +20,7 @@ export const SettingsSchema = z
       .string()
       .min(1)
       .describe(
-        'Secret key for the hash (HMAC), e.g. "$env.FINGERPRINT_SALT". Required: without it the hash could be reversed to the IP.',
+        'Secret key for the hash (HMAC), e.g. "$secret.FINGERPRINT_SALT". Required: without it the hash could be reversed to the IP.',
       ),
     rotate: z
       .enum(['daily', 'hourly', 'none'])

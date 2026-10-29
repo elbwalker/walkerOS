@@ -39,8 +39,7 @@ await startFlow({
 2. **Decision events**: The source listens for Cookiebot's
    `CookiebotOnAccept` and `CookiebotOnDecline` window events. Cookiebot fires
    one of them on every page load with a stored choice and again after each new
-   choice, including a withdrawal. Each time, the source reads
-   `window.Cookiebot.consent`.
+   choice. Each time, the source reads `window.Cookiebot.consent`.
 
 3. **Mapping**: The four Cookiebot categories are mapped through
    `categoryMap` and published with `elb('walker consent', state)`. Denied
@@ -97,10 +96,14 @@ the visitor chose, `implied` when Cookiebot consented on its own. Cookiebot
 implies consent for visitors outside the regions where your site asks for
 consent, for an implied-consent banner, and for old consents of unknown method.
 
-With `explicitOnly: true` (the default) the source waits for the visitor's
-explicit decision and publishes only explicit consent. For a visitor with
-implied consent it sends no consent command, so destinations and sources that
-require consent keep waiting until that visitor decides. To follow the consent
+With `explicitOnly: true` (the default) the source publishes only explicit
+consent. For a visitor with implied consent it sends no consent command:
+destinations gated with `config.consent` queue the visitor's events until the
+visitor makes an explicit choice, and sources gated with `config.consent` drop
+them. A visitor Cookiebot never asks, such as one outside the regions where your
+site asks for consent, makes no explicit choice, so those destinations never
+send their events (each push answers `queued` with the reason `consent`), and a
+destination with `require: ["consent"]` never starts. To follow the consent
 Cookiebot implied, set `explicitOnly: false`:
 
 ```typescript

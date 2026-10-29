@@ -6,6 +6,7 @@ import { startFlow } from '@walkeros/collector';
 import { sourceDataLayer } from '../index';
 import { interceptDataLayer } from '../interceptor';
 import type { Collector, WalkerOS } from '@walkeros/core';
+import { createMockLogger } from '@walkeros/core';
 
 // Web packages run under global fake timers, so settle on microtasks only.
 const flush = async (): Promise<void> => {
@@ -97,7 +98,7 @@ describe('dataLayer source identity', () => {
     };
     const stubWin: Record<string, unknown> = { dataLayer: [] };
 
-    interceptDataLayer(push, { settings: {} }, stubWin);
+    interceptDataLayer(push, { settings: {} }, createMockLogger(), stubWin);
     const dataLayer = stubWin.dataLayer;
     if (!Array.isArray(dataLayer)) throw new Error('dataLayer not installed');
     dataLayer.push({ event: 'stub_entry' });
@@ -128,7 +129,7 @@ describe('dataLayer source identity', () => {
       configurable: true,
     });
 
-    interceptDataLayer(push, { settings: {} }, stubWin);
+    interceptDataLayer(push, { settings: {} }, createMockLogger(), stubWin);
     const dataLayer = stubWin.dataLayer;
     if (!Array.isArray(dataLayer)) throw new Error('dataLayer not installed');
     dataLayer.push({ event: 'guarded_entry' });

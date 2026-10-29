@@ -4,7 +4,9 @@ const SASLSchema = z
   .object({
     mechanism: z
       .enum(['plain', 'scram-sha-256', 'scram-sha-512', 'aws', 'oauthbearer'])
-      .describe('SASL authentication mechanism.'),
+      .describe(
+        'SASL authentication mechanism. oauthbearer needs a token provider function, which these settings cannot hold, so it does not authenticate.',
+      ),
     username: z
       .string()
       .optional()
@@ -16,11 +18,11 @@ const SASLSchema = z
     accessKeyId: z
       .string()
       .optional()
-      .describe('AWS access key ID for IAM auth (mechanism: aws).'),
+      .describe('AWS access key ID for the kafkajs mechanism aws.'),
     secretAccessKey: z
       .string()
       .optional()
-      .describe('AWS secret access key for IAM auth (mechanism: aws).'),
+      .describe('AWS secret access key for the kafkajs mechanism aws.'),
     sessionToken: z
       .string()
       .optional()
@@ -30,7 +32,9 @@ const SASLSchema = z
     authorizationIdentity: z
       .string()
       .optional()
-      .describe('AWS authorization identity (mechanism: aws).'),
+      .describe(
+        'AWS authorization identity, required by kafkajs for mechanism aws.',
+      ),
   })
   .strict();
 
@@ -74,7 +78,7 @@ export const KafkaSettingsSchema = z
         'TLS configuration. Set true for default TLS, or provide a tls.ConnectionOptions object for mTLS.',
       ),
     sasl: SASLSchema.optional().describe(
-      'SASL authentication config. Required for Confluent Cloud, AWS MSK with IAM, etc.',
+      'SASL authentication config (like mechanism plain for Confluent Cloud).',
     ),
     connectionTimeout: z
       .number()
@@ -108,7 +112,7 @@ export const KafkaSettingsSchema = z
       .enum(['none', 'gzip', 'snappy', 'lz4', 'zstd'])
       .optional()
       .describe(
-        'Message compression codec. Default: gzip. Snappy/LZ4/ZSTD require additional npm packages.',
+        'Message compression codec. Default: gzip. snappy, lz4 and zstd need a codec registered in kafkajs CompressionCodecs in the same process; without one every send fails.',
       ),
     idempotent: z
       .boolean()

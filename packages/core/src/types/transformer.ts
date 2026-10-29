@@ -169,10 +169,11 @@ export interface Config<T extends TypesGeneric = Types> {
    *
    * At the transformer position, only event-mutating fields apply:
    * `policy`, and per rule `condition`, `policy`, `name` and `ignore`.
-   * Everything else does nothing here and is named in a one-time init
-   * warning: `consent`, `include` and `data`, and per rule `consent`,
-   * `include`, `remove`, `batch`, `settings`, `extend`, `data` and
-   * `silent`. A `config.mapping` wins over the step-level `mapping`.
+   * Everything else does nothing here: `consent`, `include` and `data`, and
+   * per rule `consent`, `include`, `remove`, `batch`, `settings`, `extend`,
+   * `data` and `silent`. The collector names them in one ERROR line when the
+   * step registers, and `walkeros validate` rejects them (`MAPPING_NO_OP`).
+   * A `config.mapping` wins over the step-level `mapping`.
    */
   mapping?: MappingConfig;
 }

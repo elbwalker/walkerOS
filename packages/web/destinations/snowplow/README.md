@@ -49,6 +49,10 @@ npm install @walkeros/web-destination-snowplow
 This sends page views. Every other event needs a rule with a `name` (the action
 type) or a `struct`; an event without one fails with `missing-input`.
 
+This quick start sets no consent, so sp.js loads and sends its events without
+consent, and a revocation changes nothing: add `consent: { analytics: true }` to
+`config` before you go live, see the docs.
+
 ## Plugins
 
 URL plugins in `settings.plugins` load with sp.js. With `settings.tracker` (your

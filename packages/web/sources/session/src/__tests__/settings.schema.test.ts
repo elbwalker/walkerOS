@@ -1,4 +1,5 @@
-import { SettingsSchema } from '../schemas';
+import { SettingsSchema, settings } from '../schemas';
+import pkg from '../../package.json';
 
 describe('Settings schema', () => {
   test('accepts cookie storage with a domain', () => {
@@ -18,5 +19,37 @@ describe('Settings schema', () => {
     expect(
       SettingsSchema.safeParse({ sessionStorage: 'indexeddb' }).success,
     ).toBe(false);
+  });
+
+  // The published JSON Schema is closed: a setting the source reads but the
+  // schema lacks fails `walkeros validate`.
+  test('accepts custom marketing parameters', () => {
+    expect(settings).toMatchObject({ properties: { parameters: {} } });
+    expect(
+      SettingsSchema.strict().safeParse({
+        storage: true,
+        parameters: { ref: 'referral' },
+      }).success,
+    ).toBe(true);
+  });
+
+  test('describes pulse by what it refreshes', () => {
+    expect(settings).toMatchObject({
+      properties: {
+        pulse: {
+          description: expect.stringMatching(
+            /^Refresh an existing stored session/,
+          ),
+        },
+      },
+    });
+  });
+});
+
+describe('Package metadata', () => {
+  test('links the documentation page with its exact path', () => {
+    expect(pkg.walkerOS.docs).toBe(
+      'https://www.walkeros.io/docs/sources/web/session',
+    );
   });
 });

@@ -10,7 +10,8 @@ let context: ClientContext | undefined;
 /**
  * Set the client context used to identify this process to the walkerOS app.
  *
- * The CLI binary calls this at startup and the MCP server calls it on boot.
+ * The CLI binary calls this at startup. The MCP server does not, so its
+ * requests carry no client headers.
  * The `WALKEROS_CLIENT_TYPE` env var overrides the resolved type (env wins
  * over `input.type`).
  */

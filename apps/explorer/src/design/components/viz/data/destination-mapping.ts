@@ -359,7 +359,7 @@ export const MAPPING_EVENTS: MappingDemoEvent[] = [
         id: 'tiktok',
         label: 'TikTok Pixel',
         rule: {
-          name: 'CompletePayment',
+          name: 'Purchase',
           data: {
             map: {
               order_id: 'data.id',
@@ -384,7 +384,7 @@ export const MAPPING_EVENTS: MappingDemoEvent[] = [
         calls: [
           [
             'ttq.track',
-            'CompletePayment',
+            'Purchase',
             {
               order_id: '0rd3r1d',
               value: 462,

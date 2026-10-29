@@ -2,7 +2,7 @@ import type { Hint } from '@walkeros/core';
 
 export const hints: Hint.Hints = {
   'ingest-prerequisite': {
-    text: 'The ip, userAgent and language settings read ingest.ip, ingest.userAgent and ingest.language first, then event.user. The server source must fill ingest via config.ingest with the map operator and direct request paths (no req. prefix). Without it Piwik PRO receives no client IP, user agent or language, and geolocates every hit to the server.',
+    text: 'The ip, userAgent and language settings read ingest.ip, ingest.userAgent and ingest.language first, then event.user. The server source must fill ingest via config.ingest with the map operator and direct request paths (no req. prefix). Without it Piwik PRO receives no client IP, user agent or language, and geolocates every hit to the server. Behind a proxy, ip is the address of the proxy: map the single-address header your proxy sets or overwrites on every request instead, such as headers.x-client-ip, never a raw X-Forwarded-For (see Client IP behind a proxy in the express source docs).',
     code: [
       {
         lang: 'json',
@@ -12,7 +12,6 @@ export const hints: Hint.Hints = {
               express: {
                 package: '@walkeros/server-source-express',
                 config: {
-                  settings: { port: 8080 },
                   ingest: {
                     map: {
                       ip: { key: 'ip' },
@@ -43,7 +42,7 @@ export const hints: Hint.Hints = {
     ],
   },
   'batch-size': {
-    text: 'Set batch: { size: 100, wait: 1000 } so each flushed batch becomes one bulk request to ppms.php, goal hits included. A bare number such as batch: 500 sets only wait, and the default size cap is 1000 entries. Skipped entries are dropped from the request; a transport failure fails the whole batch.',
+    text: 'Set batch: { size: 100, wait: 1000 } so each flushed batch becomes one bulk request to ppms.php, goal hits included. A bare number such as batch: 500 sets only wait, and the default size cap is 1000 entries. An entry the rule cannot send fails on its own with missing-input and is left out of the request. A silent rule without a goal leaves its entry out of the request as delivered when the rule names one of the portable methods, or has no name and matches a page view. A transport failure fails the whole batch.',
   },
   'identified-consent': {
     text: 'identified controls identified versus anonymous hits. Absent or true identifies every hit. false makes every hit anonymous: uia=1 and dda=1 are sent, _id and uid are dropped, cip is kept for country-level geolocation. A consent object like { marketing: true } identifies a hit when any listed state is granted, e.g. config.consent: { analytics: true } gates tracking and identified: { marketing: true } gates identification. Do not repeat the identified states in config.consent: a destination needs only one of its config.consent states granted, so next to another state the repeated one lets events through on its own, and as the only state it keeps events without it in the queue, so no anonymous hit is sent.',

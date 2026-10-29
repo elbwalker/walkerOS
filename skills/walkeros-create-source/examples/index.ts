@@ -1,9 +1,7 @@
 /**
- * Example files for source development.
- * Create these BEFORE implementation (Phase 2).
+ * Examples of the server source template: its step examples and the trigger
+ * that feeds them.
  */
 
-export * as inputs from './inputs';
-export * as outputs from './outputs';
-export * as requests from './requests';
-export * as mapping from './mapping';
+export * as step from './step';
+export { createTrigger } from './trigger';

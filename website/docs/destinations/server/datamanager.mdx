@@ -7,6 +7,7 @@ package: '@walkeros/server-destination-datamanager'
 ---
 import data from '@walkeros/server-destination-datamanager/walkerOS.json';
 import Configuration from '@site/src/components/snippets/_configuration.mdx';
+import Quickstart from '@site/src/components/snippets/_quickstart.mdx';
 
 import WhereThisFits from '@site/src/components/snippets/_where-this-fits.mdx';
 
@@ -14,9 +15,9 @@ import WhereThisFits from '@site/src/components/snippets/_where-this-fits.mdx';
 
 <PackageLink env="server" github="packages/server/destinations/datamanager" npm="@walkeros/server-destination-datamanager" />
 
-The Google Data Manager API destination package provides server-side
-integration for sending conversion events and audience data to Google's
-advertising ecosystem through a single unified API endpoint.
+The Google Data Manager API destination sends conversion events from your
+server to Google Ads, Display & Video 360 and Google Analytics 4 through one
+API endpoint.
 
 <WhereThisFits
   pre={<>Google Data Manager API is a <strong>server destination</strong> in the walkerOS flow:</>}
@@ -28,55 +29,28 @@ advertising ecosystem through a single unified API endpoint.
 
 ## Installation
 
-<CodeSnippet
-  code={`npm install @walkeros/server-destination-datamanager`}
-  language="bash"
-/>
+<Quickstart data={data} />
 
-<CodeSnippet
-  code={`import { startFlow } from '@walkeros/collector';
-import { destinationDataManager } from '@walkeros/server-destination-datamanager';
+The destination authenticates with Application Default Credentials: the `GOOGLE_APPLICATION_CREDENTIALS` environment variable, or the metadata server on Google Cloud. To use a service account instead, set `config.credentials` to its `client_email` and `private_key`, or `settings.keyFilename` to the path of its key file. If no credentials are found, the destination does not start: every push answers `failed` with the code `config`, and the collector logs `destination init failed`.
 
-await startFlow({
-  destinations: {
-    datamanager: {
-      code: destinationDataManager,
-      config: {
-        // Service account credentials
-        credentials: {
-          client_email: process.env.GOOGLE_CLIENT_EMAIL,
-          private_key: process.env.GOOGLE_PRIVATE_KEY,
-        },
-        settings: {
-          destinations: [
-            {
-              operatingAccount: {
-                accountId: '123-456-7890',
-                accountType: 'GOOGLE_ADS',
-              },
-              productDestinationId: 'AW-CONVERSION-123',
-            },
-          ],
-        },
-      },
-    },
-  },
-});`}
-  language="typescript"
-/>
+The destination sends an event only when its mapped data carries a `transactionId`; any other event fails with the code `missing-input` and one ERROR line (`transactionId is required`). The quickstart maps none, so add one, for example `data: { map: { transactionId: 'id' } }` in `config` to use the walkerOS event ID. For an order that the Google tag also reports, map the order ID the tag sends instead, like `data.id` in the order's rule: Google deduplicates the two by `transactionId` within one conversion action, so the values must match ([additional data sources](https://support.google.com/google-ads/answer/16542291)). With a Google Analytics destination (`accountType: 'GOOGLE_ANALYTICS_PROPERTY'`), an event without an `eventName` fails the same way.
 
 <Configuration type="destination" data={data} />
+
+## Failures
+
+A response outside the 2xx range, a 2xx answer that reports validation errors or cannot be read, a network error, a failed token request, or no answer within the collector's 10-second timeout fails the event with the code `transport` or `timeout`: the event goes to the dead-letter queue and the collector logs one ERROR line without the response body. A rule with `silent: true` sends nothing.
 
 ## Guided mapping helpers
 
 Define common fields once in Settings instead of repeating them in every event
-mapping:
+mapping. Event mappings always override Settings helpers.
 
 <CodeSnippet
   code={`await startFlow({
   destinations: {
     datamanager: {
-      code: destinationDataManager,
+      code: destinationDatamanager,
       config: {
         credentials: { /* ... */ },
         settings: {
@@ -84,7 +58,7 @@ mapping:
 
           // Guided helpers (apply to all events)
           userData: {
-            email: 'user.mail',
+            email: 'user.email',
             phone: 'data.phone',
           },
           userId: 'user.id',
@@ -103,7 +77,20 @@ mapping:
   language="typescript"
 />
 
-**Consent mapping**: Map your consent field names (string) or use static values (boolean). Event mappings always override Settings helpers.
+**Consent mapping**: a string names a key of the event's consent, a boolean is a static value. The collector hands a destination only the consent states an event grants, so a string sends `CONSENT_GRANTED` when the event grants that key and nothing for it when the event denies it: Google never receives `CONSENT_DENIED` from an event's consent. A static `false` sends `CONSENT_DENIED`. The request-level `settings.consent` fills in for every event that carries no consent of its own, so with `settings.consent` set to `CONSENT_GRANTED`, an event whose consent denies the mapped key is sent as granted.
+
+## User data
+
+The destination reads these keys from the mapped data (Settings helpers, then `config.data`, then the rule's `data`):
+
+- `email`, `phone`, `firstName` and `lastName`: normalized and SHA-256 hashed.
+- `regionCode` and `postalCode`: sent unhashed, as Google requires.
+- `userId`, `clientId`, `appInstanceId`, `gclid`, `gbraid`, `wbraid` and `sessionAttributes`: sent as mapped.
+- `transactionId`, `conversionValue`, `currency`, `eventName`, `cartData`, `storeId`, `eventSource`, `adUserData`, `adPersonalization`, `ipAddress` and `userAgent`: the event's conversion, consent and device fields, not hashed.
+
+Any other key, a list, and a `user_data` or `userData` object in a rule's `data` are dropped without a log line. There is no `doNotHash`: a value that is already a hash is hashed again.
+
+Normalization follows Google's [formatting rules](https://developers.google.com/data-manager/api/devguides/concepts/formatting) with these gaps today: for `gmail.com` and `googlemail.com` addresses dots are removed but a `+alias` is kept; spaces inside an email are kept; a family name ending in `v`, `iv`, `ii` or `iii` without a space before it loses those letters (`Ivanov` is hashed as `ivano`); and a phone number without a leading `+` gets `+1` when it has 10 digits or fewer, or only a `+` otherwise. Map phone numbers in E.164 format (`+491701234567`).
 
 ## Client IP and user agent
 
@@ -112,7 +99,7 @@ and `eventDeviceInfo.userAgent` by default. The `ip` and `userAgent` settings
 resolve against `{ ingest, event }` and default to `["ingest.ip", "event.user.ip"]`
 and `["ingest.userAgent", "event.user.userAgent"]`, so they fill in whenever the
 source provides them (see the `config.ingest` recipe on the
-[Express source](/docs/sources/server/express)). A value your event mapping sets
+[Express source](/docs/sources/server/express#ingest-metadata)). A value your event mapping sets
 for `ipAddress` or `userAgent` wins; a value that resolves to nothing is not
 sent. Set either to `false` to turn it off:
 
@@ -125,12 +112,16 @@ sent. Set either to `false` to turn it off:
   language="typescript"
 />
 
+## Consent
+
+The quickstart sets no `config.consent`, so Google receives every event with its user data, whatever consent the event carries, and a denial is not passed on (see **Consent mapping** above). To send only events with consent, add `consent: { marketing: true }` to `config`, next to `settings` (with several keys listed, one granted key is enough). An event without that consent is skipped or queued, depending on the collector's `consentDenied`. Server flows built by the CLI skip it and count it in `skipped`. With `startFlow` it waits in the destination's queue by default: a later event that carries consent does not release it, and only a `walker consent` command does, which then sends the waiting events of every user at once. Pass `consentDenied: 'skip'` to `startFlow` to skip such events instead (see [Gate a destination with consent](/docs/guides/consent#gate-a-destination-with-consent) and [consent-denied events on a server](/docs/collector#consent-denied-events-on-a-server)).
+
 ## Simulate
 
-`walkeros push --simulate destination.<id>` runs offline: the package's mock env
-supplies the auth client and `fetch`, so no token is requested and nothing
-reaches Google. The output shows the `fetch` call with the request body the
-destination would send.
+`walkeros push --simulate destination.<id>` uses the package's mock env for the
+auth client and `fetch`, so no token is requested and nothing reaches Google.
+The output shows the `fetch` call with the request body the destination would
+send.
 
 ## Store sales (IN_STORE)
 
@@ -157,10 +148,3 @@ API's required `eventLocation.storeId` shape.
 }`}
   language="typescript"
 />
-
-## Hash encoding
-
-Every request is sent with `encoding: 'HEX'`. Google requires the field
-whenever the payload contains hashed `userData`. The value is pinned because
-all hashing in this destination produces lowercase hex SHA-256 digests;
-exposing encoding as a setting would risk silently mismatched identifiers.

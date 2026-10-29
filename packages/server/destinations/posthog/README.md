@@ -7,8 +7,7 @@
 # @walkeros/server-destination-posthog
 
 Server-side event delivery to PostHog for product analytics, identity
-resolution, group analytics, and feature flags via the official posthog-node
-SDK.
+resolution, and group analytics via the official posthog-node SDK.
 
 [Documentation](https://www.walkeros.io/docs/destinations/server/posthog) &bull;
 [NPM Package](https://www.npmjs.com/package/@walkeros/server-destination-posthog)
@@ -32,7 +31,7 @@ npm install @walkeros/server-destination-posthog
       "destinations": {
         "posthog": {
           "package": "@walkeros/server-destination-posthog",
-          "config": { "settings": { "apiKey": "YOUR_API_KEY" } }
+          "config": { "settings": { "apiKey": "$secret.POSTHOG_API_KEY" } }
         }
       }
     }

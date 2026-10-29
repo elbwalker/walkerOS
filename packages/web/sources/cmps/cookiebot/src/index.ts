@@ -26,9 +26,9 @@ export const DEFAULT_CATEGORY_MAP: Record<string, string> = {
 };
 
 /**
- * Cookiebot's window events for a decision. uc.js fires one of them on every
- * page load with a stored choice and again after each new choice or
- * withdrawal. Its `CookieConsentOn*` aliases and `CookiebotOnConsentReady`,
+ * Cookiebot's window events for a decision. Cookiebot fires one of them when
+ * the visitor accepts or declines in its dialog, and on every page load with a
+ * stored choice. Its `CookieConsentOn*` aliases and `CookiebotOnConsentReady`,
  * which fires before Cookiebot's version check, are left out.
  */
 const DECISION_EVENTS = ['CookiebotOnAccept', 'CookiebotOnDecline'];

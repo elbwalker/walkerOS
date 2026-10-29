@@ -11,8 +11,6 @@ to Google Analytics 4 and watch both arrive in DebugView. You start with a singl
 console destination to see output immediately, then swap in the GA4 destination
 and add the ecommerce mapping that turns `product add` into `add_to_cart`.
 
-GA4 today, your warehouse next: the same event routes to [your own API](/docs/destinations/api/) or [BigQuery](/docs/destinations/server/gcp) by adding a destination, without touching your tracking code.
-
 ## Step 1: Install
 
 Install the collector and the gtag destination:
@@ -62,8 +60,9 @@ const { elb } = await startFlow({
     ga4: {
       code: destinationGtag,
       config: {
+        loadScript: true,
         settings: {
-          ga4: { measurementId: 'G-XXXXXXXXXX' },
+          ga4: { measurementId: 'G-XXXXXXXXXX', pageview: false },
         },
       },
     },
@@ -74,13 +73,29 @@ await elb({ name: 'page view', data: { title: 'Home' } });`}
   language="typescript"
 />
 
+`loadScript: true` makes walkerOS add gtag.js to the page. Without it walkerOS
+injects no gtag.js and only queues its calls in `dataLayer`, so events reach GA4
+only if your page loads gtag.js itself. `pageview: false` stops gtag from sending a `page_view` of
+its own when it starts, so this page view is not counted twice. On a single-page
+app, also turn off *Page changes based on browser history events* in the web
+stream's enhanced measurement settings: gtag.js still sends those page views
+with `pageview: false`.
+
+This snippet sets no consent, so gtag.js loads and sends its `config` as the
+flow starts, and every event goes out before any consent decision. Before you go
+live, add `consent: { analytics: true }` to `config`, next to `settings`: gtag.js
+then loads and events go out only once `analytics` is granted. With several
+keys in `consent`, one granted key is enough to open the gate (see
+[Google Consent Mode](/docs/guides/consent#google-consent-mode)).
+
 ## Step 3: Add the ecommerce mapping
 
 A `product add` event needs an explicit mapping, otherwise it would arrive as
-`product_add` carrying only `send_to`. Nest the mapping under the gtag
-destination to turn `product add` into the GA4 `add_to_cart` event. The product
-price becomes the GA4 `value`, the currency falls back to `EUR`, and the product
-is shaped into a GA4 `items` array via a `this` loop:
+`product_add` carrying only `send_to`. Add this `mapping` to the gtag
+destination's `config`, next to `settings`, to turn `product add` into the GA4
+`add_to_cart` event. The product price becomes the GA4 `value`, the currency
+falls back to `EUR`, and the product is shaped into a GA4 `items` array via a
+`this` loop:
 
 <CodeSnippet
   code={`mapping: {
@@ -135,10 +150,14 @@ produces the GA4 `add_to_cart` event:
 
 ## Step 4: Verify in GA4
 
-Copy your Measurement ID from GA4 > Admin > Data Streams and open your web
-stream, then set it as the `measurementId` above. Watch Reports > Realtime to
-confirm the `page_view` event, then open Admin > DebugView to inspect the
-`add_to_cart` event and its parameters as they arrive.
+In GA4, open Admin > Data collection and modification > Data streams, click your
+web stream and copy its Measurement ID into the `measurementId` above. Watch
+Reports > Realtime to confirm the `page_view` event.
+
+DebugView lists only events sent in debug mode, so while you test, add
+`debug: true` to `settings.ga4`: the destination then adds `debug_mode: true` to
+every event. Open Admin > Data display > DebugView to inspect the `add_to_cart`
+event and its parameters as they arrive, and remove `debug` before going live.
 
 ## Next steps
 

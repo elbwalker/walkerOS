@@ -14,7 +14,7 @@ import WhereThisFits from '@site/src/components/snippets/_where-this-fits.mdx';
 
 # GCP Cloud Functions
 
-Google Cloud Functions source for walkerOS. Lightweight runtime adapter with plug-and-play assignment to a Cloud Functions handler, support for the shared [event envelope](/docs/sources/envelope) including batches, a GET tracking pixel, and configurable CORS. The `@walkeros/server-source-gcp` package also ships [`sourcePubSubPull` and `sourcePubSubPush`](/docs/sources/server/pubsub) for ingesting from Pub/Sub topics; this page covers the Cloud Functions handler only.
+The GCP Cloud Functions source is a runtime adapter for walkerOS whose `push` you assign directly as a Cloud Functions handler. It supports the shared [event envelope](/docs/sources/envelope) including batches, a GET tracking pixel, and configurable CORS. The `@walkeros/server-source-gcp` package also ships [`sourcePubSubPull` and `sourcePubSubPush`](/docs/sources/server/pubsub) for ingesting from Pub/Sub topics; this page covers the Cloud Functions handler only.
 
 <WhereThisFits
   pre={<>The GCP Cloud Functions source is a <strong>server source</strong> in the walkerOS flow:</>}
@@ -74,6 +74,7 @@ Add to your `flow.json` sources:
   code={`"sources": {
   "gcp": {
     "package": "@walkeros/server-source-gcp",
+    "import": "sourceCloudFunction",
     "config": {
       "settings": {
         "cors": true
@@ -84,7 +85,7 @@ Add to your `flow.json` sources:
   language="json"
 />
 
-Server sources require platform-specific handlers. For containerized deployments, see the [runtime](/docs/apps/runtime).
+This bundle is for deploying to Cloud Functions. The walkerOS [runtime](/docs/apps/runtime) (`runneros`, the `walkeros/flow` image) serves only sources with an HTTP handler, such as the [Express source](/docs/sources/server/express): under it this source receives no requests, and every request answers 503.
 
 [See bundled mode setup](/docs/getting-started/modes/bundled) | [CLI reference](/docs/apps/cli)
 
@@ -133,20 +134,32 @@ Send several events in one request with the shared envelope. See
 | Status | Meaning |
 |--------|---------|
 | 200 | Event processed, or failed for a reason a resend cannot fix (see below) |
-| 400 | Rejected client input: the pipeline declared the event invalid. The body echoes the validation message, for example `Event name is required` |
+| 400 | Rejected client input: the pipeline declared the event invalid (the body echoes the validation message, for example `Event name is required`), or a batch larger than `maxBatchSize` |
+| 405 | A method other than POST, GET (pixel) and OPTIONS, or GET with `enablePixelTracking: false` |
 | 500 | The pipeline failed to process a valid event for a reason a resend could fix (the body is `Event was not processed`), or an unexpected server fault (`Internal server error`) |
+
+A malformed `application/json` body is rejected by the Functions Framework
+before the source runs: 400 with an HTML body, no CORS headers, not counted.
 
 A failed event is acknowledged or retried by one rule on every server source: see [Producer acknowledgement](/docs/sources/server#producer-acknowledgement).
 
 Invalid input is counted on `collector.status.sources.<id>.rejected` rather than
 inflating `status.failed`, and is logged at warn with the reason instead of as an
-error with a stack trace.
+error with a stack trace. A batch over `maxBatchSize` is answered 400 and not
+counted.
+
+The source sets no body size limit of its own. The Functions Framework accepts
+up to 1024mb and leaves the cap to the platform: 32 MB for a 2nd gen HTTP
+function, 10 MB for 1st gen.
+
+`settings.timeout` has no effect today: a request whose push takes longer still
+waits for it and answers as above.
 
 ## Ingest metadata
 
 Extract request metadata and forward it through the pipeline.
 
-`config.ingest` must use the `map` operator. Keys are output field names; values are direct field paths on the request scope (no `req.` prefix). A bare object like `{ ip: 'ip' }` is silently inert: without the `map` operator the source passes the whole request through and no field is extracted.
+`config.ingest` must use the `map` operator. Keys are output field names; values are direct field paths on the request scope (no `req.` prefix). A bare object like `{ ip: 'ip' }` has no operator: `walkeros validate` and the bundle reject it, and if it still runs, the collector logs one ERROR line (`mapping value has no operator`) and no field is extracted.
 
 <CodeSnippet
   code={`const { collector } = await startFlow({
@@ -157,7 +170,8 @@ Extract request metadata and forward it through the pipeline.
         settings: { cors: true },
         ingest: {
           map: {
-            ip: { key: 'ip' },
+            // only when your load balancer sets it; otherwise leave ip unmapped
+            ip: { key: 'headers.x-client-ip' },
             userAgent: { key: 'headers.user-agent' },
             origin: { key: 'headers.origin' },
           },
@@ -173,13 +187,13 @@ Extract request metadata and forward it through the pipeline.
 
 | Path | Description |
 |------|-------------|
-| `ip` | Client IP address |
+| `ip` | The Functions Framework's `req.ip`. The framework trusts every proxy, so this is the leftmost `X-Forwarded-For` entry, which a client can set itself. For the client IP, map a header your load balancer sets, see [Client IP behind a proxy](/docs/sources/server/express#client-ip-behind-a-proxy) |
 | `headers.*` | HTTP headers (user-agent, origin, etc.) |
 | `method` | HTTP method |
 | `path` | Pathname, no query string |
 | `query.*` | Query parameter, repeated keys joined with `,` |
 | `url` | Absolute request URL, or `''` when there is no `host` header |
-| `body` | Request body, parsed as JSON when it parses, otherwise the raw string |
+| `body` | Request body: parsed JSON (also a `text/plain` body that is JSON), the raw string for other `text/plain`, the fields of an `application/x-www-form-urlencoded` body, or `undefined` for other content types |
 | `raw` | The Functions Framework request itself |
 
 ## Pub/Sub

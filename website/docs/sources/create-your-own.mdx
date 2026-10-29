@@ -28,6 +28,7 @@ The context contains:
   logger: Logger;                          // Logging functions
   id: string;                              // Source identifier
   collector: Collector.Instance;           // Collector reference
+  withScope: Source.Context['withScope'];  // Per-request scope (server sources)
 }`}
   language="typescript"
 />
@@ -38,12 +39,21 @@ The returned instance must implement:
   code={`interface Source.Instance {
   type: string; // Unique identifier
   config: Source.Config; // Merged configuration
-  push: Elb.Fn; // Function to send events (forwards to env.elb)
-  destroy?(): void | Promise<void>; // Optional cleanup
+  push: Elb.Fn; // Outward entry, usually env.elb
+  init?(): void | Promise<void>; // Optional setup, runs once every source is registered
+  destroy?(context): void | Promise<void>; // Optional cleanup
   on?(event, context): void | Promise<void>; // Optional reactive hooks
 }`}
   language="typescript"
 />
+
+Events the source captures go through `env.push`, the source pipeline: its
+mapping, its `before` and `next` chains and its entry in
+`collector.status.sources`. `env.elb` is the collector's public interface for
+events and `walker` commands, and it skips the source pipeline. When the source
+is primary, `startFlow` returns its `push` as `elb`, so set `push` to `env.elb`
+unless the source exposes its own signature, such as an HTTP handler. With
+`env.push` in that slot, a `walker` command answers `{ ok: false, invalid: true }`.
 
 ## Types bundle
 
@@ -73,7 +83,7 @@ interface Types extends Source.Types<Settings, never, Elb.Fn, Env> {}`}
 1. **Settings**: Source configuration options
 2. **Mapping**: Event mapping (usually `never` for sources)
 3. **Push**: External push signature (what `source.push` exposes)
-4. **Env**: Internal dependencies (what source calls via `env.elb`)
+4. **Env**: Internal dependencies the source reads from `env`
 
 ## Context destructuring
 
@@ -92,15 +102,19 @@ The `context` parameter contains everything your source needs:
 
   // Use env.push to send events to collector
   await envPush({ name: 'my event', data: { value: 'example' } });
+
+  // ...then return the source instance (see the minimal example below)
 };`}
   language="typescript"
 />
 
 `env` is the author's dependency bag: you provide platform and vendor dependencies (like `window`, `document`, custom APIs) when configuring the source. The collector provides five capabilities into that bag, and they always win: `push`, `elb`, `command`, `logger` and `sources` are runtime-owned, so setting one of them in `env` has no effect.
 
+A factory that throws, for example over a missing dependency, is logged at ERROR (`source factory failed`) and the source is not registered.
+
 ### Ending the pipeline elsewhere: `terminus`
 
-A source registration that needs the pipeline to end somewhere other than the collector declares `terminus` next to `code`. A terminus receives the event exactly as the source emitted it, and the entire pipeline is skipped: no `before`/`next` chains, no source `cache`, no `state`, no `mapping` (including `ignore` and `consent`), no minted span id, no per-source ingest, no `respond`, no `status.sources` counting and no observability records. This is a total bypass by design, so there is one rule to know rather than a list of exceptions. It exists for deterministic capture at the source→collector boundary (step examples, dev tooling); production flows leave it unset, and stored flow configs cannot carry it (validation rejects unknown source keys).
+A source registration that needs the pipeline to end somewhere other than the collector declares `terminus` next to `code`. A terminus receives the event exactly as the source emitted it, and the entire pipeline is skipped: no `before`/`next` chains, no source `cache`, no `state`, no `mapping` (including `ignore` and `consent`), no minted span id, no per-source ingest, no `respond`, no `status.sources` counting and no observability records. The bypass is total by design, with no stage excepted. It exists for deterministic capture at the source→collector boundary (step examples, dev tooling); production flows leave it unset, and stored flow configs cannot carry it (validation rejects unknown source keys).
 
 ## Per-scope context (server sources)
 
@@ -123,17 +137,21 @@ A single source factory instance handles many concurrent invocations: an Express
   // \`config.ingest\` mapping, captures \`respond\`, and runs the body
   // with a per-scope env. Concurrent scopes never crosstalk.
   await context.withScope(scope, respond, async (env) => {
-    // toEventList decides how many events the body carries.
-    for (const event of toEventList(scope.body)) await env.push(event);
-    respond({ body: { success: true } });
+    // toEventList decides how many events the body carries; each push
+    // result becomes the outcome the caller is answered with.
+    const outcomes: EventOutcome[] = [];
+    for (const event of toEventList(scope.body))
+      outcomes.push(pushResultToOutcome(await env.push(event)));
+    const { status, body } = batchResponse(outcomes);
+    respond({ status, body });
   });
 };`}
   language="typescript"
 />
 
-A new server source must build a [scope](/docs/sources/scope) and use [`toEventList`](/docs/sources/envelope), so `config.ingest` paths and accepted body forms match every other source. `buildScopeFromNodeRequest`, `normalizeHeaders`, `normalizeQuery`, `normalizeBody`, `toEventList` and `isBatchBody` all come from `@walkeros/core`.
+A new server source must build a [scope](/docs/sources/scope) and use [`toEventList`](/docs/sources/envelope), so `config.ingest` paths and accepted body forms match every other source. `pushResultToOutcome` turns each push result into an outcome: an error with status 400 for an invalid event, an error with status 500 when a resend could fix the failure, and the event id when it was delivered or failed for a reason a resend cannot fix (still visible in the destination's `failed` counter and an ERROR line). `batchResponse` answers 207 with per-index errors when any outcome is an error and 200 otherwise, so in the snippet above a single event gets the batch answer too; a source that answers single-event requests itself uses the outcome's status. See [producer acknowledgement](/docs/sources/server#producer-acknowledgement). `buildScopeFromNodeRequest`, `normalizeHeaders`, `normalizeQuery`, `normalizeBody`, `toEventList`, `isBatchBody`, `pushResultToOutcome` and `batchResponse` all come from `@walkeros/core`.
 
-Inside the body, `env.push` carries the scope's ingest and respond all the way to destinations. Transformers and destinations read `env.respond` to delegate the HTTP response; `context.ingest` for source-extracted metadata. The scope ends when the body resolves.
+Inside the body, `env.push` carries the scope's ingest and respond all the way to destinations. Transformers and destinations read `env.respond` to delegate the HTTP response and `context.ingest` for source-extracted metadata. The scope ends when the body resolves.
 
 **Browser sources (and other single-scope sources) skip `withScope`.** A browser tab is a single logical scope for its entire lifetime; calling `env.push` directly on the factory env is correct. Only server sources handling concurrent inbound work need `withScope`.
 
@@ -152,7 +170,6 @@ interface Types extends Source.Types<Settings, never, Elb.Fn, Env> {}
 
 export const sourceCustom: Source.Init<Types> = async (context) => {
   const { config = {}, env } = context;
-  const { push: envPush } = env;
 
   const settings: Source.Settings<Types> = {
     prefix: 'custom',
@@ -167,7 +184,7 @@ export const sourceCustom: Source.Init<Types> = async (context) => {
   return {
     type: 'custom',
     config: fullConfig,
-    push: envPush,
+    push: env.elb, // startFlow's elb when this source is primary
   };
 };`}
   language="typescript"
@@ -178,12 +195,12 @@ export const sourceCustom: Source.Init<Types> = async (context) => {
 Capturing events from a third-party API with event listeners:
 
 <CodeSnippet
-  code={`import type { Source, Elb } from '@walkeros/core';
+  code={`import type { Source, Elb, WalkerOS } from '@walkeros/core';
 
 // Your external API interface
 interface ExternalAPI {
-  on(event: string, handler: (data: unknown) => void): void;
-  off(event: string, handler: (data: unknown) => void): void;
+  on(event: string, handler: (data: WalkerOS.Properties) => void): void;
+  off(event: string, handler: (data: WalkerOS.Properties) => void): void;
 }
 
 interface Settings {
@@ -196,7 +213,7 @@ interface Env extends Source.BaseEnv {
   api?: ExternalAPI;
 }
 
-interface Types extends Source.Types<Settings, never, Elb.Fn, Env> {}
+export interface Types extends Source.Types<Settings, never, Elb.Fn, Env> {}
 
 export const sourceEventAPI: Source.Init<Types> = async (context) => {
   const { config = {}, env } = context;
@@ -211,16 +228,16 @@ export const sourceEventAPI: Source.Init<Types> = async (context) => {
     ...config?.settings,
   };
 
-  const handlers = new Map<string, (data: unknown) => void>();
+  const handlers = new Map<string, (data: WalkerOS.Properties) => void>();
 
   // Register event handler
   const register = (
     event: string,
-    transform: (data: unknown) => { name: string; data: unknown },
+    transform: (data: WalkerOS.Properties) => WalkerOS.DeepPartialEvent,
   ) => {
-    const handler = (data: unknown) => {
-      const transformed = transform(data);
-      envPush(transformed);
+    const handler = (data: WalkerOS.Properties) => {
+      // The source type keeps events attributed to this source
+      envPush({ ...transform(data), source: { type: 'event-api' } });
     };
     api.on(event, handler);
     handlers.set(event, handler);
@@ -244,7 +261,7 @@ export const sourceEventAPI: Source.Init<Types> = async (context) => {
   return {
     type: 'event-api',
     config: { ...config, settings },
-    push: envPush,
+    push: env.elb,
     destroy: async () => {
       handlers.forEach((handler, event) => api.off(event, handler));
     },
@@ -272,7 +289,7 @@ const { elb } = await startFlow({
         },
       },
       env: {
-        api: externalAPI, // Collector provides elb automatically
+        api: externalAPI, // The collector adds push, elb, command and logger
       },
     },
   },
@@ -308,7 +325,7 @@ export function createMockAPI() {
 ### Test Example
 
 <CodeSnippet
-  code={`import { sourceEventAPI } from '../index';
+  code={`import { sourceEventAPI, type Types } from '../index';
 import type { Source, Collector } from '@walkeros/core';
 import { createMockLogger } from '@walkeros/core';
 import { createMockPush, createMockAPI } from './test-utils';
@@ -324,6 +341,7 @@ function createSourceContext(
     logger: env.logger || createMockLogger(),
     id: 'test-event-api',
     collector: {} as Collector.Instance,
+    withScope: () => Promise.reject(new Error('Not used by this source')),
   };
 }
 
@@ -363,6 +381,7 @@ describe('Event API Source', () => {
     expect(push).toHaveBeenCalledWith({
       name: 'app interaction',
       data: { action: 'click' },
+      source: { type: 'event-api' },
     });
   });
 
@@ -370,8 +389,9 @@ describe('Event API Source', () => {
     const api = createMockAPI();
     const push = createMockPush();
 
-    const source = await sourceEventAPI(createSourceContext({}, { push, api }));
-    await source.destroy?.();
+    const context = createSourceContext({}, { push, api });
+    const source = await sourceEventAPI(context);
+    await source.destroy?.(context);
 
     expect(api.off).toHaveBeenCalled();
   });
@@ -409,34 +429,25 @@ Sources can declare dependencies on collector events. A source with `require` wo
 <CodeSnippet
   code={`await startFlow({
   sources: {
-    session: {
-      code: sessionSource,
-      config: { require: ['consent'] },
-    },
     dataLayer: {
-      code: dataLayerSource,
-      config: { require: ['user'] },
+      code: sourceDataLayer,
+      config: { require: ['consent'] },
     },
   },
 });`}
   language="typescript"
 />
 
+Here the dataLayer source still captures new `dataLayer.push()` calls at once, from its `init()`. Only the replay of entries pushed before it started, which it runs on the `run` event, waits for the first consent command.
+
 **How it works:**
 
 - Sources are registered in `collector.sources` immediately, and the collector runs `Instance.init()` on each one eagerly after registration. `Source.Config.init` flips to `true` once init has run.
-- `require` does **not** gate code execution. It gates `on()` delivery. Lifecycle events targeted at a source whose `require` is unmet are buffered in the source's `Instance.queueOn` array.
+- `require` does **not** gate code execution or capture. It gates `on()` delivery. Lifecycle events targeted at a source whose `require` is unmet are buffered in the source's `Instance.queueOn` array.
 - After each collector event (`consent`, `user`, `session`, `run`, etc.), the collector decrements the matching entry from each source's `require` list. When a source's require is empty (and `config.init === true`), its queued lifecycle events are replayed by calling `source.on(type, data)` for each entry, then the queue is cleared.
-- Chains work naturally: `consent` clears the session source's `require`, which fires `user`, which clears the dataLayer source's `require`, which then receives any queued events.
+- A source without an `on()` method is not affected by `require`. The session source, for example, detects sessions from its `init()` and starts regardless of `require`.
 
-**Common patterns:**
-
-| Require | Use case |
-|---------|----------|
-| `['consent']` | Wait for CMP consent before tracking |
-| `['user']` | Wait for identity resolution |
-| `['session']` | Wait for session detection |
-| `['consent', 'run']` | Wait for both consent and collector run |
+Use `require` for a source whose work happens in `on()`: `['consent']` waits for the first consent command, `['user']` for identity, `['session']` for session detection, `['consent', 'run']` for both consent and the collector run.
 
 ## Common patterns
 
@@ -472,29 +483,26 @@ External System  ←→  Source (Adapter)  ←→  Collector
 **Two interfaces:**
 
 1. **External (`source.push`)**: Platform-specific signature
-   * Browser: `push(elem, data, options)` → Returns `Promise<PushResult>`
+   * Event sources (browser, dataLayer, your own): `Elb.Fn`, events and `walker` commands → Returns `Promise<PushResult>`
    * Server: `push(req, res)` → Returns `Promise<void>` (writes HTTP response)
    * Your choice: Match your environment's needs
 
-2. **Internal (`env.elb`)**: Standard collector interface
-   * Always `Elb.Fn` - same across all sources
-   * Sources translate external inputs → standard events → `env.elb(event)`
+2. **Internal (`env.push`)**: The source pipeline
+   * Always `Collector.PushFn` - same across all sources
+   * Sources translate external inputs → standard events → `env.push(event)`
 
 **Example signatures:**
 
 <CodeSnippet
-  code={`// Browser source
-export type Push = (elem?: Element, data?: Properties) => Promise<PushResult>;
-
-// HTTP handler source
+  code={`// HTTP handler source
 export type Push = (req: Request, res: Response) => Promise<void>;
 
-// Standard event source
+// Event source
 export type Push = Elb.Fn;`}
   language="typescript"
 />
 
-The `Push` type parameter defines what your source exposes externally. Internally, all sources use `env.elb` to forward to the collector.
+The `Push` type parameter defines what your source exposes externally. Internally, every source sends its events through `env.push`.
 
 ## Key concepts
 
@@ -514,7 +522,7 @@ Every walkerOS package includes machine-readable metadata for tooling and discov
 <CodeSnippet
   code={`{
   "walkerOS": { "type": "source", "platform": "web" },
-  "keywords": ["walkeros", "walkeros-source"]
+  "keywords": ["walkerOS", "walkerOS-source"]
 }`}
   language="json"
 />
@@ -538,12 +546,12 @@ This file contains your package's JSON Schemas and examples, enabling MCP tools 
 
 ### Optional: Hints
 
-Packages can export a `hints` record from `src/dev.ts` to provide lightweight, actionable context beyond schemas and examples, such as capture timing, event formats, or troubleshooting tips. Hints are serialized into `walkerOS.json` and surfaced via MCP tools. See the `walkeros-create-source` skill for details.
+Packages can export a `hints` record from `src/dev.ts` to provide context beyond schemas and examples, such as capture timing, event formats or troubleshooting tips. Hints are serialized into `walkerOS.json` and surfaced via MCP tools. See the `walkeros-create-source` skill for details.
 
 ## Publishing checklist
 
 - [ ] `walkerOS` field in package.json
-- [ ] Keywords include `walkeros` and `walkeros-source`
+- [ ] Keywords include `walkerOS` and `walkerOS-source`
 - [ ] `buildDev()` in tsup.config.ts
 - [ ] `schemas.settings` exported from `src/dev.ts` (per export for multi-export packages)
 - [ ] `dist/walkerOS.json` generated on build

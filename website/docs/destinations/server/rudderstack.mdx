@@ -1,12 +1,13 @@
 ---
 title: RudderStack
-description: "Server-side event delivery to RudderStack CDP (open-source Segment alternative) with full Segment Spec support"
+description: "Server-side event delivery to RudderStack CDP with full Segment Spec support"
 path: /docs/destinations/server/rudderstack
 sidebar_position: 6
 package: '@walkeros/server-destination-rudderstack'
 ---
 import data from '@walkeros/server-destination-rudderstack/walkerOS.json';
 import Configuration from '@site/src/components/snippets/_configuration.mdx';
+import Quickstart from '@site/src/components/snippets/_quickstart.mdx';
 
 import WhereThisFits from '@site/src/components/snippets/_where-this-fits.mdx';
 
@@ -14,7 +15,7 @@ import WhereThisFits from '@site/src/components/snippets/_where-this-fits.mdx';
 
 <PackageLink env="server" github="packages/server/destinations/rudderstack" npm="@walkeros/server-destination-rudderstack" status="beta" />
 
-Server-side event delivery to [RudderStack](https://rudderstack.com/) via the official [`@rudderstack/rudder-sdk-node`](https://www.npmjs.com/package/@rudderstack/rudder-sdk-node) SDK. Implements the full Segment Spec surface (`track`, `identify`, `group`, `page`, `screen`, and `alias`) with automatic identity deduplication and graceful shutdown via `flush()`.
+Server-side event delivery to [RudderStack](https://rudderstack.com/) via the official [`@rudderstack/rudder-sdk-node`](https://www.npmjs.com/package/@rudderstack/rudder-sdk-node) SDK. Sends the Segment Spec calls `track`, `identify`, `group`, `page`, `screen`, and `alias`, skips an `identify` or `group` call that repeats the previous one, and flushes on shutdown with `flush()`.
 
 <WhereThisFits
   pre={<>RudderStack is a <strong>server destination</strong> in the walkerOS flow:</>}
@@ -26,69 +27,24 @@ Server-side event delivery to [RudderStack](https://rudderstack.com/) via the of
 
 ## Installation
 
-<CodeSnippet
-  code={`npm install @walkeros/server-destination-rudderstack`}
-  language="bash"
-/>
-
-<Tabs groupId="mode">
-  <TabItem value="integrated" label="Integrated" default>
-
-<CodeSnippet
-  code={`import { startFlow } from '@walkeros/collector';
-import { destinationRudderStack } from '@walkeros/server-destination-rudderstack';
-
-await startFlow({
-  destinations: {
-    rudderstack: {
-      code: destinationRudderStack,
-      config: {
-        settings: {
-          writeKey: 'YOUR_RUDDERSTACK_WRITE_KEY',
-          dataPlaneUrl: 'https://your-data-plane.rudderstack.com',
-        },
-      },
-    },
-  },
-});`}
-  language="typescript"
-/>
-
-  </TabItem>
-  <TabItem value="bundled" label="Bundled">
-
-Add to your `flow.json` destinations:
-
-<CodeSnippet
-  code={`"destinations": {
-  "rudderstack": {
-    "package": "@walkeros/server-destination-rudderstack",
-    "config": {
-      "settings": {
-        "writeKey": "YOUR_RUDDERSTACK_WRITE_KEY",
-        "dataPlaneUrl": "https://your-data-plane.rudderstack.com"
-      }
-    }
-  }
-}`}
-  language="json"
-/>
-
-[See bundled mode setup](/docs/getting-started/modes/bundled) | [CLI reference](/docs/apps/cli)
-
-  </TabItem>
-</Tabs>
+<Quickstart data={data} />
 
 <Configuration type="destination" data={data} />
 
-Identity is resolved automatically from each event: `userId` defaults to `user.id` and `anonymousId` defaults to `user.session`. At least one must be present for a call to be sent. Override these paths in settings to match your event structure.
+## Identity
+
+Identity is resolved from each event: `userId` defaults to `user.id` and `anonymousId` defaults to `user.session`. Override these paths in settings to match your event structure. An event where neither resolves is not sent and fails with `missing-input`.
+
+An `identify` or `group` call is sent only when its `userId` (for a group, its `groupId`) or its traits differ from the previous call of that kind this destination sent. The `anonymousId` and, for a group, the user are not compared. When a second visitor without a `userId` has the same traits, or a second user joins the same group with the same traits, no `identify` or `group` call is sent for them and nothing reports it. Their `track` calls still go out.
 
 ## Batching and delivery
 
-This destination batches by default: `config.batch` sends after 20 events or 10 seconds, and each event keeps its own outcome. Set `config.batch: { size: 1 }` to send each event at once. How batching, retries, deduplication and acknowledgement work for the server SDK destinations is described in [Server SDK destinations](/docs/destinations#server-sdk-destinations).
+This destination batches by default: `config.batch` sends a batch at 20 events, 10 seconds after the last event, or 30 seconds after the first, whichever comes first, and each event keeps its own outcome. Set `config.batch: { size: 1 }` to send each event at once. How batching, retries, deduplication and acknowledgement work for the server SDK destinations is described in [Server SDK destinations](/docs/destinations#server-sdk-destinations).
 
-An event without `userId` or `anonymousId` fails with `missing-input`.
+## Consent
+
+The quickstart sets no `config.consent`, so RudderStack receives every event. Add `config.consent` to send only with consent ([consent management](/docs/guides/consent)).
 
 ## Alias support
 
-Unlike Segment, RudderStack also supports per-event `alias()` calls, useful for linking an anonymous identity to an identified user after signup or login. Configure via `mapping.settings.alias` with a `previousId` field.
+Unlike the Segment destination, this destination also sends `alias()` calls, to link an anonymous identity to the user id after signup or login. Map `previousId` in a rule's `settings.alias`, as the Alias user example above does. The event needs a `userId` as well: an alias call without one fails the event with `transport`.

@@ -106,14 +106,17 @@ await startFlow({
 
 ### Timing considerations
 
-The source handles all timing scenarios:
+The source handles these cases:
 
 - **SDK loads before source**: The "already loaded" check reads existing consent
   from `OptanonActiveGroups` immediately.
 - **Source loads before SDK**: The `OptanonWrapper` wrapping intercepts the
   SDK's init callback.
 - **`explicitOnly` (default)**: Uses `OneTrust.IsAlertBoxClosed()` to determine
-  if the user has actively interacted with the consent banner.
+  if the user has actively interacted with the consent banner. Until the banner
+  is closed the source sends no consent, so for a visitor who never closes it,
+  destinations gated with `config.consent` never send events (see
+  [how CMP sources work](/docs/sources/web/cmps#how-cmp-sources-work)).
 
 ## Reference
 

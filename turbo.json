@@ -6,6 +6,8 @@
     "website/.env",
     "packages/config/tsconfig/*.json",
     "packages/config/eslint/**",
+    "packages/config/tsup/**",
+    "packages/config/jest/**",
     "packages/web/eslint.config.mjs",
     "packages/server/eslint.config.mjs",
     "packages/transformers/eslint.config.mjs",

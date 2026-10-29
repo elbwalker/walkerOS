@@ -10,8 +10,8 @@ import type { DestinationWeb } from '@walkeros/web-core';
 export interface Settings {
   /** Optimizely Feature Experimentation SDK key. Required. */
   sdkKey: string;
-  /** walkerOS mapping value to resolve userId for experiment bucketing. */
-  userId?: WalkerOSMapping.Value;
+  /** walkerOS mapping value to resolve userId for experiment bucketing. Required. */
+  userId: WalkerOSMapping.Value;
   /** User attributes for audience targeting, applied when the user context is created (first event, or a userId that differs from the previous event's). */
   attributes?: WalkerOSMapping.Value;
   /** Polling interval for datafile updates in ms. Default: 60000. */

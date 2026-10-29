@@ -17,7 +17,7 @@ export const SettingsSchema = z
     email: z
       .string()
       .describe(
-        'walkerOS mapping value path to resolve contact email from events (like user.email). Required for contact association.',
+        'walkerOS mapping value path to resolve contact email from events (like user.email). Default: user.email. An event needs an email or an objectId.',
       )
       .optional(),
     objectId: z
@@ -29,7 +29,7 @@ export const SettingsSchema = z
     identify: z
       .unknown()
       .describe(
-        'Destination-level contact upsert mapping. Resolves to { email, properties }. Fires contact update on first push and re-fires when values change.',
+        'Destination-level contact update mapping. Resolves to { email, properties } and updates the contact with that email (not an upsert). Fires on first push and re-fires when values change.',
       )
       .optional(),
     defaultProperties: z

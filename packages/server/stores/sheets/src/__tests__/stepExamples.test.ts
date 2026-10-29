@@ -23,3 +23,9 @@ describe('Step Examples', () => {
     expect(Array.isArray(example.out)).toBe(true);
   });
 });
+
+describe('Config examples', () => {
+  it('reference the service account JSON as a secret', () => {
+    expect(examples.serviceAccount.credentials).toBe('$secret.SHEETS_SA_KEY');
+  });
+});

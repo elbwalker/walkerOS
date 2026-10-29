@@ -3,7 +3,7 @@ import { conformance, runExamples } from '@walkeros/collector/dev';
 import { destinationTikTok } from '..';
 import { examples, schemas } from '../dev';
 
-const settings = { accessToken: 's3cr3t', pixelCode: 'PIXEL_CODE' };
+const { settings } = examples.minimal;
 
 describe('tiktok conformance', () => {
   beforeEach(() => {
@@ -16,6 +16,7 @@ describe('tiktok conformance', () => {
       examples: examples.step,
       schema: schemas.settings,
       settings,
+      minimal: examples.minimal,
       root: path.join(__dirname, '..', '..'),
     });
   });

@@ -18,25 +18,25 @@ assistant integration.
 
 ## Claude Code plugin
 
-The recommended way to get started in Claude Code. One plugin installs the
+The plugin is the recommended way to get started in Claude Code. It installs the
 local `@walkeros/mcp` server, adds the hosted walkerOS MCP server, and installs
 22 skills that teach Claude how to build sources, destinations, transformers,
 and flows.
 
-**Step 1: add the marketplace:**
+Add the marketplace:
 
 ```
 /plugin marketplace add elbwalker/walkerOS
 ```
 
-**Step 2: install the plugin:**
+Then install the plugin:
 
 ```
 /plugin install walkeros@elbwalker
 ```
 
-That's it. Claude Code will reload with the MCP tools and skills active. The
-local tools work right away. The hosted server asks you to sign in once: run
+Claude Code reloads with the MCP tools and skills active. The local tools work
+right away. The hosted server asks you to sign in once: run
 `/mcp`, pick it, and sign in (see [Claude Code](#claude-code)).
 
 ## Quick start
@@ -77,7 +77,7 @@ In Claude Desktop and claude.ai, add it as a custom connector instead (see
 
 ### Your first flow via AI
 
-Everything in this loop runs locally, no account:
+Everything in this loop runs locally and needs no account:
 
 1. Install the plugin: `/plugin install walkeros@elbwalker`
 2. Ask: "Create a web flow with a GA4 destination, validate it, and simulate a
@@ -89,8 +89,10 @@ Everything in this loop runs locally, no account:
 
 `@walkeros/mcp` and `@walkeros/mcp-source-browser` need no environment
 variables, and the hosted server needs none either: it signs you in with OAuth.
-The local server's anonymous usage telemetry follows the CLI setting, see
-[Telemetry](/docs/apps/telemetry).
+The local server's anonymous usage telemetry follows the CLI setting (see
+[Telemetry](/docs/apps/telemetry)). A running server reads that setting once,
+when its client connects: after `walkeros telemetry disable`, it keeps sending
+until you restart it.
 
 ---
 
@@ -131,7 +133,8 @@ belongs only on the user's own machine; the stdio binary uses it.
 
 To use the tools without an `McpServer` (for example with the Vercel AI SDK),
 call `createToolHandlers(runtime)`. It returns the eight tool specs, each with
-its name, title, description, input schema, annotations and handler.
+its name, title, description, input schema, output schema (where the tool has
+one), annotations and handler.
 
 A host that registers the shared tools on its own server imports from
 `@walkeros/mcp/specs`: `createLocalToolSpecs(runtime)` returns the five tools
@@ -143,7 +146,7 @@ everything from `@walkeros/mcp/specs` (the specs, `RuntimeRefusal`,
 `FlowRuntime`, the envelope helpers), never from the main entry, which loads
 the CLI.
 
-The stdio binary stays available via `@walkeros/mcp/stdio` and the
+The stdio binary is available as `@walkeros/mcp/stdio` and as the
 `walkeros-mcp` bin entry.
 
 ### Tools
@@ -153,8 +156,18 @@ carries the same object as JSON. A list sits under a named key, or under
 `items` when the tool has no name for it, and a bare value under `value`. Text
 that people write and the assistant should only read comes back wrapped in
 `<user_data>...</user_data>`. The rule is general: values people write are
-wrapped, while keys and identifiers (config keys, step names, settings names)
-stay literal, so a returned config round-trips unchanged.
+wrapped, while keys and identifiers (config keys, step names, package names,
+IDs) and the tool's own messages stay literal.
+
+The advertised output schemas leave out `_hints` (except `flow_validate`'s) and
+the `{ error, hint }` error shape, so a client that validates structured output
+(the MCP TypeScript SDK `Client` after `listTools`) rejects every `flow_load`,
+`flow_examples`, `flow_bundle` and `flow_simulate` result, and every error
+result of a tool with an output schema, with `MCP error -32602: Structured
+content does not match the tool's output schema`. The hosted server registers
+the same schemas for its `flow_validate`, `flow_load` and `flow_examples`, error
+results included; Claude Code does not validate structured output, so these
+results reach it unchanged.
 
 #### `flow_load`
 
@@ -166,9 +179,10 @@ URL, or create a new empty flow by specifying a platform.
 | `source` | string | No | Flow source: inline JSON, a file path such as `./flow.json`, or an http(s) URL. Omit to create new. |
 | `platform` | `"web"` \| `"server"` | No | Platform for new flows. Required when source is omitted. |
 
-Returned configs are round-trip safe: structural values such as package names,
-platform, and IDs come back literally, so a loaded config can be edited and
-written back without altering anything you did not change.
+In a returned config, package names, `platform`, versions and IDs come back
+literally. Every other string value comes back wrapped, for example
+`"title": "<user_data>Home</user_data>"`. Remove the wrapper from each value
+before writing the config back, or it becomes part of the value.
 
 #### `flow_validate`
 
@@ -202,9 +216,9 @@ Bundle a walkerOS flow configuration into deployable JavaScript.
 
 | Parameter | Type | Required | Description |
 |-----------|------|----------|-------------|
-| `configPath` | string | Yes | Flow config: a file path, an http(s) URL, or inline JSON |
+| `configPath` | string | Yes | Flow config: a file path or an http(s) URL. Inline JSON is not accepted: it is read as a file name and fails with `Configuration file not found` |
 | `flow` | string | No | Flow name for multi-flow configs |
-| `stats` | boolean | No | Return bundle statistics (default: `true`) |
+| `stats` | boolean | No | Return bundle statistics (default: `true`). With `false` the bundle is still written, but the result reads `success: false` and `Bundle produced no output` |
 | `output` | string | No | Output file path |
 
 Bundle stats report the real total bundle size and the included package names
@@ -220,7 +234,7 @@ references show as `***`.
 | Parameter | Type | Required | Description |
 |-----------|------|----------|-------------|
 | `configPath` | string | Yes | Flow config: a file path, an http(s) URL, or inline JSON |
-| `event` | string \| object | Yes | Event input (see shapes below). JSON string, file path, or URL also accepted. |
+| `event` | string \| object | Yes | Event input (see shapes below), as an object or a JSON string. A file path or URL is not read: it fails with `Event string must be valid JSON` |
 | `step` | string | Yes | Target step as `"type.name"` (e.g. `"source.demo"`, `"collector.default"`, `"destination.gtag"`, `"transformer.router"`) |
 | `flow` | string | No | Flow name for multi-flow configs |
 | `platform` | `"web"` \| `"server"` | No | Override platform detection |
@@ -239,7 +253,8 @@ There are four step types: `source`, `collector`, `transformer`, and
   `consent`).
 - **Collector:** the enrichment step. It takes a post-`next` partial event plus
   an optional state snapshot `{ consent?, user?, globals?, timing? }`, applies
-  the collector's `createEvent`, and returns the fully enriched event.
+  the collector's `createEvent`, runs `collector.next`, and returns every event
+  the destinations would receive (none when the chain stops the event).
 - **Sources:** `{ content, trigger? }`, where `content` is the walkerOS event
   `{ name, data }` and the optional `trigger` is `{ type?, options? }`. There is
   no `env` field in the source-step event. A web source's page URL goes in
@@ -264,9 +279,6 @@ explains it. With `command`, `state.consent` still applies first. See
 [consent in simulate](/docs/apps/cli#consent-in-simulate) for the CLI
 equivalent.
 
-Repeated simulations of the same inline configuration reuse a prebuilt bundle,
-so successive calls run faster; a file path or URL always rebuilds.
-
 Transformer, collector and destination steps also accept an optional `ingest`
 field, a raw ingest without `_meta`. Supply it to test a request decoder standalone, for example a
 GA4 decoder that reads `ctx.ingest.url`: pass `ingest: { url: "..." }` alongside
@@ -275,10 +287,10 @@ the event.
 #### `flow_push`
 
 Push a real event through a walkerOS flow to actual destinations.
-**This makes real API calls.** Best for server-side flows. Web destinations
-require browser globals not available in Node.js. The result passes the same
-secret masking as the CLI: credential fields and the values of the secrets the
-flow references show as `***`.
+**This makes real API calls.** It is best suited to server-side flows. Web
+destinations require browser globals that Node.js does not provide. The result
+passes the same secret masking as the CLI: credential fields and the values of
+the secrets the flow references show as `***`.
 
 | Parameter | Type | Required | Description |
 |-----------|------|----------|-------------|
@@ -301,12 +313,19 @@ List all step examples in a walkerOS flow configuration.
 
 When a step has no inline examples, `flow_examples` falls back to the examples
 shipped with that step's package, tagged by source so you can tell inline
-examples from package-provided ones.
+examples from package-provided ones. Package examples are read at the version or
+local path the flow pins, and each one carries the version it was read from. A
+step whose package cannot be read is listed in the warnings: a version that
+does not exist, a version pinned through a `$var` reference (it is not
+resolved, although `flow_bundle` installs the resolved version), a local
+path without a `walkerOS.json`, or a local path in a config that is not a file
+(inline JSON, a URL, and every config on the hosted server).
 
 #### `package_search`
 
-Browse walkerOS packages or look up a specific one. Without package name: returns
-catalog filtered by type/platform. With package name: returns metadata.
+Browse walkerOS packages or look up a specific one. Without a package name it
+returns the catalog, filtered by type and platform; with a package name it
+returns that package's metadata.
 
 | Parameter | Type | Required | Description |
 |-----------|------|----------|-------------|
@@ -315,14 +334,18 @@ catalog filtered by type/platform. With package name: returns metadata.
 | `platform` | `"web"` \| `"server"` | No | Filter by platform (browse) |
 | `version` | string | No | Package version (default: latest) |
 
-In browse mode the tool returns the complete catalog. If it has to fall back to
-a partial source or omit packages, the response includes a `warnings` array
-explaining what is incomplete rather than silently returning a partial list.
+In browse mode the tool returns the published step packages that match the
+filters and whose walkerOS metadata it could read from jsDelivr. When the npm
+search fails, the catalog comes back empty with a warning that says so. A
+second warning counts the npm packages whose walkerOS metadata could not be
+read. That count includes every package that is not a step, such
+as `@walkeros/core` and `@walkeros/cli`, so this warning appears on every browse
+and does not by itself mean a step package is missing.
 
 #### `package_get`
 
-Fetch walkerOS package details from npm. By default returns schemas + hint texts +
-example summaries. Use `section` parameter for full content.
+Fetch walkerOS package details from npm. By default it returns schemas, hint
+texts and example summaries. Use the `section` parameter for full content.
 
 | Parameter | Type | Required | Description |
 |-----------|------|----------|-------------|
@@ -351,10 +374,10 @@ package. The hosted server describes them itself when a client connects; see
 | `walkeros://reference/event-model` | Event naming, properties, auto-populated fields |
 | `walkeros://reference/mapping` | Mapping syntax (data/map/loop/set/condition/consent/policy) |
 | `walkeros://reference/consent` | Consent model (destination and field level) |
-| `walkeros://reference/variables` | Variable patterns ($var/$env/$code/$store) |
+| `walkeros://reference/variables` | Variable patterns ($var/$env/$secret/$contract/$code/$store) |
 | `walkeros://reference/contract` | Event schemas, wildcards, inheritance |
 | `walkeros://reference/examples` | A complete, tested flow config with web, server and warehouse flows |
-| `walkeros://reference/packages` | Full package catalog as `{ catalog, count, warnings? }`; `warnings` says when the npm search failed, so a partial catalog is never read as an empty one |
+| `walkeros://reference/packages` | The package catalog as `{ catalog, count, warnings? }`, read the same way as `package_search` browses: `warnings` says when the npm search failed (the catalog is then empty) and counts the npm packages without readable walkerOS metadata, which today includes every package that is not a step, so it is present on every read |
 | `walkeros://schema/{packageName}` | Per-package JSON schemas |
 
 ### Prompts
@@ -385,26 +408,35 @@ the walkerOS app, ask the hosted server's `flow_manage` for a config link
 config input of the local `flow_load` (`source`) or of `flow_simulate`,
 `flow_bundle` or `flow_push` (`configPath`): the local server reads the config
 from the link, so the config itself never travels through the model. An
-expired link fails with its HTTP status (410), and a link to a flow saved again
-since it was made answers 409; ask for a fresh link in both cases.
+expired link fails with its HTTP status (410), and a link to a flow whose
+config changed since it was made answers 409; ask for a fresh link in both
+cases.
 
 ## Connect Claude Desktop, claude.ai or Cursor
 
 The hosted server is one HTTPS endpoint: `https://app.walkeros.io/api/mcp`. It is
-the only value a client needs. No token, no header, no advanced field.
+the only value a client needs: no token, header or advanced field.
 
 The endpoint runs an OAuth 2.1 authorization server, and a standard MCP client
 finds it on its own. You paste the URL, the client discovers who authorizes it
 and registers itself, a browser opens on a consent screen, you press Allow, and
-the client holds a token it refreshes without ever asking again.
+the client holds a token it refreshes on its own.
 
 ### Claude Desktop and claude.ai
 
-1. Settings, then Connectors.
-2. Add custom connector.
-3. URL: `https://app.walkeros.io/api/mcp`. Leave every advanced setting alone.
-4. The consent screen opens. Allow.
-5. The walkerOS tools appear in the client.
+1. Customize, then Connectors.
+2. Press + Add, then Add custom connector.
+3. Enter a name, for example `walkerOS`, and the URL
+   `https://app.walkeros.io/api/mcp`, then Continue.
+4. Keep the detected authentication settings and Continue. Under
+   Authentication pick a sign-in option other than No sign in, keep the
+   recommended OAuth client, then Add.
+5. When you sign in, the walkerOS consent screen opens: press Allow.
+6. In a conversation, turn the connector on under +, then Connectors.
+
+On Team and Enterprise plans an owner adds the connector first (Organization
+settings, then Connectors), and each member then presses Connect on it
+(Customize, then Connectors).
 
 ### Claude Code
 
@@ -414,8 +446,8 @@ the client holds a token it refreshes without ever asking again.
 />
 
 Then run `/mcp` inside Claude Code and choose to sign in. A browser opens on the
-consent screen, Allow, and the browser hands back to Claude Code on a local
-port. `/mcp` then lists the walkerOS tools. The Claude Code plugin adds this
+consent screen; press Allow, and the browser hands back to Claude Code on a
+local port. `/mcp` then lists the walkerOS tools. The Claude Code plugin adds this
 server for you.
 
 ### Cursor and other MCP clients
@@ -430,7 +462,7 @@ is discovered.
 |---|---|
 | Read your projects and flows | List and read projects, flows, deployments, settings and observation data. |
 | Change and deploy flows | Create, edit, deploy and delete flows, and manage project secrets and previews. |
-| Stay connected | Keep working without signing in again, until you disconnect it. |
+| Stay connected | Keep working without signing in again, until you disconnect it or it goes unused for 90 days. |
 
 Consent is per person, once, and it applies to every project that person belongs
 to. Which project a given action touches stays a choice made in the
@@ -442,8 +474,8 @@ first and hands back to the consent screen afterwards.
 ### Disconnecting
 
 Account, then Connected apps, lists every connected client with the permissions
-it was given and when it last called. Disconnect takes effect on that app's very
-next request, and it can be connected again at any time.
+it was given and when it last called. Disconnect takes effect on that app's next
+request, and it can be connected again at any time.
 
 ### A credential for a machine
 
@@ -476,7 +508,7 @@ local app, `http://localhost:3000/api/mcp`.
 ## @walkeros/mcp-source-browser (HTML tagging tools)
 
 Generate, parse, and validate walkerOS `data-elb` HTML attributes using real DOM
-parsing (JSDOM). No API token or CLI dependency required.
+parsing (JSDOM). It needs no API token and does not depend on the CLI.
 
 ### Installation
 
@@ -500,10 +532,11 @@ attribute key-value pairs and an example HTML snippet.
 | `actions` | object | No | Trigger:action pairs for `data-elbactions` (all entities) |
 | `context` | object | No | Context properties for `data-elbcontext` |
 | `globals` | object | No | Global properties for `data-elbglobals` |
+| `scoped` | object | No | Path-scoped generic properties for `data-elb_`, which only triggers nested below the element receive |
 | `link` | object | No | The one link for `data-elblink`, as `{"id": "type"}`, for example `{"details": "parent"}`. An element carries one link, so more than one entry is refused. |
 | `prefix` | string | No | Custom prefix (default: `data-elb`) |
 
-At least one parameter must be provided.
+At least one parameter other than `prefix` must be provided.
 
 #### `parse_tagging`
 
@@ -517,8 +550,8 @@ all walkerOS events and globals.
 
 #### `validate_tagging`
 
-Validate HTML `data-elb` tagging for common mistakes. Checks for orphan actions,
-missing entities, unknown triggers, orphan properties, and entities without
+Validate HTML `data-elb` tagging for common mistakes. Checks for empty entity
+names, orphan actions, unknown triggers, orphan properties, and entities without
 actions.
 
 | Parameter | Type | Required | Description |
@@ -611,7 +644,7 @@ then `package_get` to fetch schemas, hints, and examples.
 ## Next steps
 
 - **[CLI](/docs/apps/cli)**: Learn about the underlying CLI commands
-- **[Flow configuration](/docs/getting-started/modes/bundled)**: Understand flow
+- **[Flow configuration](/docs/getting-started/flow)**: Understand flow
   structure
 - **[HTML attributes](/docs/sources/web/browser/tagging/html-attributes)**: Learn about
   `data-elb` tagging

@@ -33,6 +33,8 @@ Gives each visitor a cookieless identifier without keeping personal data. By def
 import { transformerFingerprint } from '@walkeros/server-transformer-fingerprint';
 
 await startFlow({
+  // Collector chain: every event gets the hash before the destinations
+  next: 'fingerprint',
   transformers: {
     fingerprint: {
       code: transformerFingerprint,
@@ -51,11 +53,12 @@ await startFlow({
 Add to your `flow.json`:
 
 <CodeSnippet
-  code={`"transformers": {
+  code={`"collector": { "next": "fingerprint" },
+"transformers": {
   "fingerprint": {
     "package": "@walkeros/server-transformer-fingerprint",
     "config": {
-      "settings": { "salt": "$env.FINGERPRINT_SALT" }
+      "settings": { "salt": "$secret.FINGERPRINT_SALT" }
     }
   }
 }`}
@@ -80,11 +83,16 @@ Add to your `flow.json`:
 The source must extract `ip` and `userAgent` into `ingest`:
 
 <CodeSnippet
-  code={`"config": {
-  "ingest": {
-    "map": {
-      "ip": { "key": "headers.x-client-ip" },
-      "userAgent": { "key": "headers.user-agent" }
+  code={`"sources": {
+  "express": {
+    "package": "@walkeros/server-source-express",
+    "config": {
+      "ingest": {
+        "map": {
+          "ip": { "key": "headers.x-client-ip" },
+          "userAgent": { "key": "headers.user-agent" }
+        }
+      }
     }
   }
 }`}
@@ -93,11 +101,11 @@ The source must extract `ip` and `userAgent` into `ingest`:
 
 Replace `x-client-ip` with the single-address header your proxy sets or overwrites with the visitor's address; [Client IP behind a proxy](/docs/sources/server/express#client-ip-behind-a-proxy) lists the common ones and the pattern for proxies that only append to `X-Forwarded-For`. An `ip` that is not one address, for example a forwarded chain, is reported as an error and left out of the hash. An IPv4 client on a dual-stack server (`::ffff:203.0.113.7`) is treated as its IPv4 address.
 
-Set an input to another [mapping value](/docs/mapping/value) to read it from elsewhere, or to `false` to leave it out. When one input resolves empty, the transformer hashes without it; when the IP, the user agent and every field resolve empty (the site does not count), the event fails with `missing-input`.
+Set an input to another [mapping value](/docs/mapping/value) to read it from elsewhere, or to `false` to leave it out. With both `ip` and `userAgent` off and no `fields`, the flow does not start (`Fingerprint has no input that tells visitors apart`). When one input resolves empty, the transformer hashes without it and logs one WARN line for that input, which the default log level does not show. When the IP, the user agent and every field resolve empty (the site does not count), the event fails with `missing-input`.
 
 ## Salt
 
-The salt is the HMAC key. Keep it secret and out of the config file (`$env.FINGERPRINT_SALT`), and give each deployment its own. Without a salt, anyone who knows the inputs can recompute the hash, and an IP hash can be reversed by trying every address. `settings.salt` is required: without it the transformer does not start. An event whose IP, user agent and fields all resolve empty fails with `missing-input` instead of getting the hash every other visitor gets.
+The salt is the HMAC key. Keep it secret and out of the config file (`$secret.FINGERPRINT_SALT` in a flow file), and give each deployment its own. Without a salt, anyone who knows the inputs can recompute the hash, and an IP hash can be reversed by trying every address. `settings.salt` is required: without it the flow does not start (`Config settings salt missing`).
 
 ## Rotation
 
@@ -105,7 +113,7 @@ The salt is the HMAC key. Keep it secret and out of the config file (`$env.FINGE
 
 ## Site
 
-The default reads the page URL the walkerOS browser source puts on every event; `@walkeros/transformer-ga4` sets it from the hit's page URL (`dl`), so upgrading to a version that does changes the hash of GA4-decoded events once. Events without it, such as server-side events, need `site` pointed at what the collector knows: a path parameter (`ingest.property`), a header (`ingest.origin`, mapped in the source's `config.ingest`), or a fixed value for a single-site deployment:
+The default reads the page URL the walkerOS browser source puts on every event; `@walkeros/transformer-ga4` sets it from the hit's page URL (`dl`). Events without it, such as server-side events, need `site` pointed at what the collector knows: a path parameter (`ingest.property`), a header (`ingest.origin`, mapped in the source's `config.ingest`), or a fixed value for a single-site deployment:
 
 <CodeSnippet
   code={`settings: {
@@ -131,7 +139,7 @@ The site matters when one collector with one salt serves several sites: it keeps
   language="typescript"
 />
 
-When `fields` is set, the named inputs are only used if set explicitly, as above. A config with only `fields` hashes exactly those fields, plus the salt and the rotation window.
+When `fields` is set, the named inputs are only used if set explicitly, as above. A config with only `fields` hashes exactly those fields, plus the salt and the rotation window. If those fields resolve the same for every visitor, such as a fixed value or the current month, every visitor gets the same hash and nothing reports it.
 
 ## In the complete example
 
@@ -154,5 +162,3 @@ The hash is stored at `output` (default `user.hash`), `length` characters long (
 { name: 'page view', entity: 'page', action: 'view', user: { hash: '3f1c9a...' }, ... }`}
   language="typescript"
 />
-
-The transformer never throws.

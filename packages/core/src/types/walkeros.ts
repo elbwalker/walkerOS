@@ -120,6 +120,7 @@ export type PropertyType =
   | boolean
   | string
   | number
+  | null
   | { [key: string]: Property };
 
 export type Property = PropertyType | Array<PropertyType>;

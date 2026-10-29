@@ -37,7 +37,7 @@ Tag a page...
 <!-- Example usage -->
 <div data-elbglobals="language:en">
   <div data-elbcontext="test:engagement">
-    <div data-elb="promotion" data-elbaction="visible:view">
+    <div data-elb="promotion" data-elbaction="visible">
       <h1 data-elb-promotion="name:Setting up tracking easily">
         Setting up tracking easily
       </h1>
@@ -52,7 +52,7 @@ Tag a page...
 
 <CodeSnippet
   code={`{
-  name: 'promotion view', // Name as a combination of entity and action
+  name: 'promotion visible', // Name as a combination of entity and action
   data: {
     // Arbitrary properties related to the entity
     name: 'Setting up tracking easily',
@@ -79,7 +79,7 @@ Tag a page...
   id: '0123456789abcdef', // W3C Trace Context span_id (16 hex chars)
   trigger: 'visible', // Name of the trigger that fired
   entity: 'promotion', // The entity name involved in the event
-  action: 'view', // The specific action performed on the entity
+  action: 'visible', // The specific action performed on the entity
   timestamp: 1647261462000, // Time when the event fired
   timing: 3.14, // Duration how long it took to trigger this event
   source: {
@@ -96,17 +96,8 @@ Tag a page...
   language="javascript"
 />
 
-:::info Updating from v3
-The top-level `group`, `count`, and `version` fields moved into `source`:
-`source.trace` groups all events of a run, `source.count` is the emission
-sequence within the run, and `source.version` is an optional version a source
-can set. `source.release` records the release of each flow. The `id` is now a
-[W3C Trace Context](https://www.w3.org/TR/trace-context/) `span_id` (16
-lowercase hex chars). Inside `source`, `type` is now the source kind
-(`browser`, `dataLayer`, ...), the runtime is captured by the new `platform`
-field, the v3 `id` is now `url`, and `previous_id` is now `referrer`. See
-the [event model](/docs/getting-started/event-model) for the full structure.
-:::
+See the [event model](/docs/getting-started/event-model) for the full
+structure.
 
 :::note
 
@@ -130,19 +121,9 @@ on a child element, together with a matching trigger:
 Both attributes use the same syntax, e.g. `data-elbaction="visible:view"` or
 `data-elbactions="click:select"`.
 
-:::info Migration Note
-
-In @walkeros, `data-elbaction` applies to the nearest entity only. The
-@elbwalker packages applied it to all entities. To keep that behavior for
-`click` and `submit`, use `data-elbactions`. See the
-[Migration Guide](/docs/guides/migration#data-elbaction-vs-data-elbactions) for
-details.
-
-:::
-
 To define the entity's properties, set the composite attribute
 `data-elb-ENTITY` with keys and values, e.g.
-`data-elb-promotion="name:tagging is fun;position:overlay"`.
+`data-elb-promotion="name:tagging is fun;slot:overlay"`.
 
 ## Triggers
 
@@ -307,9 +288,9 @@ are allowed too. A `data-elb` value with any other character, such as
 inside it goes to the next entity above it, or to `page`. Use `shopping_cart`
 instead.
 
-Follow the same rule for action names, e.g. `add_to_cart`. Mapping rules and
-the collector read entity and action as the first two words of the event name,
-so `add to cart` would be matched as `add`.
+Follow the same rule for action names, e.g. `add_to_cart`. Mapping rules read
+entity and action as the first two words of the event name, so `add to cart`
+would be matched as `add`.
 
 :::
 
@@ -622,8 +603,8 @@ The page view, and every event pushed after it, carries the user:
   language="javascript"
 />
 
-Events that fired earlier in the run, such as `window.elbLayer` pushes replayed
-before the page view, do not get the user added afterwards. If multiple
+Events replayed from `window.elbLayer` before the page view do not get the user
+added afterwards. If multiple
 elements carry `data-elbuser`, their values are merged, and the last one in the
 DOM wins per key. Without a `data-elbuser` attribute, the existing user stays
 as it is, including a user set by an earlier `walker user` call.

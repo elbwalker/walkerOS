@@ -39,6 +39,8 @@ implementation.
 5b. Read rule.silent (informational - destination honors it)
 6. Override event.name if rule.name
 7. Transform rule.data (event-specific)
+8. Add the include sections (rule.include ?? config.include; data wins)
+9. Strip rule.remove paths from the produced data
 ```
 
 ---
@@ -59,25 +61,28 @@ interface Config {
 
 #### Mapping.Config.include
 
-`include` lists event sections to **flatten** into the destination's
-`PushContext.data` before the rule runs. Sections are top-level keys of the
-event (`globals`, `user`, `consent`, `data`, `context`, `nested`, `source`,
-`custom`). The runtime helper `flattenIncludeSections` (in
-`packages/core/src/include.ts`) handles the merge.
+`include` lists event sections whose fields are **added** to the data the
+destination receives (`PushContext.data`), after the rule's own `data` ran. Each
+field becomes a flat key named `<section>_<key>`: nested objects are joined with
+`_`, arrays stay whole, a `context` entry contributes its label. Sections:
+`data`, `globals`, `context`, `user`, `source`, `event` (`entity`, `action`,
+`id`, `timestamp`, `name`, `trigger`, `timing`), or `all` for every one of them.
+On a key conflict the produced `data` (the config-level `data` merged with the
+rule's) wins; `remove` runs after it. The runtime helper is
+`flattenIncludeSections` (in `packages/core/src/include.ts`).
 
-Use this when your mapping needs values from multiple event sections without
-plumbing each path through a `key:`/`map:` config. `include` is also available
-on `Mapping.Rule` (rule-level overrides config-level).
+Use this to forward whole sections without mapping each field. `include` is also
+available on `Mapping.Rule` (rule-level replaces config-level). `user` includes
+every user field, `email` among them, unhashed.
 
 ```typescript
 {
-  include: ['globals', 'user'],
+  include: ['globals'],
   mapping: {
     page: {
       view: {
-        // user.id and globals.* are now reachable via top-level paths in
-        // data/key/map values, e.g. `key: 'id'` for user.id.
-        data: { map: { user_id: 'id', site: 'language' } },
+        // data: { page_title, globals_language, globals_currency, ... }
+        data: { map: { page_title: 'data.title' } },
       },
     },
   },
@@ -95,9 +100,9 @@ interface Rule {
   silent?: boolean; // Process settings side effects, skip destination default push
   policy?: Policy; // Event-specific pre-processing
   condition?: Function; // Match condition (for arrays)
-  consent?: Consent; // Not enforced yet; config.consent gates a destination
+  consent?: Consent; // Not checked; config.consent gates a destination
   settings?: unknown; // Custom event configuration
-  batch?: number; // Batch size for grouping
+  batch?: number | BatchOptions; // Own batch buffer (a number is the wait in ms)
   extend?: RulePatch; // Config-layer merge onto a package-shipped default rule
   remove?: string[]; // Output-layer: dotted paths stripped from the final payload
 }
@@ -105,30 +110,37 @@ interface Rule {
 
 #### `extend` and `remove` (patching package-shipped rules)
 
-Some packages ship their own default mapping rules. A user rule at the same key
-normally replaces the default in full. Two keywords change that:
+`@walkeros/transformer-ga4` ships its own default mapping rules. A user rule at
+the same key normally replaces the default in full. Two keywords change that:
 
 - **`extend`** (config layer): a partial rule deep-merged onto the
   package-shipped default at init, before any event is evaluated. A `null` value
   clears an inherited field. Lets you add or override one field while keeping
-  the rest.
+  the rest. It has an effect only in `@walkeros/transformer-ga4`'s
+  `settings.mapping`; in any other rule `walkeros validate` and the bundle
+  reject it (`MAPPING_NO_OP`).
 - **`remove`** (output layer): dotted paths stripped from the produced payload
   after evaluation, applied last. Useful for dropping PII or vendor-reserved
-  fields without rewriting the full rule.
+  fields without rewriting the full rule. Works in a destination's rules and in
+  `@walkeros/transformer-ga4`'s `settings.mapping`.
 
 A rule with **neither** keyword keeps the standard replace behavior.
 
 See the
-[website mapping docs](/docs/mapping/rule#patching-package-shipped-rules) for
-the authoritative reference and the GA4 example.
+[website mapping docs](../../website/docs/mapping/rule.mdx#patching-package-shipped-rules)
+for the authoritative reference and the GA4 example.
 
 ```json
 {
-  "purchase": {
-    "extend": {
-      "data": { "map": { "affiliation": "params.ep.affiliation" } }
-    },
-    "remove": ["currency"]
+  "settings": {
+    "mapping": {
+      "purchase": {
+        "extend": {
+          "data": { "map": { "affiliation": "params.ep.affiliation" } }
+        },
+        "remove": ["currency"]
+      }
+    }
   }
 }
 ```
@@ -137,9 +149,9 @@ the authoritative reference and the GA4 example.
 
 Both flags control rule behavior but have different semantics:
 
-- `ignore: true` - the rule matched but **nothing happens**. No data transform,
+- `ignore: true`: the rule matched but **nothing happens**. No data transform,
   no destination call, no side effects. Use for suppression.
-- `silent: true` - the rule matched and the destination `push()` **is** called.
+- `silent: true`: the rule matched and the destination `push()` **is** called.
   `settings.identify`, `settings.revenue`, `settings.group`, etc. still run.
   Only the destination's default forwarding call (e.g. `track()`, `capture()`,
   `event()`) is suppressed. Use for "identify without an event" style flows.
@@ -199,7 +211,7 @@ const mapping = {
 
 ### Conditional Mapping (Array)
 
-Array of rules - first matching condition wins:
+In an array of rules, the first matching condition wins:
 
 ```typescript
 order: {
@@ -278,7 +290,7 @@ Common patterns shown below. For detailed examples of all 12 strategies, see
 
 ## Policy (Pre-Processing)
 
-Policy modifies the event BEFORE mapping rules are applied. Use for:
+Policy modifies the event before mapping rules are applied. Use for:
 
 - Adding computed fields
 - Normalizing data structure
@@ -286,7 +298,7 @@ Policy modifies the event BEFORE mapping rules are applied. Use for:
 
 ### Config-Level Policy
 
-Applied to ALL events:
+Applied to all events:
 
 ```typescript
 config: {
@@ -457,9 +469,9 @@ TypeScript ignores the unused second arg.
 | `silent`    | Run settings side effects, skip default forwarding                      |
 | `policy`    | Pre-process event                                                       |
 | `condition` | Match condition (arrays)                                                |
-| `consent`   | Not enforced yet; `config.consent` gates a destination                  |
+| `consent`   | Not checked; `config.consent` gates a destination                       |
 | `settings`  | Custom configuration                                                    |
-| `batch`     | Batch size                                                              |
+| `batch`     | Own batch buffer for this event (destination needs `pushBatch`)         |
 | `extend`    | Config-layer merge onto a package-shipped default (null clears a field) |
 | `remove`    | Output-layer: dotted paths stripped from the final payload              |
 
@@ -469,6 +481,7 @@ TypeScript ignores the unused second arg.
 | --------- | ----------------------------- |
 | `consent` | Required consent (all events) |
 | `data`    | Global data transformation    |
+| `include` | Event sections added to data  |
 | `policy`  | Global pre-processing         |
 | `mapping` | Event-specific rules          |
 
@@ -495,16 +508,18 @@ semantic differs by position:
 When a transformer step declares only a `mapping` (no `code`, no `package`), the
 collector synthesizes a push that runs `processEventMapping` against each event.
 A `config.mapping` wins over the step-level `mapping`. Next to `code` or
-`package`, a mapping never runs; init and `validateFlowStructure` warn about it.
-Same keyword as the destination field, different semantic at this step position.
-See
+`package`, a mapping never runs. `walkeros validate` and the bundle reject both
+cases (`MAPPING_NO_OP`), and the collector logs one ERROR line for them when the
+transformer registers. It is the same keyword as the destination field, with a
+different semantic at this step position. See
 [walkeros-understanding-transformers](../walkeros-understanding-transformers/SKILL.md)
 for the pass-through-step model.
 
 ### Which fields apply at the transformer position
 
-Only **event-mutating** fields run; every other field is a no-op, named in a
-one-time init warning (rules in array form included):
+Only **event-mutating** fields run; every other field is a no-op that
+`walkeros validate` and the bundle reject (`MAPPING_NO_OP`) and the collector
+names in one ERROR line at registration (rules in array form included):
 
 | Field                                                                                     | Transformer position                                                              |
 | ----------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------- |

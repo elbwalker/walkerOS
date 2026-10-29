@@ -38,33 +38,34 @@ const noopLogger = createMockLogger();
 
 /**
  * Builds a recording Env where analytics.load() returns an instance
- * whose every method appends to a shared call log. Also records the
- * load() call itself as ['analytics.load', settings, options].
+ * whose every method appends to a shared call log under its simulation
+ * path (analytics.load.<method>). Also records the load() call itself as
+ * ['analytics.load', settings, options].
  */
 function spyEnv(): { env: Env; collected: () => CallRecord[] } {
   const calls: CallRecord[] = [];
 
   const instance: SegmentAnalytics = {
     track: (...args: unknown[]) => {
-      calls.push(['analytics.track', ...args]);
+      calls.push(['analytics.load.track', ...args]);
     },
     identify: (...args: unknown[]) => {
-      calls.push(['analytics.identify', ...args]);
+      calls.push(['analytics.load.identify', ...args]);
     },
     group: (...args: unknown[]) => {
-      calls.push(['analytics.group', ...args]);
+      calls.push(['analytics.load.group', ...args]);
     },
     page: (...args: unknown[]) => {
-      calls.push(['analytics.page', ...args]);
+      calls.push(['analytics.load.page', ...args]);
     },
     alias: (...args: unknown[]) => {
-      calls.push(['analytics.alias', ...args]);
+      calls.push(['analytics.load.alias', ...args]);
     },
     reset: () => {
-      calls.push(['analytics.reset']);
+      calls.push(['analytics.load.reset']);
     },
     setAnonymousId: (id: string) => {
-      calls.push(['analytics.setAnonymousId', id]);
+      calls.push(['analytics.load.setAnonymousId', id]);
     },
   };
 
@@ -96,7 +97,7 @@ function trimUndefined(call: CallRecord): CallRecord {
   return trimmed as CallRecord;
 }
 
-describe('segment destination — step examples', () => {
+describe('segment destination: step examples', () => {
   // Non-public examples (silent, failures) run in the conformance test.
   const stepEntries = Object.entries(examples.step).filter(
     ([name, example]) => name !== 'init' && example.public !== false,
@@ -146,7 +147,7 @@ describe('segment destination — step examples', () => {
     if (isConsent) {
       // Consent examples need config.consent declared so the destination's
       // on('consent') handler defers load() until the first grant. Because
-      // load() is deferred, no init-time effect is captured — the load()
+      // load() is deferred, no init-time effect is captured: the load()
       // fired by consent IS the feature under test.
       await elb('walker destination', {
         code: { ...dest, env },

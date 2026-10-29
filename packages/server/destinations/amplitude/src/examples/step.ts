@@ -23,7 +23,10 @@ export const defaultEventForwarding: AmplitudeStepExample = {
   title: 'Default event',
   description:
     'A walkerOS event forwarded as an Amplitude track call with the event name and empty properties.',
-  in: getEvent('product view', { id: 'ev1700000100', timestamp: 1700000100 }),
+  in: getEvent('product view', {
+    id: 'ev1700000100',
+    timestamp: 1700000100000,
+  }),
   out: [['amplitude.track', 'product view', {}, { insert_id: 'ev1700000100' }]],
 };
 
@@ -33,7 +36,7 @@ export const defaultEventForwarding: AmplitudeStepExample = {
  */
 export const wildcardIgnored: AmplitudeStepExample = {
   public: false,
-  in: createEvent({ name: 'debug noise', timestamp: 1700000101 }),
+  in: createEvent({ name: 'debug noise', timestamp: 1700000101000 }),
   mapping: { ignore: true },
   out: [],
 };
@@ -45,8 +48,11 @@ export const wildcardIgnored: AmplitudeStepExample = {
 export const destinationLevelInclude: AmplitudeStepExample = {
   title: 'Include data section',
   description:
-    'Destination-level include flattens the event data section into prefixed event_properties on every track call.',
-  in: getEvent('product view', { id: 'ev1700000102', timestamp: 1700000102 }),
+    "With include: ['data'] in the destination config, the event data section is flattened into prefixed event_properties on every track call.",
+  in: getEvent('product view', {
+    id: 'ev1700000102',
+    timestamp: 1700000102000,
+  }),
   configInclude: ['data'],
   out: [
     [
@@ -58,6 +64,7 @@ export const destinationLevelInclude: AmplitudeStepExample = {
         data_color: 'black',
         data_size: 'l',
         data_price: 420,
+        data_currency: 'EUR',
       },
       { insert_id: 'ev1700000102' },
     ],
@@ -76,8 +83,8 @@ export const destinationLevelInclude: AmplitudeStepExample = {
 export const destinationLevelIdentify: AmplitudeStepExample = {
   title: 'Identify per event',
   description:
-    'Destination-level identify resolves user_id, device_id, and session_id into the Amplitude EventOptions on every call.',
-  in: getEvent('page view', { id: 'ev1700000104', timestamp: 1700000104 }),
+    "With settings.identify mapping user_id, device_id, and session_id to 'user.id', 'user.device', and 'user.session', every call carries them in its Amplitude EventOptions. A non-numeric session string is hashed to a stable number.",
+  in: getEvent('page view', { id: 'ev1700000104', timestamp: 1700000104000 }),
   settings: {
     identify: {
       map: {
@@ -117,7 +124,7 @@ export const userLoginIdentify: AmplitudeStepExample = {
   in: createEvent({
     name: 'user login',
     id: 'ev1700000105',
-    timestamp: 1700000105,
+    timestamp: 1700000105000,
     data: {
       user_id: 'new-user-123',
       plan: 'premium',
@@ -162,7 +169,7 @@ export const userLoginIdentify: AmplitudeStepExample = {
           email: 'user@acme.com',
         },
         setOnce: {
-          first_login: 1700000105,
+          first_login: 1700000105000,
         },
         add: {
           login_count: 1,
@@ -191,7 +198,7 @@ export const subscriptionRenewRevenue: AmplitudeStepExample = {
   in: createEvent({
     name: 'subscription renew',
     id: 'ev1700000107',
-    timestamp: 1700000107,
+    timestamp: 1700000107000,
     data: {
       plan_id: 'plan-pro',
       amount: 9.99,
@@ -240,7 +247,10 @@ export const orderCompleteMultiProduct: AmplitudeStepExample = {
   title: 'Multi-product order',
   description:
     'An order with multiple nested products fires one amplitude.revenue per product plus a single track for the order.',
-  in: getEvent('order complete', { id: 'ev1700000108', timestamp: 1700000108 }),
+  in: getEvent('order complete', {
+    id: 'ev1700000108',
+    timestamp: 1700000108000,
+  }),
   mapping: {
     include: ['data', 'globals'],
     settings: {
@@ -293,9 +303,10 @@ export const orderCompleteMultiProduct: AmplitudeStepExample = {
       {
         data_id: '0rd3r1d',
         data_currency: 'EUR',
+        data_value: 462,
+        data_tax: 73.76,
         data_shipping: 5.22,
-        data_taxes: 73.76,
-        data_value: 555,
+        data_total: 467.22,
         globals_pagegroup: 'shop',
       },
       { insert_id: 'ev1700000108' },
@@ -314,7 +325,7 @@ export const groupAssignmentWithProperties: AmplitudeStepExample = {
   in: createEvent({
     name: 'company update',
     id: 'ev1700000109',
-    timestamp: 1700000109,
+    timestamp: 1700000109000,
     data: {
       company: 'Acme',
       industry: 'tech',
@@ -383,9 +394,9 @@ export const groupAssignmentWithProperties: AmplitudeStepExample = {
 export const eventOptionsTimeInsertId: AmplitudeStepExample = {
   title: 'Event options',
   description:
-    'Destination-level eventOptions map walker fields into Amplitude per-event metadata such as time and insert_id.',
+    "With settings.eventOptions mapping time to 'timestamp' and insert_id to 'id', each call carries the event time and that insert_id in its Amplitude EventOptions.",
   in: getEvent('page view', {
-    timestamp: 1700000110,
+    timestamp: 1700000110000,
     id: '1700000110abcdef',
   }),
   settings: {
@@ -402,7 +413,7 @@ export const eventOptionsTimeInsertId: AmplitudeStepExample = {
       'page view',
       {},
       {
-        time: 1700000110,
+        time: 1700000110000,
         insert_id: '1700000110abcdef',
       },
     ],
@@ -425,7 +436,7 @@ const analyticsGranted: WalkerOS.Consent = { analytics: true };
 export const consentRevokeOptOut: AmplitudeStepExample = {
   title: 'Consent revoked',
   description:
-    'After analytics consent is granted (Amplitude loads), revoking it opts out of tracking via setOptOut(true).',
+    'With consent: { analytics: true } in the destination config, revoking analytics consent after a grant opts out of Amplitude tracking via setOptOut(true).',
   command: 'consent',
   before: { analytics: true },
   in: analyticsDenied,
@@ -442,7 +453,7 @@ export const consentRevokeOptOut: AmplitudeStepExample = {
 export const consentGrantOptIn: AmplitudeStepExample = {
   title: 'Consent granted',
   description:
-    'A walker consent command with analytics granted opts back into Amplitude tracking via setOptOut(false).',
+    'With consent: { analytics: true } in the destination config, a walker consent command that grants analytics opts into Amplitude tracking via setOptOut(false).',
   command: 'consent',
   in: analyticsGranted,
   settings: {},
@@ -454,7 +465,7 @@ export const silentRule: AmplitudeStepExample = {
   public: false,
   description:
     'A rule with silent: true and no identify, group or revenue mapping sends nothing to Amplitude.',
-  in: getEvent('page view', { timestamp: 1700000110 }),
+  in: getEvent('page view', { timestamp: 1700000110000 }),
   mapping: { silent: true },
   out: [],
 };
@@ -472,7 +483,7 @@ export const groupAssignmentWithoutData: AmplitudeStepExample = {
     name: 'company update',
     entity: 'company',
     action: 'update',
-    timestamp: 1700000111,
+    timestamp: 1700000111000,
   },
   mapping: groupAssignmentWithProperties.mapping,
   out: [],

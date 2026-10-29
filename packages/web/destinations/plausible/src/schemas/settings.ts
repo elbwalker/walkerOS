@@ -9,7 +9,7 @@ export const SettingsSchema = z
       .string()
       .regex(hostnameRegex, 'Must be a valid hostname')
       .describe(
-        'The domain of your site as registered in Plausible (like walkeros.io)',
+        'The domain of your site as registered in Plausible (like example.com). Required when loadScript is true',
       )
       .optional(),
   })

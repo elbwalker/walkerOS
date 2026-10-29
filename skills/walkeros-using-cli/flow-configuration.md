@@ -13,22 +13,30 @@ Complete reference for Flow.Json JSON configuration format.
     "<flowName>": {
       "config": {
         "platform": "web" | "server",
+        "url": "",
         "settings": {},
         "bundle": {
           "packages": {},
           "overrides": {},
-          "traceInclude": []
-        }
+          "traceInclude": [],
+          "env": {}
+        },
+        "observe": {}
       },
       "sources": {},
       "destinations": {},
       "transformers": {},
-      "mappings": {},
-      "collector": {}
+      "stores": {},
+      "collector": {},
+      "variables": {}
     }
   }
 }
 ```
+
+Mappings live on each step (`config.mapping`), not at the flow level. Validate
+drops an unknown key at the file root, on a flow or in its `config` without a
+message, so a misspelt `"destinaitons"` passes.
 
 ---
 
@@ -38,6 +46,7 @@ Every flow must specify exactly one platform via `config.platform`:
 
 ```json
 {
+  "version": 4,
   "flows": {
     "myFlow": {
       "config": {
@@ -52,6 +61,7 @@ Or:
 
 ```json
 {
+  "version": 4,
   "flows": {
     "myFlow": {
       "config": {
@@ -89,6 +99,9 @@ flow.json is the single source of truth.**
 }
 ```
 
+Pin a version for reproducible builds (`{ "version": "^4" }`); an entry without
+one is a warning, and `walkeros validate --strict` fails on it.
+
 ### With Specific Imports
 
 ```json
@@ -97,14 +110,18 @@ flow.json is the single source of truth.**
     "platform": "web",
     "bundle": {
       "packages": {
-        "@walkeros/collector": {
-          "imports": ["startFlow", "stopFlow"]
+        "@walkeros/core": {
+          "imports": ["getId", "clone"]
         }
       }
     }
   }
 }
 ```
+
+`imports` adds utility functions as named imports. It does not choose a step's
+code: a step runs its package's default export, or the export its `import` names
+(`"import": "destinationBigQuery"`).
 
 ### Local Packages
 
@@ -178,6 +195,7 @@ globs both work, resolved against the install root (where pacote put files):
     "gtag": {
       "package": "@walkeros/web-destination-gtag",
       "config": {
+        "loadScript": true,
         "settings": { "ga4": { "measurementId": "G-XXXXXX" } },
         "mapping": {
           "product": {
@@ -192,11 +210,12 @@ globs both work, resolved against the install root (where pacote put files):
 
 ### Destination Properties
 
-| Property  | Type                               | Description                                                                                                |
-| --------- | ---------------------------------- | ---------------------------------------------------------------------------------------------------------- |
-| `package` | `string`                           | NPM package or local package name                                                                          |
-| `config`  | `object`                           | `settings` (package-specific), `mapping` (event transformation rules), `consent` (required consent levels) |
-| `before`  | `string \| Route[] \| RouteConfig` | Destination chain: runs for this destination only (a `stop` skips only it)                                 |
+| Property  | Type                               | Description                                                                                                                                                                   |
+| --------- | ---------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `package` | `string`                           | NPM package or local package name                                                                                                                                             |
+| `import`  | `string`                           | Named export of `package` to run (packages without a default export, or several exports)                                                                                      |
+| `config`  | `object`                           | `settings` (package-specific), `mapping` (event transformation rules), `consent` (required consent levels), `loadScript` (load the vendor script; without it gtag loads none) |
+| `before`  | `string \| Route[] \| RouteConfig` | Destination chain: runs for this destination only (a `stop` skips only it)                                                                                                    |
 
 **Route shape** (used wherever the type column shows `Route[]` or `RouteConfig`,
 and by `collector.next`). A `RouteConfig` is a **disjoint union**: set at most
@@ -211,13 +230,13 @@ fan-out), or `stop` (drop), never more than one:
 // Gated link:
 "before": {
   "match": { "key": "ingest.path", "operator": "prefix", "value": "/api" },
-  "next": "api-handler"
+  "next": "apiHandler"
 }
 
 // First-match dispatch (one):
 "before": {
   "one": [
-    { "match": { "key": "ingest.method", "operator": "eq", "value": "POST" }, "next": "post-chain" },
+    { "match": { "key": "ingest.method", "operator": "eq", "value": "POST" }, "next": "postChain" },
     { "next": "default" }
   ]
 }
@@ -225,8 +244,8 @@ fan-out), or `stop` (drop), never more than one:
 // All-match fan-out (many, allowed in every chain field):
 "next": {
   "many": [
-    { "match": { "key": "event.consent.analytics", "operator": "eq", "value": "granted" }, "next": "ga4-pipeline" },
-    { "next": "audit-log" }
+    { "match": { "key": "event.consent.analytics", "operator": "eq", "value": "true" }, "next": "ga4Pipeline" },
+    { "next": "auditLog" }
   ]
 }
 
@@ -240,13 +259,18 @@ fan-out), or `stop` (drop), never more than one:
 `one` entries evaluate in order, first match wins. An entry with no `match`
 always matches (use it as a fallback). The match object reads the root
 `{ ingest, event }` at every position (e.g. `ingest.path`, `event.name`), and
-each route is evaluated only when the event reaches it. No matching entry means
-the event passes through unchanged. An array made only of route configs is an
-implicit `one` (first match wins). `many` turns every matching entry into its
-own copy of the event with a derived `event.id`; each copy finishes the rest of
-the path (collector and destinations included) on its own, and copies are never
-merged. `stop` ends the running copy: in `collector.next` no destination gets
-the event, in `destination.before` only that destination skips it.
+each route is evaluated only when the event reaches it. Besides `_meta`,
+`ingest` holds only what the source's `config.ingest` maps and what earlier
+steps write into it, so the `ingest.path` and `ingest.method` routes above need
+`{ "map": { "path": "path", "method": "method" } }` in that config. A consent
+value is a boolean, and `eq` compares it as text, so a granted consent matches
+`"true"`. No matching entry means the event passes through unchanged. An array
+made only of route configs is an implicit `one` (first match wins). `many` turns
+every matching entry into its own copy of the event with a derived `event.id`;
+each copy finishes the rest of the path (collector and destinations included) on
+its own, and copies are never merged. `stop` ends the running copy: in
+`collector.next` no destination gets the event, in `destination.before` only
+that destination skips it.
 
 For mapping syntax, see
 [walkeros-understanding-mapping](../walkeros-understanding-mapping/SKILL.md).
@@ -270,11 +294,12 @@ For mapping syntax, see
 
 ### Source Properties
 
-| Property  | Type                               | Description                                                        |
-| --------- | ---------------------------------- | ------------------------------------------------------------------ |
-| `package` | `string`                           | Source package name                                                |
-| `config`  | `object`                           | Source-specific configuration                                      |
-| `next`    | `string \| Route[] \| RouteConfig` | Source chain: runs before the collector (a `stop` drops the event) |
+| Property  | Type                               | Description                                                                                                 |
+| --------- | ---------------------------------- | ----------------------------------------------------------------------------------------------------------- |
+| `package` | `string`                           | Source package name                                                                                         |
+| `config`  | `object`                           | Source-specific configuration                                                                               |
+| `before`  | `string \| Route[] \| RouteConfig` | Runs before the source turns the request into events (request decoders such as `@walkeros/transformer-ga4`) |
+| `next`    | `string \| Route[] \| RouteConfig` | Source chain: runs before the collector (a `stop` drops the event)                                          |
 
 `Route` shape: see [Destination Properties](#destination-properties) above.
 
@@ -286,13 +311,12 @@ For mapping syntax, see
 {
   "transformers": {
     "fingerprint": {
-      "package": "@walkeros/transformer-fingerprint",
-      "config": {},
-      "next": "enrich"
+      "package": "@walkeros/server-transformer-fingerprint",
+      "config": { "settings": { "salt": "$secret.FINGERPRINT_SALT" } },
+      "next": "bot"
     },
-    "enrich": {
-      "package": "@walkeros/transformer-enrich",
-      "config": {}
+    "bot": {
+      "package": "@walkeros/server-transformer-bot"
     }
   }
 }
@@ -300,15 +324,15 @@ For mapping syntax, see
 
 ### Transformer Properties
 
-| Property  | Type                               | Description                                                                                                                |
-| --------- | ---------------------------------- | -------------------------------------------------------------------------------------------------------------------------- |
-| `package` | `string`                           | Transformer package name                                                                                                   |
-| `config`  | `object`                           | Transformer-specific configuration                                                                                         |
-| `code`    | `object`                           | Inline code (`push`, `init`) with `$code:`                                                                                 |
-| `before`  | `string \| Route[] \| RouteConfig` | First transformer to run before this step's push (conditional via `one`)                                                   |
-| `next`    | `string \| Route[] \| RouteConfig` | Next transformer in the chain (conditional via `one`)                                                                      |
-| `cache`   | `object`                           | Cache config (dedup, halt). `cache.stop: true` in a source chain or `collector.next` halts the event for all destinations. |
-| `mapping` | `Mapping.Config`                   | Event-to-event mapping (same shape as `Destination.mapping`, different position semantic)                                  |
+| Property  | Type                               | Description                                                                                                                            |
+| --------- | ---------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------- |
+| `package` | `string`                           | Transformer package name                                                                                                               |
+| `config`  | `object`                           | Transformer-specific configuration                                                                                                     |
+| `code`    | `object`                           | Inline code (`push`, `init`) with `$code:`                                                                                             |
+| `before`  | `string \| Route[] \| RouteConfig` | First transformer to run before this step's push (conditional via `one`)                                                               |
+| `next`    | `string \| Route[] \| RouteConfig` | Next transformer in the chain (conditional via `one`)                                                                                  |
+| `cache`   | `object`                           | Cache config (dedup, halt). With `cache.stop: true` in a source chain or `collector.next`, a hit halts the event for all destinations. |
+| `mapping` | `Mapping.Config`                   | Event-to-event mapping (same shape as `Destination.mapping`, different position semantic)                                              |
 
 `Route` shape: see [Destination Properties](#destination-properties) above.
 
@@ -326,9 +350,10 @@ position semantic differs: on a destination it produces a vendor payload; on a
 transformer step it mutates the event itself. Only event-mutating fields apply
 (`policy`, and per rule `condition`, `policy`, `name`, `ignore`); `consent`,
 `include`, `data` and per rule `remove`, `batch`, `settings`, `extend`, `silent`
-do nothing there and are named in a one-time init warning. A `config.mapping`
+do nothing there: validate and the bundle reject them (`MAPPING_NO_OP`), and the
+collector logs one ERROR line when it registers the step. A `config.mapping`
 wins over the step-level `mapping`; next to `code` or `package`, a mapping never
-runs (warned too). See
+runs (also `MAPPING_NO_OP`). See
 [walkeros-understanding-mapping](../walkeros-understanding-mapping/SKILL.md) for
 full mapping syntax.
 
@@ -341,7 +366,7 @@ validation errors, and a step must declare at least one of `code`, `package`,
 Use `next` to chain transformers:
 
 ```
-validate → enrich → [destinations]
+fingerprint → bot → [destinations]
 ```
 
 ---
@@ -358,10 +383,12 @@ validate → enrich → [destinations]
 }
 ```
 
-`collector.next` is the collector chain: a `Route` that runs once per event,
-after the collector completed it and before the destination fan-out. Every
-destination receives its output, and a `stop` there reaches no destination. Keep
-per-destination filtering on `destination.before`.
+`bot` and `validate` name transformers declared under `transformers`; a name
+that is not declared fails validate (`UNKNOWN_ROUTE_TARGET`). `collector.next`
+is the collector chain: a `Route` that runs once per event, after the collector
+completed it and before the destination fan-out. Every destination receives its
+output, and a `stop` there reaches no destination. Keep per-destination
+filtering on `destination.before`.
 
 ---
 
@@ -377,7 +404,7 @@ Embed JavaScript in JSON for mappings:
         "name": "view_item",
         "data": {
           "map": {
-            "value": "$code:(event) => event.data.price * 100",
+            "value": { "fn": "$code:(event) => event.data.price * 100" },
             "currency": { "value": "USD" }
           }
         }
@@ -396,7 +423,10 @@ Embed JavaScript in JSON for mappings:
 | `validate`  | `(value, context) => boolean` |
 
 `context` is a `Mapping.Context` object with `event`, `mapping`, `collector`,
-`logger`, and optional `consent`. One-arg signatures still work.
+`logger`, and optional `consent`. One-arg signatures still work. A `$code:`
+string goes under one of these keys. Written directly as a mapping value
+(`"value": "$code:..."`), it passes validate, and at runtime the value is
+dropped without an error.
 
 ---
 
@@ -410,7 +440,9 @@ Embed JavaScript in JSON for mappings:
       "config": {
         "platform": "web",
         "bundle": {
-          "packages": { "@walkeros/web-destination-gtag": {} }
+          "packages": {
+            "@walkeros/web-destination-gtag": { "version": "^4" }
+          }
         }
       },
       "destinations": {
@@ -421,7 +453,9 @@ Embed JavaScript in JSON for mappings:
       "config": {
         "platform": "web",
         "bundle": {
-          "packages": { "@walkeros/web-destination-meta": {} }
+          "packages": {
+            "@walkeros/web-destination-meta": { "version": "^4" }
+          }
         }
       },
       "destinations": {
@@ -432,7 +466,9 @@ Embed JavaScript in JSON for mappings:
       "config": {
         "platform": "server",
         "bundle": {
-          "packages": { "@walkeros/destination-api": {} }
+          "packages": {
+            "@walkeros/server-destination-api": { "version": "^4" }
+          }
         }
       },
       "destinations": {
@@ -466,8 +502,8 @@ walkeros bundle config.json --all -o dist/all
         "platform": "web",
         "bundle": {
           "packages": {
-            "@walkeros/web-source-browser": {},
-            "@walkeros/web-destination-gtag": {}
+            "@walkeros/web-source-browser": { "version": "^4" },
+            "@walkeros/web-destination-gtag": { "version": "^4" }
           }
         }
       },
@@ -481,7 +517,10 @@ walkeros bundle config.json --all -o dist/all
         "ga4": {
           "package": "@walkeros/web-destination-gtag",
           "config": {
-            "settings": { "ga4": { "measurementId": "G-XXXXXX" } },
+            "loadScript": true,
+            "settings": {
+              "ga4": { "measurementId": "G-XXXXXX", "pageview": false }
+            },
             "mapping": {
               "product": {
                 "view": {
@@ -528,6 +567,10 @@ walkeros bundle config.json --all -o dist/all
 }
 ```
 
+`"pageview": false` keeps the browser source's `page view` as the only page
+view: gtag.js also sends one of its own when its `config` runs, and GA4 would
+count the page twice.
+
 ---
 
 ## The tested example: flow-complete
@@ -568,7 +611,7 @@ Chapters for this file's topics: `tour` and `step-envelope` (structure),
 ## Reference
 
 - [packages/cli/examples/](../../packages/cli/examples/) - Example configs
-- [packages/cli/README.md](../../packages/cli/README.md) - Full CLI docs
+- [website/docs/apps/cli.mdx](../../website/docs/apps/cli.mdx) - Full CLI docs
 - [flow-complete.json](../../packages/cli/examples/flow-complete.json) - Tested
   example with three flows
 - [flow-complete.md](../../packages/cli/examples/flow-complete.md) - Its guide,

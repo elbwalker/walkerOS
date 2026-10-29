@@ -8,6 +8,7 @@ package: '@walkeros/web-destination-piwikpro'
 
 import data from '@walkeros/web-destination-piwikpro/walkerOS.json';
 import Configuration from '@site/src/components/snippets/_configuration.mdx';
+import Quickstart from '@site/src/components/snippets/_quickstart.mdx';
 
 import WhereThisFits from '@site/src/components/snippets/_where-this-fits.mdx';
 
@@ -36,65 +37,18 @@ server-side delivery with the same mapping, see the
 
 ## Installation
 
-<CodeSnippet
-  code={`npm install @walkeros/web-destination-piwikpro`}
-  language="bash"
-/>
+<Quickstart data={data} />
 
-<Tabs groupId="mode">
-  <TabItem value="integrated" label="Integrated" default>
-
-<CodeSnippet
-  code={`import { startFlow } from '@walkeros/collector';
-import { destinationPiwikPro } from '@walkeros/web-destination-piwikpro';
-
-await startFlow({
-  destinations: {
-    piwikpro: {
-      code: destinationPiwikPro,
-      config: {
-        loadScript: true,
-        settings: {
-          appId: 'XXX-XXX-XXX-XXX-XXX',
-          url: 'https://your_account_name.piwik.pro/',
-        },
-      },
-    },
-  },
-});`}
-  language="typescript"
-/>
-
-  </TabItem>
-  <TabItem value="bundled" label="Bundled">
-
-Add to your `flow.json` destinations:
-
-<CodeSnippet
-  code={`"destinations": {
-  "piwikpro": {
-    "package": "@walkeros/web-destination-piwikpro",
-    "config": {
-      "loadScript": true,
-      "settings": {
-        "appId": "XXX-XXX-XXX-XXX-XXX",
-        "url": "https://your_account_name.piwik.pro/"
-      }
-    }
-  }
-}`}
-  language="json"
-/>
-
-[See bundled mode setup](/docs/getting-started/modes/bundled) | [CLI reference](/docs/apps/cli)
-
-  </TabItem>
-</Tabs>
+The quickstart above sets no consent, so Piwik PRO's script loads and receives
+every event without `analytics` consent, and a revocation changes nothing. Add
+`consent: { analytics: true }` to `config`, next to `settings`, before you go
+live (see [gate a destination](/docs/guides/consent#gate-a-destination-with-consent)).
 
 <Configuration type="destination" data={data} />
 
-An event no rule maps fails with `missing-input`; use a rule with
-`ignore: true` to keep an event out without a failure. A consent revocation for
+An event that is not a page view fails with `missing-input` unless its rule
+has a name or a goal; use a rule with `ignore: true` to keep an event out
+without a failure. A consent revocation for
 a destination with `config.consent` turns off the link tracking walkerOS
 enabled, and a blocked `ppms.js` fails later events visibly.
 
@@ -161,7 +115,9 @@ A rule's `settings.goalId` adds a `trackGoal` call after the method hit.
 `settings.goalValue` is a mapping value for its conversion value, such as
 `"data.value"`. A page view rule with goal settings still tracks its page
 view. With `silent: true`, the rule sends only the goal, with its dimensions.
-A `silent` rule without a goal sends nothing and logs a skip.
+A `silent` rule without a goal sends nothing and counts as delivered when it
+has a `name` or the event is a page view; without either, the event is
+unmapped and fails with `missing-input`.
 
 A rule without `name` on an event that is not a page view sends only the goal
 when it has a `goalId`:
@@ -272,8 +228,10 @@ Automatic outlink and download tracking is on by default. The destination
 pushes `enableLinkTracking` once per page, right after the first hit it sends,
 such as a page view, an event or a goal. It never pushes it at init, so a page
 without a hit gets no automatic link tracking. Commands that set state, such as
-`setUserId`, are not hits and do not start it. Set `linkTracking: false` to
-switch it off.
+`setUserId`, are not hits and do not start it. With `config.consent`, a
+consent update that leaves none of its states granted pushes
+`disableLinkTracking`, and the first hit after a new grant pushes
+`enableLinkTracking` again. Set `linkTracking: false` to switch it off.
 
 ## Several Piwik PRO destinations
 

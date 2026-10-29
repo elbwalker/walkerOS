@@ -28,6 +28,7 @@ Learn the concepts before coding:
 | [understanding-transformers](skills/walkeros-understanding-transformers/SKILL.md) | Transformer interface, chaining, pipeline                                  |
 | [understanding-stores](skills/walkeros-understanding-stores/SKILL.md)             | Store interface, $store. wiring, lifecycle                                 |
 | [using-logger](skills/walkeros-using-logger/SKILL.md)                             | Logger access, DRY principles, when to log                                 |
+| [using-cli](skills/walkeros-using-cli/SKILL.md)                                   | Bundle, simulate, push, run and deploy flows; Flow JSON                    |
 | [using-step-examples](skills/walkeros-using-step-examples/SKILL.md)               | Step examples lifecycle, Three Type Zones, testing                         |
 | [using-store-cache](skills/walkeros-using-store-cache/SKILL.md)                   | Recipes for store-level cache, multi-tier composition                      |
 | [using-transformer-ga4](skills/walkeros-using-transformer-ga4/SKILL.md)           | Wire `@walkeros/transformer-ga4`, override mappings, troubleshoot decoding |
@@ -40,6 +41,7 @@ Learn the concepts before coding:
 | Write tests         | [testing-strategy](skills/walkeros-testing-strategy/SKILL.md)           |
 | Create destination  | [create-destination](skills/walkeros-create-destination/SKILL.md)       |
 | Create source       | [create-source](skills/walkeros-create-source/SKILL.md)                 |
+| Create CMP source   | [create-cmp-source](skills/walkeros-create-cmp-source/SKILL.md)         |
 | Create transformer  | [create-transformer](skills/walkeros-create-transformer/SKILL.md)       |
 | Configure mappings  | [mapping-configuration](skills/walkeros-mapping-configuration/SKILL.md) |
 | Debug event flow    | [debugging](skills/walkeros-debugging/SKILL.md)                         |

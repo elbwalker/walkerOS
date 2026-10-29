@@ -68,6 +68,15 @@ function withoutTimestamp(effects: readonly unknown[]): unknown[] {
 
 const emptyEvent: WalkerOS.DeepPartialEvent = {};
 
+describe('Step example text', () => {
+  // Titles and descriptions render on the docs page and in package_get.
+  it.each(Object.entries(examples.step))('%s', (_name, example) => {
+    const text = `${example.title ?? ''} ${example.description ?? ''}`;
+    expect(text).not.toMatch(/[\u2013\u2014]/);
+    expect(text).not.toContain('canary');
+  });
+});
+
 describe('Step Examples', () => {
   // Non-public examples (failures) run in the conformance test.
   const published = Object.entries(examples.step).filter(

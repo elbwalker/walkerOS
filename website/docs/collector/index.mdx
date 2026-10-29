@@ -303,11 +303,15 @@ pipeline failure. Each destination also counts its own failures in
 * transformer init failures.
 
 Rejected client input does not increment `status.failed`. An event
-the pipeline declares invalid (a missing or malformed `name`) resolves as
-`{ ok: false, invalid: true, error }`, logs one warn without a stack, and
-counts on `collector.status.sources.<id>.rejected`. That keeps `failed` a
-measure of walkerOS faults rather than of whatever the public internet
-posts at a collector endpoint.
+the pipeline declares invalid (a missing or malformed `name`, or an event
+that cannot be serialized to JSON) resolves as
+`{ ok: false, invalid: true, error }`, logs one error line without a stack
+per source and minute, and counts on
+`collector.status.sources.<id>.rejected`. That keeps `failed` a measure of
+walkerOS faults rather than of whatever the public internet posts at a
+collector endpoint. Pass values, not DOM nodes or framework objects: in a
+React app a DOM node's own keys lead into cycles, so such an event is
+refused as a whole.
 
 User-supplied callback throws in `on` subscriptions (`destination.on`,
 `source.on`, consent rules, `ready`, `run`, `session`, generic) log at error
@@ -351,6 +355,14 @@ warning.
 }`}
   language="json"
 />
+
+With `'queue'` on a server, which is also the default of a collector you start
+with `startFlow` in your own code, every user's denied events wait in the same
+destination queue. A later event whose own consent allows the destination is
+sent while the same user's earlier denied event stays queued, and one
+`walker consent` command sends the queued events of every user, including
+users who never consented. Pass `consentDenied: 'skip'` to `startFlow` on a
+server to skip these events instead.
 
 A held event keeps the consent it was admitted with: when its destination's
 hold ends it is delivered even if the collector's consent changed meanwhile.

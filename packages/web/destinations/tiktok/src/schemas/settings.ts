@@ -8,24 +8,23 @@ export const SettingsSchema = z
       .describe(
         'Your TikTok Pixel ID. Find it in TikTok Ads Manager under "Assets" → "Events" → "Web Events" → select your pixel → "Setup Web Event" → "Pixel ID".',
       ),
-    // `pageview` removed 2026-04-09 — TikTok's SDK fires auto page view and
-    // the knob was unreliable. Let it fire; don't expose a toggle.
+    // No page view setting: the destination calls no ttq.page().
     auto_config: z
       .boolean()
       .describe(
-        'TikTok default: true. Enable automatic form field detection for Advanced Matching.',
+        'Enable automatic form field detection for Advanced Matching. Forwarded to ttq.load(); when unset, the TikTok default applies.',
       )
       .optional(),
     limited_data_use: z
       .boolean()
       .describe(
-        'TikTok default: false. Restrict data use for compliance with U.S. state privacy laws.',
+        'Restrict data use for compliance with U.S. state privacy laws. Forwarded to ttq.load(); when unset, the TikTok default applies.',
       )
       .optional(),
     identify: z
       .unknown()
       .describe(
-        'walkerOS mapping value resolving to an Advanced Matching object with any of: email, phone_number, external_id. All values are auto-hashed (SHA256) by the TikTok SDK before sending.',
+        'walkerOS mapping value resolving to an Advanced Matching object with any of: email, phone_number, external_id. The destination passes the values to ttq.identify() unhashed; TikTok states that its Pixel hashes email and phone number (SHA-256).',
       )
       .optional(),
   })

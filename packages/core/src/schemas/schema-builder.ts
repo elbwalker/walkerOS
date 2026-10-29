@@ -239,8 +239,8 @@ export function createEnumSchema(
 /**
  * Create tuple schema (Loop pattern)
  *
- * Creates an array schema with exactly 2 items, which the Explorer
- * type detector recognizes as a "loop" pattern.
+ * Creates an array schema with exactly 2 items, the same length constraint
+ * the Loop mapping schema carries.
  *
  * @param firstItem - Definition for first element (source)
  * @param secondItem - Definition for second element (transform)

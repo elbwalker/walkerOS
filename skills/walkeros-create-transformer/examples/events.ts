@@ -7,7 +7,7 @@ import type { WalkerOS } from '@walkeros/core';
 
 // Event that should pass through modified
 export const validEvent: WalkerOS.DeepPartialEvent = {
-  event: 'product view',
+  name: 'product view',
   data: {
     id: 'P-123',
     name: 'Widget',
@@ -17,7 +17,7 @@ export const validEvent: WalkerOS.DeepPartialEvent = {
 
 // Expected output after processing
 export const processedEvent: WalkerOS.DeepPartialEvent = {
-  event: 'product view',
+  name: 'product view',
   data: {
     id: 'P-123',
     name: 'Widget',
@@ -27,7 +27,7 @@ export const processedEvent: WalkerOS.DeepPartialEvent = {
 
 // Event that should be blocked
 export const invalidEvent: WalkerOS.DeepPartialEvent = {
-  event: 'product view',
+  name: 'product view',
   data: {
     // Missing required 'id' field
     name: 'Widget',

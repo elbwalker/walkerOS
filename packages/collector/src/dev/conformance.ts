@@ -9,11 +9,17 @@ import type {
   WalkerOS,
 } from '@walkeros/core';
 import type { JSONSchema } from '@walkeros/core/dev';
+import {
+  composeQuickstart,
+  MINIMAL_EXAMPLE_FILE,
+  packageMetaOf,
+} from '@walkeros/core/dev';
 import { getEvent, isObject, Level, StepError, stepId } from '@walkeros/core';
 import type { EnvAnswer } from './boundary';
 import type {
   ExamplesEnv,
   LogLine,
+  RunArgs,
   Session,
   Setup,
   Step,
@@ -31,6 +37,7 @@ import {
   openStore,
   openTransformer,
   outcomeOf,
+  publishedProblems,
   readEnv,
   revokedKeys,
   RUN_TIMEOUT,
@@ -43,8 +50,8 @@ import {
 } from './runExamples';
 
 /**
- * The conformance kit: the checks of the step contract (design Q9 plus item
- * 11), run on a real collector with the boundary under the kit's control.
+ * The conformance kit: the checks of the step contract (items 1 to 12), run
+ * on a real collector with the boundary under the kit's control.
  * Each package declares one profile; the profile, not the package, decides
  * which checks run, so no package skips a check of its own.
  */
@@ -82,6 +89,25 @@ export interface ConformanceOptions {
    * browser profiles (`web-sdk`, `vendor-global`) require it.
    */
   page?: Flow.StepPage;
+  /**
+   * Destinations: the package's minimal example (`examples.minimal`). Item
+   * 12 starts the step with the settings `composeQuickstart` composes from
+   * it and the package's `$meta` (from `<root>/package.json`), pushes one
+   * public success example and requires it delivered.
+   */
+  minimal?: Flow.MinimalExample;
+  /** A package with several exports: the export this step is. */
+  exportName?: string;
+  /**
+   * A package with several exports: its `exportExamples`. Item 12 reads the
+   * step's minimal example there and requires one for every export.
+   */
+  exportExamples?: Record<string, { minimal?: Flow.MinimalExample }>;
+  /**
+   * Destinations: the reason the package publishes no minimal example. Its
+   * docs page then keeps a hand-written setup.
+   */
+  withoutMinimal?: string;
 }
 
 /** Every failed check of one conformance run: `items` lists their numbers. */
@@ -98,7 +124,7 @@ export class ConformanceError extends Error {
   }
 }
 
-/** Checks per profile (design Q9 table plus the two named profiles). */
+/** The checks each profile runs. */
 const PROFILE_ITEMS: Record<Profile, number[]> = {
   http: [1, 2, 3, 4, 5, 6, 7, 9, 10],
   'sdk-env': [1, 2, 3, 4, 5, 6, 7, 9, 10],
@@ -721,8 +747,194 @@ async function destinationItem(
       }
       return problems.length ? problems.join(', ') : undefined;
     }
+
+    case 12:
+      return minimalProblem(step, ctx);
   }
   return undefined;
+}
+
+/** Whether a dotted settings path (`ga4.measurementId`) holds a value. */
+function hasPath(settings: unknown, path: string): boolean {
+  let node = settings;
+  for (const key of path.split('.')) {
+    if (!isObject(node) || node[key] === undefined) return false;
+    node = node[key];
+  }
+  return true;
+}
+
+/**
+ * Whether the package publishes a minimal example, read as its docs page
+ * reads it: an `examples/minimal.ts` anywhere under `<root>/src`.
+ */
+async function publishesMinimal(root: string): Promise<boolean> {
+  const { readdir } = await import('node:fs/promises');
+  const { join } = await import('node:path');
+
+  async function find(dir: string, at: string): Promise<boolean> {
+    for (const entry of await readdir(dir, { withFileTypes: true })) {
+      const path = `${at}/${entry.name}`;
+      if (entry.isDirectory()) {
+        if (
+          entry.name !== 'node_modules' &&
+          (await find(join(dir, entry.name), path))
+        )
+          return true;
+      } else if (path.endsWith(`/${MINIMAL_EXAMPLE_FILE}`)) return true;
+    }
+    return false;
+  }
+
+  return find(join(root, 'src'), 'src');
+}
+
+/**
+ * Item 12: the package's minimal example, composed as the docs render it,
+ * delivers one public success example through the step, with only the
+ * kit's boundary mocked. A package without one states why in
+ * `withoutMinimal`, and the file decides which of the two is true.
+ */
+async function minimalProblem(
+  step: DestinationStep,
+  ctx: Context,
+): Promise<Problem> {
+  const { options } = ctx;
+  const { withoutMinimal } = options;
+  const given =
+    options.minimal !== undefined || options.exportExamples !== undefined;
+  if (withoutMinimal !== undefined && given)
+    return 'the test passes both a minimal example and withoutMinimal: keep one';
+  if (withoutMinimal !== undefined && !withoutMinimal.trim())
+    return 'withoutMinimal needs the reason the package has no minimal example';
+  if (withoutMinimal === undefined && !given)
+    return `no minimal example: pass minimal (examples.minimal, published from src/${MINIMAL_EXAMPLE_FILE}), or withoutMinimal with the reason the package has none`;
+  const published = await publishesMinimal(options.root);
+  if (withoutMinimal !== undefined)
+    return published
+      ? `the package publishes ${MINIMAL_EXAMPLE_FILE}, so its docs render a quickstart this test never runs: pass minimal instead of withoutMinimal`
+      : undefined;
+  if (!published)
+    return `the minimal example is not published: put it in src/${MINIMAL_EXAMPLE_FILE} (per export: src/<export>/${MINIMAL_EXAMPLE_FILE}) and re-export it as examples.minimal`;
+
+  const { readFile } = await import('node:fs/promises');
+  const { join } = await import('node:path');
+  const meta = packageMetaOf(
+    JSON.parse(await readFile(join(options.root, 'package.json'), 'utf8')),
+  );
+  const declared = Object.keys(meta.exports ?? {});
+  let { minimal } = options;
+  let exportName: string | undefined;
+  if (declared.length > 1) {
+    exportName = options.exportName;
+    if (!exportName || !declared.includes(exportName))
+      return `the package declares the exports ${declared.join(', ')}: pass exportName, the one this step is, and exportExamples`;
+    const missing = declared.filter(
+      (name) => !options.exportExamples?.[name]?.minimal,
+    );
+    if (missing.length)
+      return missing
+        .map((name) => `export ${name} has no minimal example`)
+        .join(', ');
+    minimal = options.exportExamples?.[exportName]?.minimal;
+  }
+  if (!minimal) return 'no minimal example (examples.minimal)';
+
+  let quickstart: Flow.Quickstart['run'];
+  try {
+    quickstart = composeQuickstart(meta, minimal, exportName).run;
+  } catch (error) {
+    return `the quickstart does not compose: ${textOf(error)}`;
+  }
+  const { settings, config } = quickstart;
+
+  const { keys, alternatives } = ctx.requires;
+  const missing = keys.filter((key) => !hasPath(settings, key));
+  if (missing.length)
+    return `the minimal example lacks the required ${missing.join(', ')}`;
+  for (const branches of alternatives)
+    if (!branches.some((branch) => branch.every((p) => hasPath(settings, p))))
+      return `the minimal example sets no alternative of ${branches
+        .map((branch) => branch.join(' and '))
+        .join(' or ')}`;
+  const target = ctx.events.find(
+    ({ example }) => example.public !== false && sends(example),
+  );
+  if (!target) return 'no public success example to deliver';
+
+  // A key the schema leaves optional is still required where init refuses
+  // the minimal example's config without it (loadScript needs a site id).
+  const required = new Set([
+    ...keys,
+    ...alternatives.flat(2).map((path) => path.split('.')[0]),
+  ]);
+  const extra: string[] = [];
+  for (const key of Object.keys(settings)) {
+    if (required.has(key)) continue;
+    const thrown: unknown[] = [];
+    await runDestination(step, ctx, target, {
+      settings: Object.fromEntries(
+        Object.entries(settings).filter(([other]) => other !== key),
+      ),
+      ...(config ? { config } : {}),
+      initError: (error) => thrown.push(error),
+    });
+    if (stepError(thrown[0])?.code !== 'config') extra.push(key);
+  }
+  if (extra.length)
+    return `the minimal example sets ${extra.join(', ')}, which neither the schema nor its config requires`;
+
+  const run = await runDestination(step, ctx, target, {
+    settings,
+    ...(config ? { config } : {}),
+  });
+  const failed = run.result.failed?.[STEP_ID];
+  if (failed)
+    return `the minimal example fails ${failed.reason?.code ?? 'its push'}: ${failed.reason?.message ?? textOf(failed.error)}`;
+  if (!run.result.done?.[STEP_ID])
+    return `the minimal example does not deliver example ${target.name}: the step is not done`;
+  if (!run.effects.length)
+    return `the minimal example sends nothing for example ${target.name}: the boundary received no call`;
+  // A vendor global's script loads on the page: a minimal example that
+  // inserts none where loadScript inserts one leaves its calls queued.
+  if (
+    ctx.profile === 'vendor-global' &&
+    !(await vendorScripts(step, ctx, target, settings, config ?? {})) &&
+    (await vendorScripts(step, ctx, target, settings, { loadScript: true }))
+  )
+    return 'the minimal example loads no vendor script: the step loads it only with config.loadScript';
+  return undefined;
+}
+
+/**
+ * The marked vendor scripts one run inserts on the page with this config,
+ * in a session opened as item 2 opens it (the page's document in the env).
+ */
+async function vendorScripts(
+  step: DestinationStep,
+  ctx: Context,
+  target: EventExample,
+  settings: Record<string, unknown>,
+  config: Record<string, unknown>,
+): Promise<number> {
+  const mapping = mappingOf(target.example, { event: target.event });
+  const session = await openDestination(step, {
+    settings,
+    env: ctx.env,
+    page: ctx.options.page,
+    pageGlobals: true,
+    config: {
+      timeout: RUN_TIMEOUT,
+      ...(mapping ? { mapping } : {}),
+      ...config,
+    },
+  });
+  try {
+    await session.run({ event: target.event });
+    return session.scripts().marked;
+  } finally {
+    await session.close();
+  }
 }
 
 /** Item 2 without an injectable boundary: the declared failure examples. */
@@ -1553,7 +1765,7 @@ export async function conformance(...given: ConformanceArgs): Promise<void> {
     (item) =>
       item !== 9 || (args[0] === 'destination' && Boolean(args[1].pushBatch)),
   );
-  if (args[0] === 'destination') items.push(11);
+  if (args[0] === 'destination') items.push(11, 12);
 
   const failures: Array<[number, string]> = [];
   for (const item of items) {
@@ -1565,7 +1777,55 @@ export async function conformance(...given: ConformanceArgs): Promise<void> {
   if (failures.length) throw new ConformanceError(failures);
 }
 
-function check(args: KitArgs, item: number, ctx: Context): Promise<Problem> {
+/**
+ * The run of every example as published, the same for every kind: what the
+ * kind's own checks run it with.
+ */
+function publishedArgs(args: KitArgs, ctx: Context): RunArgs {
+  const { examples, settings, env, page, createTrigger } = ctx.options;
+  switch (args[0]) {
+    case 'destination':
+      return [
+        'destination',
+        args[1],
+        examples,
+        { settings, env: ctx.runEnv ? env : undefined, page },
+      ];
+    case 'transformer':
+      return ['transformer', args[1], examples, { settings, env }];
+    case 'store':
+      return ['store', args[1], examples, { settings, env }];
+    case 'source':
+      return [
+        'source',
+        args[1],
+        examples,
+        { settings, env, page, createTrigger },
+      ];
+  }
+}
+
+/**
+ * Item 1 of every kind also runs each example as `walkerOS.json` publishes
+ * it: its published code must do what its source does.
+ */
+async function check(
+  args: KitArgs,
+  item: number,
+  ctx: Context,
+): Promise<Problem> {
+  const problem = await kindCheck(args, item, ctx);
+  if (item !== 1) return problem;
+  const problems = await publishedProblems(publishedArgs(args, ctx));
+  if (problem) problems.unshift(problem);
+  return problems.length ? problems.join(', ') : undefined;
+}
+
+function kindCheck(
+  args: KitArgs,
+  item: number,
+  ctx: Context,
+): Promise<Problem> {
   switch (args[0]) {
     case 'destination':
       return destinationItem(item, args[1], ctx);

@@ -12,7 +12,7 @@ import Configuration from '@site/src/components/snippets/_configuration.mdx';
 
 <PackageLink env="server" github="packages/server/stores/gcs" npm="@walkeros/server-store-gcs" />
 
-Google Cloud Storage store with zero runtime dependencies. Uses raw `fetch` against the GCS JSON API with built-in auth: Application Default Credentials (ADC) on Cloud Run / GKE, or explicit service account JWT for non-GCP environments.
+Google Cloud Storage store with zero runtime dependencies. It uses raw `fetch` against the GCS JSON API with built-in auth: Application Default Credentials (ADC) on Cloud Run / GKE, or explicit service account JWT for non-GCP environments.
 
 ## Installation
 
@@ -72,7 +72,7 @@ Add to your `flow.json`:
 
 ## Provisioning
 
-The package ships an idempotent `setup()` lifecycle that creates the GCS bucket described in flow config. It is invoked only by the explicit operator command:
+The package ships an idempotent `setup()` lifecycle that creates the GCS bucket described in flow config. It is invoked only by the explicit operator command, on a store with `config.setup` set (`true` or an object):
 
 <CodeSnippet
   code={`walkeros setup store.<id>`}
@@ -80,6 +80,10 @@ The package ships an idempotent `setup()` lifecycle that creates the GCS bucket 
 />
 
 It never runs automatically and never alters an existing bucket.
+
+:::caution
+Today the command stops before this setup runs, with `Package @walkeros/server-store-gcs has no default export`: `walkeros setup` reads `setup` from the package's default export, and this package's default export is its init function.
+:::
 
 ### Setup options
 
@@ -89,11 +93,11 @@ It never runs automatically and never alters an existing bucket.
 | `location`     | `string`                                              | `'EU'`       | Multi-region or regional location.                             |
 | `storageClass` | `'STANDARD' \| 'NEARLINE' \| 'COLDLINE' \| 'ARCHIVE'` | `'STANDARD'` | Default object storage class.                                  |
 | `versioning`   | `boolean`                                             | `false`      | Object versioning. Off by default; opt in.                     |
-| `lifecycle`    | `{ rule: unknown[] }`                                 | (none)       | Applied at create. Drift detection NOT included for lifecycle. |
+| `lifecycle`    | `{ rule: unknown[] }`                                 | (none)       | Applied at create. Drift detection not included for lifecycle. |
 | `kmsKeyName`   | `string`                                              | (none)       | Customer-managed encryption key (CMEK) at create time.         |
 | `labels`       | `Record<string, string>`                              | (none)       | Cost-allocation labels.                                        |
 
-`bucket` is taken from `settings.bucket` and is NOT duplicated under `setup`.
+`bucket` is taken from `settings.bucket` and is not duplicated under `setup`.
 
 ### projectId resolution
 
@@ -107,8 +111,8 @@ The GCS create call requires a project. Resolution order:
 ### Behavior
 
 - **Idempotent**: HTTP 409 (bucket exists) is treated as success. The setup never patches or mutates an existing bucket.
-- **Drift detection**: when the bucket already exists, setup performs a `GET /b/<bucket>` and logs `WARN setup.drift { field, declared, actual }` for any of `location`, `storageClass`, `versioning`, `iamConfiguration` (uniform bucket-level access, public access prevention), and `labels` that do not match. Drift is logged, never auto-fixed.
-- **Defaults enforced at create**: uniform bucket-level access on, public access prevention enforced. These are baked in by the package.
+- **Drift detection**: when the bucket already exists, setup performs a `GET /b/<bucket>` and logs one `setup.drift` warning (`{ field, declared, actual }`) on the logger it receives for each differing field among `location`, `storageClass`, `versioning`, `iamConfiguration` (uniform bucket-level access, public access prevention) and `labels`. Drift is logged, never auto-fixed.
+- **Defaults enforced at create**: uniform bucket-level access on, public access prevention enforced. The package sets both on every bucket it creates.
 
 ### Runtime hard-fail
 
@@ -129,21 +133,21 @@ When running on GCP infrastructure, omit `credentials`. The store fetches access
 
 ### Non-GCP (service account)
 
-Pass a service account JSON via `config.credentials` with a `$env.` reference. The store signs JWTs locally using `node:crypto` and exchanges them for access tokens via Google's OAuth2 endpoint.
+Pass a service account JSON via `config.credentials` with a `$secret.` reference. The store signs JWTs locally using `node:crypto` and exchanges them for access tokens via Google's OAuth2 endpoint.
 
 <CodeSnippet
   code={`"config": {
-  "credentials": "$env.GCS_SA_KEY",
+  "credentials": "$secret.GCS_SA_KEY",
   "settings": { "bucket": "my-assets", "prefix": "public" }
 }`}
   language="json"
 />
 
-The `GCS_SA_KEY` environment variable should contain the full service account JSON (with `client_email` and `private_key` fields).
+The `GCS_SA_KEY` environment variable should contain the full service account JSON (with `client_email` and `private_key` fields). When it is missing, the flow stops at startup with `required secret "GCS_SA_KEY" is not set`. A `credentials` value without `client_email` and `private_key` is ignored without a log line, and the store uses ADC instead.
 
 ## File serving pattern
 
-The primary use case is serving static files via the file transformer. Set `file: true` so the store persists and returns bytes byte-exact:
+The primary use case is serving static files via the file transformer. The express source maps the request path into `ingest.path` and runs the transformer in its `next` chain. Set `file: true` so the store persists and returns bytes byte-exact:
 
 <CodeSnippet
   code={`{
@@ -157,6 +161,16 @@ The primary use case is serving static files via the file transformer. Set `file
         },
         "file": true
       }
+    }
+  },
+  "sources": {
+    "http": {
+      "package": "@walkeros/server-source-express",
+      "config": {
+        "settings": { "paths": ["/collect", "/static/*path"] },
+        "ingest": { "map": { "path": { "key": "path" } } }
+      },
+      "next": "file"
     }
   },
   "transformers": {
@@ -174,9 +188,9 @@ A request to `/static/walker.js` looks up `public/walker.js` in the `my-assets` 
 
 ## Security
 
-- **Key validation**: Path traversal attempts (`..`, absolute paths) are rejected
+- **Key validation**: Keys with a `..` segment or a leading `/` or `\` are rejected: `get` answers a miss, `set` and `delete` do nothing. Each rejection is a WARN line, which the default log level (`ERROR`) does not show
 - **Prefix scoping**: The `prefix` setting restricts all operations to a subdirectory
-- **No ambient credentials**: ADC only works on GCP infrastructure; off-GCP requires explicit SA JSON
+- **Credentials**: ADC comes from the GCP metadata server only, so off GCP the store needs an explicit service account JSON; a `GOOGLE_APPLICATION_CREDENTIALS` file is not read
 
 ## Structured vs file mode
 

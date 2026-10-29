@@ -14,7 +14,7 @@ import WhereThisFits from '@site/src/components/snippets/_where-this-fits.mdx';
 
 # Fetch
 
-Web Standard Fetch API source for walkerOS. Platform-agnostic `(Request) => Response` signature that runs on Cloudflare Workers, Vercel Edge, Deno, Bun, and Node.js 18+. Supports batch processing, configurable CORS, and pixel tracking via a 1x1 transparent GIF for GET requests.
+The Fetch source is a Web Standard Fetch API source for walkerOS: a platform-agnostic `(Request) => Response` handler that runs on Cloudflare Workers, Vercel Edge, Deno, Bun, and Node.js 18+. It supports batch processing, configurable CORS, and pixel tracking via a 1x1 transparent GIF for GET requests.
 
 <WhereThisFits
   pre={<>The Fetch source is a <strong>server source</strong> in the walkerOS flow:</>}
@@ -30,18 +30,6 @@ Web Standard Fetch API source for walkerOS. Platform-agnostic `(Request) => Resp
   code={`npm install @walkeros/server-source-fetch`}
   language="bash"
 />
-
-:::caution path setting renamed to paths
-The `path` setting has been renamed to `paths` (array). The old `path` still works but is deprecated and will be removed in the next major version.
-
-```typescript
-// Before (deprecated)
-settings: { path: '/events' }
-
-// After
-settings: { paths: ['/events'] }
-```
-:::
 
 <Tabs groupId="mode">
   <TabItem value="integrated" label="Integrated" default>
@@ -90,7 +78,7 @@ Add to your `flow.json` sources:
   language="json"
 />
 
-Server sources require platform-specific handlers. For containerized deployments, see the [runtime](/docs/apps/runtime).
+This bundle is for deploying to an edge or serverless platform such as Cloudflare Workers. The walkerOS [runtime](/docs/apps/runtime) (`runneros`, the `walkeros/flow` image) serves only sources with an HTTP handler, such as the [Express source](/docs/sources/server/express): under it this source receives no requests, and every request answers 503.
 
 [See bundled mode setup](/docs/getting-started/modes/bundled) | [CLI reference](/docs/apps/cli)
 
@@ -104,23 +92,28 @@ Server sources require platform-specific handlers. For containerized deployments
 | Status | Meaning |
 |--------|---------|
 | 200 | Event processed, or failed for a reason a resend cannot fix (see below) |
-| 400 | Rejected client input: the pipeline declared the event invalid. The body echoes the validation message, for example `Event name is required` |
+| 400 | Rejected client input: the pipeline declared the event invalid (the body echoes the validation message, for example `Event name is required`), or a batch larger than `maxBatchSize` (default 100) |
+| 404 | Path not configured in `paths` |
+| 405 | Method not configured on that path |
+| 413 | Body larger than `maxRequestSize` (default 102400 bytes) |
 | 500 | The pipeline failed to process a valid event for a reason a resend could fix (the body is `Event was not processed`), or an unexpected server fault (`Internal server error`) |
-| 207 | Batch request where some events succeeded and others failed in a way a resend could fix. The body carries per-index errors |
+| 207 | Batch request where at least one event was invalid or failed for a reason a resend could fix. The body carries per-index errors |
 
 A failed event is acknowledged or retried by one rule on every server source: see [Producer acknowledgement](/docs/sources/server#producer-acknowledgement).
 
 A per-event "not processed" in a batch logs at DEBUG, because the collector's ERROR line is the signal. A push that throws inside a batch logs an ERROR and answers `Internal server error`.
 
-Invalid input is counted on `collector.status.sources.<id>.rejected` rather than
-inflating `status.failed`, and is logged at warn with the reason instead of as an
-error with a stack trace.
+Invalid input, a body over `maxRequestSize` and a batch over `maxBatchSize` are
+counted on `collector.status.sources.<id>.rejected` rather than inflating
+`status.failed`. An invalid event is logged at error with the reason and no
+stack trace, once per source and minute; an oversized request is logged at
+debug.
 
 ## Ingest metadata
 
 Extract request metadata and forward it through the pipeline.
 
-`config.ingest` must use the `map` operator. Keys are output field names; values are direct field paths on the request scope (no `req.` prefix). A bare object like `{ url: 'url' }` is silently inert: without the `map` operator the source passes the whole request through and no field is extracted.
+`config.ingest` must use the `map` operator. Keys are output field names; values are direct field paths on the request scope (no `req.` prefix). A bare object like `{ url: 'url' }` has no operator: `walkeros validate` and the bundle reject it, and if it still runs, the collector logs one ERROR line (`mapping value has no operator`) and no field is extracted.
 
 <CodeSnippet
   code={`const { collector } = await startFlow({

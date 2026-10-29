@@ -1,0 +1,963 @@
+{
+  "ecommerce": {
+    "description": "Events of an online shop, from the first product seen to the refund.",
+    "extend": "default",
+    "schema": {
+      "description": "What every shop event adds.",
+      "type": "object",
+      "properties": {
+        "context": {
+          "type": "object",
+          "properties": {
+            "shopping": {
+              "type": "array",
+              "description": "The stage of the shopping journey, such as discover, detail, intent, cart, checkout or complete.",
+              "prefixItems": [
+                {
+                  "type": "string",
+                  "description": "The stage."
+                },
+                {
+                  "type": "number",
+                  "description": "Its order."
+                }
+              ],
+              "examples": [["detail", 0]]
+            }
+          }
+        }
+      }
+    },
+    "events": {
+      "product": {
+        "view": {
+          "title": "Product view",
+          "description": "The detail page of a product was shown. Every shop needs it.",
+          "examples": [
+            {
+              "name": "product view",
+              "data": {
+                "id": "ers",
+                "name": "Everyday Ruck Snack",
+                "color": "black",
+                "size": "l",
+                "price": 420,
+                "currency": "EUR"
+              },
+              "context": {
+                "shopping": ["detail", 0]
+              },
+              "globals": {
+                "pagegroup": "shop"
+              },
+              "trigger": "load"
+            }
+          ],
+          "required": ["data"],
+          "properties": {
+            "data": {
+              "type": "object",
+              "description": "The product.",
+              "required": ["id", "price", "currency"],
+              "properties": {
+                "id": {
+                  "type": ["string", "number"],
+                  "description": "The product id, such as the article number.",
+                  "examples": ["ers"]
+                },
+                "name": {
+                  "type": "string",
+                  "description": "The name of the product.",
+                  "examples": ["Everyday Ruck Snack"]
+                },
+                "category": {
+                  "type": "string",
+                  "description": "The main category of the product.",
+                  "examples": ["Apparel"]
+                },
+                "brand": {
+                  "type": "string",
+                  "description": "The brand of the product."
+                },
+                "variant": {
+                  "type": ["string", "number"],
+                  "description": "The variant, such as a color.",
+                  "examples": ["green"]
+                },
+                "price": {
+                  "type": "number",
+                  "description": "The unit price the buyer sees, after any product discount.",
+                  "examples": [420]
+                },
+                "currency": {
+                  "type": "string",
+                  "description": "The currency of price, as a three-letter code.",
+                  "examples": ["EUR"]
+                }
+              }
+            }
+          }
+        },
+        "add": {
+          "title": "Product add",
+          "description": "A visitor added a product to the cart. Every shop needs it.",
+          "examples": [
+            {
+              "name": "product add",
+              "data": {
+                "id": "ers",
+                "name": "Everyday Ruck Snack",
+                "color": "black",
+                "size": "l",
+                "price": 420,
+                "currency": "EUR",
+                "quantity": 1
+              },
+              "context": {
+                "shopping": ["intent", 0]
+              },
+              "globals": {
+                "pagegroup": "shop"
+              },
+              "trigger": "click"
+            }
+          ],
+          "required": ["data"],
+          "properties": {
+            "data": {
+              "type": "object",
+              "description": "The product.",
+              "required": ["id", "price", "quantity", "currency"],
+              "properties": {
+                "id": {
+                  "type": ["string", "number"],
+                  "description": "The product id, such as the article number.",
+                  "examples": ["ers"]
+                },
+                "name": {
+                  "type": "string",
+                  "description": "The name of the product.",
+                  "examples": ["Everyday Ruck Snack"]
+                },
+                "category": {
+                  "type": "string",
+                  "description": "The main category of the product.",
+                  "examples": ["Apparel"]
+                },
+                "variant": {
+                  "type": ["string", "number"],
+                  "description": "The variant, such as a color.",
+                  "examples": ["green"]
+                },
+                "price": {
+                  "type": "number",
+                  "description": "The unit price the buyer sees, after any product discount.",
+                  "examples": [420]
+                },
+                "quantity": {
+                  "type": "number",
+                  "description": "How many pieces were added.",
+                  "examples": [1]
+                },
+                "currency": {
+                  "type": "string",
+                  "description": "The currency of price and value, as a three-letter code.",
+                  "examples": ["EUR"]
+                },
+                "value": {
+                  "type": "number",
+                  "description": "The price times the quantity."
+                }
+              }
+            }
+          }
+        },
+        "visible": {
+          "title": "Product visible",
+          "description": "A product came into view in a list, such as search results or related products. One event per product. Recommended for most shops.",
+          "examples": [
+            {
+              "name": "product visible",
+              "data": {
+                "id": "ers",
+                "name": "Everyday Ruck Snack",
+                "color": "black",
+                "size": "l",
+                "price": 420,
+                "currency": "EUR",
+                "position": 3,
+                "promo": true,
+                "list": "Related products"
+              },
+              "context": {
+                "shopping": ["discover", 0]
+              },
+              "globals": {
+                "pagegroup": "shop"
+              },
+              "trigger": "load"
+            }
+          ],
+          "required": ["data"],
+          "properties": {
+            "data": {
+              "type": "object",
+              "description": "The product in the list.",
+              "required": ["id"],
+              "properties": {
+                "id": {
+                  "type": ["string", "number"],
+                  "description": "The product id, such as the article number.",
+                  "examples": ["ers"]
+                },
+                "name": {
+                  "type": "string",
+                  "description": "The name of the product.",
+                  "examples": ["Everyday Ruck Snack"]
+                },
+                "price": {
+                  "type": "number",
+                  "description": "The unit price the buyer sees, after any product discount.",
+                  "examples": [420]
+                },
+                "position": {
+                  "type": "number",
+                  "description": "The place of the product in its list, counted from 1.",
+                  "examples": [3]
+                },
+                "list": {
+                  "type": "string",
+                  "description": "The name of the list the product is shown in.",
+                  "examples": ["Related products"]
+                },
+                "currency": {
+                  "type": "string",
+                  "description": "The currency of price, as a three-letter code.",
+                  "examples": ["EUR"]
+                }
+              }
+            }
+          }
+        },
+        "click": {
+          "title": "Product click",
+          "description": "A visitor clicked a product in a list. Recommended for most shops.",
+          "examples": [
+            {
+              "name": "product click",
+              "data": {
+                "id": "ers",
+                "name": "Everyday Ruck Snack",
+                "color": "black",
+                "size": "l",
+                "price": 420,
+                "currency": "EUR",
+                "position": 3,
+                "list": "Related products"
+              },
+              "context": {
+                "shopping": ["discover", 0]
+              },
+              "globals": {
+                "pagegroup": "shop"
+              },
+              "trigger": "click"
+            }
+          ],
+          "required": ["data"],
+          "properties": {
+            "data": {
+              "type": "object",
+              "description": "The product in the list.",
+              "required": ["id"],
+              "properties": {
+                "id": {
+                  "type": ["string", "number"],
+                  "description": "The product id, such as the article number.",
+                  "examples": ["ers"]
+                },
+                "name": {
+                  "type": "string",
+                  "description": "The name of the product.",
+                  "examples": ["Everyday Ruck Snack"]
+                },
+                "price": {
+                  "type": "number",
+                  "description": "The unit price the buyer sees, after any product discount.",
+                  "examples": [420]
+                },
+                "position": {
+                  "type": "number",
+                  "description": "The place of the product in its list, counted from 1.",
+                  "examples": [3]
+                },
+                "list": {
+                  "type": "string",
+                  "description": "The name of the list the product is shown in.",
+                  "examples": ["Related products"]
+                },
+                "currency": {
+                  "type": "string",
+                  "description": "The currency of price, as a three-letter code.",
+                  "examples": ["EUR"]
+                }
+              }
+            }
+          }
+        },
+        "remove": {
+          "title": "Product remove",
+          "description": "A visitor removed a product from the cart or lowered its quantity. Recommended for most shops.",
+          "examples": [
+            {
+              "name": "product remove",
+              "data": {
+                "id": "ers",
+                "name": "Everyday Ruck Snack",
+                "color": "black",
+                "size": "l",
+                "price": 420,
+                "currency": "EUR",
+                "quantity": 1
+              },
+              "context": {
+                "shopping": ["cart", 0]
+              },
+              "globals": {
+                "pagegroup": "shop"
+              },
+              "trigger": "click"
+            }
+          ],
+          "required": ["data"],
+          "properties": {
+            "data": {
+              "type": "object",
+              "description": "The product.",
+              "required": ["id", "quantity"],
+              "properties": {
+                "id": {
+                  "type": ["string", "number"],
+                  "description": "The product id, such as the article number.",
+                  "examples": ["ers"]
+                },
+                "price": {
+                  "type": "number",
+                  "description": "The unit price the buyer sees, after any product discount.",
+                  "examples": [420]
+                },
+                "quantity": {
+                  "type": "number",
+                  "description": "How many pieces were removed.",
+                  "examples": [1]
+                },
+                "currency": {
+                  "type": "string",
+                  "description": "The currency of price and value, as a three-letter code.",
+                  "examples": ["EUR"]
+                },
+                "value": {
+                  "type": "number",
+                  "description": "The price times the quantity removed."
+                }
+              }
+            }
+          }
+        }
+      },
+      "cart": {
+        "view": {
+          "title": "Cart view",
+          "description": "The cart was shown. Recommended for most shops.",
+          "examples": [
+            {
+              "name": "cart view",
+              "data": {
+                "currency": "EUR",
+                "value": 840
+              },
+              "context": {
+                "shopping": ["cart", 0]
+              },
+              "globals": {
+                "pagegroup": "shop"
+              },
+              "nested": [
+                {
+                  "entity": "product",
+                  "data": {
+                    "id": "ers",
+                    "name": "Everyday Ruck Snack",
+                    "color": "black",
+                    "size": "l",
+                    "price": 420,
+                    "quantity": 2
+                  },
+                  "context": {
+                    "shopping": ["cart", 0]
+                  },
+                  "nested": []
+                }
+              ],
+              "trigger": "load"
+            }
+          ],
+          "required": ["data", "nested"],
+          "properties": {
+            "data": {
+              "type": "object",
+              "description": "The cart.",
+              "required": ["value", "currency"],
+              "properties": {
+                "id": {
+                  "type": ["string", "number"],
+                  "description": "The id of the cart."
+                },
+                "value": {
+                  "type": "number",
+                  "description": "The merchandise value: the price times the quantity of every product, minus any order discount. It holds no shipping, and it holds tax only when the prices include tax.",
+                  "examples": [840]
+                },
+                "currency": {
+                  "type": "string",
+                  "description": "The currency of value and of every price, as a three-letter code.",
+                  "examples": ["EUR"]
+                }
+              }
+            },
+            "nested": {
+              "type": "array",
+              "description": "The products in the cart, at least one.",
+              "contains": {
+                "type": "object",
+                "required": ["entity", "data"],
+                "properties": {
+                  "entity": {
+                    "type": "string",
+                    "enum": ["product"],
+                    "description": "The entity name, product.",
+                    "examples": ["product"]
+                  },
+                  "data": {
+                    "type": "object",
+                    "description": "The product.",
+                    "required": ["id"],
+                    "properties": {
+                      "id": {
+                        "type": ["string", "number"],
+                        "description": "The product id.",
+                        "examples": ["ers"]
+                      },
+                      "name": {
+                        "type": "string",
+                        "description": "The name of the product.",
+                        "examples": ["Everyday Ruck Snack"]
+                      },
+                      "price": {
+                        "type": "number",
+                        "description": "The unit price the buyer sees, after any product discount.",
+                        "examples": [420]
+                      },
+                      "quantity": {
+                        "type": "number",
+                        "description": "How many pieces. Missing means 1.",
+                        "examples": [2]
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "checkout": {
+        "start": {
+          "title": "Checkout start",
+          "description": "A visitor began the checkout. Every shop needs it.",
+          "examples": [
+            {
+              "name": "checkout start",
+              "data": {
+                "currency": "EUR",
+                "value": 462
+              },
+              "context": {
+                "shopping": ["checkout", 0]
+              },
+              "globals": {
+                "pagegroup": "shop"
+              },
+              "nested": [
+                {
+                  "entity": "product",
+                  "data": {
+                    "id": "ers",
+                    "name": "Everyday Ruck Snack",
+                    "color": "black",
+                    "size": "l",
+                    "price": 420
+                  },
+                  "context": {
+                    "shopping": ["checkout", 0]
+                  },
+                  "nested": []
+                },
+                {
+                  "entity": "product",
+                  "data": {
+                    "id": "cc",
+                    "name": "Cool Cap",
+                    "size": "one size",
+                    "price": 42
+                  },
+                  "context": {
+                    "shopping": ["checkout", 0]
+                  },
+                  "nested": []
+                }
+              ],
+              "trigger": "load"
+            }
+          ],
+          "required": ["data", "nested"],
+          "properties": {
+            "data": {
+              "type": "object",
+              "description": "The checkout.",
+              "required": ["value", "currency"],
+              "properties": {
+                "value": {
+                  "type": "number",
+                  "description": "The merchandise value: the price times the quantity of every product, minus any order discount. It holds no shipping, and it holds tax only when the prices include tax.",
+                  "examples": [462]
+                },
+                "currency": {
+                  "type": "string",
+                  "description": "The currency of value and of every price, as a three-letter code.",
+                  "examples": ["EUR"]
+                },
+                "coupon": {
+                  "type": ["string", "number"],
+                  "description": "The coupon code the buyer entered."
+                },
+                "discount": {
+                  "type": "number",
+                  "description": "The discount on the whole order, as a positive amount."
+                }
+              }
+            },
+            "nested": {
+              "type": "array",
+              "description": "The products in the checkout, at least one.",
+              "contains": {
+                "type": "object",
+                "required": ["entity", "data"],
+                "properties": {
+                  "entity": {
+                    "type": "string",
+                    "enum": ["product"],
+                    "description": "The entity name, product.",
+                    "examples": ["product"]
+                  },
+                  "data": {
+                    "type": "object",
+                    "description": "The product.",
+                    "required": ["id"],
+                    "properties": {
+                      "id": {
+                        "type": ["string", "number"],
+                        "description": "The product id.",
+                        "examples": ["ers"]
+                      },
+                      "name": {
+                        "type": "string",
+                        "description": "The name of the product.",
+                        "examples": ["Everyday Ruck Snack"]
+                      },
+                      "price": {
+                        "type": "number",
+                        "description": "The unit price the buyer sees, after any product discount.",
+                        "examples": [420]
+                      },
+                      "quantity": {
+                        "type": "number",
+                        "description": "How many pieces. Missing means 1.",
+                        "examples": [1]
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "shipping": {
+          "title": "Checkout shipping",
+          "description": "The buyer chose how the order is shipped. Recommended for most shops.",
+          "examples": [
+            {
+              "name": "checkout shipping",
+              "data": {
+                "shippingMethod": "express",
+                "step": 2,
+                "value": 462,
+                "currency": "EUR"
+              },
+              "context": {
+                "shopping": ["checkout", 0]
+              },
+              "globals": {
+                "pagegroup": "shop"
+              },
+              "trigger": "click"
+            }
+          ],
+          "required": ["data"],
+          "properties": {
+            "data": {
+              "type": "object",
+              "description": "The checkout.",
+              "required": ["shippingMethod"],
+              "dependentRequired": {
+                "value": ["currency"]
+              },
+              "properties": {
+                "shippingMethod": {
+                  "type": "string",
+                  "description": "How the order is shipped.",
+                  "examples": ["express"]
+                },
+                "step": {
+                  "type": "number",
+                  "description": "The number of the checkout step, counted from 1.",
+                  "examples": [2]
+                },
+                "value": {
+                  "type": "number",
+                  "description": "The merchandise value, the same as on checkout start.",
+                  "examples": [462]
+                },
+                "currency": {
+                  "type": "string",
+                  "description": "The currency of value, as a three-letter code.",
+                  "examples": ["EUR"]
+                }
+              }
+            }
+          }
+        },
+        "payment": {
+          "title": "Checkout payment",
+          "description": "The buyer chose how to pay. Recommended for most shops.",
+          "examples": [
+            {
+              "name": "checkout payment",
+              "data": {
+                "paymentMethod": "card",
+                "step": 3,
+                "value": 462,
+                "currency": "EUR"
+              },
+              "context": {
+                "shopping": ["checkout", 0]
+              },
+              "globals": {
+                "pagegroup": "shop"
+              },
+              "trigger": "click"
+            }
+          ],
+          "required": ["data"],
+          "properties": {
+            "data": {
+              "type": "object",
+              "description": "The checkout.",
+              "required": ["paymentMethod"],
+              "dependentRequired": {
+                "value": ["currency"]
+              },
+              "properties": {
+                "paymentMethod": {
+                  "type": "string",
+                  "description": "How the buyer pays, such as card.",
+                  "examples": ["card"]
+                },
+                "step": {
+                  "type": "number",
+                  "description": "The number of the checkout step, counted from 1.",
+                  "examples": [3]
+                },
+                "value": {
+                  "type": "number",
+                  "description": "The merchandise value, the same as on checkout start.",
+                  "examples": [462]
+                },
+                "currency": {
+                  "type": "string",
+                  "description": "The currency of value, as a three-letter code.",
+                  "examples": ["EUR"]
+                }
+              }
+            }
+          }
+        }
+      },
+      "order": {
+        "complete": {
+          "title": "Order complete",
+          "description": "An order was placed. Every shop needs it.",
+          "examples": [
+            {
+              "name": "order complete",
+              "data": {
+                "id": "0rd3r1d",
+                "currency": "EUR",
+                "value": 462,
+                "tax": 73.76,
+                "shipping": 5.22,
+                "total": 467.22
+              },
+              "context": {
+                "shopping": ["complete", 0]
+              },
+              "globals": {
+                "pagegroup": "shop"
+              },
+              "nested": [
+                {
+                  "entity": "product",
+                  "data": {
+                    "id": "ers",
+                    "name": "Everyday Ruck Snack",
+                    "color": "black",
+                    "size": "l",
+                    "price": 420
+                  },
+                  "context": {
+                    "shopping": ["complete", 0]
+                  },
+                  "nested": []
+                },
+                {
+                  "entity": "product",
+                  "data": {
+                    "id": "cc",
+                    "name": "Cool Cap",
+                    "size": "one size",
+                    "price": 42
+                  },
+                  "context": {
+                    "shopping": ["complete", 0]
+                  },
+                  "nested": []
+                },
+                {
+                  "entity": "gift",
+                  "data": {
+                    "name": "Surprise"
+                  },
+                  "context": {
+                    "shopping": ["complete", 0]
+                  },
+                  "nested": []
+                }
+              ],
+              "trigger": "load"
+            }
+          ],
+          "required": ["data", "nested"],
+          "properties": {
+            "data": {
+              "type": "object",
+              "description": "The order.",
+              "required": ["id", "value", "currency"],
+              "properties": {
+                "id": {
+                  "type": ["string", "number"],
+                  "description": "The order number, unique per order.",
+                  "examples": ["0rd3r1d"]
+                },
+                "value": {
+                  "type": "number",
+                  "description": "The merchandise value: the price times the quantity of every product, minus any order discount. It holds no shipping, and it holds tax only when the prices include tax.",
+                  "examples": [462]
+                },
+                "currency": {
+                  "type": "string",
+                  "description": "The currency of every amount of the order, as a three-letter code.",
+                  "examples": ["EUR"]
+                },
+                "tax": {
+                  "type": "number",
+                  "description": "The tax amount. It is part of value when the prices include tax, and comes on top when they do not.",
+                  "examples": [73.76]
+                },
+                "shipping": {
+                  "type": "number",
+                  "description": "The shipping cost. It is not part of value.",
+                  "examples": [5.22]
+                },
+                "total": {
+                  "type": "number",
+                  "description": "The gross amount charged: value plus shipping, and plus tax when the prices exclude it.",
+                  "examples": [467.22]
+                },
+                "discount": {
+                  "type": "number",
+                  "description": "The discount on the whole order, as a positive amount."
+                },
+                "coupon": {
+                  "type": ["string", "number"],
+                  "description": "The coupon code the buyer used."
+                },
+                "paymentMethod": {
+                  "type": "string",
+                  "description": "How the buyer paid, such as card."
+                }
+              }
+            },
+            "nested": {
+              "type": "array",
+              "description": "The products of the order, at least one.",
+              "contains": {
+                "type": "object",
+                "required": ["entity", "data"],
+                "properties": {
+                  "entity": {
+                    "type": "string",
+                    "enum": ["product"],
+                    "description": "The entity name, product.",
+                    "examples": ["product"]
+                  },
+                  "data": {
+                    "type": "object",
+                    "description": "The product.",
+                    "required": ["id"],
+                    "properties": {
+                      "id": {
+                        "type": ["string", "number"],
+                        "description": "The product id.",
+                        "examples": ["ers"]
+                      },
+                      "name": {
+                        "type": "string",
+                        "description": "The name of the product.",
+                        "examples": ["Everyday Ruck Snack"]
+                      },
+                      "category": {
+                        "type": "string",
+                        "description": "The main category of the product.",
+                        "examples": ["Apparel"]
+                      },
+                      "brand": {
+                        "type": "string",
+                        "description": "The brand of the product."
+                      },
+                      "variant": {
+                        "type": ["string", "number"],
+                        "description": "The variant, such as a color.",
+                        "examples": ["green"]
+                      },
+                      "price": {
+                        "type": "number",
+                        "description": "The unit price the buyer sees, after any product discount.",
+                        "examples": [420]
+                      },
+                      "quantity": {
+                        "type": "number",
+                        "description": "How many pieces. Missing means 1.",
+                        "examples": [1]
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "refund": {
+          "title": "Order refund",
+          "description": "Money went back to the buyer for an order. Recommended for most shops.",
+          "examples": [
+            {
+              "name": "order refund",
+              "data": {
+                "id": "0rd3r1d",
+                "value": 462,
+                "currency": "EUR"
+              },
+              "globals": {
+                "pagegroup": "shop"
+              }
+            }
+          ],
+          "required": ["data"],
+          "properties": {
+            "data": {
+              "type": "object",
+              "description": "The refund.",
+              "required": ["id", "value", "currency"],
+              "properties": {
+                "id": {
+                  "type": ["string", "number"],
+                  "description": "The order number of the refunded order.",
+                  "examples": ["0rd3r1d"]
+                },
+                "value": {
+                  "type": "number",
+                  "description": "The refunded amount, as a positive number.",
+                  "examples": [462]
+                },
+                "currency": {
+                  "type": "string",
+                  "description": "The currency of value, as a three-letter code.",
+                  "examples": ["EUR"]
+                },
+                "reason": {
+                  "type": "string",
+                  "description": "Why the order was refunded."
+                }
+              }
+            },
+            "nested": {
+              "type": "array",
+              "description": "For a partial refund, the refunded products.",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "entity": {
+                    "type": "string",
+                    "description": "A product.",
+                    "examples": ["product"]
+                  },
+                  "data": {
+                    "type": "object",
+                    "description": "The product.",
+                    "properties": {
+                      "id": {
+                        "type": ["string", "number"],
+                        "description": "The product id, such as the article number.",
+                        "examples": ["ers"]
+                      },
+                      "price": {
+                        "type": "number",
+                        "description": "The unit price the buyer sees, after any product discount.",
+                        "examples": [420]
+                      },
+                      "quantity": {
+                        "type": "number",
+                        "description": "How many pieces. Missing means 1.",
+                        "examples": [1]
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}

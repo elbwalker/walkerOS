@@ -24,12 +24,11 @@ like external API calls and transformations, at `debug`.
 ### In Sources
 
 ```typescript
-export const sourceFetch = async (
-  config: PartialConfig,
-  env: Types['env'], // env.logger is available here
-): Promise<FetchSource> => {
+export const sourceFetch: Source.Init<Types> = async (context) => {
+  const { env } = context; // env.logger is available here
   // Logger is scoped automatically by collector: [type:sourceId]
   env.logger.info('Server listening on port 3000');
+  // ... build and return the source instance
 };
 ```
 
@@ -49,7 +48,7 @@ export const destinationDataManager: DestinationInterface = {
 };
 ```
 
-**Note:** You don't need to create or configure the logger—it's provided
+**Note:** You don't need to create or configure the logger; it's provided
 automatically with proper scoping.
 
 ## Logger Methods
@@ -68,10 +67,12 @@ interface Logger.Instance {
 
 ### Log Levels
 
-- **ERROR (0)**: Always visible—use for fatal/critical errors only
-- **WARN (1)**: Degraded state, config issues, transient failures
-- **INFO (2)**: High-level operations (server startup, event processed)
-- **DEBUG (3)**: Low-level details (API calls, transformations)
+- **ERROR (0)**: the user's intent is not met (an event was not delivered, a
+  setting has no effect)
+- **WARN (1)**: walkerOS acted and the intent is still met
+- **INFO (2)**: lifecycle and self-healing (server startup)
+- **DEBUG (3)**: the per-event trace and deliberate decisions (API calls,
+  transformations, a skipped event)
 
 **Default**: ERROR only (must configure to see WARN/INFO/DEBUG)
 
@@ -139,11 +140,13 @@ async init({ config }) {
   cause
 - `code` and `retryable` tell a server source whether to ask the producer to
   resend (`config`, `missing-input` and a 4xx are not retryable)
-- `logger.throw` only throws now. It writes no log line, so it is not a way to
+- `logger.throw` only throws. It writes no log line, so it is not a way to
   report a failure
 
-Never `return` early or `return false` from `init` instead of throwing: a step
-that returns normally counts as delivered.
+Never `return` early from `init` or `push` instead of throwing: a step that
+returns normally counts as started, and a push that returns normally counts as
+delivered. `return false` from `init` fails the push with the code `not-ready`,
+which does not name the missing setting.
 
 ### Pattern 2: External API Calls
 
@@ -206,14 +209,12 @@ data never reaches a log line.
 ### Pattern 4: Server Startup (Sources)
 
 ```typescript
-// ✅ GOOD - Log server listening (high-level info)
+// ✅ GOOD - Log server listening (high-level info); routeLines lists one line
+// per method and path the source serves
 if (settings.port !== undefined) {
   server = app.listen(settings.port, () => {
     env.logger.info(
-      `Express source listening on port ${settings.port}\n` +
-        `   POST ${settings.path} - Event collection (JSON body)\n` +
-        `   GET ${settings.path} - Pixel tracking (query params)\n` +
-        `   OPTIONS ${settings.path} - CORS preflight`,
+      `Express source listening on port ${settings.port}\n` + routeLines,
     );
   });
 }
@@ -327,11 +328,9 @@ const { elb } = await startFlow({
 - `'INFO'`: Errors + warnings + info
 - `'DEBUG'`: Everything
 
-**Level contract:** `ERROR` means the user's intent is not met (an event was not
-delivered, a setting has no effect). `WARN` means walkerOS acted and the intent
-is still met. `INFO` is lifecycle and self-healing. `DEBUG` is the per-event
-trace and deliberate decisions: unmet consent, a skipped event and a consent
-wait are `debug`, never a failure.
+The levels follow the contract under [Log Levels](#log-levels). A skipped event
+writes a `DEBUG` line; a consent wait writes no line, and the push result lists
+the destination under `queued` with the reason `consent`. Neither is a failure.
 
 **Format:** on a server flow, `"collector": { "logger": { "format": "json" } }`
 prints one JSON object per line (`severity`, `message`, `time`, `scope`,
@@ -360,18 +359,20 @@ every line, so forwarding to a monitoring service needs no parsing.
 A server source endpoint is exposed to the open internet. Level choice decides
 whether ambient scanner noise turns into pages.
 
-| Situation                                         | Level                  | Also                                              |
-| ------------------------------------------------- | ---------------------- | ------------------------------------------------- |
-| Unparseable body, unknown path, oversized payload | `debug`                | count on `collector.status.sources.<id>.rejected` |
-| Event the collector rejects as invalid            | `warn` with the reason | counted as `rejected`, answered 400               |
-| Settled `ok: false` arriving after the HTTP ack   | `warn`                 | nothing to answer, the ack already went out       |
-| Handler fault, rejected push promise              | `error`                | answered 500                                      |
+| Situation                                       | Level                                                             | Also                                                                                |
+| ----------------------------------------------- | ----------------------------------------------------------------- | ----------------------------------------------------------------------------------- |
+| Unparseable body, oversized payload             | `debug`                                                           | count on `collector.status.sources.<id>.rejected`                                   |
+| Unknown path                                    | no line                                                           | answered `404`                                                                      |
+| Event the collector rejects as invalid          | `error` with the reason, one line per source and minute, no stack | counted as `rejected`; answered 400 only when the source waits for delivery         |
+| Settled `ok: false` arriving after the HTTP ack | `debug`                                                           | the collector's failure line reports the cause at `error`; the ack already went out |
+| Handler fault, rejected push promise            | `error`                                                           | answered 500                                                                        |
 
 Rules that follow from the table:
 
-- **Never `error` for anything a stranger can trigger.** On Cloud Run an
-  error-level stack trace on stderr opens an Error Reporting issue, so scanner
-  traffic becomes an alert.
+- **Never `error` for anything a stranger can trigger,** apart from the
+  collector's invalid-event line, which the source does not repeat. On Cloud Run
+  an error-level stack trace on stderr opens an Error Reporting issue, so
+  scanner traffic becomes an alert; the invalid-event line carries no stack.
 - **Do not duplicate the collector's error logs.** The collector already logs
   thrown pipeline failures at error. A source that logs them again doubles every
   real fault.
@@ -389,10 +390,3 @@ synchronous POST branch.
   API logging patterns
 - [packages/server/sources/express/src/index.ts](../../packages/server/sources/express/src/index.ts) -
   Server startup logging
-
-**Needs Improvement:**
-
-- [packages/server/sources/fetch/src/index.ts](../../packages/server/sources/fetch/src/index.ts) -
-  Missing all logging
-- [packages/server/destinations/meta/src/push.ts](../../packages/server/destinations/meta/src/push.ts) -
-  Missing push logging

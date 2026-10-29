@@ -44,7 +44,5 @@ export const DestinationSchema = z.object({
   productDestinationId: z
     .string()
     .min(1)
-    .describe(
-      'Product-specific destination ID (conversion action or user list)',
-    ),
+    .describe('Product-specific destination ID, like a conversion action ID'),
 });

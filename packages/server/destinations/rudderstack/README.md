@@ -7,8 +7,7 @@
 # @walkeros/server-destination-rudderstack
 
 Server-side event delivery to RudderStack via the official rudder-sdk-node SDK,
-implementing the full Segment Spec surface with automatic identity
-deduplication.
+sending the Segment Spec calls track, identify, group, page, screen, and alias.
 
 [Documentation](https://www.walkeros.io/docs/destinations/server/rudderstack)
 &bull;

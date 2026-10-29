@@ -7,11 +7,13 @@ sidebar_position: 4
 import { schemas } from '@walkeros/core/dev';
 import { omitSchemaProperties } from '@site/src/utils/schema';
 
-export const sourceConfig = omitSchemaProperties(
-
-  schemas.SourceSchemas.configJsonSchema,
-  ['settings', 'onError'],
-);
+export const sourceConfig = (({ definitions }) =>
+  omitSchemaProperties({ ...definitions.SourceConfig, definitions }, [
+    'settings',
+    'init',
+    'data',
+    'include',
+  ]))(schemas.SourceSchemas.configJsonSchema);
 
 # Sources
 
@@ -89,7 +91,7 @@ Consent state from a CMP, forwarded to the collector:
 
 * Cookiebot, CookieFirst, Usercentrics and CookiePro adapters
 * Consent changes propagate to destinations at runtime
-* Events queue until consent resolves
+* Destinations that require consent hold their events until it is granted
 
 [Learn more →](./web/cmps/)
 
@@ -99,10 +101,10 @@ Server sources accept HTTP requests containing walkerOS events and forward them 
 
 #### Express
 
-Turn-key HTTP event collection server with Express.js:
+HTTP event collection server built on Express.js:
 
-* Standalone or embedded: Start server automatically or integrate with existing Express app
-* CORS support and health checks
+* Starts its own server or integrates with an existing Express app
+* CORS support and configurable routes
 * Pixel tracking with 1x1 transparent GIF
 
 [Learn more →](./server/express)
@@ -111,7 +113,7 @@ Turn-key HTTP event collection server with Express.js:
 
 Web Standard Fetch API source for edge and serverless platforms:
 
-* Platform agnostic: Cloudflare Workers, Vercel Edge, Deno, Bun, Node.js 18+
+* Runs on Cloudflare Workers, Vercel Edge, Deno, Bun and Node.js 18+
 * Web Standard `(Request) => Response` signature
 * Batch processing and CORS support
 
@@ -121,7 +123,7 @@ Web Standard Fetch API source for edge and serverless platforms:
 
 AWS Lambda HTTP handler for event collection:
 
-* Multi-platform: API Gateway REST (v1), HTTP API (v2), Function URLs
+* Handles API Gateway REST (v1), HTTP API (v2) and Function URLs
 * Auto-detection of API Gateway version
 * Pixel tracking and health checks
 
@@ -131,7 +133,7 @@ AWS Lambda HTTP handler for event collection:
 
 Google Cloud Functions HTTP handler for event collection:
 
-* Plug-and-play: Direct assignment to Cloud Functions handler
+* Assigned directly as the Cloud Functions handler
 * Batches via the shared [event envelope](/docs/sources/envelope)
 * Configurable CORS
 
@@ -206,7 +208,7 @@ await elb({ name: 'product view', data: { id: 'P123', name: 'Laptop' } });`}
   },
 });
 
-// elb is now dataLayer.push instead of browser.push`}
+// elb is now the dataLayer source's push (the collector's elb) instead of browser.push`}
   language="typescript"
 />
 
@@ -215,11 +217,12 @@ await elb({ name: 'product view', data: { id: 'P123', name: 'Laptop' } });`}
 Sources can react to collector events via the optional `on` method:
 
 <CodeSnippet
-  code={`const mySource: Source.Init = async (config, env) => {
+  code={`const mySource: Source.Init = async (context) => {
   return {
     type: 'custom',
-    config,
-    on: async (event, context) => {
+    config: context.config,
+    push: context.env.elb,
+    on: async (event, data) => {
       if (event === 'consent') {
         // React to consent changes
       }
@@ -232,7 +235,9 @@ Sources can react to collector events via the optional `on` method:
 Available events:
 
 * `consent` - Consent state changes
+* `user`, `globals`, `custom` - State set by the `walker` command of the same name
 * `session` - Session lifecycle events
+* `config` - Collector config changes
 * `ready` - Collector ready state
 * `run` - Collector run events
 
@@ -256,11 +261,11 @@ them:
   `mapping`, `cache` and `state` run, where the event picks up its per-source
   ingest, and what makes the source show up in `collector.status.sources`.
 * **`walker *` commands** (`walker consent`, `walker user`, `walker run`, …) go
-  straight to the collector. They are control signals, not data, so no mapping
-  or chain applies to them.
+  straight to the collector. They are control signals, so no mapping or chain
+  applies to them.
 
-This holds for every source on both platforms, web and server alike. So a
-`next` chain declared on the browser or dataLayer source runs for the events it
+This holds for every source, web and server. A `next` chain declared on the
+browser or dataLayer source runs for the events it
 captures, while a consent grant coming from a CMP source reaches the collector
 untouched.
 

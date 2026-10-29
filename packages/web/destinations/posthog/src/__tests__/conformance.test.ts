@@ -62,6 +62,7 @@ describe('posthog conformance', () => {
         session_recording: { maskAllInputs: true },
         bootstrap: { distinctID: 'user-1' },
       },
+      minimal: examples.minimal,
       env: { push: examples.env.push, simulation: examples.env.simulation },
       root: path.join(__dirname, '..', '..'),
       passThrough,

@@ -7,11 +7,13 @@ package: '@walkeros/storybook-addon'
 
 # Storybook addon
 
-The walkerOS Storybook addon integrates event tracking visualization into
-Storybook. It enables developers to inspect walker attributes, monitor real-time
-events, and visually highlight tagged elements while building components.
+The walkerOS Storybook addon adds a panel to Storybook in which you inspect
+walker attributes, watch events as they fire and highlight tagged elements
+while you build components.
 
 ## Installation
+
+The addon needs Storybook 10.
 
 <CodeSnippet
   code={`npm install --save-dev @walkeros/storybook-addon`}
@@ -68,7 +70,7 @@ events" to manually refresh the event list.
 ### Live events tab
 
 Captures events in real-time as you interact with components. Shows timestamps
-for each event and stores up to 50 events. Use the "Clear" button to reset.
+for each event and stores up to 50 events. Use the "Clear Events" button to reset.
 
 ### Skeleton tab
 
@@ -76,11 +78,11 @@ Shows a hierarchical tree of the entities found in the DOM, with each entity's
 properties resolved onto it the way the walker reads them:
 
 - Generic (`data-elb-`) and scoped (`data-elb_`) values are shown on the
-  entities that consume them, labeled by origin (`G` for generic, `S` for
-  scoped; directly declared properties are unlabeled)
+  entities that consume them, marked `(generic)` or `(scoped)`; directly
+  declared properties are unmarked
 - Expandable/collapsible entity structure
 - Click to view element markup
-- Attribute counts by type
+- The tab title counts the entities found; "Update skeleton" refreshes the tree
 
 ### Visual highlighting
 
@@ -88,17 +90,17 @@ Toggle buttons highlight elements with different attribute types:
 
 | Attribute | Color  | Data Attribute    |
 | --------- | ------ | ----------------- |
-| Globals   | Cyan   | `data-elbglobals` |
-| Context   | Yellow | `data-elbcontext` |
+| Globals   | Blue   | `data-elbglobals` |
+| Context   | Orange | `data-elbcontext` |
 | Entity    | Green  | `data-elb`        |
 | Property  | Red    | `data-elb-*`, `data-elb_` |
 | Action    | Purple | `data-elbaction`  |
 
-Multiple highlights can be active simultaneously, displaying layered outlines.
+Several highlights can be on at once; they show as layered outlines.
 
 ## Usage in stories
 
-Import `dataElbArgTypes` to add walkerOS controls to your stories:
+Import `dataElbArgTypes` to add a walkerOS control to your stories:
 
 <CodeSnippet
   code={`import { dataElbArgTypes } from '@walkeros/storybook-addon';
@@ -111,6 +113,12 @@ export default {
 };`}
   language="typescript"
 />
+
+It adds one object control, `dataElb` (the exported `DataElb` type: `entity`,
+`action`, `trigger`, `data`, `context`, `globals`, `link`), in a walkerOS
+category. Your component receives it as the `dataElb` arg and renders the
+attributes from it, for example with the
+[tagger](/docs/sources/web/browser/tagger).
 
 ## Troubleshooting
 

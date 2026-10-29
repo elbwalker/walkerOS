@@ -450,7 +450,7 @@ export interface Settings {
    *
    * Identifier for your application in Snowplow.
    *
-   * @default undefined
+   * @default "walkerOS"
    */
   appId?: string;
 

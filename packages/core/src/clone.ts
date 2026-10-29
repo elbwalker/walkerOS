@@ -1,7 +1,7 @@
 /**
  * Creates a deep clone of a value.
  * Supports primitive values, objects, arrays, dates, and regular expressions.
- * Handles circular references.
+ * Handles circular references and skips a `__proto__` key.
  *
  * @template T
  * @param org - The value to clone.
@@ -25,6 +25,7 @@ export function clone<T>(
     visited.set(org as object, clonedObj); // Remember the reference
 
     for (const key in org as Record<string | symbol, unknown>) {
+      if (key === '__proto__') continue;
       if (Object.prototype.hasOwnProperty.call(org, key)) {
         clonedObj[key] = clone(
           (org as Record<string | symbol, unknown>)[key],

@@ -220,6 +220,7 @@ A small v3 web flow:
         "ga4": {
           "package": "@walkeros/web-destination-gtag",
           "config": {
+            "loadScript": true,
             "settings": { "ga4": { "measurementId": "G-XXXXXXXXXX" } }
           }
         }
@@ -253,6 +254,7 @@ The same flow in v4:
         "ga4": {
           "package": "@walkeros/web-destination-gtag",
           "config": {
+            "loadScript": true,
             "settings": { "ga4": { "measurementId": "G-XXXXXXXXXX" } }
           }
         }
@@ -403,6 +405,7 @@ Now: a single Init object with `code` (the destination) and an optional
 ```ts
 // v3
 elb('walker destination', destinationGtag, {
+  loadScript: true,
   settings: { ga4: { measurementId: 'G-XXX' } },
 });
 
@@ -410,6 +413,7 @@ elb('walker destination', destinationGtag, {
 elb('walker destination', {
   code: destinationGtag,
   config: {
+    loadScript: true,
     settings: {
       ga4: { measurementId: 'G-XXX' },
     },

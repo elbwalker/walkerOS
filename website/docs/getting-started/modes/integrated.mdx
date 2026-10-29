@@ -80,8 +80,9 @@ const { elb } = await startFlow({
     ga4: {
       code: destinationGtag,
       config: {
+        loadScript: true,
         settings: {
-          ga4: { measurementId: 'G-XXXXXXXXXX' },
+          ga4: { measurementId: 'G-XXXXXXXXXX', pageview: false },
         },
       },
     },
@@ -89,6 +90,10 @@ const { elb } = await startFlow({
 });`}
   language="typescript"
 />
+
+`loadScript: true` adds gtag.js to the page; without it, events reach GA4 only
+if your page loads gtag.js itself. `pageview: false` stops gtag from sending a
+page view of its own, because the browser source already sends one.
 
 ---
 
@@ -115,7 +120,8 @@ Add consent requirements to control which destinations receive events:
     ga4: {
       code: destinationGtag,
       config: {
-        settings: { ga4: { measurementId: 'G-XXXXXXXXXX' } },
+        loadScript: true,
+        settings: { ga4: { measurementId: 'G-XXXXXXXXXX', pageview: false } },
         consent: { analytics: true }, // Requires analytics consent
       },
     },
@@ -193,8 +199,9 @@ const { elb } = await startFlow({
     gtag: {
       code: destinationGtag,
       config: {
+        loadScript: true,
         // `measurementID` instead of `measurementId` would be a type error
-        settings: { ga4: { measurementId: 'G-XXXXXXXXXX' } },
+        settings: { ga4: { measurementId: 'G-XXXXXXXXXX', pageview: false } },
         mapping: {
           order: { complete: { name: 'purchase', settings: { ga4: {} } } },
         },
@@ -214,28 +221,54 @@ turns the checking off for the whole call.
 
 ## Framework examples
 
+Start the flow once per page load. React StrictMode runs effects twice in
+development, so a `startFlow` call placed directly in `useEffect` starts two
+flows, and each sends its own page view. Keep the start in a module-level
+promise. With `history: true` the browser source also sends a page view on
+every route change:
+
+```typescript
+// walker.ts
+import { startFlow } from '@walkeros/collector';
+import { sourceBrowser } from '@walkeros/web-source-browser';
+
+let walkerReady: ReturnType<typeof startWalker> | undefined;
+
+// Starts the flow once, later calls return the same promise
+export function initializeWalker() {
+  walkerReady ??= startWalker();
+  return walkerReady;
+}
+
+function startWalker() {
+  return startFlow({
+    sources: {
+      browser: {
+        code: sourceBrowser,
+        config: { settings: { pageview: true, history: true } },
+      },
+    },
+  });
+}
+```
+
+`initializeWalker()` resolves to `{ collector, elb }`. Call it from an effect:
+
 <Tabs>
   <TabItem value="react" label="React">
 
 ```tsx
-// hooks/useWalker.ts
-import { useEffect, useState } from 'react';
-import { startFlow } from '@walkeros/collector';
-import { sourceBrowser } from '@walkeros/web-source-browser';
-import type { WalkerOS } from '@walkeros/core';
+// App.tsx
+import { useEffect } from 'react';
+import { initializeWalker } from './walker';
 
-export function useWalker() {
-  const [elb, setElb] = useState<WalkerOS.Elb | null>(null);
-
+export function App() {
   useEffect(() => {
-    startFlow({
-      sources: {
-        browser: { code: sourceBrowser, config: { settings: { pageview: true } } },
-      },
-    }).then(({ elb }) => setElb(() => elb));
+    // Starts once, also when React StrictMode runs effects twice
+    initializeWalker();
   }, []);
 
-  return elb;
+  return <main>{/* your routes */}</main>;
 }
 ```
 
@@ -243,27 +276,27 @@ export function useWalker() {
   <TabItem value="nextjs" label="Next.js">
 
 ```tsx
-// app/providers.tsx
+// app/walker-tracker.tsx, rendered once in app/layout.tsx
 'use client';
 import { useEffect } from 'react';
-import { startFlow } from '@walkeros/collector';
-import { sourceBrowser } from '@walkeros/web-source-browser';
+import { initializeWalker } from '../walker';
 
-export function WalkerProvider({ children }: { children: React.ReactNode }) {
+export function WalkerTracker() {
   useEffect(() => {
-    startFlow({
-      sources: {
-        browser: { code: sourceBrowser, config: { settings: { pageview: true } } },
-      },
-    });
+    // Starts once, also when React StrictMode runs effects twice
+    initializeWalker();
   }, []);
 
-  return <>{children}</>;
+  return null;
 }
 ```
 
   </TabItem>
 </Tabs>
+
+The [React](/docs/getting-started/quickstart/react) and
+[Next.js](/docs/getting-started/quickstart/nextjs) quickstarts show the complete
+setup, including the Pages Router and component tagging.
 
 ---
 

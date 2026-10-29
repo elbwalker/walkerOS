@@ -46,18 +46,23 @@ Before starting, read these skills:
 
 This skill includes reference files you can copy:
 
-- **[examples/](examples/)** - Example events and configs to adapt for your
-  transformer
-  - [events.ts](examples/events.ts) - Before/after event examples
-  - [config.ts](examples/config.ts) - Configuration examples
 - **[templates/validation/](templates/validation/)** - Complete redact
   transformer template
   - [index.ts](templates/validation/index.ts) - Implementation with context
     pattern
   - [types.ts](templates/validation/types.ts) - Type definitions
-  - [schemas.ts](templates/validation/schemas.ts) - Zod validation schemas
+  - [schemas.ts](templates/validation/schemas.ts) - Zod settings schema
   - [index.test.ts](templates/validation/index.test.ts) - Test suite with
-    helpers
+    helpers, one test per step example
+  - [conformance.test.ts](templates/validation/conformance.test.ts) - The
+    conformance kit on a real collector
+- **[examples/](examples/)** - The template's examples: `step.ts`, `events.ts`
+  (which its unit tests read) and `config.ts` (sample configs)
+
+Copy them into a package as Phase 3 lays it out: `index.ts` to
+`src/transformer.ts`, `types.ts` to `src/types.ts`, `schemas.ts` to
+`src/schemas/index.ts`, `index.test.ts` to `src/__tests__/stepExamples.test.ts`,
+`conformance.test.ts` to `src/__tests__/` and `examples/` to `src/examples/`.
 
 ---
 
@@ -76,7 +81,7 @@ This skill includes reference files you can copy:
 
 ```bash
 # Reference implementation
-ls packages/transformers/fingerprint/
+ls packages/server/transformers/fingerprint/
 
 # Transformer types
 cat packages/core/src/types/transformer.ts
@@ -97,47 +102,45 @@ cat packages/core/src/types/transformer.ts
 ### 2.1 Scaffold Directory Structure
 
 ```bash
-mkdir -p packages/transformers/[name]/src/{examples,schemas,types}
+mkdir -p packages/server/transformers/[name]/src/{examples,schemas}
 ```
 
-### 2.2 Create Event Examples
+### 2.2 Step Examples
 
-Adapt [examples/events.ts](examples/events.ts) for your transformer's use case.
-Each example file should include:
-
-- Events that should pass through (modified)
-- Expected output after processing
-- Events that should be blocked (for validators)
-
-### 2.3 Create Config Examples
-
-Adapt [examples/config.ts](examples/config.ts) for your transformer's settings.
-
-### 2.4 Step Examples
-
-Add step examples with `{ in, out }` pairs for end-to-end step testing:
+Write one step example per case in `src/examples/step.ts`: events that pass
+through (modified or not), the expected output after processing, and events that
+are blocked (for validators). Each export is one `Flow.StepExample`:
 
 ```typescript
 // examples/step.ts
-export const step = {
-  'order-passes': {
-    in: { name: 'order complete', data: { id: 'ORD-123' } },
-    out: { name: 'order complete', data: { id: 'ORD-123' } },
-  },
-  'debug-filtered': {
-    in: { name: 'debug test', data: { message: 'noise' } },
-    out: false, // Transformer rejects this event
-  },
+import type { Flow } from '@walkeros/core';
+
+export const orderPasses: Flow.StepExample = {
+  title: 'Order passes',
+  description: 'An order event passes through unchanged.',
+  in: { name: 'order complete', data: { id: 'ORD-123' } },
+  out: [
+    ['return', { event: { name: 'order complete', data: { id: 'ORD-123' } } }],
+  ],
+};
+
+export const debugFiltered: Flow.StepExample = {
+  public: false,
+  description: 'A debug event is dropped.',
+  in: { name: 'debug test', data: { message: 'noise' } },
+  out: [['return', false]], // the transformer drops this event
 };
 ```
 
-For transformers, both `in` and `out` are walkerOS events, except `out: false`
-which indicates the transformer filters (rejects) the event. Set `title` +
+`in` is a walkerOS event; `out` is the `['return', value]` effect: the result
+the transformer returns (`{ event }`), or `false` for an event it drops. A
+failure example sets `outcome` instead (see Phase 6). Set `title` +
 `description` for public examples; mark test-only fixtures with `public: false`.
-See [using-step-examples](../walkeros-using-step-examples/SKILL.md) for the
-Three Type Zones.
+`src/examples/index.ts` exports them with `export * as step from './step';`. See
+[using-step-examples](../walkeros-using-step-examples/SKILL.md) for the Three
+Type Zones.
 
-### 2.5 Export via dev.ts
+### 2.3 Export via dev.ts
 
 ```typescript
 export * as schemas from './schemas';
@@ -153,11 +156,13 @@ export * as examples from './examples';
 
 ## Phase 3: Scaffold
 
-**Template transformer:** `packages/transformers/fingerprint/`
+**Template transformer:** `packages/server/transformers/fingerprint/` (a server
+transformer). A platform-neutral transformer lives in `packages/transformers/`
+(for example `validate`, `ga4`).
 
 ```bash
-cp -r packages/transformers/fingerprint packages/transformers/[name]
-cd packages/transformers/[name]
+cp -r packages/server/transformers/fingerprint packages/server/transformers/[name]
+cd packages/server/transformers/[name]
 
 # Update package.json: name, description, repository.directory
 ```
@@ -165,20 +170,18 @@ cd packages/transformers/[name]
 **Directory structure:**
 
 ```
-packages/transformers/[name]/
+packages/server/transformers/[name]/
 ├── src/
 │   ├── index.ts           # Main export
-│   ├── transformer.ts       # Transformer implementation
-│   ├── index.test.ts      # Tests against examples
+│   ├── transformer.ts     # Transformer implementation
+│   ├── types.ts           # Settings, Types interfaces
 │   ├── dev.ts             # Exports schemas and examples
 │   ├── examples/
-│   │   ├── index.ts       # Re-exports
-│   │   ├── events.ts      # Before/after event examples
-│   │   └── config.ts      # Configuration examples
+│   │   ├── index.ts       # export * as step from './step'
+│   │   └── step.ts        # Step examples
 │   ├── schemas/
 │   │   └── index.ts       # Zod schemas for settings
-│   └── types/
-│       └── index.ts       # Settings, Types interfaces
+│   └── __tests__/         # stepExamples.test.ts, conformance.test.ts
 ├── package.json
 ├── tsconfig.json
 ├── tsup.config.ts
@@ -206,7 +209,8 @@ discovery.
 
 ### Use `buildDev()` in tsup.config.ts
 
-Replace `buildModules({ entry: ['src/dev.ts'] })` with `buildDev()`:
+Keep `buildDev()` in the `defineConfig` array (the template package's
+`tsup.config.ts` has it):
 
 ```typescript
 import { buildDev } from '@walkeros/config/tsup';
@@ -214,7 +218,8 @@ import { buildDev } from '@walkeros/config/tsup';
 buildDev(),
 ```
 
-This auto-generates `dist/walkerOS.json` from your Zod schemas at build time.
+It builds `src/dev.ts` and writes `dist/walkerOS.json` from the `schemas`,
+`examples` and `hints` it exports.
 
 ### Hints (Optional)
 
@@ -245,14 +250,13 @@ export { hints } from './hints';
 
 Guidelines:
 
-- Expand awareness — describe capabilities ("supports X, Y, Z"), don't prescribe
+- Expand awareness: describe capabilities ("supports X, Y, Z"), don't prescribe
   one path
 - Reference schemas and examples, don't duplicate them
 - Verify every claim against actual implementation before publishing
 - Key naming: kebab-case, group with prefixes (validation-\*, enrichment-\*,
   troubleshoot-\*)
-- Most transformers don't need hints — schemas and examples cover the common
-  case
+- Most transformers don't need hints; schemas and examples cover the common case
 
 ### Gate: Convention Met
 
@@ -263,11 +267,12 @@ Guidelines:
 
 ### Runtime-only npm dependencies
 
-If your package wraps a third-party npm dep that **cannot be ESM-bundled** (uses
-`__dirname`, ships a `.node` binary, etc.), declare it under
-`walkerOS.bundle.external` in your `package.json`. See
-[walkeros-using-cli → Bundle externals](../walkeros-using-cli/SKILL.md#bundle-externals-per-package-walkerosbundleexternal)
-for the complete contract.
+A third-party npm dependency that **cannot be ESM-bundled** (uses `__dirname`,
+ships a `.node` binary, etc.) needs no declaration: server bundles are traced
+with nft, which copies every file the bundle reaches at runtime. Do not add a
+`walkerOS.bundle` field to `package.json`: the CLI ignores it and warns
+`still declares walkerOS.bundle.<keys>; this is ignored`. See
+[walkeros-using-cli: server bundles use nft tracing](../walkeros-using-cli/SKILL.md#server-bundles-use-nft-tracing).
 
 ---
 
@@ -291,12 +296,16 @@ complete implementation example.
 **Key patterns:**
 
 1. **Context destructuring**: Extract `config`, `logger`, `id` from init context
-2. **Schema validation**: Use Zod schemas to validate settings and provide
-   defaults (see
-   [templates/validation/schemas.ts](templates/validation/schemas.ts))
+2. **Settings schema, defaults inline**: the Zod schema (see
+   [templates/validation/schemas.ts](templates/validation/schemas.ts)) describes
+   the settings for `walkeros validate`, `walkerOS.json` and the docs; the
+   transformer applies its defaults inline and does not parse settings at
+   runtime
 3. **Push receives pushContext**: The `push` function gets event + push context
 4. **Return values**: `{ event }` (continue), `void` (passthrough), `false`
-   (cancel on purpose: a deliberate drop, not a failure)
+   (cancel on purpose: a deliberate drop, not a failure; the push answers
+   `ok: true`), or an array of results to fork the event (see
+   [understanding-transformers](../walkeros-understanding-transformers/SKILL.md))
 5. **A failure is a throw**: throw a `StepError` from `@walkeros/core` with a
    `code`. `missing-input` is the code for an event or an ingest that lacks the
    input the transformer needs (do not drop it silently); `config` for a missing
@@ -317,8 +326,9 @@ export type { Settings, Types } from './types';
 ### Gate: Implementation Compiles
 
 - [ ] `npm run build` passes
-- [ ] `npm run verify:touched -- <transformer-name>` passes (L1: typecheck +
-      lint + test)
+- [ ] `npm run verify:touched -- <platform>-transformer-<name>` passes (L1:
+      typecheck + lint + test; the argument is the package name after
+      `@walkeros/`, `transformer-<name>` for a platform-neutral one)
 
 ---
 
@@ -329,19 +339,22 @@ export type { Settings, Types } from './types';
 See [templates/validation/index.test.ts](templates/validation/index.test.ts) for
 a complete test suite showing:
 
-1. **`createTransformerContext()` helper** - Standardizes init context creation
-2. **`createPushContext()` helper** - Standardizes push context creation
+1. **`createTransformerContext()` helper** - a typed init context for unit
+   tests, defined in the test file
+2. **`createPushContext()` helper** - the same for the push context
 3. **Examples for test data** - Don't hardcode test values
 4. **Return value testing** - Verify `event`, `void`, or `false` returns
 5. **Conformance** - `conformance('transformer', transformer, options)` from
    `@walkeros/collector/dev` (profile `transformer`) runs it on a real
-   collector. A transformer needs no `page`. A transformer whose input is the
-   ingest and not an event declares its failure with a `missing-input` example
-   (an event as `in`, `out: []`, a description).
+   collector, see
+   `packages/server/transformers/fingerprint/src/__tests__/conformance.test.ts`.
+   A transformer needs no `page`. A transformer whose input is the ingest and
+   not an event declares its failure with a `missing-input` example (an event as
+   `in`, `out: []`, an `outcome` and a description).
 
 ### Gate: Tests Pass
 
-- [ ] `npm run verify:touched -- <transformer-name>` passes (L1)
+- [ ] `npm run verify:touched -- <platform>-transformer-<name>` passes (L1)
 - [ ] Tests verify against example outputs
 
 ---
@@ -389,11 +402,11 @@ requirements (build, test, lint, no `any`):
 
 ## Reference Files
 
-| What           | Where                                    |
-| -------------- | ---------------------------------------- |
-| Template       | `packages/transformers/fingerprint/`     |
-| Types          | `packages/core/src/types/transformer.ts` |
-| Chaining logic | `packages/collector/src/transformer.ts`  |
+| What           | Where                                       |
+| -------------- | ------------------------------------------- |
+| Template       | `packages/server/transformers/fingerprint/` |
+| Types          | `packages/core/src/types/transformer.ts`    |
+| Chaining logic | `packages/collector/src/transformer.ts`     |
 
 ## Related Skills
 

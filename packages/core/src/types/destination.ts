@@ -182,14 +182,15 @@ export interface Config<T extends TypesGeneric = Types> {
   cache?: import('./cache').Cache;
   /** Declarative store get/set operations applied around this destination. */
   state?: import('./state').State | import('./state').State[];
-  /** Completely skip this destination — no init, no push, no queuing. */
+  /** Completely skip this destination: no init, no push, no queuing. */
   disabled?: boolean;
   /**
    * Per-destination delivery timeout in ms (default 10000); a delivery that
    * does not settle within this window is routed to the DLQ like a thrown push.
-   * Also bounds an `on()` handler: a state handler that does not settle within
-   * the window is logged, and the destination is held (its events stay queued)
-   * until a later state delivery to it settles.
+   * Also bounds an `on()` handler: a state handler that fails or does not
+   * settle within the window is logged, and the destination's events are held
+   * for one more window. After that, held and later events fail with
+   * `blocked` until a state delivery to it succeeds.
    */
   timeout?: number;
   /** Return this value instead of calling push(). Uses !== undefined check to support falsy values. */
@@ -221,10 +222,10 @@ export interface Config<T extends TypesGeneric = Types> {
    * inert and behavior is unchanged. After `threshold` CONSECUTIVE transport
    * failures (a thrown push, a timed-out push, a whole-batch throw, a
    * connection-level `reportError(err, event)`) the breaker opens and events
-   * are skipped (counted, not pushed) until `cooldown` ms elapse, then a single
-   * probe event is allowed; its success closes the breaker, its failure
-   * re-opens it. Partial-batch row failures are breaker-neutral. A bare number
-   * is the `threshold`.
+   * fail with `breaker-open` (counted, kept in the DLQ, not pushed) until
+   * `cooldown` ms elapse, then a single probe event is allowed; its success
+   * closes the breaker, its failure re-opens it. Partial-batch row failures
+   * are breaker-neutral. A bare number is the `threshold`.
    *
    * - `threshold`: consecutive transport failures before opening. Default 5.
    * - `cooldown`: ms an open breaker waits before admitting a probe. Default 30000.

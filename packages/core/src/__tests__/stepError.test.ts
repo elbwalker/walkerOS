@@ -145,6 +145,56 @@ describe('StepError', () => {
       300,
     );
   });
+
+  it.each<[string, unknown, string, string, boolean]>([
+    [
+      'a circular JSON TypeError',
+      new TypeError('Converting circular structure to JSON'),
+      'Converting circular structure to JSON',
+      'runtime',
+      false,
+    ],
+    [
+      'a stack overflow RangeError',
+      new RangeError('Maximum call stack size exceeded'),
+      'Maximum call stack size exceeded',
+      'runtime',
+      false,
+    ],
+    [
+      'a ReferenceError',
+      new ReferenceError('x is not defined'),
+      'x is not defined',
+      'runtime',
+      false,
+    ],
+    [
+      'a fetch TypeError with a cause code',
+      Object.assign(new TypeError('fetch failed'), {
+        cause: { code: 'ECONNREFUSED' },
+      }),
+      'fetch failed',
+      'transport',
+      true,
+    ],
+    [
+      'a SyntaxError',
+      new SyntaxError('Unexpected token <'),
+      'Unexpected token <',
+      'transport',
+      true,
+    ],
+    [
+      'a plain Error',
+      new Error('vendor said no'),
+      'vendor said no',
+      'transport',
+      true,
+    ],
+    ['a thrown string', 'boom', 'boom', 'transport', true],
+  ])('labels %s', (_, error, message, code, retryable) => {
+    expect(toFailureReason(error)).toEqual({ code, message, retryable });
+  });
 });
 
 describe('networkErrorMessage', () => {

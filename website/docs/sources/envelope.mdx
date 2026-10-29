@@ -5,9 +5,9 @@ sidebar_position: 3
 
 # Event Envelope
 
-Every server source answers one question the same way: given a POST body, how
-many events did the caller send, and which ones. The same request body produces
-the same event count on Express, Cloud Functions, Lambda and Fetch.
+Every server source reads a POST body the same way to decide how many events the
+caller sent and which ones. The same request body produces the same event count
+on Express, Cloud Functions, Lambda and Fetch.
 
 ## Accepted body forms
 
@@ -16,7 +16,7 @@ the same event count on Express, Cloud Functions, Lambda and Fetch.
 | `{ "name": "page view", ... }` | One event. |
 | `{ "batch": [ ... ] }` | N events. The canonical envelope. |
 | `[ ... ]` | N events. Accepted alias. |
-| A string, number, `null`, or unparseable body | Raw input: one empty event, with the value available as `ingest.body` for a `source.before` transformer to decode. |
+| A string, number, `null`, or unparseable body | Raw input: one empty event. A `source.before` transformer decodes the value from `ingest.body`, which `config.ingest` fills with `{ "map": { "body": { "key": "body" } } }`. |
 
 An object that is not a valid event is forwarded as one event rather than being
 replaced by an empty one, so a `source.before` chain can rewrite a vendor
@@ -39,11 +39,14 @@ A batch answers with the batch shape whether it carries one event or fifty:
 
 | Outcome | Status | Body |
 |---|---|---|
-| All events delivered | 200 | `{ success: true, processed, ids }` |
-| Some events failed | 207 | `{ success: false, processed, failed, errors: [{ index, error }] }` |
+| All events delivered, or failed for a reason a resend cannot fix | 200 | `{ success: true, processed, ids }` |
+| Some events invalid, or failed for a reason a resend could fix | 207 | `{ success: false, processed, failed, errors: [{ index, error }] }` |
 | Over the cap | 400 | `{ success: false, error }` |
 
-Single event requests keep their existing per source response bodies.
+A failure no resend can fix is acknowledged on purpose, because resending would
+fail the same way; see
+[producer acknowledgement](/docs/sources/server#producer-acknowledgement).
+Single event requests answer with each source's own response body.
 
 ### 207 requires synchronous mode
 
@@ -71,15 +74,16 @@ their route configuration rather than a setting.
 shares one `Ingest`.
 
 Transformers that write per event annotations into `ingest` therefore record
-only the last event's values for a batch. This affects `@walkeros/transformer-bot`
-(which writes `ingest.bot.*`) and `@walkeros/transformer-validate`.
+only the last event's values for a batch. This affects
+`@walkeros/server-transformer-bot` (its `ingest.bot.reasons` output, and any
+output routed to `ingest.`) and `@walkeros/transformer-validate`.
 
 **While either transformer is in the chain, prefer single event requests.** Batch
 delivery is correct for the events themselves; only the `ingest` annotations
-collapse. A per event annotation channel is planned.
+collapse.
 
-This applies to every batch producer, not just browser clients. A walkerOS
-runtime forwarding to another walkerOS runtime is one too: with `config.batch`
-set, `@walkeros/server-destination-api` sends one request carrying many events,
-so a receiving flow that runs either transformer collapses its annotations the
-same way.
+This applies to every batch producer, including a walkerOS runtime that
+forwards to another walkerOS runtime: with `config.batch` set,
+`@walkeros/server-destination-api` sends one request carrying many events, so a
+receiving flow that runs either transformer collapses its annotations the same
+way.

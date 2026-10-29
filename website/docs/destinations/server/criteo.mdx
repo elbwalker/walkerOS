@@ -7,6 +7,7 @@ package: '@walkeros/server-destination-criteo'
 ---
 import data from '@walkeros/server-destination-criteo/walkerOS.json';
 import Configuration from '@site/src/components/snippets/_configuration.mdx';
+import Quickstart from '@site/src/components/snippets/_quickstart.mdx';
 
 import WhereThisFits from '@site/src/components/snippets/_where-this-fits.mdx';
 
@@ -14,7 +15,7 @@ import WhereThisFits from '@site/src/components/snippets/_where-this-fits.mdx';
 
 <PackageLink env="server" github="packages/server/destinations/criteo" npm="@walkeros/server-destination-criteo" status="beta" />
 
-Server-side event delivery to Criteo's Events API (S2S v0) for reliable retargeting, bypassing browser limitations and providing consistent user matching for ad optimization.
+Server-side event delivery to Criteo's Events API (S2S v0) for retargeting. Sending from the server avoids browser limitations and gives Criteo consistent user matching for ad optimization.
 
 <WhereThisFits
   pre={<>Criteo Events API is a <strong>server destination</strong> in the walkerOS flow:</>}
@@ -26,65 +27,21 @@ Server-side event delivery to Criteo's Events API (S2S v0) for reliable retarget
 
 ## Installation
 
-<CodeSnippet
-  code={`npm install @walkeros/server-destination-criteo`}
-  language="bash"
-/>
-
-<Tabs groupId="mode">
-  <TabItem value="integrated" label="Integrated" default>
-
-<CodeSnippet
-  code={`import { startFlow } from '@walkeros/collector';
-import { destinationCriteo } from '@walkeros/server-destination-criteo';
-
-await startFlow({
-  destinations: {
-    criteo: {
-      code: destinationCriteo,
-      config: {
-        settings: {
-          partnerId: 'YOUR_PARTNER_ID',
-          callerId: 'YOUR_CALLER_ID',
-        },
-      },
-    },
-  },
-});`}
-  language="typescript"
-/>
-
-  </TabItem>
-  <TabItem value="bundled" label="Bundled">
-
-Add to your `flow.json` destinations:
-
-<CodeSnippet
-  code={`"destinations": {
-  "criteo": {
-    "package": "@walkeros/server-destination-criteo",
-    "import": "destinationCriteo",
-    "config": {
-      "settings": {
-        "partnerId": "YOUR_PARTNER_ID",
-        "callerId": "YOUR_CALLER_ID"
-      }
-    }
-  }
-}`}
-  language="json"
-/>
-
-[See bundled mode setup](/docs/getting-started/modes/bundled) | [CLI reference](/docs/apps/cli)
-
-  </TabItem>
-</Tabs>
+<Quickstart data={data} />
 
 <Configuration type="destination" data={data} />
 
+## Failures
+
+A response outside the 2xx range, a network error, or no answer within 5 seconds fails the event: the push answers `failed` with the code `transport` (with the HTTP status) or `timeout`, the event goes to the dead-letter queue, and the collector logs one ERROR line. Any 2xx answer counts as delivered: the destination does not read the response body. Without `partnerId` or `callerId` the destination does not start: every push answers `failed` with the code `config`, and the collector logs `destination init failed`. A rule with `silent: true` sends nothing.
+
 ## Client IP and user agent
 
-The destination sends the client IP as `ip` and the user agent as `useragent` by default. The `ip` and `userAgent` settings resolve against `{ ingest, event }` and default to `["ingest.ip", "event.user.ip"]` and `["ingest.userAgent", "event.user.userAgent"]`, so they fill in whenever the source provides them (see the `config.ingest` recipe on the [Express source](/docs/sources/server/express#ingest-metadata)). A value your mapping sets for `user_data.ip` or `user_data.useragent` wins. A value that resolves to nothing is not sent. Set either setting to `false` to turn it off, or to another mapping value to read it elsewhere.
+The destination sends the client IP as `ip` and the user agent as `useragent` by default. The `ip` and `userAgent` settings resolve against `{ ingest, event }` and default to `["ingest.ip", "event.user.ip"]` and `["ingest.userAgent", "event.user.userAgent"]`, so they fill in whenever the source provides them (see the `config.ingest` recipe on the [Express source](/docs/sources/server/express#ingest-metadata)). A value that `user_data` in settings maps to `ip` or `useragent` wins; a rule's `data` is not read for them. A value that resolves to nothing is not sent. Set either setting to `false` to turn it off, or to another mapping value to read it elsewhere.
+
+## Consent
+
+The quickstart sets no `config.consent`, so Criteo receives every event, whatever consent the event carries. To send only events with consent, add `consent: { marketing: true }` to `config`, next to `settings` (with several keys listed, one granted key is enough). An event without that consent is skipped or queued, depending on the collector's `consentDenied`. Server flows built by the CLI skip it and count it in `skipped`. With `startFlow` it waits in the destination's queue by default: a later event that carries consent does not release it, and only a `walker consent` command does, which then sends the waiting events of every user at once. Pass `consentDenied: 'skip'` to `startFlow` to skip such events instead (see [Gate a destination with consent](/docs/guides/consent#gate-a-destination-with-consent) and [consent-denied events on a server](/docs/collector#consent-denied-events-on-a-server)).
 
 ## Event mapping
 
@@ -101,6 +58,8 @@ Criteo uses its own standard event names. Set the Criteo event name via each rul
 | `checkout payment` | `addPaymentInfo`        |
 | `order complete`   | `trackTransaction`      |
 | `user login`       | `login`                 |
+
+An event without a rule `name` is sent under its walkerOS name, such as `page view`, which is not a Criteo event name.
 
 <CodeSnippet
   code={`"mapping": {
@@ -132,7 +91,7 @@ Criteo uses its own standard event names. Set the Criteo event name via each rul
 
 ## User identity
 
-Criteo matches users via three signals. Wire them through `user_data` in settings:
+Criteo matches users via three signals. Wire them through `user_data` in settings. Only these three keys are read there (besides `ip` and `useragent`), each as one value:
 
 | Field                 | Description                                           |
 | --------------------- | ----------------------------------------------------- |
@@ -140,9 +99,11 @@ Criteo matches users via three signals. Wire them through `user_data` in setting
 | `email`               | Raw email. Hashed into MD5, SHA-256 and SHA-256(MD5)  |
 | `retailer_visitor_id` | Stable retailer visitor identifier                    |
 
+Any other key, a list, and a `user_data` object in a rule's `data` are dropped without a log line.
+
 <CodeSnippet
   code={`"settings": {
-  "partnerId": "YOUR_PARTNER_ID",
+  "partnerId": "12345",
   "callerId": "YOUR_CALLER_ID",
   "user_data": {
     "mapped_user_id": "user.id",
@@ -161,12 +122,8 @@ Raw emails are lowercased and trimmed, then hashed into all three formats Criteo
 - `sha256`: SHA-256 hex digest
 - `sha256_md5`: SHA-256 hex of the MD5 hex string
 
-Pre-hashed values (detected by hex length: 32 chars for MD5, 64 for SHA-256) are passed through without re-hashing.
+A value that is already a hash is not hashed again: a 64-character hex value is sent as `sha256` only, and a 32-character hex value is sent as `md5`, with `sha256_md5` derived from it.
 
 ## Deduplication
 
 Criteo Events API supports deduplication with Criteo OneTag by sharing a `deduplication_page_view_id` across channels. Wire it via `data.map.deduplication_page_view_id` in the event mapping.
-
-## Links
-
-- [Criteo Events API Guide](https://guides.criteotilt.com/events-api/)

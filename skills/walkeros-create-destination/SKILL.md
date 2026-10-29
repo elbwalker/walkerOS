@@ -61,14 +61,14 @@ quality determines implementation quality.
 ### 1.1 Find and Install Official SDK
 
 Always prefer the vendor's official SDK package over raw HTTP API calls. The SDK
-handles transport, batching, retries, and plugin ecosystems — don't reinvent
+handles transport, batching, retries, and plugin ecosystems; don't reinvent
 these.
 
-- [ ] **Install the SDK** — `npm install @vendor/sdk` and read the actual source
-- [ ] **Read TypeScript types** — Import types from the SDK package directly.
+- [ ] **Install the SDK**: `npm install @vendor/sdk` and read the actual source
+- [ ] **Read TypeScript types**: Import types from the SDK package directly.
       Never duplicate type definitions. This ensures IntelliSense completeness
       and consistency with SDK updates.
-- [ ] **Understand the full API surface** — List every public method, not just
+- [ ] **Understand the full API surface**: List every public method, not just
       `track()`. Identity methods, property operations, group management,
       specialized event types (revenue, etc.)
 
@@ -84,14 +84,14 @@ ls node_modules/@vendor/analytics-browser/lib/esm/
 
 ### 1.2 Understand SDK Architecture
 
-- [ ] **Init options** — What does `init()` accept? What can be configured?
-- [ ] **Call ordering** — Can you call methods before `init()`? Is there
-      internal queuing? What are the race condition implications?
-- [ ] **Plugin system** — Does the SDK support plugins? How are they added?
-- [ ] **Identity management** — How does the SDK handle user/device/session IDs?
+- [ ] **Init options**: What does `init()` accept? What can be configured?
+- [ ] **Call ordering**: Can you call methods before `init()`? Is there internal
+      queuing? What are the race condition implications?
+- [ ] **Plugin system**: Does the SDK support plugins? How are they added?
+- [ ] **Identity management**: How does the SDK handle user/device/session IDs?
       Does it manage cookies/storage? Can this be disabled (since walkerOS
       manages identity)?
-- [ ] **Consent** — Does the SDK have a consent mode or just binary opt-out?
+- [ ] **Consent**: Does the SDK have a consent mode or just binary opt-out?
 
 ### 1.3 Identify All Event Methods
 
@@ -140,11 +140,11 @@ complexity.
 
 ### 2.1 Taxonomy Types
 
-| Type             | Description                                    | Mapping Needed                         | Example Vendors       |
-| ---------------- | ---------------------------------------------- | -------------------------------------- | --------------------- |
-| **Free-form**    | Any event name accepted, no prescribed schema  | Minimal — names pass through           | Most modern analytics |
-| **Rigid**        | Prescribed event names unlock specific reports | Essential — must map to exact names    | Some legacy analytics |
-| **Schema-based** | Self-describing events with formal schemas     | Structural — must build schema objects | Data warehouse tools  |
+| Type             | Description                                    | Mapping Needed                        | Example Vendors       |
+| ---------------- | ---------------------------------------------- | ------------------------------------- | --------------------- |
+| **Free-form**    | Any event name accepted, no prescribed schema  | Minimal: names pass through           | Most modern analytics |
+| **Rigid**        | Prescribed event names unlock specific reports | Essential: must map to exact names    | Some legacy analytics |
+| **Schema-based** | Self-describing events with formal schemas     | Structural: must build schema objects | Data warehouse tools  |
 
 ### 2.2 Determine Integration Approach
 
@@ -154,13 +154,13 @@ complexity.
 | **Script + command queue** | SDK loaded via script tag          | Load script, use global function queue                     |
 | **HTTP API**               | No SDK available, or server-side   | Direct HTTP calls via `sendWeb()` or `fetch`               |
 
-**Prefer the vendor SDK** — it handles transport, retries, and plugin
+**Prefer the vendor SDK**: it handles transport, retries, and plugin
 orchestration. HTTP API is a fallback when no SDK exists.
 
 When using the vendor SDK:
 
 - Disable features walkerOS replaces (autocapture, identity storage) **by
-  default** — but allow users to re-enable via settings
+  default**, but allow users to re-enable via settings
 - Pass through all SDK init options for full configurability
 - Import types from the SDK package directly
 
@@ -175,14 +175,14 @@ When using the vendor SDK:
 ## Phase 3: Create Examples (BEFORE Implementation)
 
 **Mandatory.** Examples are the test fixtures for Phase 8. Define expected `in`
-/ `out` / `mapping` triples FIRST — start with the end result in mind. Without
+/ `out` / `mapping` triples FIRST: start with the end result in mind. Without
 examples, you cannot test. Even for free-form vendors where no mapping is
 strictly "required," step examples serve as the single source of truth for
 tests, simulations, and documentation.
 
 > **Authoritative pattern:** See
 > [using-step-examples](../walkeros-using-step-examples/SKILL.md) for the Three
-> Type Zones and lifecycle. This skill reuses that contract — do not diverge.
+> Type Zones and lifecycle. This skill reuses that contract; do not diverge.
 
 ### 3.1 Scaffold Directory Structure
 
@@ -191,27 +191,31 @@ mkdir -p packages/web/destinations/[name]/src/examples
 mkdir -p packages/web/destinations/[name]/src/{schemas,types}
 ```
 
-### 3.2 Required Files (3 files total)
+### 3.2 Required Files (4 files total)
 
-All seven reference web destinations (gtag, meta, snowplow, plausible, piwikpro,
-api, demo) use exactly three files in `src/examples/`. Match this structure — no
-`events.ts`, `outputs.ts`, or standalone `mapping.ts`.
+The reference web destinations (meta, snowplow, plausible, piwikpro, api) use
+exactly four files in `src/examples/`. Match this structure: no `events.ts`,
+`outputs.ts`, or standalone `mapping.ts`.
 
-| File                | Purpose                                                           |
-| ------------------- | ----------------------------------------------------------------- |
-| `examples/env.ts`   | Mock environment for testing (no real network calls)              |
-| `examples/step.ts`  | `Flow.StepExample` entries with `in` / `out` / `mapping?` triples |
-| `examples/index.ts` | Barrel exports: `env` and `step`                                  |
+| File                  | Purpose                                                           |
+| --------------------- | ----------------------------------------------------------------- |
+| `examples/env.ts`     | Mock environment for testing (no real network calls)              |
+| `examples/step.ts`    | `Flow.StepExample` entries with `in` / `out` / `mapping?` triples |
+| `examples/minimal.ts` | `Flow.MinimalExample`: only the settings it needs to start        |
+| `examples/index.ts`   | Barrel exports: `env`, `step` and `minimal`                       |
 
 The `step.ts` file embeds the input event, the mapping config, and the expected
-vendor output together in one `Flow.StepExample` — subsuming what older skills
-described as separate `events.ts` / `outputs.ts` / `mapping.ts` files.
+vendor output together in one `Flow.StepExample`.
+
+The skill's [examples/](./examples/) folder holds these four files for the
+template destination ([templates/simple/](./templates/simple/)): copy them to
+`src/examples/`.
 
 ### 3.3 Typing Rules (strict)
 
 **No `any`.** Every example value must be explicitly typed.
 
-- **Inputs** use `WalkerOS.Event` (via `getEvent()` from `@walkeros/core`) —
+- **Inputs** use `WalkerOS.Event` (via `getEvent()` from `@walkeros/core`);
   never hand-roll event literals.
 - **Outputs** use **vendor SDK types** imported from the official package
   whenever the vendor publishes them. Do not invent local output types for
@@ -220,27 +224,42 @@ described as separate `events.ts` / `outputs.ts` / `mapping.ts` files.
 - **Step entries** are typed `Flow.StepExample` from `@walkeros/core`.
 - **Mock env** is typed against the destination's local `Env` type from
   `../types`. No `as any`, no untyped `{}`.
-- Vendor SDK types come from the SDK you installed in Phase 1 — reuse them
-  rather than duplicating shapes.
+- Vendor SDK types come from the SDK you installed in Phase 1: reuse them rather
+  than duplicating shapes.
 
-### 3.4 Code Template — `examples/step.ts`
+### 3.4 Code Template: `examples/step.ts`
+
+The examples match the template destination
+([index.ts](./templates/simple/index.ts)), which calls a vendor global
+`window.vendorSdk('track', name, params)`:
 
 ```typescript
-import type { Flow, WalkerOS } from '@walkeros/core';
+import type { Flow } from '@walkeros/core';
 import { getEvent } from '@walkeros/core';
 
 // One step example per supported feature / setting.
-// `in`  is a WalkerOS.Event (use getEvent for deterministic fixtures).
-// `out` is the vendor-specific call we expect the destination to produce —
-//       typed against the vendor SDK's published types where available.
-// `mapping` is the mapping rule under test (optional — omit for default push).
+// `in`  is a WalkerOS.Event (getEvent returns the same event on every run).
+// `out` lists the vendor calls the destination makes, as [callable, ...args]
+//       tuples written from the vendor's documented calls.
+// `mapping` is the mapping rule under test (optional: omit it for the default
+//       push).
 
 // Set `title` + `description` for public examples; mark test-only fixtures
-// with `public: false`. See
-// [walkeros-using-step-examples](../walkeros-using-step-examples/SKILL.md).
+// with `public: false`. See the walkeros-using-step-examples skill.
+
+export const init: Flow.StepExample = {
+  title: 'Initialization',
+  description:
+    'The destination loads the vendor script and initializes the SDK with the API key.',
+  in: { loadScript: true, settings: { apiKey: 'YOUR_API_KEY' } },
+  out: [['window.vendorSdk', 'init', 'YOUR_API_KEY']],
+};
 
 export const purchase: Flow.StepExample = {
-  in: getEvent('order complete', { timestamp: 1700000100 }),
+  title: 'Purchase',
+  description:
+    'A completed order is sent as a purchase with its id, value and currency.',
+  in: getEvent('order complete'),
   mapping: {
     name: 'purchase',
     data: {
@@ -252,109 +271,83 @@ export const purchase: Flow.StepExample = {
     },
   },
   out: [
-    'event',
-    'purchase',
-    {
-      transaction_id: '0rd3r1d',
-      value: 555,
-      currency: 'EUR',
-    },
+    [
+      'window.vendorSdk',
+      'track',
+      'purchase',
+      { transaction_id: '0rd3r1d', value: 462, currency: 'EUR' },
+    ],
   ],
 };
 
 export const pageView: Flow.StepExample = {
-  in: getEvent('page view', { timestamp: 1700000102 }),
-  mapping: undefined,
-  out: ['event', 'page_view', { send_to: 'G-XXXXXXXXXX' }],
-};
-
-// For destinations that handle consent updates, use the command field
-// to route `in` through elb('walker consent', in) instead of an event push:
-export const consentGranted: Flow.StepExample = {
-  command: 'consent',
-  in: { marketing: true, functional: true },
-  out: ['consent', 'update', { ad_storage: 'granted' }],
+  title: 'Page view',
+  description: 'A page view without a rule is sent under its walkerOS name.',
+  in: getEvent('page view'),
+  out: [['window.vendorSdk', 'track', 'page view', {}]],
 };
 ```
+
+A consent example sets `command: 'consent'`, which routes `in` through
+`elb('walker consent', in)` instead of an event push (see `consentRevoke`
+below).
 
 #### Init step example
 
-Every destination ships an `examples.step.init` entry — the init is a
-first-class step example, not a hidden side effect.
+A destination whose `init` makes vendor calls (script tags, SDK initializers,
+queue setup) can ship them as an `examples.step.init` entry, as plausible, meta
+and snowplow do.
 
-- `in` mirrors the real `Destination.Config` shape users copy-paste — typically
+- `in` mirrors the real `Destination.Config` shape users copy-paste, typically
   `{ loadScript: true, settings: { /* vendor-specific */ } }`. Whatever a user
   would configure in their flow goes here verbatim.
-- `out` is the ordered list of vendor calls the `init()` lifecycle produces
-  (script tags, SDK initializers, queue setup). Each effect tuple follows the
-  standard `[callable, ...args]` shape.
+- `out` is the ordered list of vendor calls the `init()` lifecycle produces.
+  Each effect tuple follows the standard `[callable, ...args]` shape.
 
-**Test pattern.** Call
-`destination.init({ id, config, env, logger, collector })` directly in the test
-— no capture helpers, no `capture.ts`, no allowlists. Assert the captured vendor
-calls equal `examples.step.init.out`:
-
-```typescript
-const calls: unknown[][] = [];
-const env = wrapEnv(examples.env.init, (call) => calls.push(call));
-await destination.init({
-  id: 'test',
-  config: examples.step.init.in as Destination.Config,
-  env,
-  logger,
-  collector,
-});
-expect(calls).toEqual(examples.step.init.out);
-```
-
-**Event step tests** bootstrap once with `examples.step.init.in`, then slice the
-shared capture buffer to isolate push effects from init effects:
-
-```typescript
-const pushCalls = calls.slice(examples.step.init.out.length);
-expect(pushCalls).toEqual(example.out);
-```
-
-There are no hand-maintained allowlists or `isInitEffect` filters — the init
-example's `out.length` is the single source of truth for how many effects belong
-to init.
+`runExamples` keeps init calls out of every event example's `out` and takes
+events only, so the init example runs in a test of its own: start a real
+collector, call `destination.init(...)` with an env that records the paths
+`examples.env.simulation` names, and compare the calls with `init.out`. The
+template [index.test.ts](./templates/simple/index.test.ts) does this, as
+`packages/web/destinations/meta/src/__tests__/conformance.test.ts` does.
 
 **Multi-tool packages** (like `gtag`, which drives GA4, Google Ads, and GTM)
-ship **per-tool init examples** — `examples.step.ga4Init`, `adsInit`, `gtmInit`
-— instead of a single `init`. The docs render each on its own page via
-`<StepExample example={data.examples.step.ga4Init} />`, and tests pick the right
-init per sub-tool.
+ship **per-tool init examples** (`examples.step.ga4Init`, `adsInit`, `gtmInit`)
+instead of a single `init`, and their tests run each with its sub-tool's
+settings.
 
 #### Failure, silent and consent examples
 
 Besides the happy path, `step.ts` carries `public: false` examples that the
-conformance kit (Phase 8) runs on a real collector:
+conformance kit and `runExamples` (Phase 8) run on a real collector. The first
+and the last fit the template destination; the two in between show failures
+other destinations report:
 
 ```typescript
 // A silent rule sends nothing.
 export const silentRule: Flow.StepExample = {
   public: false,
   description: 'A rule with silent: true sends no event.',
-  in: getEvent('page view', { timestamp: 1700000006 }),
+  in: getEvent('page view'),
   mapping: { silent: true },
   out: [],
 };
 
-// An event the destination cannot send is reported, not counted delivered.
+// A destination that needs a user id reports an event without one.
 export const missingInput: Flow.StepExample = {
   public: false,
   description: 'Without a user id the push fails with missing-input.',
-  in: getEvent('user login', { timestamp: 1700000007 }),
+  in: getEvent('page view', { user: { device: 'c00k13' } }),
   mapping: { settings: { identify: { map: { id: 'user.id' } } } },
   out: [],
   outcome: { status: 'failed', code: 'missing-input', retryable: false },
 };
 
-// A vendor that answers 200 with an error in the body.
+// An HTTP destination whose vendor answers 200 with an error in the body.
 export const rejectedByVendor: Flow.StepExample = {
   public: false,
   description: 'The vendor answers 200 and reports the event as failed.',
-  in: getEvent('page view', { timestamp: 1700000008 }),
+  in: getEvent('page view'),
   respond: { status: 200, body: { events: [{ status: 'failed' }] } },
   outcome: { status: 'failed', code: 'transport', retryable: false },
 };
@@ -362,6 +355,8 @@ export const rejectedByVendor: Flow.StepExample = {
 // A consent revocation reaches the vendor.
 export const consentRevoke: Flow.StepExample = {
   public: false,
+  description:
+    'For a destination with config.consent { marketing: true }, revoking marketing tells the vendor to revoke.',
   command: 'consent',
   in: { marketing: false },
   out: [['window.vendorSdk', 'consent', 'revoke']],
@@ -385,43 +380,94 @@ For destinations, the Three Type Zones collapse to:
 ```typescript
 export * as env from './env';
 export * as step from './step';
+export { minimal } from './minimal';
 ```
 
 ### 3.6 `examples/env.ts`
 
 Mock the vendor SDK surface and any DOM touchpoints. Never reach real network,
-real cookies, or real globals. Type the exports against your local `Env`:
+real cookies, or real globals. Type the exports against your local `Env`, and
+name the calls a simulation records in `simulation`:
 
 ```typescript
+import { mockScriptDocument } from '@walkeros/web-core/dev';
 import type { Env } from '../types';
 
-export const init: Env | undefined = {
-  /* pre-init state (vendor SDK not yet loaded) */
+const noop = () => {};
+
+/** Before init: no SDK global yet, `init` installs the stub. */
+export const init: Env = {
+  window: {},
+  document: mockScriptDocument(),
 };
 
+/** After init: the SDK global the push calls. */
 export const push: Env = {
-  /* post-init state used for push() tests */
+  window: { vendorSdk: Object.assign(noop, { q: [] as IArguments[] }) },
+  document: mockScriptDocument(),
+};
+
+/** The calls a simulation records. */
+export const simulation = ['call:window.vendorSdk'];
+```
+
+### 3.7 `examples/minimal.ts`
+
+The minimal example is the setup a reader copies: the docs page renders its
+install line, integrated code and `flow.json` under `## Installation` from it
+(`<Quickstart data={data} />`), and the conformance test runs exactly those
+settings and requires one public example delivered.
+
+```typescript
+import type { Flow } from '@walkeros/core';
+
+/** The settings the vendor needs to deliver: the API key, with the vendor script loaded by the destination. */
+export const minimal: Flow.MinimalExample = {
+  settings: { apiKey: 'YOUR_API_KEY' },
+  config: { loadScript: true },
 };
 ```
 
-### 3.7 Test Fixture Contract (hard rule)
+- `settings`: only the keys the settings schema requires, plus any that `init`
+  refuses to start without under the example's `config` (Plausible's `domain`
+  with `loadScript: true`), with placeholder values. Other keys stay in the step
+  examples that need them; the kit fails a minimal example that sets one.
+- `config`: only `{ loadScript: true }`, for a web destination that loads its
+  vendor script only when asked to; the kit fails a script-loaded destination
+  without it.
+- `secrets` (server destinations): each credential setting mapped to its secret
+  name, `<VENDOR>_<SETTING>` (for example
+  `{ accessToken: 'META_ACCESS_TOKEN' }`). The generated code reads
+  `process.env.META_ACCESS_TOKEN` and `$secret.META_ACCESS_TOKEN`; a web
+  destination holds no secret.
+- A package with several exports keeps one per export, in the export's folder
+  (`src/firehose/examples/minimal.ts`), listed in `exportExamples`.
+
+A package that cannot express its setup in one minimal example (one package
+serving several docs pages, an install line with a driver choice) passes
+`withoutMinimal: '<reason>'` to `conformance` instead, and its page keeps a
+hand-written setup.
+
+### 3.8 Test Fixture Contract (hard rule)
 
 The examples authored here **are** the Phase 8 test fixtures. No parallel
 fixtures allowed.
 
-- `src/index.test.ts` (or `src/__tests__/stepExamples.test.ts`) **MUST** iterate
-  examples via `it.each(Object.entries(examples.step))`.
+- Every event example runs through `runExamples` from `@walkeros/collector/dev`
+  with `claims` (the standard events the destination maps): it runs each one on
+  a real collector as `walkerOS.json` publishes it and compares its `out` and
+  its `outcome`. Do not hand-roll that loop.
 - Tests **must NOT** contain hardcoded payloads, vendor configs, or expected
   outputs.
 - If a test needs a value that is not in `examples.step`, **add it to `step.ts`
   first**, then consume it from the test. Never inline test data.
-- The only per-test setup allowed is deriving destination `settings` from the
-  example's `mapping.settings` (e.g. enabling the right sub-tool).
+- The only per-test setup allowed is the settings a group of examples needs
+  (e.g. enabling the right sub-tool).
 
-See `packages/web/destinations/gtag/src/__tests__/stepExamples.test.ts` for a
+See `packages/web/destinations/meta/src/__tests__/conformance.test.ts` for a
 canonical reference.
 
-### 3.8 Export via `dev.ts`
+### 3.9 Export via `dev.ts`
 
 ```typescript
 export * as schemas from './schemas';
@@ -430,19 +476,23 @@ export * as examples from './examples';
 
 ### Phase 3 Acceptance Checklist
 
-- [ ] `src/examples/env.ts` — mock env, no real network, typed against local
+- [ ] `src/examples/env.ts`: mock env, no real network, typed against local
       `Env`
-- [ ] `src/examples/step.ts` — one `Flow.StepExample` per supported feature /
+- [ ] `src/examples/step.ts`: one `Flow.StepExample` per supported feature /
       setting, typed `in` / `out` / `mapping?`
-- [ ] `src/examples/index.ts` — barrel exports `env` and `step`
+- [ ] `src/examples/minimal.ts`: `Flow.MinimalExample` with only the settings
+      the schema requires or `init` refuses to start without (`secrets` for
+      server credentials, `config.loadScript` for a script-loaded web
+      destination)
+- [ ] `src/examples/index.ts`: barrel exports `env`, `step` and `minimal`
 - [ ] No standalone `events.ts`, `outputs.ts`, or `mapping.ts` files
-- [ ] All vendor SDK types imported from the official package — no `any`, no
+- [ ] All vendor SDK types imported from the official package, no `any`, no
       reinvented local output types
-- [ ] `src/index.test.ts` (or `__tests__/stepExamples.test.ts`) iterates
-      `examples.step` via `it.each(Object.entries(...))`
-- [ ] Tests contain zero hardcoded payloads / vendor configs / expected outputs
-      — everything flows from `examples.step`
-- [ ] `npm run build` passes — examples compile against published types
+- [ ] `src/__tests__/conformance.test.ts` runs the event examples through
+      `runExamples` with `claims`, and a test runs the init example (if any)
+- [ ] Tests contain zero hardcoded payloads / vendor configs / expected outputs:
+      everything flows from `examples.step`
+- [ ] `npm run build` passes: examples compile against published types
 - [ ] Each example traces: `in` → apply `mapping` → matches `out`
 
 ---
@@ -451,7 +501,7 @@ export * as examples from './examples';
 
 **Goal:** Document transformation from walkerOS events to vendor format.
 
-Mapping rules live **inside** each `Flow.StepExample` entry in `step.ts` — no
+Mapping rules live **inside** each `Flow.StepExample` entry in `step.ts`, no
 separate `mapping.ts` file. Each step example embeds the exact mapping rule
 under test alongside its `in` event and expected `out` output.
 
@@ -491,9 +541,10 @@ cd packages/web/destinations/[name]
 packages/web/destinations/[name]/
 ├── src/
 │   ├── index.ts           # Main destination (init + push)
-│   ├── index.test.ts      # Tests against examples
+│   ├── index.test.ts      # The init example and other boundary tests
+│   ├── __tests__/         # conformance.test.ts: conformance + runExamples
 │   ├── dev.ts             # Exports schemas and examples
-│   ├── examples/
+│   ├── examples/          # env.ts, step.ts, minimal.ts, index.ts
 │   ├── schemas/
 │   └── types/
 ├── package.json
@@ -535,7 +586,8 @@ discovery.
 
 ### Use `buildDev()` in tsup.config.ts
 
-Replace `buildModules({ entry: ['src/dev.ts'] })` with `buildDev()`:
+Keep `buildDev()` in the `defineConfig` array (the template package's
+`tsup.config.ts` has it):
 
 ```typescript
 import { buildDev } from '@walkeros/config/tsup';
@@ -543,7 +595,8 @@ import { buildDev } from '@walkeros/config/tsup';
 buildDev(),
 ```
 
-This auto-generates `dist/walkerOS.json` from your Zod schemas at build time.
+It builds `src/dev.ts` and writes `dist/walkerOS.json` from the `schemas`,
+`examples` and `hints` it exports.
 
 ### Hints (Optional)
 
@@ -574,14 +627,13 @@ export { hints } from './hints';
 
 Guidelines:
 
-- Expand awareness — describe capabilities ("supports X, Y, Z"), don't prescribe
+- Expand awareness: describe capabilities ("supports X, Y, Z"), don't prescribe
   one path
 - Reference schemas and examples, don't duplicate them
 - Verify every claim against actual implementation before publishing
 - Key naming: kebab-case, group with prefixes (auth-\*, storage-\*,
   troubleshoot-\*)
-- Most destinations don't need hints — schemas and examples cover the common
-  case
+- Most destinations don't need hints; schemas and examples cover the common case
 
 ### Gate: Convention Met
 
@@ -600,18 +652,19 @@ Guidelines:
 
 Use these templates as your starting point:
 
-| File                            | Purpose               | Template                                                      |
-| ------------------------------- | --------------------- | ------------------------------------------------------------- |
-| `types/index.ts`                | Type definitions      | [types.ts](./templates/simple/types.ts)                       |
-| `index.ts`                      | Main destination      | [index.ts](./templates/simple/index.ts)                       |
-| `__tests__/conformance.test.ts` | Failure-contract test | [conformance.test.ts](./templates/simple/conformance.test.ts) |
+| File                            | Purpose                        | Template                                                      |
+| ------------------------------- | ------------------------------ | ------------------------------------------------------------- |
+| `types/index.ts`                | Type definitions               | [types.ts](./templates/simple/types.ts)                       |
+| `index.ts`                      | Main destination               | [index.ts](./templates/simple/index.ts)                       |
+| `index.test.ts`                 | Init example test              | [index.test.ts](./templates/simple/index.test.ts)             |
+| `__tests__/conformance.test.ts` | Failure contract, all examples | [conformance.test.ts](./templates/simple/conformance.test.ts) |
 
 ### Key Patterns
 
 1. **Init receives context**: Destructure `config`, `env`, `logger`, `id` from
    context
-2. **Push receives context**: Includes `data`, `rule` (renamed from `mapping`),
-   `ingest`
+2. **Push receives context**: Includes `data` (the mapped data), `rule` (the
+   matching mapping rule), `ingest`
 3. **Use `getEnv<Env>(env)`**: Never access `window`/`document` directly, and
    never cast them. Declare your SDK global
    (`declare global { interface Window { vendorSdk?: ... } }`) and narrow
@@ -636,14 +689,22 @@ Use these templates as your starting point:
    `on('consent')` controls vendor SDK internals (opt-out, pause capture, etc.).
    Both needed for complete consent compliance. `on()` may be async: the
    collector awaits it, bounded by `config.timeout`, and delivers the current
-   state before the destination's first push. A state handler that does not
-   settle in that time, or rejects, holds the destination's events in its queue
-   until a later delivery settles; held events are discarded at the next
-   `walker run`. Lifecycle handlers such as `on('run')` are awaited too, bounded
-   by the same timeout, and never hold events. An async state handler must
-   settle: until it settles or reaches `config.timeout`, that destination
-   receives no events. `elb` commands and `startFlow` resolve only after the
-   destinations' `on()` handlers for that command have settled or timed out.
+   state before the destination's first push; events pushed meanwhile answer
+   `queued` with the reason `held`. A state handler that rejects or does not
+   settle in that time writes an ERROR line (`consent not applied`) and holds
+   the destination's events for one more `config.timeout`. The first push after
+   that window retries the delivery, and once a delivery succeeds the held
+   events are delivered. Until one has succeeded, the held events and every
+   later one fail with `blocked` (the push answers `ok: false`, the events go to
+   the dead-letter queue, an ERROR `Push failed` line is written) and are not
+   sent when the destination recovers; later pushes retry the delivery once per
+   `config.timeout`. A `walker run` discards events that are still held, with no
+   counter and no log line. Lifecycle handlers such as `on('run')` are awaited
+   too, bounded by the same timeout, and never hold events. `elb` commands and
+   `startFlow` resolve only after the destinations' `on()` handlers for that
+   command have settled or timed out. See
+   [consent](https://www.walkeros.io/docs/guides/consent#gate-a-destination-with-consent)
+   for the full sequence.
    - For step-example tests, use `command: 'consent'` on `Flow.StepExample` to
      invoke the `on('consent')` handler. Do not push consent data as an event.
 
@@ -654,7 +715,8 @@ Use these templates as your starting point:
      cannot send, `transport` for a failed request; add `status` for an HTTP
      status, `retryable` to override the default). Never `return` early, never
      `return false` from `init`, never log the failure yourself: the collector
-     writes one ERROR line per cause, a failed counter and a DLQ entry.
+     counts the push as failed, keeps a DLQ entry and writes one ERROR line per
+     cause (repeats within a minute are counted, not logged again).
    - Await every call the vendor makes. A call that is not awaited fails after
      the push was already counted as delivered. The lint rules
      `walkeros/await-send` and `walkeros/no-silent-return` flag both.
@@ -683,9 +745,12 @@ Use these templates as your starting point:
     `on('consent')`, tell the vendor about a revocation and a grant when it has
     a switch (`getGrantedConsent(config.consent, collector.consent)`), and throw
     a `consent-not-applied` StepError when the vendor does not take it.
-12. **Batching.** A server SDK that batches implements `pushBatch` and gets a
-    default `config.batch`; each entry has its own outcome, and
-    `config.batch: { size: 1 }` is the per-event setting.
+12. **Batching.** A server SDK that batches implements `pushBatch` and ships a
+    default `config.batch` in the destination's own config (the server segment
+    destination: `{ size: 15, wait: 10_000 }`); each entry has its own outcome,
+    and `config.batch: { size: 1 }` is the per-event setting. See
+    [batch scheduling](https://www.walkeros.io/docs/mapping/rule#batch-scheduling)
+    for `size`, `wait` and `age`.
 
 ### Reserved fields
 
@@ -698,8 +763,9 @@ Repurposing the name will collide with that wiring.
 ### Gate: Implementation Compiles
 
 - [ ] `npm run build` passes
-- [ ] `npm run verify:touched -- <destination-name>` passes (L1: typecheck +
-      lint + test)
+- [ ] `npm run verify:touched -- <platform>-destination-<name>` passes (L1:
+      typecheck + lint + test; the argument is the package name after
+      `@walkeros/`)
 
 ---
 
@@ -722,7 +788,11 @@ For background on how setup fits the destination lifecycle, see
 
 ```typescript
 // types/index.ts
-import type { CoreDestination } from '@walkeros/core';
+import type {
+  Credential,
+  Destination as CoreDestination,
+  ServiceAccount,
+} from '@walkeros/core';
 
 export interface Settings {
   /* runtime push settings */
@@ -748,9 +818,8 @@ export interface Setup {
 
 // Service-account / key-pair credentials. Becomes the trailing C slot of Types;
 // surfaces as the optional top-level `config.credentials` (sibling of `settings`),
-// $env-resolvable and validated per package.
-export type Credentials =
-  CoreDestination.Credential<CoreDestination.ServiceAccount>;
+// set with a `$secret.` reference and validated per package.
+export type Credentials = Credential<ServiceAccount>;
 
 export type Types = CoreDestination.Types<
   Settings,
@@ -763,19 +832,17 @@ export type Types = CoreDestination.Types<
 ```
 
 **Where credentials belong.** Put service-account / key-pair credentials (the
-kind paired with `$env.NAME` to inject a secret) on the strictly-typed top-level
-`config.credentials`, not inside `settings`. Read them via
-`config.credentials ?? settings.credentials ?? ADC` so existing flows keep
-working, and omit them to fall back to Application Default Credentials. The raw
-`settings.<sdk>` passthrough (e.g. `settings.bigquery`) stays as the lower-level
-escape hatch for SDK-specific auth options. The package-specific
-`settings.credentials` still works but is deprecated.
+kind paired with `$secret.NAME` to inject a secret) on the strictly-typed
+top-level `config.credentials`, not inside `settings`. Read them from
+`config.credentials`, and fall back to Application Default Credentials when they
+are omitted. The raw `settings.<sdk>` passthrough (e.g. `settings.bigquery`)
+stays as the lower-level escape hatch for SDK-specific auth options.
 
 ### Implementation
 
 ```typescript
 // setup.ts
-import type { CoreDestination, SetupFn } from '@walkeros/core';
+import type { Destination as CoreDestination, SetupFn } from '@walkeros/core';
 import { resolveSetup } from '@walkeros/core';
 import type { Setup, Types } from './types';
 
@@ -800,13 +867,20 @@ Wire it in your default export:
 
 ```typescript
 // index.ts
+import type { Destination as CoreDestination } from '@walkeros/core';
 import { setup } from './setup';
+import type { Types } from './types';
 
-export default {
+export const destinationMine: CoreDestination.Instance<Types> = {
   type: 'my-destination',
-  push: /* ... */,
+  config: {},
+  async push(event, context) {
+    // Send the event (Phase 7)
+  },
   setup,
 };
+
+export default destinationMine;
 ```
 
 ### When to implement
@@ -853,11 +927,14 @@ if (config.setup === true) {
 
 **Verify implementation produces expected outputs.**
 
-### Test Template
+### Test Templates
 
-Use the test template: [index.test.ts](./templates/simple/index.test.ts).
-Reference canonical implementation:
-`packages/web/destinations/gtag/src/__tests__/stepExamples.test.ts`.
+Use the test templates:
+[conformance.test.ts](./templates/simple/conformance.test.ts) (the conformance
+kit and every event example) and
+[index.test.ts](./templates/simple/index.test.ts) (the init example). Reference
+canonical implementation:
+`packages/web/destinations/meta/src/__tests__/conformance.test.ts`.
 
 ### Conformance test
 
@@ -870,6 +947,19 @@ event data into a log line, a `silent` example sends nothing, a consent
 revocation reaches the vendor, `init` throws on a missing setting, and every
 event the destination cannot send has a declared outcome. It fails with every
 broken item at once.
+
+`conformance` does not compare a failure example's `outcome` with what the push
+reported. The same test file therefore runs the event examples through
+`runExamples` with `claims`, which compares each example's `out` and `outcome`:
+a failure example with a wrong outcome fails the test and is not published under
+"When it fails".
+
+It also runs the minimal example: pass `minimal: examples.minimal` (the template
+does), and the kit starts the destination with the settings its docs quickstart
+shows and requires one public example delivered. A package without
+`src/examples/minimal.ts` passes `withoutMinimal: '<reason>'` instead. A test
+with neither, with both, or with an option that disagrees with the file fails
+and says which option to pass, so a copied template without `minimal` fails.
 
 The `profile` option says what the destination talks to: `http` (calls `fetch`),
 `sdk-env` (a server SDK injected through `env`), `web-sdk` (a web SDK started in
@@ -884,27 +974,27 @@ collector: `startFlow` and mock only the network or the vendor global.
 
 ### Key Test Patterns
 
-1. **`it.each(Object.entries(examples.step))` is mandatory** — one iteration per
-   step example. Do not write per-feature tests with hand-rolled payloads.
-2. **Use `createPushContext()` helper** — standardizes context creation.
-3. **Include `id` field** — required in context.
-4. **Use `rule` instead of `mapping`** — property renamed in `PushContext`.
-5. **Zero hardcoded payloads** — every input, vendor config, and expected output
+1. **`runExamples` runs every event example** on a real collector, with `claims`
+   listing the standard events the destination maps. Do not write per-feature
+   tests with hand-rolled payloads.
+2. **The init example runs on its own**: its `in` is a config, not an event.
+3. **Zero hardcoded payloads**: every input, vendor config, and expected output
    comes from `examples.step` or `examples.env`. If you need something new, add
    it to examples first.
-6. **Clone env per test** — `clone(examples.env.push)` so vendor mocks don't
-   leak across iterations.
+4. **Clone env per test**: `clone(examples.env.push)` so vendor mocks don't leak
+   across tests.
 
 ### Gate: Tests Pass
 
-- [ ] `npm run verify:touched -- <destination-name>` passes (L1)
-- [ ] Tests iterate via `it.each(Object.entries(examples.step))`
+- [ ] `npm run verify:touched -- <platform>-destination-<name>` passes (L1)
+- [ ] The event examples run through `runExamples` with `claims`
 - [ ] Tests contain no hardcoded payloads, vendor configs, or expected outputs
 - [ ] Every assertion reads from `examples.step[...].out`
-- [ ] The conformance test passes with the right profile
-- [ ] `examples.step` has a `silent` example, a failure example (`outcome`) for
-      each event the destination cannot send, and a consent revocation example
-      when the vendor has a consent switch
+- [ ] The conformance test passes with the right profile and
+      `minimal: examples.minimal` (or `withoutMinimal: '<reason>'`)
+- [ ] `examples.step` has a `silent` example, a failure example (`outcome`, with
+      a `description`) for each event the destination cannot send, and a consent
+      revocation example when the vendor has a consent switch
 
 ---
 
@@ -920,9 +1010,12 @@ skill for:
 Key requirements for destination documentation:
 
 - [ ] Event mapping table (walkerOS → vendor format)
-- [ ] Configuration options table (use PropertyTable if schema exists)
-- [ ] Working code example with imports
-- [ ] Installation instructions
+- [ ] `## Installation` renders `<Quickstart data={data} />`: the install line,
+      integrated code and `flow.json` generated from `examples.minimal`. No
+      hand-written install or setup snippet there; the doc-lint fails one
+- [ ] `<Configuration type="destination" data={data} />` renders settings,
+      mapping, examples and "When it fails" (from the failure examples'
+      `description`) from `walkerOS.json`
 
 ---
 
@@ -969,9 +1062,9 @@ requirements (build, test, lint, no `any`):
 
 - [understanding-destinations](../walkeros-understanding-destinations/SKILL.md) -
   Destination interface and env pattern
-- [using-step-examples](../walkeros-using-step-examples/SKILL.md) —
+- [using-step-examples](../walkeros-using-step-examples/SKILL.md) -
   Authoritative `Flow.StepExample` pattern and Three Type Zones
-- [testing-strategy](../walkeros-testing-strategy/SKILL.md) — Testing with env
+- [testing-strategy](../walkeros-testing-strategy/SKILL.md) - Testing with env
   mocking and dev-examples-as-fixtures conventions
 - [writing-documentation](../walkeros-writing-documentation/SKILL.md) -
   Documentation standards

@@ -33,14 +33,14 @@ Workflow skills require:
 
 **Skill Coverage:**
 
-| Step               | Covered | Location                     |
-| ------------------ | ------- | ---------------------------- |
-| Template selection | ✅      | Choose Your Template section |
-| Research phase     | ✅      | Phase 1: Research            |
-| Example creation   | ✅      | Phase 2: Create Examples     |
-| Implementation     | ✅      | Phase 3-5                    |
-| Testing            | ✅      | Phase 6: Testing             |
-| Documentation      | ✅      | Phase 7: Documentation       |
+| Step               | Covered | Location                       |
+| ------------------ | ------- | ------------------------------ |
+| Template selection | ✅      | Choose Your Template section   |
+| Research phase     | ✅      | Phase 1: Research              |
+| Example creation   | ✅      | Phase 3: Create Examples       |
+| Implementation     | ✅      | Phases 5-7                     |
+| Testing            | ✅      | Phase 8: Test Against Examples |
+| Documentation      | ✅      | Phase 9: Document              |
 
 **Result:** ✅ PASS
 
@@ -51,16 +51,16 @@ Workflow skills require:
 **Task:** "Create a destination that batches events and sends them every 5
 seconds"
 
-**Expected:** Agent identifies need for "batching" template, follows appropriate
-pattern.
+**Expected:** Agent picks the server template (`gcp/`), implements `pushBatch`
+and sets a default `config.batch`.
 
 **Skill Coverage:**
 
-| Feature           | Covered | Location                   |
-| ----------------- | ------- | -------------------------- |
-| Batching template | ✅      | Choose Your Template table |
-| Queue management  | ✅      | Batching template section  |
-| Flush triggers    | ✅      | Batching template section  |
+| Feature           | Covered | Location                                  |
+| ----------------- | ------- | ----------------------------------------- |
+| Batching template | ✅      | Choose Your Template table (`gcp/`)       |
+| `pushBatch`       | ✅      | Phase 7, Key Patterns 12                  |
+| Flush triggers    | ✅      | Key Patterns 12, link to batch scheduling |
 
 **Result:** ✅ PASS
 

@@ -7,10 +7,10 @@ sidebar_position: 3
 
 # Browser source commands
 
-The browser source provides an enhanced `elb` function that supports
-browser-specific features like DOM interaction, elbLayer communication, and
-automatic initialization. These commands are processed by the browser source
-translation layer before being passed to the collector.
+The browser source provides an enhanced `elb` function with browser-specific
+features: DOM interaction, elbLayer communication and automatic initialization.
+The browser source's translation layer processes these commands before it
+passes them to the collector.
 
 ```mermaid
 flowchart
@@ -40,8 +40,8 @@ During initialization the source installs its writer at `window[settings.elb]`
 (default `elb`). The name is a single slot and belongs to the first source that
 installs it: a source that finds the name held by another one logs an error,
 skips the install, and keeps capturing through its own `push`. Set `elb: false`
-to install no window property at all, which is the posture for an embedded
-source that should leave no page-window footprint. Calls return a promise that
+to install no window property at all, which suits an embedded source that
+should leave no page-window footprint. Calls return a promise that
 resolves with the [push result](/docs/getting-started/event-model#push-an-event).
 
 Code that can run before the source starts, such as a page script ahead of an
@@ -121,33 +121,33 @@ created. Session tracking is provided by the separate
 
 ## run
 
-A `run` initializes the browser source and triggers automatic DOM scanning and
-event setup. It will:
+`startFlow` sends the first run unless it is called with `run: false`, and each
+`walker run` starts a new one. On such a run the browser source:
 
-* Initialize DOM event listeners
-* Scan for `data-elb` attributes
-* Trigger a `page view` event by default
-* Process the `elbLayer` stack
+* Scans its scope for `data-elb` attributes, wires the triggers they declare
+  and fires the `load` triggers
+* Processes the events queued in `elbLayer` (on the first run)
+* Reads `data-elbuser` into the user
+* Sends a `page view` (unless `pageview` is `false`)
 
 <CodeSnippet
   code={`elb('walker run');`}
   language="javascript"
 />
 
-A run accepts state to set before it starts, any of `consent`, `user`,
-`globals` and `custom`:
+With `history` on, the source also starts a run on every route change. That run
+sends the `page view` but does not re-scan: it keeps the registered elements,
+and the route's new elements register as they render (see
+[single-page apps](/docs/sources/web/browser/#single-page-apps)).
 
-<CodeSnippet
-  code={`elb('walker run', { globals: { pagegroup: 'checkout' } });`}
-  language="javascript"
-/>
+The state a run accepts, and the queued events it discards, are described under
+[walker run](/docs/collector/commands#run-command).
 
 ### Virtual pageviews in SPAs
 
-Use `walker run` to trigger virtual pageviews when navigating between routes in
-Single Page Applications. Call it on each route change to fire a new `page view`
-event and re-scan the DOM. Route changes do not start a new session: the session
-source detects a session start once per page load.
+Each `walker run` sends a new `page view` and re-scans the DOM, which is how a
+single-page app counts a route change by hand. Route changes do not start a new
+session: the session source detects a session start once per page load.
 
 :::note
 
@@ -158,25 +158,11 @@ or every navigation sends two page views. See
 
 :::
 
-<CodeSnippet
-  code={`// React Router example
-useEffect(() => {
-  window.elb('walker run');
-}, [location]);
-
-// Next.js App Router example
-useEffect(() => {
-  window.elb('walker run');
-}, [pathname]);`}
-  language="javascript"
-/>
-
-:::tip
-
-For SPAs, use `walker run` for route changes (triggers pageview), and
-`walker init` for dynamically loaded content within the same page (no pageview).
-
-:::
+With `history: false`, call `walker run` from the router's post-render hook,
+listed per router under
+[single-page apps](/docs/sources/web/browser/#single-page-apps). Skip the call
+for the first render: the run that started the flow already sent the landing
+page's `page view`.
 
 ## init
 
@@ -190,8 +176,8 @@ elb('walker init', [element1, element2]); // Multiple elements`}
   language="javascript"
 />
 
-This command is essential for Single Page Applications (SPAs) where content is
-added dynamically after the initial page load.
+Single-page apps (SPAs) use it for content added dynamically after the initial
+page load.
 
 Re-initializing a scope clears and rebuilds that scope's `pulse`, `wait`,
 `hover`, `scroll`, `visible`, and `impression` triggers. The `load` trigger fires (again) on each call.
@@ -205,7 +191,7 @@ attribute values are read fresh and the `load` trigger fires again.
   code={`// The step element was already tracked by the initial page scan.
 const step = document.getElementById('checkout-step');
 step.setAttribute('data-elb-checkout', 'step:3');
-elb('walker init', step); // fires 'checkout view' again, now with step: 3`}
+elb('walker init', step); // fires 'checkout start' again, now with step: 3`}
   language="javascript"
 />
 
@@ -224,7 +210,7 @@ fetchProducts().then(() => {
 :::tip
 
 Use `walker init` after adding new DOM elements with `data-elb` attributes.
-Unlike `walker run`, this does not trigger a page view event - it only enables
+Unlike `walker run`, it does not trigger a page view event; it only enables
 tracking on the specified elements.
 
 :::
@@ -239,14 +225,14 @@ each injection.
 
 | Command | Triggers pageview | Re-scans DOM | Use case |
 |---------|------------------|--------------|----------|
-| `walker run` | Yes | Full page | SPA route changes, virtual pageviews |
+| `walker run` | Yes | Full page | SPA route changes with `history: false`, virtual pageviews |
 | `walker init` | No | Target elements only | Dynamically loaded content (product lists, infinite scroll) |
 
 ## Integration with collector
 
-Browser source commands work in conjunction
-with <Link to="/docs/collector/commands">collector commands</Link>. The
-browser source handles DOM-specific functionality while the collector manages
+Browser source commands work together
+with <Link to="/docs/collector/commands">collector commands</Link>: the
+browser source handles DOM-specific functionality, and the collector manages
 destinations, consent, and user data.
 
 Common workflow:

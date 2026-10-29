@@ -1,12 +1,10 @@
 // walkerOS/packages/cli/src/commands/validate/validators/settings.ts
 
-import * as fs from 'fs';
-import * as path from 'path';
 import Ajv, { type ErrorObject, type ValidateFunction } from 'ajv';
 import type { Flow } from '@walkeros/core';
 import {
+  createLogger,
   ENV_MARKER_PREFIX,
-  fetchPackage,
   getErrorMessage,
   isObject,
   REF_CODE_PREFIX,
@@ -17,7 +15,11 @@ import {
   resolveExportName,
   type ComponentKind,
 } from '../../../core/resolve-export-name.js';
-import { parsePackageSpec } from '../../../core/step-packages.js';
+import {
+  resolveStepPackage,
+  type ResolvedStepPackage,
+} from '../../../core/step-packages.js';
+import { readStepPackageInfo } from '../../../core/package-info.js';
 import type { EntrySection } from '../scope.js';
 import type {
   ValidateCheck,
@@ -31,6 +33,10 @@ import type {
 declare const __VERSION__: string;
 
 const CLIENT_HEADER = 'walkeros-cli/' + __VERSION__;
+
+// Resolving a step's package logs only a warning (a bundle pin over a
+// disagreeing inline version); the version checked is in details.packages.
+const LOGGER = createLogger();
 
 /** One step whose settings are checked against its package schema. */
 export interface SettingsTarget {
@@ -81,12 +87,6 @@ export type SettingsSelection =
 type CompiledSettings =
   | { ok: true; validate: ValidateFunction }
   | { ok: false; message: string };
-
-interface PackageSource {
-  name: string;
-  version?: string;
-  localPath?: string;
-}
 
 export function createSettingsContext(configDir?: string): SettingsContext {
   return { configDir, cache: new Map(), compiled: new Map() };
@@ -230,85 +230,12 @@ function isUnder(segments: string[], prefix: string[]): boolean {
   return prefix.every((segment, index) => segments[index] === segment);
 }
 
-function bundlePin(
-  rawFlow: unknown,
-  name: string,
-): { version?: string; path?: string } {
-  const config = isObject(rawFlow) ? rawFlow.config : undefined;
-  const bundle = isObject(config) ? config.bundle : undefined;
-  const packages = isObject(bundle) ? bundle.packages : undefined;
-  const pin = isObject(packages) ? packages[name] : undefined;
-  if (!isObject(pin)) return {};
-  return {
-    ...(typeof pin.version === 'string' ? { version: pin.version } : {}),
-    ...(typeof pin.path === 'string' ? { path: pin.path } : {}),
-  };
-}
-
-/**
- * Where a step's package comes from, as the bundler picks it: a local
- * `path` (inline `./` or `/` spec, or a bundle pin), else the bundle pin's
- * version, else the inline `@version`, else latest.
- */
-function packageSource(spec: string, rawFlow: unknown): PackageSource {
-  if (spec.startsWith('.') || spec.startsWith('/'))
-    return { name: spec, localPath: spec };
-  const { name, version } = parsePackageSpec(spec);
-  const pin = bundlePin(rawFlow, name);
-  if (pin.path) return { name, localPath: pin.path };
-  const pinned = pin.version ?? version;
-  return pinned ? { name, version: pinned } : { name };
-}
-
-function readJson(file: string): unknown {
-  return JSON.parse(fs.readFileSync(file, 'utf-8'));
-}
-
-/** Schemas of a local package, read from its `walkerOS.json` on disk. */
-function readLocalSchema(
-  source: PackageSource,
-  configDir: string,
-): PackageSchema {
-  const localPath = source.localPath ?? '';
-  const root = path.isAbsolute(localPath)
-    ? localPath
-    : path.resolve(configDir, localPath);
-  const file = [
-    path.join(root, 'dist', 'walkerOS.json'),
-    path.join(root, 'walkerOS.json'),
-  ].find((candidate) => fs.existsSync(candidate));
-  if (!file) throw new Error(`no walkerOS.json under ${root}`);
-  const meta = readJson(file);
-  const pkgFile = path.join(root, 'package.json');
-  const pkg = fs.existsSync(pkgFile) ? readJson(pkgFile) : undefined;
-  const schemas = isObject(meta) ? meta.schemas : undefined;
-  const exportSchemas = isObject(meta) ? meta.exportSchemas : undefined;
-  const declared =
-    isObject(meta) && isObject(meta.$meta) ? meta.$meta.exports : undefined;
-  const version =
-    isObject(pkg) && typeof pkg.version === 'string' ? pkg.version : undefined;
-  return {
-    ...(version ? { version } : {}),
-    settings: isObject(schemas) ? schemas.settings : undefined,
-    ...(isObject(exportSchemas) ? { exportSchemas } : {}),
-    ...(isObject(declared) ? { exports: Object.keys(declared) } : {}),
-  };
-}
-
 async function loadSchema(
-  source: PackageSource,
+  resolved: ResolvedStepPackage,
   context: SettingsContext,
 ): Promise<PackageSchema> {
-  if (source.localPath !== undefined) {
-    const configDir = context.configDir;
-    if (configDir === undefined)
-      throw new Error(
-        'it is a local path package and the input is not a file, so there is no directory to read it from',
-      );
-    return readLocalSchema(source, configDir);
-  }
-  const info = await fetchPackage(source.name, {
-    ...(source.version ? { version: source.version } : {}),
+  const info = await readStepPackageInfo(resolved, {
+    configDir: context.configDir,
     client: CLIENT_HEADER,
   });
   return {
@@ -336,32 +263,32 @@ function compileSettings(settings: unknown): CompiledSettings | undefined {
   }
 }
 
-function sourceKey(source: PackageSource): string {
-  return source.localPath
-    ? `path:${source.localPath}`
-    : `${source.name}@${source.version ?? 'latest'}`;
+function sourceKey({ packageName, spec }: ResolvedStepPackage): string {
+  return spec.path !== undefined
+    ? `path:${spec.path}`
+    : `${packageName}@${spec.version ?? 'latest'}`;
 }
 
 function cachedSchema(
-  source: PackageSource,
+  resolved: ResolvedStepPackage,
   context: SettingsContext,
 ): Promise<PackageSchema> {
-  const key = sourceKey(source);
+  const key = sourceKey(resolved);
   let pending = context.cache.get(key);
   if (!pending) {
-    pending = loadSchema(source, context);
+    pending = loadSchema(resolved, context);
     context.cache.set(key, pending);
   }
   return pending;
 }
 
 function cachedCompile(
-  source: PackageSource,
+  resolved: ResolvedStepPackage,
   exportName: string | undefined,
   settings: unknown,
   context: SettingsContext,
 ): CompiledSettings | undefined {
-  const key = `${sourceKey(source)}#${exportName ?? ''}`;
+  const key = `${sourceKey(resolved)}#${exportName ?? ''}`;
   if (context.compiled.has(key)) return context.compiled.get(key);
   const compiled = compileSettings(settings);
   context.compiled.set(key, compiled);
@@ -377,7 +304,6 @@ function cachedCompile(
 export async function checkStepSettings(
   target: SettingsTarget,
   resolvedFlow: Flow,
-  rawFlow: unknown,
   check: ValidateCheck,
   context: SettingsContext,
 ): Promise<SettingsOutcome> {
@@ -395,35 +321,56 @@ export async function checkStepSettings(
     return outcome;
   }
 
-  const source = packageSource(spec, rawFlow);
-  let schema: PackageSchema;
+  // The package source the bundle would install for this step.
+  let resolved: ResolvedStepPackage;
   try {
-    schema = await cachedSchema(source, context);
+    resolved = resolveStepPackage(
+      resolvedFlow,
+      SECTION_KIND[target.section],
+      target.key,
+      LOGGER,
+    );
   } catch (error) {
     outcome.skipped.push({
       path: at,
       check,
-      reason: `Schema for ${source.name}${source.version ? `@${source.version}` : ''} could not be loaded: ${getErrorMessage(error)}`,
+      reason: `Schema for ${spec} could not be loaded: ${getErrorMessage(error)}`,
+      code: 'SCHEMA_UNAVAILABLE',
+    });
+    return outcome;
+  }
+  const { label } = resolved;
+  const pinned =
+    resolved.spec.path === undefined ? resolved.spec.version : undefined;
+
+  let schema: PackageSchema;
+  try {
+    schema = await cachedSchema(resolved, context);
+  } catch (error) {
+    outcome.skipped.push({
+      path: at,
+      check,
+      reason: `Schema for ${label}${pinned ? `@${pinned}` : ''} could not be loaded: ${getErrorMessage(error)}`,
       code: 'SCHEMA_UNAVAILABLE',
     });
     return outcome;
   }
   outcome.checked = {
     path: at,
-    package: source.name,
+    package: label,
     ...(schema.version ? { version: schema.version } : {}),
   };
 
   // The export the step imports, resolved as the bundler resolves it.
   const { exportName } = resolveExportName(
-    resolvedFlow,
+    resolved.normalizedFlow,
     SECTION_KIND[target.section],
     target.key,
   );
-  const version = schema.version ?? source.version;
+  const version = schema.version ?? pinned;
   const selection = selectSettingsSchema(
     schema,
-    version ? `${source.name}@${version}` : source.name,
+    version ? `${label}@${version}` : label,
     exportName,
   );
   if (!selection.ok) {
@@ -437,7 +384,7 @@ export async function checkStepSettings(
   }
 
   const compiled = cachedCompile(
-    source,
+    resolved,
     exportName,
     selection.settings,
     context,
@@ -446,7 +393,7 @@ export async function checkStepSettings(
     outcome.skipped.push({
       path: at,
       check,
-      reason: `Package ${source.name} has no settings schema`,
+      reason: `Package ${label} has no settings schema`,
       code: 'NO_SETTINGS_SCHEMA',
     });
     return outcome;
@@ -455,7 +402,7 @@ export async function checkStepSettings(
     outcome.skipped.push({
       path: at,
       check,
-      reason: `The settings schema of ${source.name} cannot be compiled: ${compiled.message}`,
+      reason: `The settings schema of ${label} cannot be compiled: ${compiled.message}`,
       code: 'SCHEMA_UNAVAILABLE',
     });
     return outcome;

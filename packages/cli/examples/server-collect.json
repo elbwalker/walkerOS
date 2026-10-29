@@ -9,8 +9,7 @@
           "config": {
             "settings": {
               "path": "/collect",
-              "cors": true,
-              "healthCheck": true
+              "cors": true
             }
           }
         }

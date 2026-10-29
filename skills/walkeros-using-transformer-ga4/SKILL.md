@@ -133,8 +133,9 @@ example. The fetch source also takes `paths`; none of them takes `port`.
 **Common mistake:** `config.ingest` must be the `map` operator with direct field
 paths on the request scope (no `req.` prefix), e.g.
 `{ "map": { "url": { "key": "url" } } }`. The bare `{ "url": "req.url" }` form
-is silently inert: without a `map` operator no field is extracted, so
-`ctx.ingest` stays empty, the decoder reads no `url`, and the hit is dropped.
+has no operator: `walkeros validate` and the bundle reject it
+(`MAPPING_VALUE_NO_OPERATOR`). If it still runs, the collector logs an ERROR,
+`ctx.ingest` stays empty, and the decoder fails every hit with `missing-input`.
 
 This wiring contract (before-chain placement plus the `config.ingest` keys the
 source must populate) is also surfaced as a package hint, so `package_get` on
@@ -257,8 +258,8 @@ POST body with more non-empty lines is dropped whole, before decoding:
 ### Custom destination after decode
 
 The transformer returns walkerOS events with `entity action` names. Anything
-downstream of the collector treats them as native events — no GA4 awareness
-needed:
+downstream of the collector treats them as native events and needs no GA4
+awareness:
 
 ```json
 "destinations": {
@@ -312,9 +313,9 @@ Set from the hit, each only when present, value as sent.
 - `timestamp` is the receive time (`Date.now()`), not the session start (`sid`).
   Event ids do not depend on it.
 - `source.url` feeds server destinations that send a page URL (Meta, Snapchat,
-  Pinterest, Bing, TikTok, Criteo, Piwik PRO; Piwik PRO skips events without it)
-  and the fingerprint transformer's default `site` input. Fingerprint hashes of
-  GA4-decoded events therefore change once on upgrade.
+  Pinterest, Bing, TikTok, Criteo, Piwik PRO; Piwik PRO fails events without it
+  with `missing-input`) and the fingerprint transformer's default `site` input.
+  Fingerprint hashes of GA4-decoded events therefore change once on upgrade.
 
 ## Troubleshooting
 
@@ -326,8 +327,9 @@ Set from the hit, each only when present, value as sent.
 2. Check that `source.config.ingest` is the `map` operator and populates `url`
    (required, string) and `body` (optional, string), e.g.
    `{ "map": { "url": { "key": "url" }, "body": { "key": "body" } } }`. A bare
-   `{ "url": "req.url" }` object is silently inert and `ctx.ingest` is left
-   empty.
+   `{ "url": "req.url" }` object fails `walkeros validate`
+   (`MAPPING_VALUE_NO_OPERATOR`); at runtime `ctx.ingest` stays empty and every
+   hit fails with `missing-input`, one ERROR line per cause and minute.
 3. Confirm `before: "ga4"` is set on the source, not on a destination.
 4. Check the `tidPattern`: by default `^G-` blocks `AW-` / `DC-` traffic
    silently.
@@ -335,7 +337,7 @@ Set from the hit, each only when present, value as sent.
    decode.
 6. A POST body with more non-empty lines than `settings.maxEvents` (default
    `100`) is dropped whole. The client still gets a success response; the only
-   trace is a `warn` log line with the line count and the cap. Raise the cap if
+   trace is one ERROR line with the line count and the cap. Raise the cap if
    your own server-to-server batches are larger.
 
 ### Wrong field in the output event
@@ -351,9 +353,7 @@ Set from the hit, each only when present, value as sent.
 `@walkeros/server-source-express` only rejects a POST body that is sent as
 `application/json` and does not parse. gtag.js sends `text/plain`, which express
 keeps as the raw string. If a proxy in front of the collector rewrites the
-content type to `application/json`, restore `text/plain`. Earlier express
-releases parsed `text/plain` bodies as JSON too and answered these hits with
-400; upgrade the source.
+content type to `application/json`, restore `text/plain`.
 
 ### `gcs` consent not applied
 
@@ -368,9 +368,7 @@ Override the consent path manually if you need richer mapping.
 - **Basic `gcs` only.** No `gcd`, no functional/preferences flags.
 - **Raw text body required.** Pre-parsed JSON bodies will not decode. Batched
   gtag POSTs (`text/plain`, one URL-encoded hit per line) reach `ingest.body`
-  raw on the express source. Express source releases before the text body fix
-  rejected them with 400 before the decoder ran; if batched hits answer 400,
-  upgrade `@walkeros/server-source-express`.
+  raw on the express source.
 - **At most `maxEvents` events per request.** Default `100`; a larger batch is
   dropped whole before decoding, because each event becomes its own push and a
   source's batch limit does not cover a raw text body.

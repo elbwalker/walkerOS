@@ -8,6 +8,7 @@ package: '@walkeros/server-destination-aws'
 
 import awsData from '@walkeros/server-destination-aws/walkerOS.json';
 import Configuration from '@site/src/components/snippets/_configuration.mdx';
+import Quickstart from '@site/src/components/snippets/_quickstart.mdx';
 import AwsCredentials from '@site/src/components/snippets/_aws-credentials.mdx';
 
 import WhereThisFits from '@site/src/components/snippets/_where-this-fits.mdx';
@@ -30,8 +31,8 @@ creates topics while it runs: provisioning (subscriptions, KMS encryption, FIFO
 attributes) is a separate step, `walkeros setup`.
 
 The destination ships inside `@walkeros/server-destination-aws` alongside
-Firehose. Import the named export `destinationSNS` and reference it via
-the `code` field in `flow.json`.
+Firehose. In `flow.json`, select it with `"import": "destinationSNS"` on the
+step; in code, import the named export `destinationSNS`.
 
 <WhereThisFits
   pre={<>SNS is a <strong>server destination</strong> in the walkerOS flow:</>}
@@ -41,82 +42,12 @@ the `code` field in `flow.json`.
   post={<>Publishes events to an SNS topic for fan-out delivery to SQS queues, Lambda functions, HTTPS endpoints, email, SMS, and custom subscribers.</>}
 />
 
-## Quick start
+## Installation
 
-```json
-"destinations": {
-  "sns": {
-    "package": "@walkeros/server-destination-aws",
-    "import": "destinationSNS",
-    "config": {
-      "settings": {
-        "topicArn": "arn:aws:sns:eu-central-1:123456789012:walkeros-events"
-      }
-    }
-  }
-}
-```
+<Quickstart data={data} export="destinationSNS" />
 
 The region and the topic name come from the ARN. Add
 [credentials](#credentials) when the flow runs outside AWS.
-
-## Installation
-
-<CodeSnippet
-  code={`npm install @walkeros/server-destination-aws`}
-  language="bash"
-/>
-
-<Tabs groupId="mode">
-  <TabItem value="integrated" label="Integrated" default>
-
-<CodeSnippet
-  code={`import { startFlow } from '@walkeros/collector';
-import { destinationSNS } from '@walkeros/server-destination-aws';
-
-await startFlow({
-  destinations: {
-    sns: {
-      code: destinationSNS,
-      config: {
-        settings: {
-          topicArn: 'arn:aws:sns:eu-central-1:123456789012:walkeros-events',
-        },
-      },
-    },
-  },
-});`}
-  language="typescript"
-/>
-
-  </TabItem>
-  <TabItem value="bundled" label="Bundled">
-
-Add to your `flow.json` destinations:
-
-<CodeSnippet
-  code={`"destinations": {
-  "sns": {
-    "package": "@walkeros/server-destination-aws",
-    "import": "destinationSNS",
-    "config": {
-      "settings": {
-        "topicArn": "arn:aws:sns:eu-central-1:123456789012:walkeros-events"
-      },
-      "credentials": {
-        "accessKeyId": "$secret.AWS_ACCESS_KEY_ID",
-        "secretAccessKey": "$secret.AWS_SECRET_ACCESS_KEY"
-      }
-    }
-  }
-}`}
-  language="json"
-/>
-
-[See bundled mode setup](/docs/getting-started/modes/bundled) | [CLI reference](/docs/apps/cli)
-
-  </TabItem>
-</Tabs>
 
 <Configuration type="destination" data={data} />
 
@@ -152,8 +83,9 @@ Each `Message` is the full walkerOS event as JSON, or the mapped `data` when
 the event's mapping produces an object. Keep the event `id` in mapped data, so
 subscribers can deduplicate on it.
 
-SNS publishes one message per event and has no batching. Setting `config.batch`
-on this destination logs a warning at start; remove it.
+SNS publishes one message per event and has no batching. `config.batch` has
+no effect on this destination: the collector logs an ERROR line saying so, and
+events still go out one by one. Remove it.
 
 ## Delivery
 
@@ -167,11 +99,11 @@ error carrying `code` (the AWS error name), `status` (the HTTP status) and
 on, with each attempt bounded at a quarter of `config.timeout` unless you pass
 your own `settings.config.requestHandler`.
 
-:::caution Messages rejected by AWS are not replayed yet
+:::caution Messages rejected by AWS are not replayed
 There is no retry beyond the SDK's own. A message that SNS throttles or rejects
 goes to the collector's in-memory dead letter queue, which nothing replays, so
 it is lost. The collector logs every failure with its cause, so the loss is
-visible. A standard retry for all destinations is planned in the collector.
+visible.
 :::
 
 ## Setup
@@ -181,6 +113,10 @@ Provision the topic, attributes, tags, and declared subscriptions in one shot:
 ```bash
 walkeros setup destination.sns -c flow.json
 ```
+
+Setup runs only when the step's `config.setup` is `true` or an object (the
+fields below); without it the command provisions nothing and prints
+`setup: skipped destination.sns (config.setup is unset)`.
 
 Setup reads the same `config.credentials` as the runtime, and resolves
 `$secret` references from the environment before it runs. An unset secret
@@ -199,14 +135,20 @@ subscriptions or tags outside walkerOS without interference. Re-running setup
 against a fully provisioned topic with declared state matching actual produces
 zero state mutations.
 
-The result is JSON-stringified to stdout:
+The command prints `setup: ok destination.sns`. With `--json` it prints a JSON
+envelope instead, with the result under `data.result`:
 
 ```json
 {
-  "topicArn": "arn:aws:sns:eu-central-1:000000000000:walkeros-events",
-  "topicCreated": true,
-  "tagsApplied": 2,
-  "subscriptionsCreated": 1
+  "success": true,
+  "data": {
+    "result": {
+      "topicArn": "arn:aws:sns:eu-central-1:000000000000:walkeros-events",
+      "topicCreated": true,
+      "tagsApplied": 2,
+      "subscriptionsCreated": 1
+    }
+  }
 }
 ```
 
@@ -219,7 +161,8 @@ The result is JSON-stringified to stdout:
 Set `setup.fifoTopic: true`. The destination auto-appends `.fifo` to the
 topic name when missing and applies `FifoTopic`/`ContentBasedDeduplication`
 attributes at creation. Reverse: `setup.fifoTopic: false` with a `.fifo`
-suffix throws a clear error.
+suffix throws a clear error. The runtime publishes to `settings.topicArn` as
+written, so name the `.fifo` topic there too.
 
 ### KMS encryption
 
@@ -231,7 +174,10 @@ The AWS-managed default key alias is `alias/aws/sns`.
 Each declared subscription is created with one idempotent `Subscribe` call.
 Supported protocols: `sqs`, `lambda`, `https`, `http`, `email`, `sms`.
 Per-subscription attributes (`rawMessageDelivery`, `filterPolicy`,
-`deadLetterTargetArn`) are applied at the same call.
+`deadLetterTargetArn`) are applied at the same call. An SQS queue that a
+walkerOS [SQS source](/docs/sources/server/sqs) reads needs
+`rawMessageDelivery: true`. Without it, each message is the SNS envelope, which
+the source rejects and deletes.
 
 ```json
 "setup": {
@@ -266,7 +212,10 @@ value-config form supplies a literal:
 
 On a FIFO topic (an ARN ending in `.fifo`), `MessageDeduplicationId` defaults
 to the event `id` unless a rule maps one, so SNS drops a resent event within
-its five-minute deduplication window.
+its five-minute deduplication window. `MessageGroupId` has no default, and SNS
+requires one on every message to a FIFO topic, so every rule that matches an
+event needs a `messageGroupId` (a `"*": { "*": ... }` rule covers the events
+without a rule of their own).
 
 ## Message attributes
 
@@ -296,6 +245,7 @@ Setup role:
 - `sns:CreateTopic`
 - `sns:GetTopicAttributes` (existence probe)
 - `sns:Subscribe`
+- `sns:TagResource`, when `setup.tags` is set
 
 Setup also calls `sts:GetCallerIdentity` to resolve the account id. That call
 needs no IAM permission.
@@ -337,12 +287,11 @@ neither `settings.topicArn` nor `settings.topicName` is set,
 or `config.credentials` is malformed. The message names the
 field.
 
-**`AccessDenied` at setup.** The setup role is missing one of the three SNS
+**`AccessDenied` at setup.** The setup role is missing one of the SNS
 permissions above. SNS errors propagate verbatim.
 
-**FIFO suffix error.** A topic name ending in `.fifo` was supplied with
-`setup.fifoTopic: false`, or vice versa. Either set `fifoTopic: true` or
-rename the topic.
+**FIFO suffix error.** A topic name ending in `.fifo` was supplied without
+`setup.fifoTopic: true`. Either set `fifoTopic: true` or rename the topic.
 
 **Subscription endpoint rejected.** AWS validates the endpoint at `Subscribe`
 time. SNS does NOT create the SQS queue, Lambda, or HTTPS endpoint. Provision
@@ -350,6 +299,6 @@ those resources separately, then declare the subscription here.
 
 ## Next steps
 
-- [AWS SQS source](/docs/sources/server/sqs) for the consumer side. Standard pattern: SNS topic fans out to one or more SQS queues that walkerOS pulls.
+- [AWS SQS source](/docs/sources/server/sqs) for the consumer side. Standard pattern: SNS topic fans out to one or more SQS queues that walkerOS pulls, each subscribed with `rawMessageDelivery: true`.
 - [Mapping configuration](/docs/mapping)
 - [Flow configuration](/docs/getting-started/flow)

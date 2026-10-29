@@ -13,15 +13,16 @@ This guide deploys a walkerOS event collector to [Bunny Magic Containers](https:
 - [GitHub account](https://github.com/) (for private container registry)
 - [Bunny.net account](https://bunny.net/) with Magic Containers access
 - [Docker](https://docs.docker.com/get-docker/) installed
-- [Node.js 18+](https://nodejs.org/) installed
+- [Node.js 22.12+](https://nodejs.org/) installed
 
 ## 1. Set Up BigQuery
 
 Follow the [GCP BigQuery setup](/docs/destinations/server/gcp#gcp-setup) to:
 
-- Create a BigQuery dataset
 - Create a service account with write permissions
 - [Download a service account key](/docs/destinations/server/gcp#authentication) (`sa-bigquery.json`)
+
+Step 2 creates the dataset and the events table with `walkeros setup`.
 
 :::caution
 The key file will be baked into your Docker image. Keep the image in a **private** registry only.
@@ -38,7 +39,15 @@ npm install -g @walkeros/cli
 walkeros bundle https://www.walkeros.io/flows/gcp-bigquery.json -o dist/
 ```
 
-This creates `dist/flow.mjs`, `dist/package.json`, and `dist/node_modules/`. The flow reads `GCP_PROJECT_ID` (required), `BQ_DATASET`, `BQ_TABLE`, and `BQ_LOCATION` (optional, defaults `walkerOS`, `events`, `EU`) from the environment when the container starts, so nothing is baked in at bundle time. Only web flows bake `$env` values in, from `config.bundle.env`.
+This creates `dist/flow.mjs`, `dist/package.json`, and `dist/node_modules/`. The flow reads `GCP_PROJECT_ID` (required), `BQ_DATASET` and `BQ_TABLE` (optional, defaults `walkerOS` and `events`) from the environment when the container starts, so nothing is baked in at bundle time. Only web flows bake `$env` values in, from `config.bundle.env`.
+
+The flow's `"setup"` lets [`walkeros setup`](/docs/destinations/server/gcp#setup-lifecycle) create the dataset and the events table, in the region `BQ_LOCATION` names (default `EU`). Run it once. It finds Google credentials the way the runtime does, from `GOOGLE_APPLICATION_CREDENTIALS` (the key from step 1) or your gcloud application default credentials, and the account needs the setup permissions listed under [Create service accounts](/docs/destinations/server/gcp#create-service-accounts):
+
+```bash
+export GCP_PROJECT_ID="your-project-id"
+export GOOGLE_APPLICATION_CREDENTIALS="$(pwd)/sa-bigquery.json"
+walkeros setup destination.bigquery -c https://www.walkeros.io/flows/gcp-bigquery.json
+```
 
 :::tip[Quick Local Test]
 Test your flow before building Docker using `push --simulate`. The BigQuery call is mocked, so no credentials are needed:
@@ -60,16 +69,20 @@ FROM walkeros/flow:<version>
 # Copy the pre-built flow bundle (flow.mjs, package.json, node_modules/)
 COPY dist/ /app/flow/
 
-# Copy service account credentials
-COPY sa-bigquery.json /app/sa-bigquery.json
+# Copy service account credentials, owned by the user the image runs as
+COPY --chown=walker:walker sa-bigquery.json /app/sa-bigquery.json
 
 # Configure runtime
 ENV GOOGLE_APPLICATION_CREDENTIALS=/app/sa-bigquery.json
 ENV GCP_PROJECT_ID=your-project-id
 ```
 
-Replace `<version>` with the `walkeros/flow` version matching your CLI, see
-[image tags](/docs/apps/runtime#image-tags). The image already starts
+The image runs as the user `walker` (uid 1001). Without `--chown` the file is
+copied as owned by root, so a key that only its owner can read (mode 600) stays
+unreadable for that user.
+
+Replace `<version>` with the `walkeros/flow` version matching your CLI (see
+[image tags](/docs/apps/runtime#image-tags)). The image already starts
 `/app/flow/flow.mjs` on port 8080, so no command or `BUNDLE` is needed. To
 bundle inside Docker instead of on your machine, use the
 [canonical two-stage Dockerfile](/docs/apps/runtime#canonical-dockerfile).
@@ -108,6 +121,8 @@ Expected response:
 ```json
 { "success": true, "timestamp": 1234567890 }
 ```
+
+The Express source answers a POST [before delivery](/docs/sources/server/express#response-modes-async), so the response says nothing about BigQuery. A failed write shows up as a `Push failed` line in the container log.
 
 Verify in BigQuery:
 
@@ -165,50 +180,28 @@ For security, create a separate token with read-only access:
 1. Log in to [bunny.net dashboard](https://dash.bunny.net/)
 2. Navigate to **Magic Containers** → **Image Registries**
 3. Click **Add Image Registry**
-4. Select **GitHub** from the dropdown
+4. As **Registry**, select **GitHub**
 5. Enter:
    - **Username**: Your GitHub username
-   - **Personal Access Token**: The read-only token from above
-6. Click **Save**
+   - **Personal access token**: The read-only token from above
+6. Click **Add Image Registry**
 
 ## 7. Deploy to Bunny Magic Containers
 
-### Create New App
+1. In the bunny.net dashboard, go to **Magic Containers** and click **+ Add App**
+2. Search for and select the image `walkeros-collector` from your GitHub
+   registry; its `latest` tag is selected automatically
+3. Add an endpoint with **+ CDN** (routes HTTP(S) traffic through bunny.net's
+   edge network) or **+ Anycast IP** (direct access through an Anycast IP), name
+   it `collect` and set the container port to `8080`. Leave **SSL for origin**
+   off: the container serves plain HTTP on port 8080
+4. Enter the app name `walkeros-collector` and choose a region (the one closest
+   to you is preselected)
+5. Click **Deploy**
+6. Note the endpoint URL (e.g., `https://walkeros-collector-xxxxx.b-cdn.net`)
 
-1. In Bunny dashboard, go to **Magic Containers**
-2. Click **Add App**
-3. Enter app name: `walkeros-collector`
-4. Select deployment type:
-   - **Magic** (recommended) - AI auto-scales across regions
-   - **Single Region** - Deploy to one region
-5. Click **Next**
-
-### Add Container
-
-1. Click **Add Container**
-2. Enter container name: `collector`
-3. Select your GitHub registry
-4. Select image: `walkeros-collector`
-5. Select tag: `latest`
-6. Click **Next**
-
-### Configure Endpoint
-
-1. Click **Add New Endpoint**
-2. Enter endpoint name: `collect`
-3. Select exposure method:
-   - **CDN** - Routes through Bunny CDN (recommended for caching static responses)
-   - **Anycast** - Direct routing to container ($2/month for anycast IP)
-4. Set container port: `8080`
-5. Enable SSL
-6. Click **Next**
-
-### Deploy
-
-1. Review your configuration
-2. Click **Confirm and Create**
-3. Wait for deployment (typically 1-2 minutes)
-4. Note the endpoint URL (e.g., `https://walkeros-collector-xxxxx.b-cdn.net`)
+To run in more regions, add them after the deploy in the app's **Regions and
+Scaling** settings.
 
 ## 8. Verify Deployment
 
@@ -244,7 +237,8 @@ bq query --use_legacy_sql=false \
 When you need to update your flow or configuration:
 
 ```bash
-# 1. Make changes and rebuild
+# 1. Make changes, bundle the flow again and rebuild
+walkeros bundle https://www.walkeros.io/flows/gcp-bigquery.json -o dist/
 docker build -t ghcr.io/YOUR_GITHUB_USERNAME/walkeros-collector:latest .
 
 # 2. Push new image
@@ -257,7 +251,7 @@ docker push ghcr.io/YOUR_GITHUB_USERNAME/walkeros-collector:latest
 
 - [Configure event mapping](/docs/mapping) to transform events before sending to BigQuery
 - [Add more destinations](/docs/destinations) to forward events to multiple services
-- Set up [Bunny monitoring](https://docs.bunny.net/docs/magic-containers-overview) for your deployment
+- Read the [Magic Containers documentation](https://bunny.net/docs/magic-containers-overview)
 
 ## Cleanup
 

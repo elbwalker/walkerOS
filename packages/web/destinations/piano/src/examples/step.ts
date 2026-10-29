@@ -25,7 +25,7 @@ export const pageView: Flow.StepExample = {
   title: 'Page view',
   description:
     'A page view fires a Piano page.display event with the page name and chapter.',
-  in: getEvent('page view', { timestamp: 1700000200 }),
+  in: getEvent('page view', { timestamp: 1700000200000 }),
   mapping: {
     name: 'page.display',
     data: {
@@ -51,7 +51,7 @@ export const purchase: Flow.StepExample = {
   title: 'Purchase',
   description:
     'A completed order fires a Piano transaction.confirmation event with the transaction id, revenue and currency.',
-  in: getEvent('order complete', { timestamp: 1700000201 }),
+  in: getEvent('order complete', { timestamp: 1700000201000 }),
   mapping: {
     name: 'transaction.confirmation',
     data: {
@@ -68,7 +68,7 @@ export const purchase: Flow.StepExample = {
       'transaction.confirmation',
       {
         transaction_id: '0rd3r1d',
-        revenue: 555,
+        revenue: 462,
         currency: 'EUR',
       },
     ],
@@ -79,7 +79,7 @@ export const customEvent: Flow.StepExample = {
   title: 'Custom event',
   description:
     'A generic entity action fires a custom Piano event with mapped properties.',
-  in: getEvent('entity action', { timestamp: 1700000202 }),
+  in: getEvent('entity action', { timestamp: 1700000202000 }),
   mapping: {
     name: 'click.action',
     data: {
@@ -105,7 +105,7 @@ export const customEvent: Flow.StepExample = {
 export const silentRule: Flow.StepExample = {
   public: false,
   description: 'A rule with silent: true sends no Piano event.',
-  in: getEvent('page view', { timestamp: 1700000203 }),
+  in: getEvent('page view', { timestamp: 1700000203000 }),
   mapping: { silent: true },
   out: [],
 };

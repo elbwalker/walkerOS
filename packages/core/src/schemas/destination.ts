@@ -97,7 +97,12 @@ export const ConfigSchema = z
     id: Identifier.describe(
       'Destination instance identifier (defaults to destination key)',
     ).optional(),
-    init: z.boolean().describe('Whether to initialize immediately').optional(),
+    init: z
+      .boolean()
+      .describe(
+        'Whether the destination is already initialized; true skips its init(). The collector sets it after init runs.',
+      )
+      .optional(),
     loadScript: z
       .boolean()
       .describe('Whether to load external script (for web destinations)')
@@ -127,7 +132,7 @@ export const ConfigSchema = z
       .union([z.boolean(), z.record(z.string(), z.unknown())])
       .optional()
       .describe(
-        'One-time setup options applied during destination registration (boolean enables defaults, object configures specifics)',
+        'Provisioning options for `walkeros setup`, which runs only when invoked (boolean enables defaults, object configures specifics)',
       ),
     before: RouteSchema.optional().describe(
       'Transformer chain run for this destination only, before it receives the event.',
@@ -201,7 +206,7 @@ export const ConfigSchema = z
       ])
       .optional()
       .describe(
-        'Per-destination circuit breaker (presence-gated). After threshold consecutive transport failures the breaker opens and events are skipped until cooldown ms elapse, then one probe is admitted; success closes it, failure re-opens it. Partial-batch row failures are breaker-neutral. Bare number is the threshold; object form supports threshold (default 5) and cooldown (default 30000ms).',
+        'Per-destination circuit breaker (presence-gated). After threshold consecutive transport failures the breaker opens and events fail with breaker-open (counted, kept in the DLQ) until cooldown ms elapse, then one probe is admitted; success closes it, failure re-opens it. Partial-batch row failures are breaker-neutral. Bare number is the threshold; object form supports threshold (default 5) and cooldown (default 30000ms).',
       ),
   })
   .meta({

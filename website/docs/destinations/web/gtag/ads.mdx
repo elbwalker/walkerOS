@@ -17,8 +17,8 @@ import Configuration from '@site/src/components/snippets/_configuration.mdx';
 />
 
 [Google Ads conversion tracking](https://support.google.com/google-ads/answer/1722022?hl=en)
-enables you to track conversions and measure the effectiveness of your Google
-Ads campaigns via the unified gtag destination.
+records the conversions of your Google Ads campaigns. The unified gtag
+destination sends them.
 
 ## Installation
 
@@ -36,15 +36,17 @@ const { elb } = await startFlow({
     gtag: {
       code: destinationGtag,
       config: {
+        loadScript: true,
         settings: {
           ads: {
-            conversionId: 'AW-XXXXXXXXX',
+            conversionId: 'AW-123456789',
             currency: 'EUR',
           },
         },
         mapping: {
           order: {
             complete: {
+              name: 'purchase',
               settings: {
                 ads: {
                   label: 'purchase_conversion',
@@ -60,13 +62,25 @@ const { elb } = await startFlow({
   language="typescript"
 />
 
+`loadScript: true` makes walkerOS add gtag.js to the page; without it, events
+reach Google only if your page loads gtag.js itself.
+
+The snippet sets no consent, so conversions, and with enhanced conversions the
+customer's email, phone and address, go to Google without `marketing` consent.
+Add `consent: { marketing: true }` to `config`, next to `settings`, before you
+go live: the destination then sends nothing until `marketing` is granted (see
+[Google Consent Mode](/docs/guides/consent#google-consent-mode)).
+
 <Configuration type="destination" data={data} />
 
 ## Conversion example
 
-An `order complete` event with a `label` on its rule is sent as a Google Ads
-conversion. The destination builds `send_to` from the conversion ID and the
-label, and takes the currency from the `ads` settings.
+An `order complete` event whose rule has a `name` and a `label` is sent as a
+Google Ads conversion. The destination builds `send_to` from the conversion ID
+and the label (the rule's `name` when it has no label) and sets `currency` from
+the `ads` settings, `EUR` when unset; a `currency` in the mapped data replaces
+it. A rule with a `label` and no `name` sends no conversion, and its push still
+answers `done`.
 
 <StepExample example={data.examples.step.googleAdsConversion} />
 
@@ -87,7 +101,7 @@ from `event.user`, `event.data`, or anywhere a mapping reaches.
   code={`{
   settings: {
     ads: {
-      conversionId: 'AW-XXXXXXXXX',
+      conversionId: 'AW-123456789',
       currency: 'EUR',
       enhancedConversions: {
         email: 'data.customerEmail',

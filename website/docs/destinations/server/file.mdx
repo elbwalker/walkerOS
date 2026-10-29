@@ -8,6 +8,7 @@ package: '@walkeros/server-destination-file'
 
 import data from '@walkeros/server-destination-file/walkerOS.json';
 import Configuration from '@site/src/components/snippets/_configuration.mdx';
+import Quickstart from '@site/src/components/snippets/_quickstart.mdx';
 
 import WhereThisFits from '@site/src/components/snippets/_where-this-fits.mdx';
 
@@ -22,61 +23,12 @@ Local filesystem sink for walkerOS server flows. Appends events to a file as JSO
   flowMap={{
     destinations: { default: { label: 'Destination', text: 'Local file', highlight: true } },
   }}
-  post={<>Receives events server-side from the collector, serialises each event, and appends a line to a local file. No network calls, no SDKs, just `fs.createWriteStream` with `flag: 'a'`.</>}
+  post={<>Receives events server-side from the collector, serialises each event, and appends a line to a local file. It makes no network calls and uses no SDK, only `fs.createWriteStream` with `flags: 'a'`.</>}
 />
 
 ## Installation
 
-<CodeSnippet
-  code={`npm install @walkeros/server-destination-file`}
-  language="bash"
-/>
-
-<Tabs groupId="mode">
-  <TabItem value="integrated" label="Integrated" default>
-
-<CodeSnippet
-  code={`import { startFlow } from '@walkeros/collector';
-import { destinationFile } from '@walkeros/server-destination-file';
-
-await startFlow({
-  destinations: {
-    log: {
-      code: destinationFile,
-      config: {
-        settings: {
-          filename: 'events.jsonl',
-        },
-      },
-    },
-  },
-});`}
-  language="typescript"
-/>
-
-  </TabItem>
-  <TabItem value="bundled" label="Bundled">
-
-Add to your `flow.json` destinations:
-
-<CodeSnippet
-  code={`"destinations": {
-  "log": {
-    "package": "@walkeros/server-destination-file",
-    "config": {
-      "settings": {
-        "filename": "events.jsonl"
-      }
-    }
-  }
-}`}
-  language="json"
-/>
-
-[See bundled mode setup](/docs/getting-started/modes/bundled) | [CLI reference](/docs/apps/cli)
-
-  </TabItem>
-</Tabs>
+<Quickstart data={data} />
 
 <Configuration type="destination" data={data} />
 
@@ -95,20 +47,31 @@ The destination opens one long-lived `WriteStream` per resolved filename during 
   language="json"
 />
 
-Each event lands in a file named after the tenant value (e.g. `acme`, `venti`). Pair with a static suffix via `fn:` if you need a `.jsonl` extension.
+Each event lands in a file named after the tenant value (e.g. `acme`, `globex`), without an extension. An event whose mapping resolves to no name fails with a `missing-input` error and is not written.
+
+A mapping value runs one operator, so `fn` next to `key` never runs. For a `.jsonl` extension, build the whole name in `fn`:
+
+<CodeSnippet
+  code={`{
+  "filename": {
+    "fn": "$code:(event) => event.data.tenant && \`\${event.data.tenant}.jsonl\`"
+  }
+}`}
+  language="json"
+/>
 
 ### Daily rotation
 
 <CodeSnippet
   code={`{
   "filename": {
-    "fn": "$code:\`events-\${new Date(value.timestamp).toISOString().slice(0,10)}.jsonl\`"
+    "fn": "$code:(event) => \`events-\${new Date(event.timestamp).toISOString().slice(0, 10)}.jsonl\`"
   }
 }`}
   language="json"
 />
 
-Inside the `$code:` function, `value` is the event being processed. One file per UTC day, created automatically. No `logrotate`, no cron.
+The function receives the event being processed. Each UTC day gets its own file, created by that day's first event, without `logrotate` or cron.
 
 ## Formats
 
@@ -118,7 +81,7 @@ One JSON object per line. The entire event is serialised with `JSON.stringify`. 
 
 ### TSV / CSV
 
-Specify `fields: string[]` listing the event paths to extract as columns. Object values are JSON-stringified into a single cell. CSV output follows RFC 4180 quoting.
+Specify `fields: string[]` listing the event paths to extract as columns, in that order. Object values are JSON-stringified into a single cell, a missing value is an empty cell, and no header row is written. CSV output follows RFC 4180 quoting. TSV writes each value as it is, so a tab inside a value shifts the following columns and a line break splits the row: use CSV for free text. `format: "tsv"` or `"csv"` without `fields` fails at init with a `config` error.
 
 <CodeSnippet
   code={`{
@@ -133,5 +96,5 @@ Specify `fields: string[]` listing the event paths to extract as columns. Object
 
 - One file handle is opened per resolved filename and kept open until `destroy()`. Sharding by high-cardinality keys (e.g. `user.session`) can exhaust the OS file descriptor table. Be deliberate about cardinality.
 - External rotation (e.g. `logrotate`) leaves the cached handle pointing at the rotated inode. Use the date-token pattern above instead.
-- No batching. Each event is written individually; Node's stream layer buffers under the hood.
-- Write errors log a warning and drop the event. They never fail the flow.
+- There is no batching: each event is one write, and its push resolves once the line is written. A `batch` setting has no effect, and the collector logs an ERROR line that names it.
+- A file that cannot be opened or written (for example `EACCES`, `ENOSPC` or `EISDIR`) fails the event with a `transport` error that names the code, and the event goes to the dead-letter queue ([when delivery fails](/docs/destinations#when-delivery-fails)). The process keeps running, and the next event opens the file again.

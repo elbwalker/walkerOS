@@ -30,16 +30,19 @@ import { startFlow } from '@walkeros/collector';
 const { elb } = await startFlow({
   destinations: {
     debug: {
-      push: async (event, context) => {
-        console.log('[walkerOS Event]', {
-          name: event.name,
-          data: event.data,
-          context: event.context,
-          consent: event.consent,
-          timestamp: event.timestamp,
-        });
+      code: {
+        type: 'debug',
+        config: {},
+        push: async (event) => {
+          console.log('[walkerOS Event]', {
+            name: event.name,
+            data: event.data,
+            context: event.context,
+            consent: event.consent,
+            timestamp: event.timestamp,
+          });
+        },
       },
-      config: {},
     },
     // ... other destinations
   },
@@ -69,19 +72,19 @@ For destinations that make HTTP calls:
 | Meta      | [Facebook Pixel Helper](https://developers.facebook.com/docs/meta-pixel/support/pixel-helper) |
 | Plausible | [Plausible Dashboard real-time](https://plausible.io/docs)                                    |
 
-### 4. Dry Run Mode
+### 4. Simulate or Mock the Destination
 
-Test mapping without sending to vendor:
+To see what a destination's mapping produces without calling the vendor,
+simulate it: the vendor calls are recorded on a mock env instead of sent.
 
-```typescript
-const destination = {
-  ...actualDestination,
-  config: {
-    ...actualDestination.config,
-    dryRun: true, // Events processed but not sent
-  },
-};
+```bash
+walkeros push flow.json -e event.json --simulate destination.ga4
 ```
+
+`config.mock` (`"mock": true` in the destination's `config`) replaces only the
+destination's `push` call with that value: the mapping still runs, `init` still
+runs (it may load the vendor script and make its init calls), and the push
+answers with the mock value instead of calling the vendor.
 
 ## Common Issues
 
@@ -93,28 +96,23 @@ const destination = {
 // Event pushed
 elb({ name: 'product view', data: { id: 'P123' } });
 
-// Mapping expects different name
-mapping: {
+// Mapping expects a different name
+const mapping = {
   Product: {
     // Wrong: capital P
-    View: {
-      // Wrong: capital V
-      name: 'view_item';
-    }
-  }
-}
+    View: { name: 'view_item' }, // Wrong: capital V
+  },
+};
 ```
 
 **Fix:** Event names are case-sensitive. Use exact match:
 
 ```typescript
-mapping: {
+const mapping = {
   product: {
-    view: {
-      name: 'view_item';
-    }
-  }
-}
+    view: { name: 'view_item' },
+  },
+};
 ```
 
 ### Missing Nested Data
@@ -123,36 +121,36 @@ mapping: {
 
 ```typescript
 // Event structure
-{
+const event = {
   name: 'order complete',
   data: { value: 100 },
-  nested: [
-    { entity: 'product', data: { id: 'P1' } }
-  ]
-}
+  nested: [{ entity: 'product', data: { id: 'P1' } }],
+};
 
 // Mapping tries wrong path
-data: {
-  map: {
-    items: {
-      loop: [
-        'data.items',  // Wrong: nested is at root, not in data
-        { map: { id: 'data.id' } }
-      ]
-    }
-  }
-}
+const rule = {
+  data: {
+    map: {
+      items: {
+        loop: [
+          'data.items', // Wrong: nested is at root, not in data
+          { map: { id: 'data.id' } },
+        ],
+      },
+    },
+  },
+};
 ```
 
 **Fix:** Use correct path to nested array:
 
 ```typescript
-items: {
+const items = {
   loop: [
     'nested', // Correct: root-level nested
     { map: { item_id: 'data.id' } },
-  ];
-}
+  ],
+};
 ```
 
 ### Consent Blocking Events
@@ -163,11 +161,9 @@ items: {
 
 ```typescript
 // Destination config
-config: {
-  consent: {
-    marketing: true;
-  } // Requires marketing consent
-}
+const config = {
+  consent: { marketing: true }, // Requires marketing consent
+};
 ```
 
 **Check 2:** Is consent granted?
@@ -186,16 +182,20 @@ elb('walker consent', { marketing: true });
 destination sent nothing, from the collector's own records (`--json` and MCP:
 `skipped` on the result):
 
-| Line (`skipped`)                                                                                         | Meaning                                                                    | Fix in simulate                                                  |
-| -------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------- | ---------------------------------------------------------------- |
-| `pending: waits for consent (require)` (`{ reason: 'pending', require: ['consent'] }`)                   | `require: ["consent"]`: never started, no consent state exists             | `--consent '{"functional":true}'` (MCP `state.consent`)          |
-| `skipped: consent (requires marketing; granted functional)` (`{ reason: 'consent', required, granted }`) | Started, but `config.consent` denied the event (collector + event consent) | Grant the key in `--consent` or the event's `consent`            |
-| `mapping: none (skipped before mapping)`, no `skipped` line                                              | Not consent: a filter, a `before` chain stop, or an error                  | Check `--verbose` logs, the `before` chain and the mapping rules |
+| Line (`skipped`)                                                                                         | Meaning                                                                            | Fix in simulate                                                                              |
+| -------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------- |
+| `pending: waits for consent (require)` (`{ reason: 'pending', require: ['consent'] }`)                   | `require: ["consent"]`: never started, no consent state exists                     | `--consent '{"functional":true}'` (MCP `state.consent`)                                      |
+| `skipped: consent (requires marketing; granted functional)` (`{ reason: 'consent', required, granted }`) | Started, but `config.consent` denied the event (collector + event consent)         | Grant the key in `--consent` or the event's `consent`                                        |
+| `mapping: none (skipped before mapping)`, no `skipped` line                                              | Not consent: an event without `name`, a filter, a `before` chain stop, or an error | Check the event has a `name`, the `--verbose` logs, the `before` chain and the mapping rules |
 
 `require` checks that consent state is present at all; `config.consent` checks
 each event's keys. `--consent` is the collector's starting state: any value
 clears the consent `require`, and its granted keys feed the consent check. A
 `require` other than consent (e.g. `user`) cannot be seeded by simulate.
+
+An event without `name` sends nothing and the simulation still answers
+`success: true` with `mapping: none (skipped before mapping)` and `no calls`,
+while a real push of it answers `ok: false` with `Event name is required`.
 
 ### Does the CMP Source Send Consent?
 
@@ -206,7 +206,7 @@ call:
 ```
 success: true
   source.usercentrics
-    call elb("walker consent",{"functional":true,"marketing":true})
+    call elb("walker consent",{"essential":true,"functional":true,"marketing":true})
     no events
 ```
 
@@ -218,45 +218,66 @@ source's call. For a consent-gated source (the session source with
 `settings.consent`), `no events` without `--consent` is expected; pass
 `--consent '{"functional":true}'` (MCP `state.consent`) to see what it emits.
 
+### `startFlow` Throws `Cannot read properties of undefined (reading 'config')`
+
+A `destinations` entry without `code` (for example `{ push, config }` written
+directly) makes `startFlow` throw this `TypeError`, which names neither the
+destination nor `code`. Put the destination instance under `code`, as in
+"Console Logging" above.
+
 ### Vendor SDK Not Loaded
 
-**Problem:** `TypeError: env.window.gtag is not a function`
+**Problem:** the push fails with `vendor-not-loaded`
+(`Vendor script failed to load`), `vendor-not-ready`
+(`Vendor not ready: its global is missing`) or `vendor-timeout`, or the vendor
+receives nothing although the push answers `done`.
 
-**Cause:** Vendor script not loaded before push.
+**Cause:** the vendor script was blocked, did not load in time, or was never
+injected: a web destination that loads its vendor script (gtag, Meta, Plausible
+and others) injects it only with `config.loadScript: true`. Without it nothing
+is injected, and gtag's calls wait in `dataLayer` while the push answers `done`.
 
-**Fix:** Ensure init() loads script:
-
-```typescript
-init: async (config, env) => {
-  // Wait for script to load
-  await loadScript('https://vendor.com/sdk.js');
-  // Verify SDK available
-  if (!env.window.vendorSdk) {
-    throw new Error('Vendor SDK failed to load');
-  }
-},
-```
+**Fix:** set `"loadScript": true` in the destination's `config`, or keep the
+vendor's own tag on the page. A destination package loads its script through
+`loadVendor` from `@walkeros/web-core`, which reports the codes above instead of
+losing events (see
+[create-destination](../walkeros-create-destination/SKILL.md), Phase 7, "Scripts
+through `loadVendor`").
 
 ### Function Mapping Errors
 
-**Problem:** `Cannot read property 'price' of undefined`
+**Problem:** the log shows
+`ERROR mapping fn failed { step: 'mapping.product view', code: 'mapping', ... error: "Cannot read properties of undefined (reading 'price')" }`,
+and the destination receives the event without that field.
 
-```typescript
-// Mapping with unsafe access
-data: {
-  map: {
-    value: {
-      fn: (e) => e.data.price * 100;
-    } // Fails if data.price undefined
+```json
+{
+  "data": {
+    "map": {
+      "value": {
+        "fn": "$code:(value, { event }) => event.data.product.price * 100"
+      }
+    }
   }
 }
 ```
 
-**Fix:** Add null checks:
+The function fails when the event has no `data.product`. A function that returns
+`NaN` instead (for example `event.data.price * 100` on an event without a price)
+drops the field with no log line at all.
 
-```typescript
-value: {
-  fn: (e) => (e.data?.price ?? 0) * 100;
+**Fix:** Read the event through optional chaining and a fallback, which avoids
+both:
+
+```json
+{
+  "data": {
+    "map": {
+      "value": {
+        "fn": "$code:(value, { event }) => (event.data?.product?.price ?? 0) * 100"
+      }
+    }
+  }
 }
 ```
 
@@ -275,31 +296,45 @@ When events aren't working:
 
 ## Testing in Isolation
 
-Test destination push directly:
+Run one destination on a real collector and record its vendor calls through
+`env` instead of loading the vendor script:
 
 ```typescript
-import { push } from '@walkeros/web-destination-gtag';
-import { mockEnv } from '@walkeros/core';
+import { startFlow } from '@walkeros/collector';
+import { getEvent } from '@walkeros/core';
+import { destinationGtag } from '@walkeros/web-destination-gtag';
 
-// Create test event
-const event = {
-  name: 'product view',
-  data: { id: 'P123', price: 99 },
-  // ... full event
-};
-
-// Mock env to capture calls
-const calls = [];
-const testEnv = mockEnv(baseEnv, (path, args) => {
-  calls.push({ path, args });
+// Record every gtag() call instead of loading gtag.js
+const calls: unknown[][] = [];
+const { elb } = await startFlow({
+  destinations: {
+    ga4: {
+      code: destinationGtag,
+      config: {
+        settings: { ga4: { measurementId: 'G-XXXXXXXXXX' } },
+        mapping: {
+          product: {
+            view: { name: 'view_item', data: { map: { value: 'data.price' } } },
+          },
+        },
+      },
+      env: {
+        window: {
+          dataLayer: [],
+          gtag: (...args: unknown[]) => calls.push(args),
+        },
+      },
+    },
+  },
 });
 
-// Test push directly
-await push(event, { config: testConfig, env: testEnv });
-
-// Inspect what was called
-console.log(calls);
+const result = await elb(getEvent('product view'));
+console.log(result.ok, calls);
+// true [['config', 'G-XXXXXXXXXX', {}], ['event', 'view_item', { value: 420, send_to: 'G-XXXXXXXXXX' }]]
 ```
+
+The CLI does the same for a flow file:
+`walkeros push flow.json -e event.json --simulate destination.ga4`.
 
 ## MCP Tool Debugging
 
@@ -316,12 +351,15 @@ diagnostic information:
   as `elb` calls (no `verbose` needed) and its summary counts them
   (`Source captured 0 events and 1 command`); `state.consent` applies to source
   steps too.
-- **`flow_bundle`** warns when the build produces no output
+- **`flow_bundle`** with `stats: false` still writes the bundle, but its result
+  reads `success: false` and `Bundle produced no output`
 - **`flow_examples`** warns when no examples are found in the config
-- **`package_search`** returns the complete catalog and warns (via the
-  `warnings` array) when it falls back to a partial source or omits packages,
-  instead of silently returning a partial list
-- All error responses include a `hint` field with recovery suggestions
+- **`package_search`** browses the published step packages whose walkerOS
+  metadata it could read. When the npm search fails, the catalog is empty and a
+  warning says so; a second warning counts the npm packages without readable
+  walkerOS metadata, which includes every package that is not a step, so it
+  appears on every browse
+- Error responses carry `error` and, where the tool knows a recovery, a `hint`
 
 From a terminal, `walkeros diagnostics` reports the CLI version, the app URL
 (and whether it came from `WALKEROS_APP_URL`, the config file or the default),

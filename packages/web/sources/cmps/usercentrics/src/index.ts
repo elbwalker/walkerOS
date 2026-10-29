@@ -10,9 +10,10 @@ export * as SourceUsercentrics from './types';
  * Usercentrics consent management source for walkerOS.
  *
  * Listens to Usercentrics CMP events and translates consent states to
- * walkerOS consent commands. Supports both the legacy V2 API
- * (`window.UC_UI` + `ucEvent`) and the current V3 API
- * (`window.__ucCmp` + `UC_UI_CMP_EVENT`).
+ * walkerOS consent commands. Supports both the V2 API (`window.UC_UI`) and
+ * the V3 API (`window.__ucCmp`): each reads consent on `UC_UI_INITIALIZED`
+ * and on `UC_UI_CMP_EVENT` decisions (V3 listens to `v3EventName` instead
+ * when it is set).
  *
  * @example
  * ```typescript
@@ -77,7 +78,7 @@ export const sourceUsercentrics: Source.Init<Types> = async (context) => {
       } else if (actualWindow.UC_UI) {
         cleanups.push(setupV2Adapter(adapterCtx));
       } else {
-        // Neither loaded yet — attach both listeners so whichever loads later is caught.
+        // Neither loaded yet: attach both listeners so whichever loads later is caught.
         cleanups.push(setupV2Adapter(adapterCtx));
         cleanups.push(await setupV3Adapter(adapterCtx));
       }

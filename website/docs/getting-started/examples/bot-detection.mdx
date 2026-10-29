@@ -103,10 +103,10 @@ success: true
 
 ## What you get
 
-Every event now carries `user.botScore` (0-99, higher means more automated), `user.botCategory` (what kind of client it is) and `user.botProduct` when a named detector matched. The reason codes land on `ingest.bot.reasons`, off the analytics event. In production the demo destination logs each annotated event; a request from GPTBot looks like this (from the transformer's examples):
+Every event now carries `user.botScore` (0-99, higher means more automated), `user.botCategory` (what kind of client it is) and `user.botProduct` when a named detector matched. The reason codes land on `ingest.bot.reasons`, off the analytics event. When the flow runs, the demo destination logs each annotated event under its `name` setting; a request from GPTBot looks like this:
 
 <CodeSnippet
-  code={`[demo] {
+  code={`[Event Logger] {
   "name": "page view",
   "user": {
     "botScore": 90,
@@ -118,7 +118,7 @@ Every event now carries `user.botScore` (0-99, higher means more automated), `us
   language="bash"
 />
 
-Without `--ingest`, a simulated event has no request behind it, so it resolves no signals at all and scores `null` with category `unknown`, which means not measured rather than human. `ingest.bot.reasons` then names which mappings are missing. To act on the scores, add a mapping condition on your real destinations that drops or segments events where `botScore` exceeds 50. See [Bot detection](/docs/transformers/bot) for the full filtering recipes.
+Without `--ingest`, a simulated event has no request behind it, so it resolves no signals at all and scores `null` with category `unknown`, which means not measured rather than human. To act on the scores, filter downstream: for example, a mapping rule on a vendor destination with a `condition` on `user.botScore` and `ignore: true` keeps events scoring above 50 from that vendor. See [Bot detection](/docs/transformers/bot) for the full filtering recipes.
 
 ## Next steps
 

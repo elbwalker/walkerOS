@@ -60,6 +60,7 @@ describe('mixpanel conformance', () => {
         record_sessions_percent: 0,
         record_mask_all_inputs: true,
       },
+      minimal: examples.minimal,
       env: { push: examples.env.push, simulation: examples.env.simulation },
       root: path.join(__dirname, '..', '..'),
       passThrough,

@@ -34,6 +34,7 @@ npm install @walkeros/web-destination-gtag
         "gtag": {
           "package": "@walkeros/web-destination-gtag",
           "config": {
+            "loadScript": true,
             "settings": { "ga4": { "measurementId": "G-XXXXXXXXXX" } }
           }
         }
@@ -42,6 +43,10 @@ npm install @walkeros/web-destination-gtag
   }
 }
 ```
+
+This quick start sets no consent: add `consent: { analytics: true }` to `config`
+before you go live, and give Google Ads a destination of its own with
+`consent: { marketing: true }`, see the docs.
 
 ## Documentation
 

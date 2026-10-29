@@ -41,7 +41,7 @@ export const SettingsSchema = z
       .string()
       .url()
       .describe(
-        'Custom base URL for the X Conversions API endpoint (like https://ads-api.x.com/)',
+        'Custom base URL for the X Conversions API, ending in / (like https://ads-api.x.com/)',
       )
       .optional(),
     user_data: z

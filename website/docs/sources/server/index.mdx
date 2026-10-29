@@ -6,7 +6,7 @@ sidebar_position: 2
 
 # Server sources
 
-Server sources accept HTTP requests containing walkerOS events and forward them to the collector. Choose based on your deployment environment.
+Server sources receive walkerOS events over HTTP or from a queue and forward them to the collector. Choose based on your deployment environment.
 
 ## Available sources
 
@@ -21,13 +21,13 @@ Server sources accept HTTP requests containing walkerOS events and forward them 
 
 ## Choosing a source
 
-**Express** - Best for traditional Node.js deployments, Docker containers, or when you need full control over the HTTP server.
+**Express**: best for traditional Node.js deployments, Docker containers, or when you need full control over the HTTP server.
 
-**Fetch** - Best for edge computing and serverless platforms that support the Web Standard Fetch API.
+**Fetch**: best for edge computing and serverless platforms that support the Web Standard Fetch API.
 
-**AWS Lambda** - Best for AWS-native deployments with API Gateway or Lambda Function URLs.
+**AWS Lambda**: best for AWS-native deployments with API Gateway or Lambda Function URLs.
 
-**GCP Cloud Functions** - Best for Google Cloud deployments using Cloud Functions.
+**GCP Cloud Functions**: best for Google Cloud deployments using Cloud Functions.
 
 ## Common features
 
@@ -39,9 +39,13 @@ inbound requests and all provide:
 - **JSON event ingestion** (POST), with one shared [event envelope](/docs/sources/envelope)
 - **Pixel tracking** (GET with 1x1 GIF response)
 - **CORS support** (configurable)
-- **Health checks** (liveness/readiness endpoints)
 - One shared [request scope](/docs/sources/scope), so a `config.ingest` mapping
   resolves the same on each of them
+
+Health checks: the [runtime](/docs/apps/runtime#health-checks) answers `/health`
+and `/ready` for an Express flow, and the AWS Lambda source answers its own
+`healthPath`. Express run standalone, Fetch and GCP have none (GCP answers a GET
+with the pixel when pixel tracking is on).
 
 **Queue consumers** (AWS SQS, Google Pub/Sub pull) read from a queue instead of
 serving requests. They have no HTTP surface, so none of the request-shaped
@@ -58,7 +62,18 @@ result, with one rule:
 | Delivered, queued, skipped | 200 | ack | 200 |
 | Failed, a resend could fix it (`retryable`) | 500, or 207 for the failed events of a batch | nack | 500 |
 | Failed, a resend cannot fix it | 200, acknowledged | ack | 200 |
-| Invalid input | 400 | ack, counted as `rejected` | 400 |
+| Invalid input | 400, or 207 for the invalid events of a batch | ack, counted as `rejected` | 400 |
+
+HTTP sources answer this way when they wait for the push: Express POST does
+that only when POST is synchronous (`async: false` or `{ "POST": false }`; its
+default answers 200 on receipt, see
+[Response modes](/docs/sources/server/express#response-modes-async)), and a GET
+pixel always answers 200 with the GIF.
+
+SQS and Pub/Sub pull report an acknowledged invalid message through the
+`rejected` counter and one ERROR line per source and minute. A decoder or
+producer that sends messages without an event name therefore drops every
+message: check `rejected` and the log after a change.
 
 A deterministic failure is acknowledged on purpose: resending the message would
 fail the same way and loop. It is visible in the destination's `failed`

@@ -31,7 +31,7 @@ export const purchase: Flow.StepExample = {
   title: 'Purchase',
   description:
     'A completed order fires a Plausible purchase event with revenue currency and amount.',
-  in: getEvent('order complete', { timestamp: 1700000200 }),
+  in: getEvent('order complete', { timestamp: 1700000200000 }),
   mapping: {
     name: 'purchase',
     data: {
@@ -47,12 +47,12 @@ export const purchase: Flow.StepExample = {
   },
   out: [
     [
-      'plausible',
+      'window.plausible',
       'purchase',
       {
         revenue: {
           currency: 'EUR',
-          amount: 555,
+          amount: 462,
         },
       },
     ],
@@ -63,7 +63,7 @@ export const customEvent: Flow.StepExample = {
   title: 'Custom event',
   description:
     'A generic entity action fires a Plausible custom event with mapped scalar props.',
-  in: getEvent('entity action', { timestamp: 1700000201 }),
+  in: getEvent('entity action', { timestamp: 1700000201000 }),
   mapping: {
     name: 'Custom Event',
     data: {
@@ -80,7 +80,7 @@ export const customEvent: Flow.StepExample = {
   },
   out: [
     [
-      'plausible',
+      'window.plausible',
       'Custom Event',
       {
         props: {
@@ -97,7 +97,7 @@ export const customEvent: Flow.StepExample = {
 export const silentRule: Flow.StepExample = {
   public: false,
   description: 'A rule with silent: true sends no Plausible event.',
-  in: getEvent('page view', { timestamp: 1700000600 }),
+  in: getEvent('page view', { timestamp: 1700000600000 }),
   mapping: { silent: true },
   out: [],
 };

@@ -149,7 +149,7 @@ export const ConfigSchema = MappingConfigSchema.extend({
     .array(z.string())
     .optional()
     .describe(
-      'Defer source initialization until these collector events fire (e.g., ["consent"])',
+      'Collector events (e.g., ["consent"]) that must fire before the source receives on() calls; init and event capture are not delayed',
     ),
   logger: LoggerConfigSchema.optional().describe(
     'Logger configuration (level, handler) to override the collector defaults',
@@ -164,13 +164,13 @@ export const ConfigSchema = MappingConfigSchema.extend({
     .union([z.boolean(), z.record(z.string(), z.unknown())])
     .optional()
     .describe(
-      'One-time setup options applied during source registration (boolean enables defaults, object configures specifics)',
+      'Provisioning options for `walkeros setup`, which runs only when invoked (boolean enables defaults, object configures specifics)',
     ),
   ingest: z
     .union([ValueSchema, ValuesSchema])
     .optional()
     .describe(
-      'Ingest metadata extraction mapping. Extracts values from raw request objects (Express req, Lambda event) using mapping syntax.',
+      'Ingest metadata extraction mapping. On server sources it resolves against the normalized request scope (method, url, path, query, headers, body, ip, raw), without a prefix.',
     ),
   disabled: z
     .boolean()
@@ -250,7 +250,7 @@ export const InstanceSchema = z
         id: 'SourceInstancePushFn',
         title: 'Source.PushFn',
         description:
-          'Push function — THE HANDLER (flexible signature for platform compatibility).',
+          'Push function: THE HANDLER (flexible signature for platform compatibility).',
       })
       .describe(
         'Push function - THE HANDLER (flexible signature for platform compatibility)',

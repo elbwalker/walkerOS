@@ -24,6 +24,7 @@ describe('kafka conformance', () => {
         },
       },
       env: { push: examples.env.push, simulation: examples.env.simulation },
+      minimal: examples.minimal,
       root: path.join(__dirname, '..', '..'),
     });
   });

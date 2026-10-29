@@ -8,6 +8,7 @@ package: '@walkeros/web-destination-matomo'
 
 import data from '@walkeros/web-destination-matomo/walkerOS.json';
 import Configuration from '@site/src/components/snippets/_configuration.mdx';
+import Quickstart from '@site/src/components/snippets/_quickstart.mdx';
 
 import WhereThisFits from '@site/src/components/snippets/_where-this-fits.mdx';
 
@@ -35,60 +36,12 @@ dimensions.
 
 ## Installation
 
-<CodeSnippet
-  code={`npm install @walkeros/web-destination-matomo`}
-  language="bash"
-/>
+<Quickstart data={data} />
 
-<Tabs groupId="mode">
-  <TabItem value="integrated" label="Integrated" default>
-
-<CodeSnippet
-  code={`import { startFlow } from '@walkeros/collector';
-import { destinationMatomo } from '@walkeros/web-destination-matomo';
-
-await startFlow({
-  destinations: {
-    matomo: {
-      code: destinationMatomo,
-      config: {
-        loadScript: true,
-        settings: {
-          siteId: '1',
-          url: 'https://analytics.example.com/',
-        },
-      },
-    },
-  },
-});`}
-  language="typescript"
-/>
-
-  </TabItem>
-  <TabItem value="bundled" label="Bundled">
-
-Add to your `flow.json` destinations:
-
-<CodeSnippet
-  code={`"destinations": {
-  "matomo": {
-    "package": "@walkeros/web-destination-matomo",
-    "config": {
-      "loadScript": true,
-      "settings": {
-        "siteId": "1",
-        "url": "https://analytics.example.com/"
-      }
-    }
-  }
-}`}
-  language="json"
-/>
-
-[See bundled mode setup](/docs/getting-started/modes/bundled) | [CLI reference](/docs/apps/cli)
-
-  </TabItem>
-</Tabs>
+The quickstart above sets no consent, so `matomo.js` loads and Matomo receives
+every event without `analytics` consent, and a revocation changes nothing. Add
+`consent: { analytics: true }` to `config`, next to `settings`, before you go
+live (see [gate a destination](/docs/guides/consent#gate-a-destination-with-consent)).
 
 <Configuration type="destination" data={data} />
 

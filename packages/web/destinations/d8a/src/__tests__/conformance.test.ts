@@ -53,6 +53,7 @@ describe('d8a conformance', () => {
         file_downloads_enabled: true,
         file_download_extensions: ['pdf'],
       },
+      minimal: examples.minimal,
       env: { push: examples.env.push, simulation: examples.env.simulation },
       // Forwarded whole into d8a('config', ...) by buildConfigParams
       passThrough: [

@@ -20,3 +20,7 @@ walkeros bundle packages/cli/examples/flow-complete.json -f web -o packages/cli/
 walkeros bundle packages/cli/examples/flow-complete.json -f server -o dist/server.mjs
 runneros start dist/server.mjs -p 8080 --env-file .env
 ```
+
+- `runneros` refuses an `.env` that group or other can read
+  (`Refusing to load env file ".env": it is readable by group or other`);
+  restrict it with `chmod 600 .env`.

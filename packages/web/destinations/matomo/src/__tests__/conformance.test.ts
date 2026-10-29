@@ -15,7 +15,8 @@ describe('matomo conformance', () => {
       page,
       examples: examples.step,
       schema: schemas.settings,
-      settings: { siteId: '1', url: 'https://analytics.example.com/' },
+      settings: examples.minimal.settings,
+      minimal: examples.minimal,
       env: { push: examples.env.push, simulation: examples.env.simulation },
       root: path.join(__dirname, '..', '..'),
     });

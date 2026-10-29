@@ -32,13 +32,19 @@ npm install @walkeros/web-destination-meta
       "destinations": {
         "meta": {
           "package": "@walkeros/web-destination-meta",
-          "config": { "settings": { "pixelId": "YOUR_PIXEL_ID" } }
+          "config": {
+            "loadScript": true,
+            "settings": { "pixelId": "1234567890" }
+          }
         }
       }
     }
   }
 }
 ```
+
+This quick start sets no consent: add `consent: { marketing: true }` to `config`
+before you go live, see the docs.
 
 ## Documentation
 

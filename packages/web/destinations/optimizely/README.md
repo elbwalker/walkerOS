@@ -45,6 +45,10 @@ npm install @walkeros/web-destination-optimizely
 An event whose `user.id` is not set fails with `missing-input`. The docs show a
 fallback for anonymous visitors.
 
+This quick start sets no consent, so the Optimizely client receives every event
+without consent, and a revocation changes nothing: add
+`consent: { analytics: true }` to `config` before you go live, see the docs.
+
 ## Documentation
 
 Full configuration, mapping, and examples live in the docs:

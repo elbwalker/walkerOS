@@ -18,7 +18,9 @@
         "platform": "server",
         "bundle": {
           "packages": {
-            "@walkeros/collector": {}
+            "@walkeros/collector": {
+              "version": "latest"
+            }
           }
         }
       }

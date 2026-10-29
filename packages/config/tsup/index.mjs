@@ -3,11 +3,7 @@ import { readFileSync, writeFileSync, mkdirSync, existsSync } from 'fs';
 import { resolve, join } from 'path';
 import { pathToFileURL } from 'url';
 import { assertNoPublishedCredentials } from './credentialGuard.mjs';
-import {
-  assertExportMaps,
-  assertStepSettings,
-  publishedExports,
-} from './exportMaps.mjs';
+import { assertExportMaps, assertStepSettings } from './exportMaps.mjs';
 
 const baseConfig = {
   entry: ['src/index.ts'],
@@ -122,39 +118,8 @@ const buildES5 = (customConfig = {}) => ({
   ...customConfig,
 });
 
-/**
- * Deep-clone a value for JSON serialization.
- *
- * Conventions:
- * - Functions → { $code: fn.toString() } — serialized source for documentation, not executable
- * - Zod instances → filtered out (returns undefined)
- *   Zod 3: detected via _def.typeName starting with 'Zod'
- *   Zod 4: detected via _zod property
- * - Everything else → recursively passed through
- */
-const toSerializable = (value) => {
-  if (value === null || value === undefined) return value;
-  if (typeof value === 'function') return { $code: value.toString() };
-  if (
-    typeof value === 'object' &&
-    (value._def?.typeName?.startsWith?.('Zod') || '_zod' in value)
-  )
-    return undefined;
-  if (Array.isArray(value)) {
-    return value.map((item) => toSerializable(item));
-  }
-  if (typeof value === 'object') {
-    const result = {};
-    for (const [key, val] of Object.entries(value)) {
-      const serialized = toSerializable(val);
-      if (serialized !== undefined) result[key] = serialized;
-    }
-    return result;
-  }
-  return value;
-};
-
-// Dev build: builds src/dev.ts and generates walkerOS.json
+// Dev build: builds src/dev.ts and generates walkerOS.json. Every way the
+// generation can fail rejects onSuccess, so the build exits non-zero.
 const buildDev = (customConfig = {}) => {
   const { onSuccess: customOnSuccess, ...restConfig } = customConfig;
 
@@ -168,21 +133,22 @@ const buildDev = (customConfig = {}) => {
     async onSuccess() {
       const cwd = process.cwd();
       const packagePath = resolve(cwd, 'package.json');
-      let pkg = { name: 'unknown', version: '0.0.0' };
+      let pkg;
       try {
         pkg = JSON.parse(readFileSync(packagePath, 'utf8'));
       } catch (error) {
-        console.warn('[buildDev] Could not read package.json:', error.message);
+        throw new Error(
+          `[buildDev] cannot read ${packagePath}: ${error.message}`,
+          { cause: error },
+        );
       }
 
       // Check the built module exists
       const devMjsPath = resolve(cwd, 'dist/dev.mjs');
-      if (!existsSync(devMjsPath)) {
-        console.warn(
-          '[buildDev] dist/dev.mjs not found, skipping walkerOS.json generation',
+      if (!existsSync(devMjsPath))
+        throw new Error(
+          `[buildDev] ${pkg.name}: dist/dev.mjs not found, so dist/walkerOS.json cannot be generated`,
         );
-        return;
-      }
 
       // Import the built module (cache-bust for watch mode rebuilds)
       const devModulePath = pathToFileURL(devMjsPath).href;
@@ -190,42 +156,47 @@ const buildDev = (customConfig = {}) => {
       try {
         devModule = await import(`${devModulePath}?t=${Date.now()}`);
       } catch (error) {
-        console.warn(
-          `[buildDev] Could not import dist/dev.mjs: ${error.message}. Skipping walkerOS.json generation`,
+        throw new Error(
+          `[buildDev] ${pkg.name}: dist/dev.mjs does not import: ${error.message}`,
+          { cause: error },
         );
-        return;
+      }
+
+      // The one serializer, shared with the step-example runner, the one
+      // package.json to $meta reading, shared with the conformance kit, and the
+      // step types. Loaded here, not at the top: core itself builds with this
+      // config.
+      let toSerializable;
+      let packageMetaOf;
+      let STEP_TYPES;
+      try {
+        ({ toSerializable, packageMetaOf, STEP_TYPES } =
+          await import('@walkeros/core/dev'));
+      } catch (error) {
+        throw new Error(
+          `[buildDev] ${pkg.name}: @walkeros/core/dev does not import: ${error.message}`,
+          { cause: error },
+        );
       }
 
       // Extract schemas (Zod instances filtered by toSerializable)
       const schemas = toSerializable(devModule.schemas || {}) || {};
+      if (Object.keys(schemas).length === 0)
+        throw new Error(
+          `[buildDev] ${pkg.name}: dist/dev.mjs exports no schemas`,
+        );
 
       // Extract examples (convert functions to $code strings)
       const rawExamples = devModule.examples || {};
       const examples = toSerializable(rawExamples) || {};
 
-      // Read type and platform from package.json walkerOS field
+      // $meta: name, version, the walkerOS field and the source URL
       const walkerOS = pkg.walkerOS || {};
-      const meta = { package: pkg.name, version: pkg.version };
-      if (walkerOS.type) meta.type = walkerOS.type;
-      if (walkerOS.platform) {
-        meta.platform = Array.isArray(walkerOS.platform)
-          ? walkerOS.platform
-          : [walkerOS.platform];
-      }
-      if (walkerOS.renderer) meta.renderer = walkerOS.renderer;
-      const exports = publishedExports(walkerOS);
-      if (exports) meta.exports = exports;
-
-      // Docs URL (manual, from walkerOS.docs in package.json)
-      if (walkerOS.docs) meta.docs = walkerOS.docs;
-
-      // Source URL (auto-derived from repository.directory)
-      const repo = pkg.repository;
-      if (repo?.directory) {
-        const repoUrl = (repo.url || '')
-          .replace(/^git\+/, '')
-          .replace(/\.git$/, '');
-        if (repoUrl) meta.source = `${repoUrl}/tree/main/${repo.directory}/src`;
+      let meta;
+      try {
+        meta = packageMetaOf(pkg);
+      } catch (error) {
+        throw new Error(`[buildDev] ${error.message}`, { cause: error });
       }
 
       // Extract hints (optional)
@@ -265,23 +236,18 @@ const buildDev = (customConfig = {}) => {
         exportExamples: output.exportExamples,
         exportSchemas: output.exportSchemas,
       });
-      assertStepSettings(pkg.name, walkerOS.type, schemas);
-
-      // Validate
-      if (Object.keys(schemas).length === 0) {
-        console.warn('[buildDev] Warning: schemas is empty');
-      }
+      assertStepSettings(pkg.name, walkerOS.type, schemas, STEP_TYPES);
 
       // Verify valid JSON roundtrip
-      const jsonString = JSON.stringify(output, null, 2);
+      let jsonString;
       try {
+        jsonString = JSON.stringify(output, null, 2);
         JSON.parse(jsonString);
       } catch (error) {
-        console.error(
-          '[buildDev] Error: output is not valid JSON:',
-          error.message,
+        throw new Error(
+          `[buildDev] ${pkg.name}: walkerOS.json is not valid JSON: ${error.message}`,
+          { cause: error },
         );
-        return;
       }
 
       // Write to dist/walkerOS.json
@@ -307,6 +273,5 @@ export {
   buildBrowser,
   buildES5,
   buildDev,
-  toSerializable,
   defineConfig,
 };

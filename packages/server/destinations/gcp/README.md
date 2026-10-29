@@ -39,10 +39,16 @@ npm install @walkeros/server-destination-gcp
 }
 ```
 
+The events go to the table `walkerOS.events`, which must exist: add
+`"setup": true` to the destination's `config` and run
+`walkeros setup destination.gcp` once. For Pub/Sub, import `destinationPubSub`
+and set `settings.topic`.
+
 ## Documentation
 
 Full configuration, mapping, and examples live in the docs:
-**https://www.walkeros.io/docs/destinations/server/gcp**
+**https://www.walkeros.io/docs/destinations/server/gcp** (BigQuery) and
+**https://www.walkeros.io/docs/destinations/server/pubsub** (Pub/Sub)
 
 ## Contribute
 

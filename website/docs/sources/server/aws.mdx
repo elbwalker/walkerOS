@@ -14,7 +14,7 @@ import WhereThisFits from '@site/src/components/snippets/_where-this-fits.mdx';
 
 # AWS Lambda
 
-AWS Lambda source for walkerOS. Works across API Gateway REST (v1), API Gateway HTTP (v2), Lambda Function URLs, and direct invocation. Auto-detects the API Gateway version, supports optional pixel tracking with a 1x1 GIF response, and exposes a built-in health check endpoint. The `@walkeros/server-source-aws` package also ships [`sourceSqs`](/docs/sources/server/sqs) for ingesting from SQS queues; this page covers the Lambda handler only.
+The AWS Lambda source for walkerOS works across API Gateway REST (v1), API Gateway HTTP (v2) and Lambda Function URLs. It detects the API Gateway version automatically, supports optional pixel tracking with a 1x1 GIF response, and has a built-in health check endpoint. The `@walkeros/server-source-aws` package also ships [`sourceSqs`](/docs/sources/server/sqs) for ingesting from SQS queues; this page covers the Lambda handler only.
 
 <WhereThisFits
   pre={<>The AWS Lambda source is a <strong>server source</strong> in the walkerOS flow:</>}
@@ -84,6 +84,7 @@ Add to your `flow.json` sources:
   code={`"sources": {
   "lambda": {
     "package": "@walkeros/server-source-aws",
+    "import": "sourceLambda",
     "config": {
       "settings": {
         "cors": true,
@@ -95,7 +96,7 @@ Add to your `flow.json` sources:
   language="json"
 />
 
-Server sources require platform-specific handlers. For containerized deployments, see the [runtime](/docs/apps/runtime).
+This bundle is for deploying to AWS Lambda. The walkerOS [runtime](/docs/apps/runtime) (`runneros`, the `walkeros/flow` image) serves only sources with an HTTP handler, such as the [Express source](/docs/sources/server/express): under it this source receives no requests, and every request answers 503.
 
 [See bundled mode setup](/docs/getting-started/modes/bundled) | [CLI reference](/docs/apps/cli)
 
@@ -126,14 +127,25 @@ rides through instead of being dropped.
 | Status | Meaning |
 |--------|---------|
 | 200 | Event processed, or failed for a reason a resend cannot fix (see below) |
-| 400 | Rejected client input: the pipeline declared the event invalid. The body echoes the validation message, for example `Event name is required` |
+| 400 | Rejected client input: the pipeline declared the event invalid (the body echoes the validation message, for example `Event name is required`), a POST without a body (`Request body is required`), or a batch larger than `maxBatchSize` |
+| 405 | Method not allowed, or GET with `enablePixelTracking: false` |
 | 500 | The pipeline failed to process a valid event for a reason a resend could fix (the body is `Event was not processed`), or an unexpected server fault (`Internal server error`) |
+| 207 | Batch request where at least one event was invalid or failed for a reason a resend could fix. The body carries per-index errors |
+
+Every request to `healthPath` (default `/health`) answers `{ status: 'ok', ... }`, whatever the method.
 
 A failed event is acknowledged or retried by one rule on every server source: see [Producer acknowledgement](/docs/sources/server#producer-acknowledgement).
 
 Invalid input is counted on `collector.status.sources.<id>.rejected` rather than
 inflating `status.failed`, and is logged at warn with the reason instead of as an
-error with a stack trace.
+error with a stack trace. A POST without a body and a batch over `maxBatchSize`
+are answered 400 and not counted.
+
+The source sets no body size limit of its own; Lambda caps a synchronous
+request payload at 6 MB.
+
+`settings.timeout` has no effect today: a request whose push takes longer still
+waits for it and answers as above.
 
 ## Ingest metadata
 
@@ -141,8 +153,9 @@ Extract request metadata from Lambda events and forward it through the pipeline.
 
 `config.ingest` must use the `map` operator. Keys are output field names; values
 are paths on the shared [request scope](/docs/sources/scope), with no prefix. A
-bare object like `{ ip: 'ip' }` is silently inert: without the `map` operator the
-source passes the whole scope through and no field is extracted.
+bare object like `{ ip: 'ip' }` has no operator: `walkeros validate` and the
+bundle reject it, and if it still runs, the collector logs one ERROR line
+(`mapping value has no operator`) and no field is extracted.
 
 **API Gateway v1 and v2 produce an identical scope.** The version specific
 envelopes are normalized away, so one mapping serves both.
@@ -181,7 +194,7 @@ envelopes are normalized away, so one mapping serves both.
 | `ip` | Client IP, from either gateway version's request context |
 | `raw` | The Lambda event itself |
 
-Anything genuinely version specific stays reachable through `raw`, for example
+Anything version specific stays reachable through `raw`, for example
 `raw.requestContext.stage`.
 
 ## Supported platforms
@@ -191,4 +204,4 @@ Anything genuinely version specific stays reachable through `raw`, for example
 | API Gateway REST API (v1) | Supported |
 | API Gateway HTTP API (v2) | Supported |
 | Lambda Function URLs | Supported |
-| Direct Lambda invocation | Supported |
+| Direct Lambda invocation | Only with an API Gateway v1 or v2 shaped event |

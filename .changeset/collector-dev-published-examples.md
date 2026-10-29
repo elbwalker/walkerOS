@@ -2,7 +2,8 @@
 '@walkeros/collector': patch
 ---
 
-`runExamples` from `@walkeros/collector/dev` takes `published: true` to run
-every example as `walkerOS.json` publishes it: each mapping function as its
-source text, evaluated without the module it was written in. A function that
-needs an import then fails in the package test instead of in a copied flow.
+`runExamples` and `conformance` from `@walkeros/collector/dev` always run every
+example the way `walkerOS.json` publishes it: each function in the example runs
+from its source text, without the module it was written in. A function that
+needs an import fails the package test and names the example. The `published`
+option is gone.

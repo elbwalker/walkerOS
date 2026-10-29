@@ -1,0 +1,234 @@
+{
+  "travel": {
+    "description": "Events of a travel booking site, from the trip being planned to the confirmed booking.",
+    "extend": "default",
+    "events": {
+      "itinerary": {
+        "add": {
+          "title": "Itinerary add",
+          "description": "A visitor added an experience or a destination to the trip they plan.",
+          "examples": [
+            {
+              "name": "itinerary add",
+              "data": {
+                "id": "it3m",
+                "type": "experience"
+              },
+              "trigger": "click"
+            }
+          ],
+          "required": ["data"],
+          "properties": {
+            "data": {
+              "type": "object",
+              "description": "The item added to the trip.",
+              "required": ["id", "type"],
+              "properties": {
+                "id": {
+                  "type": ["string", "number"],
+                  "description": "The id of the item.",
+                  "examples": ["it3m"]
+                },
+                "type": {
+                  "type": "string",
+                  "description": "What is booked, such as an experience or a destination.",
+                  "examples": ["experience"]
+                },
+                "title": {
+                  "type": "string",
+                  "description": "The name of what is booked."
+                },
+                "location": {
+                  "type": "string",
+                  "description": "Where it takes place."
+                },
+                "price": {
+                  "type": "number",
+                  "description": "The price per participant."
+                },
+                "currency": {
+                  "type": "string",
+                  "description": "The currency of every amount, as a three-letter code.",
+                  "examples": ["EUR"]
+                }
+              }
+            }
+          }
+        }
+      },
+      "booking": {
+        "start": {
+          "title": "Booking start",
+          "description": "A visitor began to book.",
+          "examples": [
+            {
+              "name": "booking start",
+              "data": {
+                "id": "b00k1ng",
+                "type": "experience"
+              },
+              "trigger": "click"
+            }
+          ],
+          "required": ["data"],
+          "properties": {
+            "data": {
+              "type": "object",
+              "description": "The booking.",
+              "required": ["id", "type"],
+              "properties": {
+                "id": {
+                  "type": ["string", "number"],
+                  "description": "The booking number.",
+                  "examples": ["b00k1ng"]
+                },
+                "type": {
+                  "type": "string",
+                  "description": "What is booked, such as an experience or a destination.",
+                  "examples": ["experience"]
+                },
+                "title": {
+                  "type": "string",
+                  "description": "The name of what is booked."
+                },
+                "location": {
+                  "type": "string",
+                  "description": "Where it takes place."
+                },
+                "price": {
+                  "type": "number",
+                  "description": "The price per participant."
+                },
+                "currency": {
+                  "type": "string",
+                  "description": "The currency of every amount, as a three-letter code.",
+                  "examples": ["EUR"]
+                }
+              }
+            }
+          }
+        },
+        "complete": {
+          "title": "Booking complete",
+          "description": "A booking was confirmed.",
+          "examples": [
+            {
+              "name": "booking complete",
+              "data": {
+                "id": "b00k1ng",
+                "type": "experience",
+                "start": "2026-11-12",
+                "end": "2026-11-15",
+                "participants": 2,
+                "insurance": false,
+                "value": 120,
+                "price": 60,
+                "currency": "EUR"
+              },
+              "trigger": "load"
+            }
+          ],
+          "required": ["data"],
+          "properties": {
+            "data": {
+              "type": "object",
+              "description": "The booking.",
+              "required": ["id", "value", "currency"],
+              "properties": {
+                "id": {
+                  "type": ["string", "number"],
+                  "description": "The booking number.",
+                  "examples": ["b00k1ng"]
+                },
+                "type": {
+                  "type": "string",
+                  "description": "What is booked, such as an experience or a destination.",
+                  "examples": ["experience"]
+                },
+                "title": {
+                  "type": "string",
+                  "description": "The name of what is booked."
+                },
+                "location": {
+                  "type": "string",
+                  "description": "Where it takes place."
+                },
+                "price": {
+                  "type": "number",
+                  "description": "The price per participant.",
+                  "examples": [60]
+                },
+                "currency": {
+                  "type": "string",
+                  "description": "The currency of every amount, as a three-letter code.",
+                  "examples": ["EUR"]
+                },
+                "start": {
+                  "type": "string",
+                  "format": "date",
+                  "description": "The first day of the booking.",
+                  "examples": ["2026-11-12"]
+                },
+                "end": {
+                  "type": "string",
+                  "format": "date",
+                  "description": "The last day of the booking.",
+                  "examples": ["2026-11-15"]
+                },
+                "participants": {
+                  "type": "number",
+                  "description": "How many people the booking is for.",
+                  "examples": [2]
+                },
+                "insurance": {
+                  "type": "boolean",
+                  "description": "True when the booking includes insurance.",
+                  "examples": [false]
+                },
+                "value": {
+                  "type": "number",
+                  "description": "The price times the participants.",
+                  "examples": [120]
+                }
+              }
+            }
+          }
+        }
+      },
+      "filter": {
+        "apply": {
+          "title": "Filter apply",
+          "description": "A visitor filtered a list of results.",
+          "examples": [
+            {
+              "name": "filter apply",
+              "data": {
+                "type": "price",
+                "option": "under 100"
+              },
+              "trigger": "click"
+            }
+          ],
+          "properties": {
+            "data": {
+              "type": "object",
+              "description": "The filter.",
+              "properties": {
+                "type": {
+                  "type": "string",
+                  "description": "What the filter works on, such as price.",
+                  "examples": ["price"]
+                },
+                "option": {
+                  "type": "string",
+                  "description": "The option chosen.",
+                  "examples": ["under 100"]
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}

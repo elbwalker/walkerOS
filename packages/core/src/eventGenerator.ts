@@ -16,7 +16,7 @@ const TIMESTAMP = 1700000000000;
 export type StandardEventName =
   | 'entity action'
   | 'cart view'
-  | 'checkout view'
+  | 'checkout start'
   | 'order complete'
   | 'page view'
   | 'product add'
@@ -162,9 +162,8 @@ export function getEvent(
       ],
       trigger: 'load',
     },
-    'checkout view': {
+    'checkout start': {
       data: {
-        step: 'payment',
         currency: 'EUR',
         value: product1.data.price + product2.data.price,
       },
@@ -190,9 +189,10 @@ export function getEvent(
       data: {
         id: '0rd3r1d',
         currency: 'EUR',
+        value: product1.data.price + product2.data.price,
+        tax: 73.76,
         shipping: 5.22,
-        taxes: 73.76,
-        value: 555,
+        total: 467.22,
       },
       context: { shopping: ['complete', 0] },
       globals: { pagegroup: 'shop' },
@@ -233,21 +233,26 @@ export function getEvent(
       trigger: 'load',
     },
     'product add': {
-      ...product1,
+      data: { ...product1.data, quantity: 1, currency: 'EUR' },
       context: { shopping: ['intent', 0] },
       globals: { pagegroup: 'shop' },
       nested: [],
       trigger: 'click',
     },
     'product view': {
-      ...product1,
+      data: { ...product1.data, currency: 'EUR' },
       context: { shopping: ['detail', 0] },
       globals: { pagegroup: 'shop' },
       nested: [],
       trigger: 'load',
     },
     'product visible': {
-      data: { ...product1.data, position: 3, promo: true },
+      data: {
+        ...product1.data,
+        position: 3,
+        list: 'Related products',
+        promo: true,
+      },
       context: { shopping: ['discover', 0] },
       globals: { pagegroup: 'shop' },
       nested: [],
@@ -255,8 +260,9 @@ export function getEvent(
     },
     'promotion visible': {
       data: {
+        id: 'promo_autumn26',
         name: 'Setting up tracking easily',
-        position: 'hero',
+        slot: 'hero',
       },
       context: { ab_test: ['engagement', 0] },
       globals: { pagegroup: 'homepage' },

@@ -18,7 +18,7 @@ export const SettingsSchema = z
       .string()
       .url()
       .describe(
-        'Custom Conversions API base URL (default https://tr.snapchat.com/v3/)',
+        'Custom Conversions API base URL, ending in / (default https://tr.snapchat.com/v3/)',
       )
       .optional(),
     action_source: z

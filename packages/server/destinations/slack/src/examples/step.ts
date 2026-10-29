@@ -36,7 +36,7 @@ export const purchaseAlert: SlackStepExample = {
   description:
     'A completed order posts a templated message to a sales channel via the Slack Web API.',
   in: getEvent('order complete', {
-    timestamp: 1700000100,
+    timestamp: 1700000100000,
     data: {
       id: 'ORD-500',
       value: 299.99,
@@ -74,7 +74,7 @@ export const errorAlert: SlackStepExample = {
     'An error event posts a critical alert to an engineering channel using a mapping-level channel override.',
   in: createEvent({
     name: 'error occur',
-    timestamp: 1700000200,
+    timestamp: 1700000200000,
     data: {
       message: 'Payment gateway timeout',
       code: 'PGW_TIMEOUT',
@@ -107,10 +107,10 @@ export const errorAlert: SlackStepExample = {
 export const welcomeDM: SlackStepExample = {
   title: 'Welcome DM',
   description:
-    'A user signup opens a Slack DM channel and posts a welcome message with the selected plan.',
+    'A user signup opens a DM with the fixed Slack user U-NEW-USER set in the rule (user is not read from the event) and posts a welcome message with the selected plan.',
   in: createEvent({
     name: 'user signup',
-    timestamp: 1700000300,
+    timestamp: 1700000300000,
     data: { plan: 'enterprise' },
     user: { id: 'U-NEW-USER' },
   }),
@@ -142,11 +142,11 @@ export const welcomeDM: SlackStepExample = {
 export const threadedCheckoutStep: SlackStepExample = {
   title: 'Threaded reply',
   description:
-    'A checkout step posts as a threaded reply in Slack via thread_ts with broadcast to the channel.',
+    'A checkout step posts as a threaded reply under the fixed thread_ts set in the rule, broadcast to the channel.',
   in: createEvent({
     name: 'checkout step',
-    timestamp: 1700000400,
-    data: { step: 'payment', sessionTs: '1700000000.000050' },
+    timestamp: 1700000400000,
+    data: { step: 2, sessionTs: '1700000000.000050' },
   }),
   mapping: {
     settings: {
@@ -161,7 +161,7 @@ export const threadedCheckoutStep: SlackStepExample = {
       'slackClient.chat.postMessage',
       {
         channel: '#sales',
-        text: 'Checkout step: payment',
+        text: 'Checkout step: 2',
         unfurl_links: false,
         unfurl_media: false,
         mrkdwn: true,
@@ -181,7 +181,7 @@ export const ephemeralMessage: SlackStepExample = {
     'A quota warning posts an ephemeral Slack message visible only to a target admin user.',
   in: createEvent({
     name: 'quota warning',
-    timestamp: 1700000500,
+    timestamp: 1700000500000,
     data: { remaining: 5 },
   }),
   mapping: {
@@ -217,7 +217,7 @@ export const defaultBlocks: SlackStepExample = {
     'With no custom text the destination auto-generates a Block Kit message from event data and source.',
   in: createEvent({
     name: 'lead submit',
-    timestamp: 1700000600,
+    timestamp: 1700000600000,
     data: { name: 'Acme', email: 'sales@acme.test' },
     source: { type: 'crm', platform: 'server' },
   }),
@@ -265,10 +265,10 @@ export const defaultBlocks: SlackStepExample = {
 export const deployNotification: SlackStepExample = {
   title: 'Webhook deploy',
   description:
-    'Without a token the destination posts to an incoming Slack webhook URL with the rendered message body.',
+    'With settings.webhookUrl instead of a token, the destination posts the rendered message body to that incoming webhook.',
   in: createEvent({
     name: 'deploy complete',
-    timestamp: 1700000700,
+    timestamp: 1700000700000,
     data: { version: '1.4.2', environment: 'prod' },
   }),
   settings: {

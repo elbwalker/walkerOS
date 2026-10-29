@@ -128,7 +128,8 @@ export interface GA4Item {
 export interface GA4Settings {
   /**
    * Mapping registry keyed by GA4 event name (`en`).
-   * User config replaces matching package defaults at the per-event key.
+   * A user rule with `extend` or `remove` patches the matching default; any
+   * other user rule replaces it.
    * Use `'*'` for the unknown-event fallback.
    * Set a rule's `ignore: true` to drop matching events.
    */

@@ -40,3 +40,11 @@ describe('hint examples', () => {
     },
   );
 });
+
+describe('hint text', () => {
+  it('reports a bare config.ingest object as the error it is', () => {
+    const text = hints['ingest-prerequisite'].text;
+    expect(text).not.toContain('silently inert');
+    expect(text).toContain('MAPPING_VALUE_NO_OPERATOR');
+  });
+});

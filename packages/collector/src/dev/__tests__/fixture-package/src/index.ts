@@ -1,8 +1,9 @@
 import * as https from 'https';
 import { StepError } from '@walkeros/core';
 import type { Destination } from '@walkeros/core';
+import { send } from './send';
 
-type Settings = { url?: string };
+type Settings = { url?: string; siteId?: string };
 type Types = Destination.Types<Settings>;
 
 function requireUrl(config: Destination.Config<Types>): string {
@@ -13,7 +14,7 @@ function requireUrl(config: Destination.Config<Types>): string {
 }
 
 async function post(url: string, body: string): Promise<void> {
-  const res = await fetch(url, { method: 'POST', body });
+  const res = await send(url, { method: 'POST', body });
   if (!res.ok)
     throw new StepError(`HTTP ${res.status}`, {
       code: 'transport',
@@ -32,6 +33,23 @@ export const good: Destination.Instance<Types> = {
   push: async (event, { config, rule }) => {
     if (rule?.silent) return;
     await post(requireUrl(config), JSON.stringify({ name: event.name }));
+  },
+};
+
+/**
+ * Needs settings siteId only to load its script, as matomo does: init
+ * refuses config.loadScript without it, and its schema keeps it optional
+ * (item 12).
+ */
+export const siteScript: Destination.Instance<Types> = {
+  ...good,
+  type: 'site-script',
+  init: ({ config }) => {
+    requireUrl(config);
+    if (config.loadScript && !config.settings?.siteId)
+      throw new StepError('Site script with loadScript needs settings siteId', {
+        code: 'config',
+      });
   },
 };
 
@@ -64,7 +82,7 @@ export const echoing: Destination.Instance<Types> = {
   type: 'echoing',
   push: async (event, { config, rule }) => {
     if (rule?.silent) return;
-    const res = await fetch(requireUrl(config), {
+    const res = await send(requireUrl(config), {
       method: 'POST',
       body: JSON.stringify({ name: event.name }),
     });

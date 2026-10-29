@@ -57,6 +57,10 @@ yourself before walkerOS starts, omit `loadScript`. Either way the destination
 calls `pa.setConfigurations` with `site`, `collectDomain` and `options` before
 its first event.
 
+This quick start sets no consent, so the Piano SDK loads and receives every
+event without consent, and a revocation changes nothing: add
+`consent: { analytics: true }` to `config` before you go live, see the docs.
+
 ## Settings
 
 | Setting         | Type     | Required | Description                                                  |

@@ -37,7 +37,7 @@ export const SettingsSchema = z
       .string()
       .url()
       .describe(
-        'Custom URL for Pinterest Conversions API endpoint (like https://api.pinterest.com/v5/)',
+        'Custom base URL for the Pinterest Conversions API, ending in / (like https://api.pinterest.com/v5/)',
       )
       .optional(),
     user_data: z

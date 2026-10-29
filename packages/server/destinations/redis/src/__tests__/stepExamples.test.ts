@@ -21,6 +21,7 @@ jest.mock('ioredis', () => ({
 }));
 
 import type { WalkerOS, Mapping as WalkerOSMapping } from '@walkeros/core';
+import { isObject } from '@walkeros/core';
 import { startFlow } from '@walkeros/collector';
 import { examples } from '../dev';
 import type {
@@ -162,3 +163,10 @@ describe('redis server destination -- step examples', () => {
 
 it('declares simulation paths that resolve', () =>
   expectSimulationResolves(examples.env));
+
+// Event timestamps are epoch milliseconds: a seconds-sized value reads as 1970.
+it('uses millisecond timestamps in every step example', () => {
+  for (const example of Object.values(examples.step))
+    if (isObject(example.in))
+      expect(example.in.timestamp).toBeGreaterThan(1e12);
+});

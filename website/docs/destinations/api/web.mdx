@@ -8,6 +8,7 @@ sidebar_position: 1
 
 import data from '@walkeros/web-destination-api/walkerOS.json';
 import Configuration from '@site/src/components/snippets/_configuration.mdx';
+import Quickstart from '@site/src/components/snippets/_quickstart.mdx';
 
 import WhereThisFits from '@site/src/components/snippets/_where-this-fits.mdx';
 
@@ -32,90 +33,18 @@ with customizable data transformation and transport methods.
 
 ## Installation
 
-<CodeSnippet
-  code={`npm install @walkeros/web-destination-api`}
-  language="bash"
-/>
+<Quickstart data={data} />
 
 <Configuration type="destination" data={data} />
 
-## Modes
-
-<Tabs groupId="mode">
-  <TabItem value="integrated" label="Integrated" default>
-
-<CodeSnippet
-  code={`import { startFlow } from '@walkeros/collector';
-import { destinationAPI } from '@walkeros/web-destination-api';
-
-const { collector, elb } = await startFlow({
-  destinations: {
-    api: {
-      code: destinationAPI,
-      config: {
-        settings: {
-          url: 'https://api.example.com/events',
-        },
-      },
-    },
-  },
-});`}
-  language="typescript"
-/>
-
-  </TabItem>
-  <TabItem value="bundled" label="Bundled">
-
-Add to your `flow.json` destinations:
-
-<CodeSnippet
-  code={`"destinations": {
-  "api": {
-    "package": "@walkeros/web-destination-api",
-    "config": {
-      "settings": {
-        "url": "https://api.example.com/events"
-      }
-    }
-  }
-}`}
-  language="json"
-/>
-
-[See bundled mode setup](/docs/getting-started/modes/bundled) | [CLI reference](/docs/apps/cli)
-
-  </TabItem>
-</Tabs>
-
 ## Usage
 
-### Basic usage
+Every visitor's browser receives the destination's config, `settings.headers`
+included, so a header may carry a public key but never a secret such as an API
+token. To authenticate with a secret, send the events to your own server
+endpoint and add the credential there.
 
-<CodeSnippet
-  code={`import { startFlow } from '@walkeros/collector';
-import { destinationAPI } from '@walkeros/web-destination-api';
-
-const { collector, elb } = await startFlow({
-  destinations: {
-    api: {
-      code: destinationAPI,
-      config: {
-        settings: {
-          url: 'https://api.example.com/events',
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            Authorization: 'Bearer your-token',
-          },
-        },
-      },
-    },
-  },
-});`}
-  language="typescript"
-/>
-
-### Advanced usage with transform
+### Usage with transform {#advanced-usage-with-transform}
 
 <CodeSnippet
   code={`import { startFlow } from '@walkeros/collector';

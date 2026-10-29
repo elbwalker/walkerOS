@@ -36,7 +36,10 @@ This web flow sends one event stream to four analytics tools at once, with no pe
         "ga4": {
           "package": "@walkeros/web-destination-gtag",
           "config": {
-            "settings": { "ga4": { "measurementId": "G-XXXXXXXXXX" } }
+            "loadScript": true,
+            "settings": {
+              "ga4": { "measurementId": "G-XXXXXXXXXX", "pageview": false }
+            }
           }
         },
         "amplitude": {
@@ -59,6 +62,8 @@ This web flow sends one event stream to four analytics tools at once, with no pe
   language="json"
 />
 
+The gtag destination adds gtag.js to the page only with `"loadScript": true`, and `"pageview": false` keeps gtag from sending a `page_view` of its own next to the browser source's page view, so GA4 does not count each page twice. The Amplitude, Mixpanel and PostHog destinations bundle their vendor SDK.
+
 ## Run it
 
 Save the config as `flow.json` and push an order event with all four destinations mocked, one `--simulate` per destination. Each simulation runs its destination on its own, so this compares how each vendor receives the event; it is not a fan-out check of one running flow. This needs `@walkeros/cli` 4.7.1 or later. Nothing is sent to any vendor:
@@ -70,6 +75,8 @@ Save the config as `flow.json` and push an order event with all four destination
   language="bash"
 />
 
+With the Amplitude destination at 4.8.2 this bundle fails with `No matching export ... for import "start"`; until a fixed release, set every package in `bundle.packages` to `"4.8.1"`, which builds and prints `amplitude.initAll(...)` in place of the `amplitude.init(...)` line below.
+
 You should see, besides an `Output:` line naming the built bundle before each `Simulating` line:
 
 <CodeSnippet
@@ -80,11 +87,11 @@ Simulating destination: posthog
 success: true
   destination.ga4
     mapping: none
-    call window.gtag("config","G-XXXXXXXXXX",{})
+    call window.gtag("config","G-XXXXXXXXXX",{"send_page_view":false})
     call window.gtag("event","order_complete",{"send_to":"G-XXXXXXXXXX"})
   destination.amplitude
     mapping: none
-    call amplitude.initAll("test-project",{"analytics":{"autocapture":false,"identityStorage":"none"}})
+    call amplitude.init("test-project",{"autocapture":false,"identityStorage":"none"})
     call amplitude.track("order complete",{})
   destination.mixpanel
     mapping: none
@@ -100,7 +107,7 @@ success: true
 
 ## What each tool receives
 
-The collector fans the same event out to all four destinations, and each one forwards it in its own native call (from the packages' examples):
+The collector fans the same event out to all four destinations, and each one forwards it in its own native call, as the simulation above prints:
 
 <CodeSnippet
   code={`gtag('event', 'order_complete', { send_to: 'G-XXXXXXXXXX' });
@@ -110,9 +117,9 @@ posthog.capture('order complete', {});`}
   language="javascript"
 />
 
-That is the routing half of the job: one stream, four tools, no per-tool code. The payload half is mapping: per-destination rules reshape the same event into each tool's expected schema, like the full GA4 purchase payload in [GA4 ecommerce](/docs/getting-started/ga4-ecommerce). Without mapping the name arrives in each tool's native call; with mapping the properties do too.
+This covers routing: one event stream reaches four tools without per-tool code. Mapping covers the payload: per-destination rules reshape the same event into each tool's expected schema, like the GA4 `add_to_cart` mapping in [GA4 ecommerce](/docs/getting-started/ga4-ecommerce). Without mapping the name arrives in each tool's native call; with mapping the properties do too.
 
 ## Next steps
 
-- [**GA4 ecommerce**](/docs/getting-started/ga4-ecommerce): Map an order into a full GA4 purchase payload
+- [**GA4 ecommerce**](/docs/getting-started/ga4-ecommerce): Map a product add into the GA4 `add_to_cart` event
 - [**Mapping**](/docs/mapping): Transform events per destination

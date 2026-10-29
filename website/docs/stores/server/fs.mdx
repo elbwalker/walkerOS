@@ -12,7 +12,7 @@ import Configuration from '@site/src/components/snippets/_configuration.mdx';
 
 <PackageLink env="server" github="packages/server/stores/fs" npm="@walkeros/server-store-fs" />
 
-Local filesystem store for walkerOS server flows. Reads and writes files relative to a base directory with path traversal protection.
+Local filesystem store for walkerOS server flows. It reads and writes files relative to a base directory, with path traversal protection.
 
 ## Installation
 
@@ -95,7 +95,7 @@ In file mode, `get()` returns the bytes as a `Uint8Array` leaf and `set()` rejec
 
 ## File serving pattern
 
-Use with the file transformer to serve static assets from the local filesystem. Set `file: true` so the store persists and returns bytes byte-exact:
+Use with the file transformer to serve static assets from the local filesystem. The express source maps the request path into `ingest.path` and runs the transformer in its `next` chain; a transformer that no chain names never runs. Set `file: true` so the store persists and returns bytes byte-exact:
 
 <CodeSnippet
   code={`{
@@ -106,6 +106,16 @@ Use with the file transformer to serve static assets from the local filesystem. 
         "settings": { "basePath": "./public" },
         "file": true
       }
+    }
+  },
+  "sources": {
+    "http": {
+      "package": "@walkeros/server-source-express",
+      "config": {
+        "settings": { "paths": ["/collect", "/static/*path"] },
+        "ingest": { "map": { "path": { "key": "path" } } }
+      },
+      "next": "file"
     }
   },
   "transformers": {
@@ -119,11 +129,13 @@ Use with the file transformer to serve static assets from the local filesystem. 
   language="json"
 />
 
-A request to `/static/walker.js` reads `./public/walker.js` from disk. Omit `file` (or set it false) for a structured key-value store instead.
+A GET to `/static/walker.js` answers with `./public/walker.js` from disk; a path the store does not hold gets the source's usual answer (for a GET, the express source's 200 tracking pixel). Omit `file` (or set it false) for a structured key-value store instead.
+
+A relative `basePath` resolves against the working directory of the process. The [runtime](/docs/apps/runtime#file-paths-at-runtime) changes into the bundle's folder before it loads the flow, so there `./public` is the `public` folder next to the bundle; copy it there with `include`, or use an absolute path.
 
 ## Security
 
-- **Path traversal protection**: Requests with `..`, absolute paths, or backslash traversal are rejected and logged as warnings
+- **Path traversal protection**: Keys with a `..` segment (`/` or `\` separated) or a leading `/` or `\` are rejected: `get` answers a miss, `set` and `delete` do nothing. Each rejection is a WARN line, which the default log level (`ERROR`) does not show
 - **Base path scoping**: All operations are restricted to the configured `basePath` directory
 - **Intermediate directories**: `set()` creates parent directories automatically via `mkdir -p`
 

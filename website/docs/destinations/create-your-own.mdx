@@ -63,7 +63,11 @@ The push context contains:
 This example destination sends events to a webhook URL.
 
 <CodeSnippet
-  code={`import { StepError, type Destination } from '@walkeros/core';
+  code={`import {
+  networkErrorMessage,
+  StepError,
+  type Destination,
+} from '@walkeros/core';
 
 // 1. Define your settings and bundle your types
 interface WebhookSettings {
@@ -93,12 +97,21 @@ export const destinationWebhook: Destination.Instance<Types> = {
   async push(event, { config, rule }) {
     // A rule with silent: true sends nothing; the push still returns normally
     if (!rule?.silent) {
-      // 4. Send the event and await it; fetch resolves on an error status
-      const response = await fetch(requireUrl(config), {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(event),
-      });
+      // 4. Send the event and await it: a network failure is a StepError,
+      //    and fetch resolves on an error status
+      let response: Response;
+      try {
+        response = await fetch(requireUrl(config), {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(event),
+        });
+      } catch (err) {
+        throw new StepError(networkErrorMessage(err), {
+          code: 'transport',
+          cause: err,
+        });
+      }
       if (!response.ok)
         throw new StepError(\`HTTP \${response.status}\`, {
           code: 'transport',
@@ -129,6 +142,17 @@ event to the dead-letter queue and writes one ERROR line per cause and minute.
   vendor script is missing, not ready yet or too slow
 * **`transport`** - the request failed; a `429` and a `5xx` status are
   retryable, other `4xx` statuses are not
+
+A `TypeError`, `RangeError` or `ReferenceError` is a `runtime` failure: a
+fault in step or flow code that a retry repeats, so it is not retryable.
+Node's `fetch failed` error stays a retryable `transport` failure, because it
+carries the network error's code on its `cause`. A failed `fetch` in the
+browser is a `TypeError` without that code, so throw network failures as a
+`StepError` with the code `transport`, as
+[`sendWeb`](/docs/core/web#sendweb) and
+[`sendServer`](/docs/core/server#sendserver) do. The conformance kit checks
+this: a destination that lets a raw `fetch` error escape fails its network
+check.
 
 Any other throw is a `transport` failure. `retryable` tells a server source
 whether to ask the producer to resend the message. Keep payload data out of the
@@ -178,10 +202,54 @@ destination that calls `fetch`, `sdk-env` for a server SDK, `web-sdk` for a web
 SDK started in `init`, `vendor-global` for a vendor script that defines a
 global, or `socket`. A browser profile (`web-sdk`, `vendor-global`) also needs
 the `page` option, imported from `@walkeros/web-core/dev`; without it the test
-fails and names that import. The
+fails and names that import.
+
+Every destination test also passes `minimal`: the package's `examples.minimal`
+(`{ settings: { ... } }`), exported from `src/examples/minimal.ts` (per export:
+`src/<export>/examples/minimal.ts`), with only the settings the schema requires,
+plus any that `init` refuses to start without under the example's `config`. A
+server destination's minimal example maps credential settings to secret names
+in `secrets`, and a web destination that
+loads its script only on request also sets `config: { loadScript: true }`. The
+kit composes the minimal example into the integrated code and the flow file a
+quickstart shows, and requires it to deliver one public example. A package with
+several exports passes `exportName` and `exportExamples` instead; a package
+without a minimal example passes `withoutMinimal: '<reason>'`. A test with
+neither option fails, and so does one whose option disagrees with the published
+file. The
 [conformance test template](https://github.com/elbwalker/walkerOS/blob/main/skills/walkeros-create-destination/templates/simple/conformance.test.ts)
 shows the call. A "one of these settings" rule is stated as `anyOf` in the
 settings schema.
+
+Each failure the destination reports also ships as a step example:
+`public: false`, the `outcome` the push result reports (such as
+`{ status: 'failed', code: 'missing-input' }`) and a `description` of when it
+happens. The package's docs page lists it under "When it fails" with that
+description; a failure example without one fails the docs build. See
+[step examples](/docs/getting-started/flow/step-examples#what-a-package-page-shows-from-its-examples).
+
+Run the failure examples through `runExamples` from `@walkeros/collector/dev`
+in one of the package's tests, for example next to the `conformance` call: it
+compares each example's outcome with the push result. `conformance` does not
+do that for every profile, and never for `http`, so without such a test a
+wrong outcome still passes and is published:
+
+<CodeSnippet
+  code={`import { runExamples } from '@walkeros/collector/dev';
+import { destinationWebhook } from '..';
+import { examples } from '../dev';
+
+it('reports a rejected event', async () => {
+  const { rejectedEvent } = examples.step;
+  await runExamples(
+    'destination',
+    destinationWebhook,
+    { rejectedEvent },
+    { settings: examples.minimal.settings },
+  );
+});`}
+  language="typescript"
+/>
 
 ## The `pushBatch` function (optional)
 
@@ -545,5 +613,8 @@ Packages can export a `hints` record from `src/dev.ts` with short notes that sch
 - [ ] `buildDev()` in tsup.config.ts
 - [ ] `schemas.settings` exported from `src/dev.ts` (per export for multi-export packages)
 - [ ] `dist/walkerOS.json` generated on build
+- [ ] `src/examples/minimal.ts` exported as `examples.minimal` (or `withoutMinimal` with a reason in the conformance test)
+- [ ] A failure example (`public: false`, `outcome`, `description`) for each failure the destination reports
+- [ ] A test that runs the failure examples through `runExamples`
 - [ ] `npm run test` passes
 - [ ] `npm run lint` passes

@@ -10,8 +10,8 @@ description:
 
 ## Overview
 
-walkerOS follows extreme programming principles with strict conventions. This
-skill is your foundation before writing any code.
+walkerOS follows extreme programming principles with strict conventions. Read
+this skill before writing any code.
 
 **Core principle:** DRY, KISS, YAGNI. Test first. Verify before claiming
 complete.
@@ -48,18 +48,28 @@ packages/
 ├── core/           # Platform-agnostic types, utilities, schemas
 ├── collector/      # Central event processing engine
 ├── config/         # Shared config (eslint, jest, tsconfig, tsup)
+├── cli/            # walkeros CLI (validate, bundle, push, setup)
+├── runner/         # Runs prebuilt flow bundles
+├── mcps/           # MCP servers (mcp, source-browser)
+├── transformers/   # Neutral transformers: validate, ga4, demo
 ├── web/
 │   ├── core/       # Web-specific utilities
-│   ├── sources/    # browser, dataLayer
-│   └── destinations/ # gtag, meta, api, piwikpro, plausible
+│   ├── sources/    # browser, dataLayer, session, cmps/
+│   └── destinations/ # gtag, meta, api, piwikpro, plausible, ...
 └── server/
     ├── core/       # Server-specific utilities
-    ├── sources/    # gcp
-    └── destinations/ # aws, gcp, meta
+    ├── sources/    # express, fetch, aws, gcp
+    ├── destinations/ # aws, gcp, meta, ...
+    ├── transformers/ # bot, fingerprint, file
+    └── stores/     # fs, s3, gcs, sheets
 
 apps/
 ├── walkerjs/       # Zero-config browser file for GTM
 ├── quickstart/     # Code examples (source of truth for patterns)
+├── explorer/       # React components for the docs and exploration
+├── cli/            # The walkeros npm package (CLI entry)
+├── storybook-addon/ # walkerOS Storybook addon
+├── scripts/        # Repository scripts (docs and skills checks)
 └── demos/          # Demo applications
 ```
 
@@ -91,7 +101,7 @@ import {
 
 - ESLint config: `@walkeros/config/eslint`
 - Jest config: `@walkeros/config/jest`
-- TSConfig: `@walkeros/config/tsconfig`
+- TSConfig presets: `@walkeros/config/tsconfig/{base,web,node}.json`
 - Tsup config: `@walkeros/config/tsup`
 
 ## Editing core Config types
@@ -120,8 +130,10 @@ Top-level boundaries in the collector (`createPush` in `push.ts`,
 `createCommand` in `command.ts`) wrap their inner pipeline in `tryCatchAsync`.
 The `onError` callback MUST do two things:
 
-- log a structured error via `collector.logger.error(message, { ... })` with
-  enough context to reproduce (event/ingest for push, command/data for command),
+- log one structured ERROR line with the context an operator needs to find the
+  cause, and no payload: the event name for push, the command name for command,
+  never the event, the ingest or the command's data, which can carry personal
+  data,
 - increment `collector.status.failed`.
 
 An empty `onError` is a defect: it swallows the exception, returns
@@ -131,13 +143,13 @@ canonical pattern.
 
 Two categories of caught error:
 
-1. **Internal walkerOS pipeline failures** (push, command, mapping outer wrap in
-   `mapping.ts`, source factory / init / queueOn flush in `source.ts`,
-   transformer init in `transformer.ts`, destination init in `destination.ts`):
-   log AND `status.failed++`.
-2. **User-supplied callbacks** (mapping `condition` / `fn` / `validate`, `on`
-   subscriptions in `on.ts`): log only. `status.failed` stays a pipeline-health
-   signal; user-code visibility goes via logs.
+1. **Internal walkerOS pipeline failures** (push, command, a throwing rule
+   `condition` in `push.ts`, source factory / init / queueOn flush in
+   `source.ts`, transformer init in `transformer.ts`, destination init in
+   `destination.ts`): log AND `status.failed++`.
+2. **User-supplied callbacks** (a mapping value's `condition` / `fn` /
+   `validate`, `on` subscriptions in `on.ts`): log only. `status.failed` stays a
+   pipeline-health signal; user-code visibility goes via logs.
 
 For invariant violations or operator-initiated aborts that must crash the host
 process, throw `FatalError` (exported from `@walkeros/core`). `FatalError`

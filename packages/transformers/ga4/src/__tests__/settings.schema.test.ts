@@ -39,6 +39,17 @@ describe('ga4 SettingsSchema', () => {
     expect(SettingsSchema.safeParse({ maxEvents }).success).toBe(false);
   });
 
+  it('names the mapping features a GA4 rule does not run', () => {
+    const { properties } = zodToSchema(SettingsSchema);
+    expect(properties).toMatchObject({
+      mapping: {
+        description: expect.stringContaining(
+          "`fn`, `loop`, `set` and a rule's `condition` have no effect",
+        ),
+      },
+    });
+  });
+
   it('exposes exactly the GA4Settings keys in the generated JSON Schema', () => {
     // Type-checked drift guard: adding or removing a GA4Settings key fails
     // compilation here until the schema is updated to match.

@@ -21,10 +21,10 @@ declare const __VERSION__: string;
  * below is written out as sent, form-encoded.
  *
  * The examples run with `{ url: 'https://your_account_name.piwik.pro/',
- * appId: APP_ID }`, an example's optional `settings` merged on top. Each input
- * is a browser event relayed to the server: its page url and referrer, its
- * trace, and the request's IP and user agent on `user` (read by default when
- * no ingest carries them).
+ * appId: 'XXX-XXX-XXX-XXX-XXX' }`, an example's optional `settings` merged on
+ * top. Each input is a browser event relayed to the server: its page url and
+ * referrer, its trace, and the request's IP and user agent on `user` (read by
+ * default when no ingest carries them).
  *
  * Functions in mappings are published as source code, so they must not use
  * imported helpers.
@@ -56,7 +56,7 @@ const USER = {
 };
 
 /** Common parameters of every hit, as sent. */
-const COMMON = `idsite=e8f3a1c2-0b4d-4e5f-9a6b-7c8d9e0f1a2b&rec=1&send_image=0&ts_n=walkerOS&ts_v=${__VERSION__}`;
+const COMMON = `idsite=XXX-XXX-XXX-XXX-XXX&rec=1&send_image=0&ts_n=walkerOS&ts_v=${__VERSION__}`;
 
 /**
  * Context of an identified hit of the relayed event, as sent: _id is the
@@ -196,8 +196,8 @@ export const ecommerceOrder: StepExample = {
         {
           map: {
             orderId: 'data.id',
-            grandTotal: 'data.value',
-            tax: 'data.taxes',
+            grandTotal: ['data.total', 'data.value'],
+            tax: 'data.tax',
             shipping: 'data.shipping',
           },
         },
@@ -211,7 +211,7 @@ export const ecommerceOrder: StepExample = {
       ENDPOINT,
       JSON.stringify({
         requests: [
-          `?${COMMON}&e_t=order&ec_id=0rd3r1d&revenue=555&ec_tx=73.76&ec_sh=5.22&ec_products=%5B%5B%22ers%22%2C%22Everyday+Ruck+Snack%22%2Cnull%2C420%2C1%2Cnull%2C%22black%22%2C%7B%221%22%3A%22l%22%7D%5D%2C%5B%22cc%22%2C%22Cool+Cap%22%2Cnull%2C42%2C1%2Cnull%2Cnull%2C%7B%221%22%3A%22one+size%22%7D%5D%5D&cur=EUR&${CONTEXT}`,
+          `?${COMMON}&e_t=order&ec_id=0rd3r1d&revenue=467.22&ec_tx=73.76&ec_sh=5.22&ec_products=%5B%5B%22ers%22%2C%22Everyday+Ruck+Snack%22%2Cnull%2C420%2C1%2Cnull%2C%22black%22%2C%7B%221%22%3A%22l%22%7D%5D%2C%5B%22cc%22%2C%22Cool+Cap%22%2Cnull%2C42%2C1%2Cnull%2Cnull%2C%7B%221%22%3A%22one+size%22%7D%5D%5D&cur=EUR&${CONTEXT}`,
         ],
       }),
       OPTIONS,
@@ -288,8 +288,8 @@ export const eventWithGoalValue: StepExample = {
       ENDPOINT,
       JSON.stringify({
         requests: [
-          `?${COMMON}&e_c=order&e_a=complete&e_n=0rd3r1d&e_v=555&${CONTEXT}`,
-          `?${COMMON}&idgoal=${GOAL_ID}&revenue=555&${CONTEXT}`,
+          `?${COMMON}&e_c=order&e_a=complete&e_n=0rd3r1d&e_v=462&${CONTEXT}`,
+          `?${COMMON}&idgoal=${GOAL_ID}&revenue=462&${CONTEXT}`,
         ],
       }),
       OPTIONS,
@@ -333,12 +333,12 @@ export const siteSearch: StepExample = {
   description:
     'A search event maps to trackSiteSearch with keyword, category and result count.',
   in: otherEvent('search submit', {
-    data: { query: 'rucksack', category: 'bags', results: 12 },
+    data: { term: 'rucksack', category: 'bags', results: 12 },
   }),
   mapping: {
     name: 'trackSiteSearch',
     data: {
-      set: ['data.query', 'data.category', 'data.results'],
+      set: ['data.term', 'data.category', 'data.results'],
     },
   },
   out: [

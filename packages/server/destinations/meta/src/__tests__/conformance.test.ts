@@ -12,7 +12,7 @@ const CLAIMS: StandardEventName[] = [
   'order complete',
 ];
 
-const settings = { accessToken: 's3cr3t', pixelId: '1234567890' };
+const { settings } = examples.minimal;
 
 describe('meta conformance', () => {
   beforeEach(() => {
@@ -25,6 +25,7 @@ describe('meta conformance', () => {
       examples: examples.step,
       schema: schemas.settings,
       settings,
+      minimal: examples.minimal,
       root: path.join(__dirname, '..', '..'),
     });
   });
@@ -34,7 +35,6 @@ describe('meta conformance', () => {
       settings,
       env: { push: examples.env.push, simulation: examples.env.simulation },
       claims: CLAIMS,
-      published: true,
     });
   });
 

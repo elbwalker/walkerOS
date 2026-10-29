@@ -5,21 +5,21 @@ description: Compare walkerOS and RudderStack to understand which solution fits 
 ---
 
 [RudderStack](https://www.rudderstack.com/) is a warehouse-first customer data
-platform with both open-source and cloud offerings. It is often positioned as an
-open-source alternative to Segment.
+platform with a self-hosted, source-available edition and a cloud offering. It
+is often positioned as an open-source alternative to Segment.
 
 ## Quick comparison
 
 | Feature              | RudderStack                      | walkerOS                          |
 | -------------------- | -------------------------------- | --------------------------------- |
-| Open-source          | Yes (with limitations)           | Yes (MIT, no limitations)         |
-| Pricing              | From $750/month (cloud)          | Free (paid support available)     |
-| Free tier            | 1M events/month                  | Unlimited (self-hosted)           |
+| Open-source          | Source-available (Elastic License 2.0) | Yes (MIT, no limitations)   |
+| Pricing              | From $265/month (Growth, cloud)  | Free (paid support available)     |
+| Free tier            | 250K events/month                | Unlimited (self-hosted)           |
 | Self-hosted option   | Yes                              | Yes                               |
 | Complexity           | Medium to high                   | Low to medium                     |
 | Pre-built integrations | 200+                           | Build your own or use existing    |
 | Warehouse-first      | Yes (core focus)                 | Warehouse is one destination      |
-| Transformations      | JavaScript/Python                | JavaScript (mapping)              |
+| Transformations      | JavaScript/Python                | Mapping (JSON), transformers (JavaScript) |
 | Composable tagging   | No                               | Yes (tag once, use everywhere)    |
 
 ## Who should use what?
@@ -44,18 +44,17 @@ open-source alternative to Segment.
 
 ### Open-source approach
 
-**RudderStack:** The core is open-source, but advanced features (Transformations,
-Live Events) require the cloud version or aren't available in Control Plane
-Lite, so the open-source version has limitations.
+**RudderStack:** The self-hosted server is published under the Elastic License
+2.0, a source-available license. RudderStack Open Source caps transformations
+at five and leaves features such as Live Events to the managed plans.
 
 **walkerOS:** Fully open-source under the MIT license, with all features
 available and no restrictions on use.
 
 ### Complexity and setup
 
-**RudderStack:** Self-hosting requires Docker or Kubernetes and separates the
-data plane from the control plane, so the full feature set means more
-infrastructure to manage.
+**RudderStack:** Self-hosting means you run and scale the data plane yourself,
+on Docker or Kubernetes, connected to a control plane that RudderStack hosts.
 
 **walkerOS:** A simpler architecture you can start with quickly, without complex
 infrastructure. It is designed for developers who want control without that
@@ -63,9 +62,9 @@ overhead.
 
 ### Cost
 
-**RudderStack:** Free cloud tier with 1M events/month. Paid plans start at
-$750/month with usage-based pricing (events, not MTUs). Self-hosted is "free"
-but requires infrastructure investment.
+**RudderStack:** Free cloud tier with 250K events/month. The Growth plan starts
+at $265/month for 1M events, with usage-based pricing (events, not MTUs).
+Self-hosted is "free" but requires infrastructure investment.
 
 **walkerOS:** The software is free and open-source with no event limits, and you
 pay for your own infrastructure. Optional paid services include implementation
@@ -94,7 +93,8 @@ integration code.
 ## Can they work together?
 
 Yes. You can use walkerOS for event collection and send the data to RudderStack
-as a destination. walkerOS then handles composable tagging and consent on the
+with the [RudderStack destination](/docs/destinations/server/rudderstack).
+walkerOS then handles composable tagging and consent on the
 frontend, and RudderStack's warehouse integrations and transformations run on
 the backend.
 

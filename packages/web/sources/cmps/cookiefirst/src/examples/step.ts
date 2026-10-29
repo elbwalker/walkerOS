@@ -83,8 +83,9 @@ export const categoryMapOverride: Flow.StepExample = {
 };
 
 export const cfInitDetection: Flow.StepExample = {
-  title: 'cf_init detection',
-  description: 'CMP detected via cf_init CustomEvent (primary detection path)',
+  title: 'Stored choice at start',
+  description:
+    "CookieFirst already holds the visitor's choice when the source starts, so the read at init emits it.",
   trigger: { type: 'consent' },
   in: {
     necessary: true,

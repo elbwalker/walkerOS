@@ -10,9 +10,10 @@ describe('flattenIncludeSections', () => {
     expect(result).toEqual({
       data_id: '0rd3r1d',
       data_currency: 'EUR',
+      data_value: 462,
+      data_tax: 73.76,
       data_shipping: 5.22,
-      data_taxes: 73.76,
-      data_value: 555,
+      data_total: 467.22,
     });
   });
 
@@ -60,7 +61,7 @@ describe('flattenIncludeSections', () => {
   test('"all" expands to every section', () => {
     const result = flattenIncludeSections(event, ['all']);
     // Should contain keys from all sections
-    expect(result.data_value).toBe(555);
+    expect(result.data_value).toBe(462);
     expect(result.globals_pagegroup).toBe('shop');
     expect(result.context_shopping).toBe('complete');
     expect(result.user_id).toBe('us3r');
@@ -70,7 +71,7 @@ describe('flattenIncludeSections', () => {
 
   test('multiple sections combined', () => {
     const result = flattenIncludeSections(event, ['data', 'globals']);
-    expect(result.data_value).toBe(555);
+    expect(result.data_value).toBe(462);
     expect(result.globals_pagegroup).toBe('shop');
     // No context keys
     expect(result.context_shopping).toBeUndefined();
@@ -162,7 +163,7 @@ describe('processEventMapping with include', () => {
 
     expect(isObject(result.data)).toBe(true);
     expect(result.data).toMatchObject({
-      data_value: 555,
+      data_value: 462,
       data_currency: 'EUR',
     });
   });

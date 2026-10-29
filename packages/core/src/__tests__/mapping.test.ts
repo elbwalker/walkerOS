@@ -1449,6 +1449,30 @@ describe('getMappingValue keeps its guard and inference', () => {
   });
 });
 
+describe('a null value maps as before', () => {
+  const collector = createMockCollector();
+  const event = createEvent({ data: { id: 'A', coupon: null, price: 9 } });
+
+  test.each<[string, Mapping.Value, WalkerOS.Property | undefined]>([
+    [
+      'a key fallback replaces null',
+      { key: 'data.coupon', value: 'none' },
+      'none',
+    ],
+    [
+      'a map leaves the null key out',
+      { map: { id: 'data.id', coupon: 'data.coupon' } },
+      { id: 'A' },
+    ],
+    ['an object holding null maps to nothing', { key: 'data' }, undefined],
+    ['a sibling value still maps', { key: 'data.price' }, 9],
+  ])('%s', async (_, mapping, expected) => {
+    expect(await getMappingValue(event, mapping, { collector })).toStrictEqual(
+      expected,
+    );
+  });
+});
+
 describe('loop items never supply their own consent', () => {
   const cases: Array<{
     name: string;

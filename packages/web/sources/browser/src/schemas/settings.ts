@@ -9,11 +9,7 @@ import {
  * ELB Layer configuration schema
  * Note: Runtime type can be boolean | string | Elb.Layer
  */
-const ElbLayerConfigSchema = z.union([
-  z.boolean(),
-  z.string(),
-  z.any().describe('Elb.Layer array for async command queuing'),
-]);
+const ElbLayerConfigSchema = z.union([z.boolean(), z.string(), z.any()]);
 
 /**
  * Browser source settings schema
@@ -24,7 +20,7 @@ export const SettingsSchema = z.object({
   ),
 
   scope: ScopeSelector.describe(
-    'DOM scope for event tracking (default: document)',
+    'DOM node to track: an Element, Document or ShadowRoot, not a selector (default: document). A selector string fails the source init with an ERROR',
   ),
 
   pageview: z
@@ -36,7 +32,7 @@ export const SettingsSchema = z.object({
     .boolean()
     .default(true)
     .describe(
-      'Read click/submit triggers in the capture phase so tagged elements are resolved at click time before app handlers run (set false for the previous bubble-phase behavior)',
+      'Read click/submit triggers in the capture phase so tagged elements are resolved at click time before app handlers run (false reads them in the bubbling phase)',
     ),
 
   history: z
@@ -51,10 +47,10 @@ export const SettingsSchema = z.object({
     .default('elb')
     .describe('Name for global elb function, or false to install none'),
 
-  name: z.string().describe('Custom name for source instance').optional(),
+  name: z.string().describe('Has no effect: nothing reads it').optional(),
 
   elbLayer: ElbLayerConfigSchema.default('elbLayer').describe(
-    'Enable elbLayer for async command queuing (boolean, string, or Elb.Layer)',
+    'Window command queue to adopt: a name (default: elbLayer) or true for elbLayer; false creates none. An array is not adopted: the source uses window.elbLayer',
   ),
 });
 

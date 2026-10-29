@@ -13,7 +13,9 @@ describe('criteo conformance', () => {
       profile: 'http',
       examples: examples.step,
       schema: schemas.settings,
+      // The step examples' fixture settings (see examples/step.ts).
       settings: { partnerId: 'PARTNER_ID', callerId: 'CALLER_ID' },
+      minimal: examples.minimal,
       root: path.join(__dirname, '..', '..'),
     });
   });

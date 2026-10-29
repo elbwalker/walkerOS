@@ -30,7 +30,7 @@ export const defaultTrack: SegmentStepExample = {
     'A walker event becomes a Segment analytics.track call with userId and anonymousId resolved from the event.',
   in: getEvent('product view', {
     id: 'ev1700000100',
-    timestamp: 1700000100,
+    timestamp: 1700000100000,
     user: { id: 'us3r', session: 's3ss10n' },
   }),
   out: [
@@ -42,7 +42,7 @@ export const defaultTrack: SegmentStepExample = {
         anonymousId: 's3ss10n',
         event: 'product view',
         properties: {},
-        timestamp: new Date(1700000100),
+        timestamp: new Date(1700000100000),
       },
     ],
   ],
@@ -57,7 +57,7 @@ export const mappedEventName: SegmentStepExample = {
     "A mapping renames the event so the Segment track call uses Segment's canonical 'Order Completed' name.",
   in: getEvent('order complete', {
     id: 'ev1700000101',
-    timestamp: 1700000101,
+    timestamp: 1700000101000,
     user: { id: 'us3r', session: 's3ss10n' },
   }),
   mapping: {
@@ -72,7 +72,7 @@ export const mappedEventName: SegmentStepExample = {
         anonymousId: 's3ss10n',
         event: 'Order Completed',
         properties: {},
-        timestamp: new Date(1700000101),
+        timestamp: new Date(1700000101000),
       },
     ],
   ],
@@ -85,10 +85,10 @@ export const mappedEventName: SegmentStepExample = {
 export const destinationIdentify: SegmentStepExample = {
   title: 'Destination identify',
   description:
-    'Destination-level identify fires Segment analytics.identify with traits on the first push only, then the track call follows.',
+    "With settings.identify mapping the email trait to 'user.email', the first push fires Segment analytics.identify with the traits before the track call. Later pushes repeat it only when the userId or traits differ.",
   in: getEvent('page view', {
     id: 'ev1700000102',
-    timestamp: 1700000102,
+    timestamp: 1700000102000,
     user: { id: 'us3r', session: 's3ss10n', email: 'user@example.com' },
   }),
   settings: {
@@ -110,7 +110,7 @@ export const destinationIdentify: SegmentStepExample = {
         userId: 'us3r',
         anonymousId: 's3ss10n',
         traits: { email: 'user@example.com' },
-        timestamp: new Date(1700000102),
+        timestamp: new Date(1700000102000),
       },
     ],
     [
@@ -121,7 +121,7 @@ export const destinationIdentify: SegmentStepExample = {
         anonymousId: 's3ss10n',
         event: 'page view',
         properties: {},
-        timestamp: new Date(1700000102),
+        timestamp: new Date(1700000102000),
       },
     ],
   ],
@@ -137,7 +137,7 @@ export const userLoginIdentify: SegmentStepExample = {
   in: createEvent({
     name: 'user login',
     id: 'ev1700000103',
-    timestamp: 1700000103,
+    timestamp: 1700000103000,
     user: { id: 'us3r', session: 's3ss10n' },
     data: {
       user_id: 'new-user-123',
@@ -171,7 +171,7 @@ export const userLoginIdentify: SegmentStepExample = {
         userId: 'new-user-123',
         anonymousId: 's3ss10n',
         traits: { email: 'user@acme.com', name: 'Jane Doe', plan: 'premium' },
-        timestamp: new Date(1700000103),
+        timestamp: new Date(1700000103000),
       },
     ],
   ],
@@ -187,7 +187,7 @@ export const companyGroup: SegmentStepExample = {
   in: createEvent({
     name: 'company update',
     id: 'ev1700000104',
-    timestamp: 1700000104,
+    timestamp: 1700000104000,
     user: { id: 'us3r', session: 's3ss10n' },
     data: {
       company_id: 'comp-456',
@@ -222,7 +222,7 @@ export const companyGroup: SegmentStepExample = {
         anonymousId: 's3ss10n',
         groupId: 'comp-456',
         traits: { name: 'Acme', industry: 'tech', employees: 50 },
-        timestamp: new Date(1700000104),
+        timestamp: new Date(1700000104000),
       },
     ],
   ],
@@ -238,7 +238,7 @@ export const pageView: SegmentStepExample = {
     'A page view fires Segment analytics.page with category, name, and properties instead of a generic track.',
   in: getEvent('page view', {
     id: 'ev1700000105',
-    timestamp: 1700000105,
+    timestamp: 1700000105000,
     user: { id: 'us3r', session: 's3ss10n' },
     data: {
       category: 'docs',
@@ -272,7 +272,7 @@ export const pageView: SegmentStepExample = {
         category: 'docs',
         name: 'Getting Started',
         properties: { section: 'tutorials' },
-        timestamp: new Date(1700000105),
+        timestamp: new Date(1700000105000),
       },
     ],
   ],
@@ -288,7 +288,7 @@ export const screenView: SegmentStepExample = {
   in: createEvent({
     name: 'screen view',
     id: 'ev1700000106',
-    timestamp: 1700000106,
+    timestamp: 1700000106000,
     user: { id: 'us3r', session: 's3ss10n' },
     data: {
       screen_name: 'Welcome',
@@ -322,7 +322,7 @@ export const screenView: SegmentStepExample = {
         name: 'Welcome',
         category: 'onboarding',
         properties: { build: '1.2.3' },
-        timestamp: new Date(1700000106),
+        timestamp: new Date(1700000106000),
       },
     ],
   ],
@@ -337,7 +337,7 @@ export const anonymousOnly: SegmentStepExample = {
     'When no userId is resolved Segment accepts a track call keyed solely by anonymousId.',
   in: getEvent('product view', {
     id: 'ev1700000107',
-    timestamp: 1700000107,
+    timestamp: 1700000107000,
     user: { session: 's3ss10n' },
   }),
   settings: {
@@ -351,7 +351,7 @@ export const anonymousOnly: SegmentStepExample = {
         anonymousId: 's3ss10n',
         event: 'product view',
         properties: {},
-        timestamp: new Date(1700000107),
+        timestamp: new Date(1700000107000),
       },
     ],
   ],
@@ -364,10 +364,10 @@ export const anonymousOnly: SegmentStepExample = {
 export const consentForwarding: SegmentStepExample = {
   title: 'Consent forwarding',
   description:
-    'Walker consent keys are mapped to Segment categoryPreferences on the analytics context for downstream filtering.',
+    "With settings.consent mapping analytics to 'Analytics' and marketing to 'Advertising', the event's consent is sent as Segment categoryPreferences on the analytics context for downstream filtering.",
   in: getEvent('product view', {
     id: 'ev1700000108',
-    timestamp: 1700000108,
+    timestamp: 1700000108000,
     user: { id: 'us3r', session: 's3ss10n' },
     consent: { analytics: true, marketing: true },
   }),
@@ -386,7 +386,7 @@ export const consentForwarding: SegmentStepExample = {
         anonymousId: 's3ss10n',
         event: 'product view',
         properties: {},
-        timestamp: new Date(1700000108),
+        timestamp: new Date(1700000108000),
         context: {
           consent: {
             categoryPreferences: {
@@ -430,7 +430,7 @@ export const silentRule: SegmentStepExample = {
   description:
     'A rule with silent: true and no identify, group, page or screen mapping sends nothing to Segment.',
   in: getEvent('page view', {
-    timestamp: 1700000116,
+    timestamp: 1700000116000,
     user: { id: 'us3r', session: 's3ss10n' },
   }),
   mapping: { silent: true },
@@ -445,7 +445,7 @@ export const wildcardIgnored: SegmentStepExample = {
   public: false,
   in: createEvent({
     name: 'debug noise',
-    timestamp: 1700000109,
+    timestamp: 1700000109000,
     user: { id: 'us3r', session: 's3ss10n' },
   }),
   mapping: { ignore: true },
@@ -464,7 +464,7 @@ export const companyGroupWithoutData: SegmentStepExample = {
     name: 'company update',
     entity: 'company',
     action: 'update',
-    timestamp: 1700000120,
+    timestamp: 1700000120000,
     user: { id: 'us3r', session: 's3ss10n' },
   },
   mapping: companyGroup.mapping,

@@ -23,6 +23,13 @@ describe('hints', () => {
     expect(text).not.toContain('Express req');
   });
 
+  it('reports a bare config.ingest object as the error it is', () => {
+    const text = hints.wiring.text;
+    expect(text).not.toContain('silently inert');
+    expect(text).toContain('MAPPING_VALUE_NO_OPERATOR');
+    expect(text).toContain('missing-input');
+  });
+
   it('wires the express source on the gtag.js path', () => {
     const block = hints.wiring.code?.[0];
     expect(block).toBeDefined();
