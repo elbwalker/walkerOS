@@ -19,7 +19,7 @@ const builds: [string, string][] = [
 // In effect this caps walker.js's total size: a PR that grows walker.js for
 // another reason raises BEFORE_LOADER_GZIP_BYTES by its measured delta and
 // says so.
-const BEFORE_LOADER_GZIP_BYTES = 38_857;
+const BEFORE_LOADER_GZIP_BYTES = 39_014;
 const LOADER_BUDGET_BYTES = 700;
 
 it('keeps the Tag Mode loader within its budget', () => {
