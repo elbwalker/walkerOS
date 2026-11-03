@@ -211,7 +211,7 @@ Topic provisioning is owned by the [Pub/Sub destination](/docs/destinations/serv
 
 Neither `text` nor `raw` carries an event name: without a `source.before` transformer that builds the event, the collector rejects it as invalid, so pull acknowledges and drops the message and push answers 400. A JSON payload of `null` is acknowledged and dropped with a DEBUG line only (push: `200` with `dropped: true`, no log line).
 
-A decoder that throws on malformed payloads triggers `onPushError` (pull mode): `nack` redelivers, `ack` drops it; the decode failure is an ERROR line. In pull mode a failure a redelivery cannot fix (a missing setting, a `4xx` from the vendor, a destination that is not ready) and invalid input are acknowledged: the failure is in the destination's dead-letter queue and in one ERROR line from the collector, and invalid input is counted as `rejected`. Only a retryable failure (a timeout, an unavailable vendor) and a thrown push follow `onPushError`.
+A decoder that throws on malformed payloads triggers `onPushError` (pull mode): `nack` redelivers, `ack` drops it; the decode failure is an ERROR line. In pull mode a failure a redelivery cannot fix (a missing setting, a `4xx` from the vendor, a destination that is not ready) and invalid input are acknowledged: the failure is in the destination's dead-letter queue and in one ERROR line from the collector, and invalid input is counted as `rejected` with one ERROR line per source and minute. Only a retryable failure (a timeout, an unavailable vendor) and a thrown push follow `onPushError`.
 
 ## Emulator
 

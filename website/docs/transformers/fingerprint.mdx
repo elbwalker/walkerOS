@@ -105,7 +105,7 @@ Set an input to another [mapping value](/docs/mapping/value) to read it from els
 
 ## Salt
 
-The salt is the HMAC key. Keep it secret and out of the config file (`$secret.FINGERPRINT_SALT` in a flow file), and give each deployment its own. Without a salt, anyone who knows the inputs can recompute the hash, and an IP hash can be reversed by trying every address. `settings.salt` is required: without it the flow does not start (`Config settings salt missing`).
+The salt is the HMAC key. Keep it secret and out of the config file, and give each deployment its own. In a flow file, `$secret.FINGERPRINT_SALT` reads it from the `FINGERPRINT_SALT` environment variable when the bundle starts (a flow the app deploys gets it from the app's secrets). A missing value stops the flow with `required secret "FINGERPRINT_SALT" is not set`; see [`$secret.`](/docs/guides/reference-syntax#secret--secrets). Without a salt, anyone who knows the inputs can recompute the hash, and an IP hash can be reversed by trying every address. `settings.salt` is required: without it the flow does not start (`Config settings salt missing`).
 
 ## Rotation
 

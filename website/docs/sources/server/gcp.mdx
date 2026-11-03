@@ -144,9 +144,9 @@ before the source runs: 400 with an HTML body, no CORS headers, not counted.
 A failed event is acknowledged or retried by one rule on every server source: see [Producer acknowledgement](/docs/sources/server#producer-acknowledgement).
 
 Invalid input is counted on `collector.status.sources.<id>.rejected` rather than
-inflating `status.failed`, and is logged at warn with the reason instead of as an
-error with a stack trace. A batch over `maxBatchSize` is answered 400 and not
-counted.
+inflating `status.failed`, and is logged at error with the reason and no stack
+trace, once per source and minute. A batch over `maxBatchSize` is answered 400
+and not counted.
 
 The source sets no body size limit of its own. The Functions Framework accepts
 up to 1024mb and leaves the cap to the platform: 32 MB for a 2nd gen HTTP

@@ -418,9 +418,10 @@ The hosted server is one HTTPS endpoint: `https://app.walkeros.io/api/mcp`. It i
 the only value a client needs: no token, header or advanced field.
 
 The endpoint runs an OAuth 2.1 authorization server, and a standard MCP client
-finds it on its own. You paste the URL, the client discovers who authorizes it
-and registers itself, a browser opens on a consent screen, you press Allow, and
-the client holds a token it refreshes on its own.
+finds it on its own. You paste the URL and the client discovers who authorizes
+it. It registers itself or presents its published client identity, a browser
+opens on a consent screen, you press Allow, and the client holds a token it
+refreshes on its own.
 
 ### Claude Desktop and claude.ai
 

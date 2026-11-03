@@ -19,7 +19,10 @@ attributes.
 ## Basic usage
 
 Pass `elb` a [partial event](/docs/getting-started/event-model#push-an-event):
-`name` is required, every other field is optional.
+`name` is required, every other field is optional. Pass values that JSON can
+serialize: an event holding a DOM node in a React app, for example, is refused
+as invalid (`{ ok: false, invalid: true, error }`) and reaches no destination
+(see [What `failed` counts](/docs/collector#what-failed-counts)).
 
 <CodeSnippet
   code={`elb({ name: 'product view', data: { id: 'P123', name: 'Widget' } });

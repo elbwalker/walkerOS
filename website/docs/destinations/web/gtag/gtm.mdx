@@ -75,8 +75,11 @@ it is.
 on it. On a destination that also configures `ga4` or `ads`, the same flag
 governs whether those scripts are loaded too.
 
-Consent Mode reaches the container only when the destination declares a consent
-signal. With `loadScript: true`:
+walkerOS sends Consent Mode through a `gtag` function. When the page has none,
+the destination adds one only if it declares a consent signal or configures
+`ga4` or `ads`. So on a destination that configures only `gtm`, on a page
+without a `gtag` function, Consent Mode reaches the container only when the
+destination declares a consent signal. With `loadScript: true`:
 
 - With `consent: { marketing: true }` in `config`, walkerOS pushes the denied
   `consent default` before `gtm.js`, loads the container once that consent is
@@ -86,6 +89,14 @@ signal. With `loadScript: true`:
   `consent update` follows every change.
 - With neither, consent commands push nothing into the dataLayer and the
   container loads as the flow starts.
+
+With neither signal, walkerOS still sends Consent Mode when a `gtag` function is
+in place: because this destination configures `ga4` or `ads`, because another
+Google tag destination added one, or because the page defines one itself, for
+example for its own Consent Mode default. The first consent command pushes the denied
+`consent default`, followed by the `consent update`, through `gtag`, and every
+later change pushes a `consent update`. With `loadScript: true`, these come
+after `gtm.js`.
 
 A container that is already on the page loads before walkerOS starts, so its
 Consent Mode default has to come from the page, set by your CMP or inside the

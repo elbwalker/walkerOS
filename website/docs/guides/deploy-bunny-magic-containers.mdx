@@ -119,7 +119,7 @@ curl -X POST http://localhost:8080/collect \
 Expected response:
 
 ```json
-{ "success": true, "timestamp": 1234567890 }
+{ "success": true, "timestamp": 1700000000000 }
 ```
 
 The Express source answers a POST [before delivery](/docs/sources/server/express#response-modes-async), so the response says nothing about BigQuery. A failed write shows up as a `Push failed` line in the container log.

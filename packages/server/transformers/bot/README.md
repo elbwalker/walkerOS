@@ -6,7 +6,7 @@ Annotates events with an automation likelihood, a category saying what kind of
 client it is, the identified product when there is one, and stable reason codes.
 It never drops events: downstream destination mappings decide the policy.
 
-## Install
+## Installation
 
 ```bash
 npm install @walkeros/server-transformer-bot

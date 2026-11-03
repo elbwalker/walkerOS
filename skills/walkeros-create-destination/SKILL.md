@@ -693,16 +693,18 @@ Use these templates as your starting point:
    `queued` with the reason `held`. A state handler that rejects or does not
    settle in that time writes an ERROR line (`consent not applied`) and holds
    the destination's events for one more `config.timeout`. The first push after
-   that window retries the delivery, and once a delivery succeeds the held
-   events are delivered. Until one has succeeded, the held events and every
-   later one fail with `blocked` (the push answers `ok: false`, the events go to
-   the dead-letter queue, an ERROR `Push failed` line is written) and are not
-   sent when the destination recovers; later pushes retry the delivery once per
-   `config.timeout`. A `walker run` discards events that are still held, with no
-   counter and no log line. Lifecycle handlers such as `on('run')` are awaited
-   too, bounded by the same timeout, and never hold events. `elb` commands and
-   `startFlow` resolve only after the destinations' `on()` handlers for that
-   command have settled or timed out. See
+   that window retries a delivery whose handler rejected, and once a delivery
+   succeeds the held events are delivered. Until one has succeeded, the held
+   events and every later one fail with `blocked` (the push answers `ok: false`,
+   the events go to the dead-letter queue, an ERROR `Push failed` line is
+   written) and are not sent when the destination recovers; later pushes retry a
+   rejected delivery once per `config.timeout`. A handler that timed out gets no
+   new delivery until it settles, so one that never settles keeps the
+   destination blocked. A `walker run` discards events that are still held, with
+   no counter and no log line. Lifecycle handlers such as `on('run')` are
+   awaited too, bounded by the same timeout, and never hold events. `elb`
+   commands and `startFlow` resolve only after the destinations' `on()` handlers
+   for that command have settled or timed out. See
    [consent](https://www.walkeros.io/docs/guides/consent#gate-a-destination-with-consent)
    for the full sequence.
    - For step-example tests, use `command: 'consent'` on `Flow.StepExample` to

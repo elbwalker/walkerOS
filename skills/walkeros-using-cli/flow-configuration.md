@@ -38,6 +38,10 @@ Mappings live on each step (`config.mapping`), not at the flow level. Validate
 drops an unknown key at the file root, on a flow or in its `config` without a
 message, so a misspelt `"destinaitons"` passes.
 
+`config.observe` (`url` + `binding`, `level`, `sample`) applies to web flows
+only. A server flow ignores it; the runner reads its level from
+`WALKEROS_OBSERVE_LEVEL` instead.
+
 ---
 
 ## Platform Selection

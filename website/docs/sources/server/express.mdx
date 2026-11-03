@@ -185,7 +185,7 @@ push.
 |--------|---------|
 | 200 | Accepted (respond-first mode: accepted for processing, not proof of delivery) or, in synchronous mode, processed, or failed for a reason a resend cannot fix (see below) |
 | 400 | Rejected client input: an unparseable `application/json` body (body echoes the parser message), a batch larger than `maxBatchSize` (default 100), or, on synchronous POST, a single event the pipeline declared invalid (body echoes the validation message, e.g. `Event name is required`) |
-| 404 | Path, or method on that path, not configured in `paths` (JSON body `{ "success": false, "error": "Not found" }`) |
+| 404 | Path, or method on that path, not configured in `path` or `paths` (JSON body `{ "success": false, "error": "Not found" }`) |
 | 405 | `HEAD` request on a path that serves `GET` (no body) |
 | 413 | Body exceeds the 1mb limit |
 | 415 | Unsupported charset |

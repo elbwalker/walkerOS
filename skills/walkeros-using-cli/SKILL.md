@@ -155,7 +155,7 @@ loads it itself, events go nowhere while the push still reports them as done.
           "overrides": {},              // Transitive dep version pins (npm-style)
           "traceInclude": []            // Optional: nft escape hatch (paths/globs)
         },
-        "observe": {}                   // Optional: public observe connect pair (url + binding)
+        "observe": {}                   // Optional, web flows only: url + binding, level, sample
       },
       "sources": {},                    // Event sources
       "destinations": {},               // Event destinations (each with its own mapping)
@@ -188,7 +188,9 @@ the bundle only warns and builds, so remove it.
 emits the `url` + `binding` connect pair statically into the bundle; the
 per-session credential arrives out-of-band at runtime (`?elbObserve=` URL
 param), so no secret ever enters the artifact. A partial pair (only one of the
-two set) warns at build time and wires nothing.
+two set) warns at build time and wires nothing. A server flow ignores
+`config.observe`: the runner reads its level from `WALKEROS_OBSERVE_LEVEL`
+instead (see Runtime environment below).
 
 For detailed configuration options, see
 [flow-configuration.md](flow-configuration.md).

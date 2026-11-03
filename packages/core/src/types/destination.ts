@@ -219,15 +219,18 @@ export interface Config<T extends TypesGeneric = Types> {
   batch?: number | BatchOptions;
   /**
    * Per-destination circuit breaker. Presence-gated: when unset the breaker is
-   * inert and behavior is unchanged. After `threshold` CONSECUTIVE transport
+   * inert and behavior is unchanged. After `threshold` CONSECUTIVE retryable
    * failures (a thrown push, a timed-out push, a whole-batch throw, a
-   * connection-level `reportError(err, event)`) the breaker opens and events
+   * connection-level `reportError(err, event)`, each only when its failure
+   * reason is retryable: a 4xx other than 429, `config`, `missing-input` or a
+   * `runtime` throw (a `TypeError`, `RangeError` or `ReferenceError` whose
+   * `cause` carries no code) never counts) the breaker opens and events
    * fail with `breaker-open` (counted, kept in the DLQ, not pushed) until
    * `cooldown` ms elapse, then a single probe event is allowed; its success
    * closes the breaker, its failure re-opens it. Partial-batch row failures
    * are breaker-neutral. A bare number is the `threshold`.
    *
-   * - `threshold`: consecutive transport failures before opening. Default 5.
+   * - `threshold`: consecutive retryable failures before opening. Default 5.
    * - `cooldown`: ms an open breaker waits before admitting a probe. Default 30000.
    */
   breaker?: number | BreakerOptions;
@@ -238,7 +241,7 @@ export interface Config<T extends TypesGeneric = Types> {
  * (`Destination.Config.breaker`). A bare number is treated as `threshold`.
  */
 export interface BreakerOptions {
-  /** Consecutive transport failures before the breaker opens. Default 5. */
+  /** Consecutive retryable failures before the breaker opens. Default 5. */
   threshold?: number;
   /** Milliseconds an open breaker waits before admitting a probe. Default 30000. */
   cooldown?: number;

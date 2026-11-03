@@ -206,7 +206,7 @@ export const ConfigSchema = z
       ])
       .optional()
       .describe(
-        'Per-destination circuit breaker (presence-gated). After threshold consecutive transport failures the breaker opens and events fail with breaker-open (counted, kept in the DLQ) until cooldown ms elapse, then one probe is admitted; success closes it, failure re-opens it. Partial-batch row failures are breaker-neutral. Bare number is the threshold; object form supports threshold (default 5) and cooldown (default 30000ms).',
+        'Per-destination circuit breaker (presence-gated). After threshold consecutive retryable failures (such as a network error, a timeout, or a 429 or 5xx answer; any other 4xx, a missing setting or a runtime failure does not count) the breaker opens and events fail with breaker-open (counted, kept in the DLQ) until cooldown ms elapse, then one probe is admitted; success closes it, failure re-opens it. Partial-batch row failures are breaker-neutral. Bare number is the threshold; object form supports threshold (default 5) and cooldown (default 30000ms).',
       ),
   })
   .meta({

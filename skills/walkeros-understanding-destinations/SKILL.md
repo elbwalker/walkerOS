@@ -260,9 +260,10 @@ request IDs or HTTP responses (BigQuery, mParticle, HubSpot) should read
 **A `BatchOutcome` is for sinks that report per row, and for nothing else.** A
 sink that succeeds or fails as a whole (one SQL `INSERT`, one file write, one
 publish) must never report an all-failed outcome in place of throwing. Only a
-throw records a transport failure on the breaker, and only a flush with at least
-one delivered entry records a success, so an outcome where nothing succeeded
-records neither: a total outage passes the breaker unseen and it never opens. A
+throw can count as a failure on the breaker (a retryable one, such as a network
+error, a timeout or a 429 or 5xx answer), and only a flush with at least one
+delivered entry records a success, so an outcome where nothing succeeded records
+neither: a total outage passes the breaker unseen and it never opens. A
 whole-batch sink has exactly two answers: resolve `void` or throw.
 
 Batching, the delivery timeout, the DLQ and the breaker are the collector's;

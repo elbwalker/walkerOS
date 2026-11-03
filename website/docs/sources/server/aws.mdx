@@ -137,9 +137,9 @@ Every request to `healthPath` (default `/health`) answers `{ status: 'ok', ... }
 A failed event is acknowledged or retried by one rule on every server source: see [Producer acknowledgement](/docs/sources/server#producer-acknowledgement).
 
 Invalid input is counted on `collector.status.sources.<id>.rejected` rather than
-inflating `status.failed`, and is logged at warn with the reason instead of as an
-error with a stack trace. A POST without a body and a batch over `maxBatchSize`
-are answered 400 and not counted.
+inflating `status.failed`, and is logged at error with the reason and no stack
+trace, once per source and minute. A POST without a body and a batch over
+`maxBatchSize` are answered 400 and not counted.
 
 The source sets no body size limit of its own; Lambda caps a synchronous
 request payload at 6 MB.

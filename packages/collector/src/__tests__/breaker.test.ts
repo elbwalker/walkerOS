@@ -12,7 +12,7 @@ import {
  * Step-general circuit breaker (keyed by `stepId()`).
  *
  * These tests drive the REAL push path (`pushToDestinations` against a real
- * `collector({})`) — not the breaker helpers in isolation — so they prove the
+ * `collector({})`), not the breaker helpers in isolation, so they prove the
  * gate, the failure/success accounting, and the canonical-key resolution all
  * agree. Time is controlled through the injectable breaker clock
  * (`__setBreakerNow`) so open→half-open is deterministic without fake timers.
@@ -55,7 +55,7 @@ describe('circuit breaker', () => {
     __resetBreakerNow();
   });
 
-  test('presence-gated: with no breaker config, events are never skipped', async () => {
+  test('presence-gated: with no breaker config, events never fail with breaker-open', async () => {
     const push = jest.fn();
     let outcome: 'ok' | 'throw' = 'throw';
     const destination = makeDestination(() => outcome, {}, push);
@@ -71,7 +71,7 @@ describe('circuit breaker', () => {
     expect(c.status.breakers[BREAKER_KEY]).toBeUndefined();
   });
 
-  test('N consecutive transport failures open the breaker; later events skip', async () => {
+  test('N consecutive transport failures open the breaker; later events fail with breaker-open', async () => {
     const push = jest.fn();
     const destination = makeDestination(() => 'throw', { breaker: 3 }, push);
     const c = await makeCollector();
@@ -86,7 +86,7 @@ describe('circuit breaker', () => {
     expect(c.status.breakers[BREAKER_KEY].state).toBe('open');
     expect(c.status.breakers[BREAKER_KEY].consecutiveFailures).toBe(3);
 
-    // Subsequent events are skipped (counted, not pushed).
+    // Subsequent events fail with breaker-open (counted, not pushed).
     await pushToDestinations(c, createEvent());
     await pushToDestinations(c, createEvent());
     expect(push).toHaveBeenCalledTimes(3);
@@ -136,7 +136,7 @@ describe('circuit breaker', () => {
 
     expect(c.status.breakers[BREAKER_KEY].state).toBe('closed');
     expect(c.status.breakers[BREAKER_KEY].consecutiveFailures).toBe(1);
-    // All four reached the destination (never skipped).
+    // All four reached the destination (none failed with breaker-open).
     expect(push).toHaveBeenCalledTimes(4);
   });
 
@@ -157,7 +157,7 @@ describe('circuit breaker', () => {
     expect(c.status.breakers[BREAKER_KEY].state).toBe('open');
     expect(push).toHaveBeenCalledTimes(2);
 
-    // Within cooldown: skipped.
+    // Within cooldown: fails with breaker-open.
     now += 1000;
     await pushToDestinations(c, createEvent());
     expect(push).toHaveBeenCalledTimes(2);
@@ -170,7 +170,8 @@ describe('circuit breaker', () => {
       pushToDestinations(c, createEvent()),
       pushToDestinations(c, createEvent()),
     ]);
-    // Exactly one probe admitted; the other two saw half-open and skipped.
+    // Exactly one probe admitted; the other two saw half-open and failed with
+    // breaker-open.
     expect(push).toHaveBeenCalledTimes(3);
     // Probe failed → re-opened with a fresh window.
     expect(c.status.breakers[BREAKER_KEY].state).toBe('open');
@@ -220,7 +221,8 @@ describe('circuit breaker', () => {
     expect(secondOpenUntil).toBeGreaterThan(firstOpenUntil ?? 0);
     expect(push).toHaveBeenCalledTimes(3);
 
-    // Within the new window: all skipped, no extra pushes (no storm).
+    // Within the new window: all fail with breaker-open, no extra pushes (no
+    // storm).
     await pushToDestinations(c, createEvent());
     await pushToDestinations(c, createEvent());
     expect(push).toHaveBeenCalledTimes(3);
@@ -242,10 +244,10 @@ describe('circuit breaker', () => {
 
     const canonicalKey = stepId('destination', 'real-id');
     expect(c.status.breakers[canonicalKey].state).toBe('open');
-    // No breaker entry under the map key — proves gate + accounting agree.
+    // No breaker entry under the map key: proves gate + accounting agree.
     expect(c.status.breakers[stepId('destination', 'mapKey')]).toBeUndefined();
 
-    // Next event is skipped (gate reads the canonical entry).
+    // Next event fails with breaker-open (gate reads the canonical entry).
     await pushToDestinations(c, createEvent());
     expect(push).toHaveBeenCalledTimes(2);
   });
@@ -336,7 +338,7 @@ describe('circuit breaker', () => {
       expect(c.status.breakers[BREAKER_KEY].probing).toBe(false);
 
       // Transport heals; after another cooldown the breaker probes again and
-      // closes — proving it was NOT stuck half-open.
+      // closes, proving it was NOT stuck half-open.
       initShouldThrow = false;
       now += 6000;
       await pushToDestinations(c, createEvent());
@@ -414,7 +416,7 @@ describe('circuit breaker', () => {
       await pushToDestinations(c, createEvent());
       expect(c.status.breakers[BREAKER_KEY].state).toBe('open');
 
-      // Within the new window: skipped (no storm).
+      // Within the new window: fails with breaker-open (no storm).
       const callsBefore = push.mock.calls.length;
       await pushToDestinations(c, createEvent());
       expect(push.mock.calls.length).toBe(callsBefore);

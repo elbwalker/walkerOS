@@ -413,13 +413,16 @@ function withoutIdentity(
   };
 }
 
-export const noIdentityProduct = withoutIdentity('product view', 1700000110);
-export const noIdentityOrder = withoutIdentity('order complete', 1700000111);
-export const noIdentityPage = withoutIdentity('page view', 1700000112);
-export const noIdentityLogin = withoutIdentity('user login', 1700000113);
-export const noIdentityCompany = withoutIdentity('company update', 1700000114);
-export const noIdentityScreen = withoutIdentity('screen view', 1700000115);
-export const noIdentityMerge = withoutIdentity('identity merge', 1700000116);
+export const noIdentityProduct = withoutIdentity('product view', 1700000110000);
+export const noIdentityOrder = withoutIdentity('order complete', 1700000111000);
+export const noIdentityPage = withoutIdentity('page view', 1700000112000);
+export const noIdentityLogin = withoutIdentity('user login', 1700000113000);
+export const noIdentityCompany = withoutIdentity(
+  'company update',
+  1700000114000,
+);
+export const noIdentityScreen = withoutIdentity('screen view', 1700000115000);
+export const noIdentityMerge = withoutIdentity('identity merge', 1700000116000);
 
 /** A silent rule without identify, group, page, screen or alias calls nothing. */
 export const silentRule: RudderStackStepExample = {
