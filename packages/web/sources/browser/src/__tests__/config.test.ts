@@ -1,7 +1,8 @@
 import { startFlow } from '@walkeros/collector';
 import type { WalkerOS } from '@walkeros/core';
+import { isObject } from '@walkeros/core';
 import { getConfig, settingsFrom } from '../config';
-import { SettingsSchema } from '../schemas';
+import { SettingsSchema, settings } from '../schemas';
 import {
   createBrowserSource,
   destroyAllTestSources,
@@ -175,5 +176,41 @@ describe('settingsFrom with a scope from another realm', () => {
 
   test('drops a node that cannot be a scope, such as a text node', () => {
     expect(settingsFrom({ scope: { nodeType: 3 } }).scope).toBeUndefined();
+  });
+});
+
+// The descriptions render the settings table on the docs page and the MCP
+// package_get answer, so each one states what the source does with the value.
+describe('settings descriptions', () => {
+  const description = (key: string): string => {
+    const property = isObject(settings.properties)
+      ? settings.properties[key]
+      : undefined;
+    return isObject(property) ? String(property.description) : '';
+  };
+
+  test('scope takes a DOM node, not a selector', () => {
+    expect(description('scope')).toMatch(/Element, Document or ShadowRoot/);
+    expect(description('scope')).toMatch(/not a selector/);
+    expect(description('scope')).toMatch(
+      /selector string fails the source init/,
+    );
+  });
+
+  test('elbLayer offers no array, which the source does not adopt', () => {
+    expect(description('elbLayer')).not.toMatch(/Elb\.Layer/);
+    expect(description('elbLayer')).toMatch(/false creates none/);
+    expect(description('elbLayer')).toMatch(
+      /An array is not adopted: the source uses window\.elbLayer/,
+    );
+  });
+
+  test('capture names the bubbling phase', () => {
+    expect(description('capture')).toMatch(/bubbling phase/);
+    expect(description('capture')).not.toMatch(/previous/);
+  });
+
+  test('name says it has no effect', () => {
+    expect(description('name')).toMatch(/Has no effect: nothing reads it/);
   });
 });

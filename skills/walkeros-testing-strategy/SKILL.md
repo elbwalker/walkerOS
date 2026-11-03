@@ -52,45 +52,52 @@ expect(calls).toContainEqual({
 
 ### Rule 2: Link Tests to `dev` Examples
 
-The `dev.ts` export provides `examples.env`, `examples.events`,
-`examples.mapping`, and `examples.step`. Using these in tests ensures
-documentation stays in sync.
+The `dev.ts` export provides `examples.env` (the mock env and its `simulation`
+paths) and `examples.step` (the step examples), plus `examples.minimal` for a
+destination and `examples.createTrigger` for a source. Using these in tests
+ensures documentation stays in sync.
+
+#### Step Examples on a Real Collector
+
+A destination's step examples run through `runExamples`, which starts a real
+collector for each one and compares its `out` and `outcome`:
 
 ```typescript
+import type { StandardEventName } from '@walkeros/core';
+import { runExamples } from '@walkeros/collector/dev';
+import { page } from '@walkeros/web-core/dev';
+import { destinationMeta } from '..';
 import { examples } from '../dev';
 
-// Use examples.env for mock environment
-const testEnv = mockEnv(examples.env.push, interceptor);
+// The standard events the destination maps, each with a public example
+const claims: StandardEventName[] = [
+  'page view',
+  'product view',
+  'product add',
+  'order complete',
+];
 
-// Assert against examples.events (documented expected output)
-expect(calls[0].args).toEqual(examples.events.ga4PageView());
+// The init example takes a config as `in`, not an event
+const { init, ...events } = examples.step;
 
-// Test with examples.mapping configurations
-const config = { mapping: examples.mapping.ecommerce };
-```
-
-#### Step Examples with `it.each`
-
-Step examples (`examples.step`) provide `{ in, out }` pairs for each step. Use
-`it.each` to iterate over them:
-
-```typescript
-import { examples } from '../dev';
-
-describe('step examples', () => {
-  it.each(Object.entries(examples.step))(
-    '%s',
-    async (name, { in: input, out: expected }) => {
-      const result = await step.push(input, context);
-      if (expected === false) {
-        expect(result).toBe(false);
-      } else {
-        expect(result).toEqual(expected);
-      }
-    },
-  );
+it('runs the step examples', async () => {
+  await runExamples('destination', destinationMeta, events, {
+    settings: examples.minimal.settings,
+    env: { push: examples.env.push, simulation: examples.env.simulation },
+    page,
+    claims,
+  });
 });
 ```
+
+(`packages/web/destinations/meta/src/__tests__/conformance.test.ts` runs this
+test.)
+
+A source's step examples run one test per example with
+`it.each(Object.entries(examples.step))`: the test feeds each example's
+`trigger` and `in` through `examples.createTrigger` and compares what the source
+hands the collector with `out` (see
+`packages/server/sources/express/src/__tests__/stepExamples.test.ts`).
 
 See [using-step-examples](../walkeros-using-step-examples/SKILL.md) for the full
 lifecycle including the Three Type Zones and naming conventions.
@@ -133,12 +140,22 @@ call. The `profile` states what the step talks to: for destinations `http`,
 `sdk-env`, `web-sdk` (a web SDK started in `init`), `vendor-global` or `socket`;
 `transformer` and `source` for those kinds. A web step passes `page` from
 `@walkeros/web-core/dev`, the browser it runs on; the browser profiles fail
-without it. `runExamples` runs the examples alone.
+without it. A destination also passes `minimal: examples.minimal` (from
+`src/examples/minimal.ts`, only the settings the schema requires or `init`
+refuses to start without): the kit starts the destination with the settings its
+docs quickstart shows and requires one public example delivered. A package that
+cannot have a minimal example passes `withoutMinimal: '<reason>'` instead; with
+neither, or with an option that disagrees with the file, the test fails.
+`runExamples` runs the examples alone.
 
 **Examples are the tests.** A destination's public examples (one per standard
 event it maps, from `getEvent(name)`) are asserted by `runExamples` with
-`claims` and `published: true`; do not restate an example's input and assertion
-in a second test. Keep the tests for boundaries, failures and ordering. An
+`claims`; do not restate an example's input and assertion in a second test.
+Every example runs as published: each function as source text, revived outside
+its module, the way `walkerOS.json` ships it (the runner reads that text from
+the code the test run compiled, not from the built `dist/walkerOS.json`). A
+condition that calls an imported helper therefore fails the test, as it would
+fail in a user's flow. Keep the tests for boundaries, failures and ordering. An
 example's `out` is a literal taken from the vendor's documented request, never
 the output of the code under test, otherwise the test passes by construction.
 See [using-step-examples](../walkeros-using-step-examples/SKILL.md).
@@ -207,21 +224,26 @@ tests efficiently cover variations. Contract tests catch API drift.
 ## Simulation Testing
 
 Simulation testing uses the CLI `push` command with `--simulate` flags. The
-collector does not export a `simulate()` function — simulation is a CLI concern
+collector does not export a `simulate()` function: simulation is a CLI concern
 that maps to `mock`/`disabled` config properties at runtime.
 
 **CLI usage:**
 
 ```bash
 # Simulate a destination (mocks its push, captures API calls)
-walkeros push flow.json -e '{"entity":"page","action":"view"}' --simulate destination.ga4
+walkeros push flow.json -e '{"name":"page view"}' --simulate destination.ga4
 
 # Simulate a source (captures events it pushes, disables all destinations)
-walkeros push flow.json --simulate source.browser
+walkeros push flow.json -e '{"content":"","trigger":{"type":"load"}}' --simulate source.browser
 
 # Mock a destination with a specific return value
 walkeros push flow.json -e event.json --mock destination.ga4='{"status":"ok"}'
 ```
+
+The event needs a `name`: a destination simulation of an event without one sends
+nothing and still answers `success: true`
+(`mapping: none (skipped before mapping)`, `no calls`), while a real push of it
+answers `ok: false` with `Event name is required`.
 
 **Programmatic usage:**
 
@@ -361,11 +383,10 @@ Each package with external dependencies should have:
 export * as schemas from './schemas';
 export * as examples from './examples';
 
-// src/examples/index.ts
+// src/examples/index.ts (a destination)
 export * as env from './env';
-export * as events from './events';
-export * as mapping from './mapping';
 export * as step from './step'; // Step examples { in, out }
+export { minimal } from './minimal';
 ```
 
 ### Testing Sources with Injected env
@@ -374,41 +395,43 @@ Sources accept platform dependencies via `env`. Mock `window`, `document`, or
 library imports by passing them through `env` instead of mocking globals.
 
 Type the mock against the source's own `Env` type, not against the global
-`Window`. A source narrows `Env.window` to only the members it touches, so the
-mock satisfies that narrowed shape directly with **no `as unknown as Window`
-cast**:
+`Window`. A source that narrows `Env.window` to only the members it touches, as
+the Cookiebot source does with `CookiebotWindow`, takes a mock of that shape
+directly with **no `as unknown as Window` cast**:
 
 ```typescript
-import type { Env } from '../types'; // the source's narrowed Env
+import type { Elb } from '@walkeros/core';
+import { createMockLogger } from '@walkeros/core';
+import type { CookiebotWindow, Types } from '../types';
 
-// Instead of mocking window.performance globally:
-const env: Env = {
-  window: {
-    performance: {
-      getEntriesByType: jest.fn().mockReturnValue([{ type: 'navigate' }]),
-    },
-    location: { href: 'https://test.com/' },
+// Instead of mocking the global window:
+const mockWindow: CookiebotWindow = {
+  Cookiebot: {
+    consent: { marketing: true, method: 'explicit' },
+    hasResponse: true,
   },
+  addEventListener: jest.fn(),
+  removeEventListener: jest.fn(),
 };
 
-await createSessionSource(collector, undefined, env);
-
-// Instead of mocking express import, type the binding against the source's
-// injected dependency type so the mock is assignable without a cast:
-import type { SourceEnv } from './types';
-
-const express: SourceEnv['express'] = Object.assign(
-  jest.fn().mockReturnValue(mockApp),
-  { json: jest.fn().mockReturnValue(middleware) },
-);
-await sourceExpress(createSourceContext({}, { express }));
+const elb: Elb.Fn = jest.fn();
+const env: Types['env'] = {
+  push: elb,
+  command: elb,
+  elb,
+  window: mockWindow,
+  logger: createMockLogger(),
+};
 ```
 
-This pattern avoids global state pollution between tests, enables simulation in
-non-browser environments, and stays cast-free because the source narrows its own
-`Env` to exactly the members it uses (the same declare-global + narrowed-`Env`
-approach destinations use — see
-[create-destination §3.3.1](../walkeros-create-destination/SKILL.md)).
+This pattern avoids global state pollution between tests and enables simulation
+in non-browser environments. Most sources type `Env.window` as the full
+`Window & typeof globalThis`; the mock stays cast-free only when the source
+narrows it to the members it uses (the same declare-global + narrowed-`Env`
+approach destinations use, see
+[create-destination](../walkeros-create-destination/SKILL.md), Phase 7, Key
+Patterns 3). Server sources take their platform modules the same way
+(`env.express ?? express`).
 
 ## Red Flags - Stop and Fix
 
@@ -417,7 +440,7 @@ approach destinations use — see
 - Assertions only checking mock call counts
 - Proving delivery or loss with a mocked `collector.push` instead of `startFlow`
 - A destination without a conformance test, a `silent` example or a failure
-  example
+  example, or a failure example without a `description`
 - Tests with extensive mock setup (>50% of test is setup)
 - Test-only methods added to production classes
 - Claiming tests pass without running them
@@ -471,23 +494,21 @@ Do not write `collector.sources.X.push as any` or
 `collector.sources.X.push as (rawData: ...) => Promise<...>`. The accessor
 exists exactly to remove that boundary cast.
 
-## Destination Test Duplication, Pending Cleanup
+## Shared Destination Test Harness
 
-As of 2026-04-29, web and server destination tests share substantial scaffolding
-(init validation, missing-settings rejection, mock setup, push assertions) with
-no shared harness. Audit found roughly 1500-2500 lines of repetition across 47
-destinations. A typed shared harness is planned as a follow-on initiative.
+The conformance kit (`conformance` and `runExamples` from
+`@walkeros/collector/dev`) is the shared harness for destination tests: the
+failure contract, missing settings, the minimal example and every step example.
 
-When writing a new destination test today:
+When writing a new destination test:
 
-- Keep destination-specific behavior (mapping rules, vendor-specific batch
-  shapes, edge cases) in the test file.
-- The boilerplate sections (env clone, `jest.clearAllMocks`,
-  missing-required-settings, init returns valid contract) are candidates for
-  extraction. Mirror the shape used by an existing destination of the same
-  family (web vs server) so the future migration is mechanical.
-- Do NOT invent a new private harness inside the destination. If the missing
-  harness blocks you, flag it.
+- Keep destination-specific behavior (vendor-specific batch shapes, ordering,
+  edge cases the examples cannot state) in the test file.
+- Mirror the shape of an existing destination of the same family (web vs
+  server), for example `packages/web/destinations/meta/src/__tests__/` or
+  `packages/server/destinations/pinterest/src/__tests__/`.
+- Do NOT invent a new private harness inside the destination. If the kit does
+  not cover a case, flag it.
 
 ## Related Skills
 

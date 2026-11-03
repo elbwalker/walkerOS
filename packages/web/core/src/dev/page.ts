@@ -5,9 +5,10 @@ import { VENDOR_SCRIPT_MARKER } from '../loadVendor';
  * The page a web step runs on in the conformance kit and the examples runner
  * of `@walkeros/collector/dev`. While a run is open, `navigator.sendBeacon`
  * and `XMLHttpRequest` answer through the kit's boundary (`sendWeb` runs on
- * them), and the scripts the run adds are tracked; closing the run restores
- * both and removes those scripts, so the next run starts on the page it
- * found (the page is loadVendor's once-per-src registry).
+ * them), and the scripts the run adds are tracked: a marked vendor script
+ * loads unless `failScripts` fails it. Closing the run restores both and
+ * removes those scripts, so the next run starts on the page it found (the
+ * page is loadVendor's once-per-src registry).
  */
 
 const macrotask = () => new Promise<void>((resolve) => setTimeout(resolve, 0));
@@ -115,6 +116,25 @@ export const page: Flow.StepPage = {
       replace(navigator, 'sendBeacon', beacon),
     ];
 
+    // A vendor script a run adds loads, as in a browser: once, right after
+    // it is inserted (loadVendor listens before it inserts). jsdom fetches
+    // no script, so without this answer every awaited script times out.
+    const loaded = new WeakSet<Node>();
+    const observer = new MutationObserver((mutations) => {
+      for (const { addedNodes } of mutations)
+        addedNodes.forEach((node) => {
+          if (
+            !(node instanceof HTMLScriptElement) ||
+            !node.hasAttribute(VENDOR_SCRIPT_MARKER) ||
+            loaded.has(node)
+          )
+            return;
+          loaded.add(node);
+          node.dispatchEvent(new Event('load'));
+        });
+    });
+    observer.observe(doc, { childList: true, subtree: true });
+
     return {
       globals: { document: doc },
       scripts: () => {
@@ -130,6 +150,7 @@ export const page: Flow.StepPage = {
           .forEach((script) => script.dispatchEvent(new Event('error')));
       },
       close: () => {
+        observer.disconnect();
         restores.splice(0).forEach((restore) => restore());
         added().forEach((script) => script.remove());
       },

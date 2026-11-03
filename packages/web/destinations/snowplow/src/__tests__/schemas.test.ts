@@ -16,4 +16,12 @@ describe('schemas', () => {
         : undefined;
     expect(isObject(contexts) && Object.keys(contexts)).toContain('browser');
   });
+
+  it('states the appId init falls back to', () => {
+    const appId =
+      isObject(settings.properties) && isObject(settings.properties.appId)
+        ? settings.properties.appId.description
+        : undefined;
+    expect(appId).toMatch(/Default: walkerOS\./);
+  });
 });

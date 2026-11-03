@@ -45,6 +45,10 @@ npm install @walkeros/web-destination-amplitude
 }
 ```
 
+This quick start sets no consent, so Amplitude receives every event without
+consent, and a revocation changes nothing: add `consent: { analytics: true }` to
+`config` before you go live, see the docs.
+
 ## Plugins
 
 With only `apiKey` and the analytics options, only Amplitude analytics starts.

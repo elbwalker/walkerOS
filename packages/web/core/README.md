@@ -10,7 +10,7 @@ Browser-specific utilities for client-side walkerOS implementations, covering
 DOM interactions, browser information, storage, element visibility, web hashing,
 and web-based communication.
 
-[Documentation](https://www.walkeros.io/docs) &bull;
+[Documentation](https://www.walkeros.io/docs/core/web) &bull;
 [NPM Package](https://www.npmjs.com/package/@walkeros/web-core) &bull;
 [Source Code](https://github.com/elbwalker/walkerOS/tree/main/packages/web/core)
 
@@ -28,7 +28,7 @@ import { getAttribute, isVisible, sendWeb } from '@walkeros/web-core';
 const element = document.querySelector('[data-elb="product"]');
 const entity = getAttribute(element, 'data-elb');
 
-if (isVisible(element)) {
+if (isVisible(element, window, document)) {
   await sendWeb('https://api.example.com/events', { entity });
 }
 ```
@@ -36,7 +36,7 @@ if (isVisible(element)) {
 ## Documentation
 
 Full configuration, mapping, and examples live in the docs:
-**https://www.walkeros.io/docs**
+**https://www.walkeros.io/docs/core/web**
 
 ## Contribute
 

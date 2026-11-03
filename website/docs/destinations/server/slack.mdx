@@ -7,6 +7,7 @@ package: '@walkeros/server-destination-slack'
 ---
 import data from '@walkeros/server-destination-slack/walkerOS.json';
 import Configuration from '@site/src/components/snippets/_configuration.mdx';
+import Quickstart from '@site/src/components/snippets/_quickstart.mdx';
 
 import WhereThisFits from '@site/src/components/snippets/_where-this-fits.mdx';
 
@@ -26,65 +27,13 @@ Send walkerOS events to Slack as formatted messages. Supports both Incoming Webh
 
 ## Installation
 
-<CodeSnippet
-  code={`npm install @walkeros/server-destination-slack`}
-  language="bash"
-/>
-
-<Tabs groupId="mode">
-  <TabItem value="integrated" label="Integrated" default>
-
-<CodeSnippet
-  code={`import { startFlow } from '@walkeros/collector';
-import { destinationSlack } from '@walkeros/server-destination-slack';
-
-await startFlow({
-  destinations: {
-    slack: {
-      code: destinationSlack,
-      config: {
-        settings: {
-          token: 'xoxb-your-bot-token',
-          channel: '#notifications',
-        },
-      },
-    },
-  },
-});`}
-  language="typescript"
-/>
-
-  </TabItem>
-  <TabItem value="bundled" label="Bundled">
-
-Add to your `flow.json` destinations:
-
-<CodeSnippet
-  code={`"destinations": {
-  "slack": {
-    "package": "@walkeros/server-destination-slack",
-    "import": "destinationSlack",
-    "config": {
-      "settings": {
-        "token": "xoxb-your-bot-token",
-        "channel": "#notifications"
-      }
-    }
-  }
-}`}
-  language="json"
-/>
-
-[See bundled mode setup](/docs/getting-started/modes/bundled) | [CLI reference](/docs/apps/cli)
-
-  </TabItem>
-</Tabs>
+<Quickstart data={data} />
 
 <Configuration type="destination" data={data} />
 
 ## Webhook vs Web API modes
 
-Pick exactly one auth method per destination. Each mode trades capability for simplicity.
+Pick exactly one auth method per destination; setting both or neither fails with `config`. Each mode trades capability for simplicity.
 
 | Capability | Incoming Webhook (`webhookUrl`) | Web API (`token`) |
 | --- | --- | --- |
@@ -93,10 +42,12 @@ Pick exactly one auth method per destination. Each mode trades capability for si
 | Threading | Not supported | `threadTs` + `replyBroadcast` |
 | Direct messages | Not supported | `dm: true` + `user` |
 | Ephemeral messages | Not supported | `ephemeral: true` |
-| Retries | Plain HTTP | SDK-managed (`retryConfig`) |
+| Retries | One attempt per push; a non-2xx answer fails it with Slack's status | The SDK retries (`retryConfig`), by default up to 10 times over about 30 minutes |
 | Block Kit | Yes | Yes |
 
 Use **webhooks** for a single firehose channel and minimal setup. Use the **Web API** whenever you need routing, threading, DMs, or ephemeral messages.
+
+The destination timeout (`config.timeout`, 10 seconds by default) ends a Web API push with `timeout` while the SDK is still retrying. The SDK keeps retrying in the background and can post the message after the push was reported as failed. With `retryConfig: "none"` the push reports Slack's answer directly.
 
 ## Channel routing
 
@@ -106,10 +57,9 @@ With Web API mode, route events to different channels using nested `entity > act
   code={`"destinations": {
   "slack": {
     "package": "@walkeros/server-destination-slack",
-    "import": "destinationSlack",
     "config": {
       "settings": {
-        "token": "$env.SLACK_BOT_TOKEN",
+        "token": "$secret.SLACK_BOT_TOKEN",
         "channel": "#events"
       },
       "mapping": {
@@ -124,8 +74,7 @@ With Web API mode, route events to different channels using nested `entity > act
         "error": {
           "report": {
             "settings": {
-              "channel": "#incidents",
-              "threadTs": "data.incidentTs"
+              "channel": "#incidents"
             }
           }
         },
@@ -143,7 +92,7 @@ With Web API mode, route events to different channels using nested `entity > act
   language="json"
 />
 
-Events that don't match any rule fall back to the default `channel` in `settings`.
+Events that don't match any rule fall back to the default `channel` in `settings`. Only `text` and `blocks` fill in `${...}` placeholders. `channel`, `threadTs` and `user` are sent as written, so a thread or a DM target is a fixed Slack id.
 
 ## Message formatting
 

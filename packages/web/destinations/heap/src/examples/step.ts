@@ -21,7 +21,7 @@ export const defaultEventForwarding: HeapStepExample = {
   title: 'Default track',
   description:
     'A walker event becomes a Heap track call with the event name and empty properties.',
-  in: getEvent('product view', { timestamp: 1700000100 }),
+  in: getEvent('product view', { timestamp: 1700000100000 }),
   out: [['window.heap.track', 'product view', {}]],
 };
 
@@ -33,13 +33,13 @@ export const destinationLevelInclude: HeapStepExample = {
   title: 'Renamed purchase',
   description:
     'An order complete is renamed to purchase and mapped to Heap track properties such as order_id, total, and currency.',
-  in: getEvent('order complete', { timestamp: 1700000101 }),
+  in: getEvent('order complete', { timestamp: 1700000101000 }),
   mapping: {
     name: 'purchase',
     data: {
       map: {
         order_id: 'data.id',
-        total: 'data.value',
+        total: ['data.total', 'data.value'],
         currency: { key: 'data.currency', value: 'EUR' },
       },
     },
@@ -48,7 +48,7 @@ export const destinationLevelInclude: HeapStepExample = {
     [
       'window.heap.track',
       'purchase',
-      { order_id: '0rd3r1d', total: 555, currency: 'EUR' },
+      { order_id: '0rd3r1d', total: 467.22, currency: 'EUR' },
     ],
   ],
 };
@@ -61,7 +61,7 @@ export const destinationLevelIdentify: HeapStepExample = {
   title: 'Destination identify',
   description:
     "With settings.identify set to 'user.id', the destination calls heap.identify before the default track.",
-  in: getEvent('page view', { timestamp: 1700000102 }),
+  in: getEvent('page view', { timestamp: 1700000102000 }),
   settings: {
     identify: 'user.id',
   },
@@ -81,7 +81,7 @@ export const userLoginIdentify: HeapStepExample = {
     'A user login identifies the Heap user by email and adds user properties while skipping the track.',
   in: createEvent({
     name: 'user login',
-    timestamp: 1700000103,
+    timestamp: 1700000103000,
     data: {
       email: 'user@example.com',
       plan: 'premium',
@@ -113,7 +113,7 @@ export const userLogoutReset: HeapStepExample = {
   title: 'User logout reset',
   description:
     'A user logout calls heap.resetIdentity to clear the identified user from the Heap client.',
-  in: createEvent({ name: 'user logout', timestamp: 1700000104 }),
+  in: createEvent({ name: 'user logout', timestamp: 1700000104000 }),
   mapping: {
     silent: true,
     settings: {
@@ -132,7 +132,7 @@ export const eventWithUserProperties: HeapStepExample = {
   description:
     'An order fires Heap addUserProperties with last-order fields and then tracks the event.',
   in: getEvent('order complete', {
-    timestamp: 1700000105,
+    timestamp: 1700000105000,
     data: {
       id: '0rd3r1d',
       value: 555,
@@ -167,7 +167,7 @@ export const globalEventProperties: HeapStepExample = {
   description:
     'A page view sets persistent Heap event properties so all subsequent events include the page category.',
   in: getEvent('page view', {
-    timestamp: 1700000106,
+    timestamp: 1700000106000,
     data: { category: 'docs' },
   }),
   mapping: {
@@ -216,7 +216,7 @@ export const consentGrantStartTracking: HeapStepExample = {
 export const silentRule: HeapStepExample = {
   public: false,
   description: 'A rule with silent: true and no settings calls nothing.',
-  in: getEvent('page view', { timestamp: 1700000107 }),
+  in: getEvent('page view', { timestamp: 1700000107000 }),
   mapping: { silent: true },
   out: [],
 };

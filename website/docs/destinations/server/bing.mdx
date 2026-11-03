@@ -7,6 +7,7 @@ package: '@walkeros/server-destination-bing'
 ---
 import data from '@walkeros/server-destination-bing/walkerOS.json';
 import Configuration from '@site/src/components/snippets/_configuration.mdx';
+import Quickstart from '@site/src/components/snippets/_quickstart.mdx';
 
 import WhereThisFits from '@site/src/components/snippets/_where-this-fits.mdx';
 
@@ -14,77 +15,33 @@ import WhereThisFits from '@site/src/components/snippets/_where-this-fits.mdx';
 
 <PackageLink env="server" github="packages/server/destinations/bing" npm="@walkeros/server-destination-bing" status="beta" />
 
-Server-side event delivery to Microsoft Advertising's Universal Event Tracking (UET) Conversions API for enhanced conversion tracking in Microsoft Ads campaigns, bypassing browser limitations and improving match quality.
+Server-side event delivery to Microsoft Advertising's Universal Event Tracking (UET) Conversions API for enhanced conversion tracking in Microsoft Ads campaigns. Sending from the server avoids browser limitations and improves match quality.
 
 <WhereThisFits
   pre={<>Bing UET CAPI is a <strong>server destination</strong> in the walkerOS flow:</>}
   flowMap={{
     destinations: { default: { label: 'Destination', text: 'Bing UET CAPI', highlight: true } },
   }}
-  post={<>Sends events server-side to Microsoft's UET Conversions API using raw HTTP (no SDK). Identity fields (`em`, `ph`) are SHA-256 hashed before sending with Microsoft-specific email normalization. Events include a stable `eventId` for deduplication with the UET JavaScript tag.</>}
+  post={<>Sends events server-side to Microsoft's UET Conversions API using raw HTTP (no SDK). Identity fields (`em`, `ph`) are SHA-256 hashed before sending, emails with Microsoft-specific normalization. Events include a stable `eventId` for deduplication with the UET JavaScript tag.</>}
 />
 
 ## Installation
 
-<CodeSnippet
-  code={`npm install @walkeros/server-destination-bing`}
-  language="bash"
-/>
-
-<Tabs groupId="mode">
-  <TabItem value="integrated" label="Integrated" default>
-
-<CodeSnippet
-  code={`import { startFlow } from '@walkeros/collector';
-import { destinationBing } from '@walkeros/server-destination-bing';
-
-await startFlow({
-  destinations: {
-    bing: {
-      code: destinationBing,
-      config: {
-        settings: {
-          accessToken: 'YOUR_ACCESS_TOKEN',
-          tagId: 'YOUR_UET_TAG_ID',
-        },
-      },
-    },
-  },
-});`}
-  language="typescript"
-/>
-
-  </TabItem>
-  <TabItem value="bundled" label="Bundled">
-
-Add to your `flow.json` destinations:
-
-<CodeSnippet
-  code={`"destinations": {
-  "bing": {
-    "package": "@walkeros/server-destination-bing",
-    "import": "destinationBing",
-    "config": {
-      "settings": {
-        "accessToken": "YOUR_ACCESS_TOKEN",
-        "tagId": "YOUR_UET_TAG_ID"
-      }
-    }
-  }
-}`}
-  language="json"
-/>
-
-[See bundled mode setup](/docs/getting-started/modes/bundled) | [CLI reference](/docs/apps/cli)
-
-  </TabItem>
-</Tabs>
+<Quickstart data={data} />
 
 <Configuration type="destination" data={data} />
+
+## Failures
+
+A response outside the 2xx range, a network error, or no answer within 5 seconds fails the event: the push answers `failed` with the code `transport` (with the HTTP status) or `timeout`, the event goes to the dead-letter queue, and the collector logs one ERROR line. Any 2xx answer counts as delivered: the destination does not read the response body. Microsoft answers 200 when it removes an optional field it cannot accept (an `em` or `ph` that is not a SHA-256 hash, for example), and with `continueOnValidationError: true` also when it skips the invalid events of a request, so those events count as delivered too. Without `accessToken` or `tagId` the destination does not start: every push answers `failed` with the code `config`, and the collector logs `destination init failed`. A rule with `silent: true` sends nothing.
 
 ## Client IP and user agent
 
 The destination sends the client IP as `userData.clientIpAddress` and the user agent as `userData.clientUserAgent` by default. The `ip` and `userAgent` settings resolve against `{ ingest, event }` and default to `["ingest.ip", "event.user.ip"]` and `["ingest.userAgent", "event.user.userAgent"]`, so they fill in whenever the source provides them (see the `config.ingest` recipe on the [Express source](/docs/sources/server/express#ingest-metadata)). A value your mapping sets for `userData.clientIpAddress` or `userData.clientUserAgent` wins. A value that resolves to nothing is not sent. Set either setting to `false` to turn it off, or to another mapping value to read it elsewhere.
+
+## Consent
+
+Every event this destination sends carries `adStorageConsent: "G"` (granted), and Microsoft processes an event as granted unless it says `D`. The quickstart sets no `config.consent`, so Microsoft receives every event marked as granted, whatever consent the event carries. To send only events with consent, add `consent: { marketing: true }` to `config`, next to `settings` (with several keys listed, one granted key is enough). An event without that consent is skipped or queued, depending on the collector's `consentDenied`. Server flows built by the CLI skip it and count it in `skipped`. With `startFlow` it waits in the destination's queue by default: a later event that carries consent does not release it, and only a `walker consent` command does, which then sends the waiting events of every user at once. Pass `consentDenied: 'skip'` to `startFlow` to skip such events instead (see [Gate a destination with consent](/docs/guides/consent#gate-a-destination-with-consent) and [consent-denied events on a server](/docs/collector#consent-denied-events-on-a-server)).
 
 ## Event types
 
@@ -125,11 +82,17 @@ Bing UET distinguishes two event types. Set the type via `mapping.settings.event
 
 ### customData structure
 
-Event properties must be nested under `customData`. Common fields include `value`, `currency`, `transactionId`, `items`, `itemIds`, `pageType`, `eventCategory`, `eventLabel`, `eventValue`, `searchTerm`.
+Map event properties under `customData`; every other key of `config.data` and of a rule's `data` except `userData` lands in `customData` too. Common fields include `value`, `currency`, `transactionId`, `items`, `itemIds`, `pageType`, `eventCategory`, `eventLabel`, `eventValue`, `searchTerm`.
 
 ## Hashing
 
-Only `em` (email) and `ph` (phone) are SHA-256 hashed before sending. All other identity fields pass through as-is: `anonymousId`, `externalId`, `msclkid`, `clientIpAddress`, `clientUserAgent`, `idfa`, `gaid`.
+Map identity fields with Microsoft's key names under `userData` in a rule's `data` or the destination's `config.data`, or in `settings.user_data`. No identifier is read from `event.user` on its own; only the client IP and user agent are filled in from it (see [Client IP and user agent](#client-ip-and-user-agent)). The destination SHA-256 hashes `em` (email) and `ph` (phone) before sending.
+
+- **Every other key is sent in clear text.** `anonymousId`, `externalId`, `msclkid`, `clientIpAddress`, `clientUserAgent`, `idfa` and `gaid` are sent as mapped, and so is any other key: nothing checks the names under `userData`, so `email` or `phone` instead of `em` and `ph` reaches Microsoft unhashed. Every other key of `config.data` and of a rule's `data`, a `user_data` object included, lands in `customData`, unhashed.
+- **`anonymousId` and `externalId` are not hashed.** Microsoft asks never to send real user IDs, so map an anonymized or hashed ID there, such as the walkerOS `user.device`, not a login or customer ID.
+- **Every event needs an identifier.** Microsoft requires at least one of `em`, `ph`, `anonymousId`, `externalId`, `msclkid`, `idfa` or `gaid` in `userData`. The client IP and user agent do not count, and the quickstart maps none, so map at least one.
+- **Phone numbers are hashed as mapped**, only trimmed: map them in E.164 format (`+14255551234`), as Microsoft requires.
+- **Map one value per key.** A list is joined with commas and hashed as one string.
 
 ### Microsoft-specific email normalization
 
@@ -140,11 +103,13 @@ Before hashing, emails are normalized to match Microsoft's canonicalization:
 3. Remove dots from the user portion (`a.b.c@example.com` becomes `abc@example.com`)
 4. Strip `+alias` suffix (`user+promo@example.com` becomes `user@example.com`)
 
-Pass raw values and hashing is handled for you. If a value is already hashed or you want to skip hashing for a specific field, use `doNotHash`:
+- **Emails can be mapped raw**; the destination normalizes them as above.
+
+If a value is already hashed or you want to skip hashing for a specific field, use `doNotHash`. A `doNotHash` key is sent exactly as mapped, and Microsoft removes an `em` or `ph` that is not a SHA-256 hash:
 
 <CodeSnippet
   code={`"settings": {
-  "accessToken": "YOUR_ACCESS_TOKEN",
+  "accessToken": "$secret.BING_ACCESS_TOKEN",
   "tagId": "YOUR_UET_TAG_ID",
   "doNotHash": ["em"]
 }`}
@@ -153,13 +118,8 @@ Pass raw values and hashing is handled for you. If a value is already hashed or 
 
 ## Deduplication
 
-Each event is sent with `eventId` set to the walkerOS event `id`. If you also run the UET JavaScript tag in the browser, Microsoft deduplicates server and browser events that share the same `eventId` and `eventName`, so conversions are not double-counted.
-
-## Consent
-
-All events sent to this destination include `adStorageConsent: "G"` (granted). Gate the destination with its `consent` config rather than sending denied events.
+Each event is sent with `eventId` set to the walkerOS event `id`. If you also run the UET JavaScript tag in the browser, Microsoft deduplicates server and browser events that share the same `eventId` and `eventName`, so conversions are not double-counted. Use the same UET tag on both sides and set the rule's `name` to the UET event action: without a `name`, the walkerOS event name (like `order complete`) is sent as `eventName`.
 
 ## Links
 
-- [Microsoft UET Conversions API documentation](https://learn.microsoft.com/en-us/advertising/guides/universal-event-tracking-capi)
-- [Microsoft Advertising CAPI reference](https://help.ads.microsoft.com/)
+- [Microsoft Conversions API (CAPI) documentation](https://learn.microsoft.com/en-us/advertising/guides/uet-conversion-api-integration)

@@ -44,14 +44,14 @@ export const init: Flow.StepExample = {
 
 const pageEvent = getEvent('page view', {
   id: 'ev-1700001000',
-  timestamp: 1700001000,
+  timestamp: 1700001000000,
   data: { title: 'Home', url: 'https://example.com/' },
   source: { type: 'express', platform: 'server' },
 });
 
 const orderEvt = getEvent('order complete', {
   id: 'ev-1700001001',
-  timestamp: 1700001001,
+  timestamp: 1700001001000,
   data: { id: 'ORD-400', value: 99.99, currency: 'EUR' },
   source: { type: 'express', platform: 'server' },
 });
@@ -59,7 +59,7 @@ const orderEvt = getEvent('order complete', {
 const signupEvt = createEvent({
   name: 'user signup',
   id: 'ev-1700001002',
-  timestamp: 1700001002,
+  timestamp: 1700001002000,
   data: { plan: 'pro', source: 'landing-page' },
   user: { id: 'usr-789', email: 'new@example.com' },
   source: { type: 'express', platform: 'server' },
@@ -79,7 +79,7 @@ export const firehoseRecord: Flow.StepExample = {
         Records: [
           {
             Data: Buffer.from(
-              '{"name":"page view","data":{"title":"Home","url":"https://example.com/"},"context":{"dev":["test",1]},"globals":{"pagegroup":"docs"},"custom":{"completely":"random"},"user":{"id":"us3r","device":"c00k13","session":"s3ss10n"},"nested":[{"entity":"child","data":{"is":"subordinated"}}],"consent":{"functional":true},"id":"ev-1700001000","trigger":"load","entity":"page","action":"view","timestamp":1700001000,"timing":3.14,"source":{"count":1,"trace":"0a1b2c3d4e5f60718293a4b5c6d7e8f9","type":"express","platform":"server"}}\n',
+              '{"name":"page view","data":{"title":"Home","url":"https://example.com/"},"context":{"dev":["test",1]},"globals":{"pagegroup":"docs"},"custom":{"completely":"random"},"user":{"id":"us3r","device":"c00k13","session":"s3ss10n"},"nested":[{"entity":"child","data":{"is":"subordinated"}}],"consent":{"functional":true},"id":"ev-1700001000","trigger":"load","entity":"page","action":"view","timestamp":1700001000000,"timing":3.14,"source":{"count":1,"trace":"0a1b2c3d4e5f60718293a4b5c6d7e8f9","type":"express","platform":"server"}}\n',
             ),
           },
         ],
@@ -102,7 +102,7 @@ export const orderEvent: Flow.StepExample = {
         Records: [
           {
             Data: Buffer.from(
-              '{"name":"order complete","data":{"id":"ORD-400","value":99.99,"currency":"EUR"},"context":{"shopping":["complete",0]},"globals":{"pagegroup":"shop"},"custom":{"completely":"random"},"user":{"id":"us3r","device":"c00k13","session":"s3ss10n"},"nested":[{"entity":"product","data":{"id":"ers","name":"Everyday Ruck Snack","color":"black","size":"l","price":420},"context":{"shopping":["complete",0]},"nested":[]},{"entity":"product","data":{"id":"cc","name":"Cool Cap","size":"one size","price":42},"context":{"shopping":["complete",0]},"nested":[]},{"entity":"gift","data":{"name":"Surprise"},"context":{"shopping":["complete",0]},"nested":[]}],"consent":{"functional":true},"id":"ev-1700001001","trigger":"load","entity":"order","action":"complete","timestamp":1700001001,"timing":3.14,"source":{"count":1,"trace":"0a1b2c3d4e5f60718293a4b5c6d7e8f9","type":"express","platform":"server"}}\n',
+              '{"name":"order complete","data":{"id":"ORD-400","value":99.99,"currency":"EUR"},"context":{"shopping":["complete",0]},"globals":{"pagegroup":"shop"},"custom":{"completely":"random"},"user":{"id":"us3r","device":"c00k13","session":"s3ss10n"},"nested":[{"entity":"product","data":{"id":"ers","name":"Everyday Ruck Snack","color":"black","size":"l","price":420},"context":{"shopping":["complete",0]},"nested":[]},{"entity":"product","data":{"id":"cc","name":"Cool Cap","size":"one size","price":42},"context":{"shopping":["complete",0]},"nested":[]},{"entity":"gift","data":{"name":"Surprise"},"context":{"shopping":["complete",0]},"nested":[]}],"consent":{"functional":true},"id":"ev-1700001001","trigger":"load","entity":"order","action":"complete","timestamp":1700001001000,"timing":3.14,"source":{"count":1,"trace":"0a1b2c3d4e5f60718293a4b5c6d7e8f9","type":"express","platform":"server"}}\n',
             ),
           },
         ],
@@ -125,7 +125,7 @@ export const userSignupEvent: Flow.StepExample = {
         Records: [
           {
             Data: Buffer.from(
-              '{"name":"user signup","data":{"plan":"pro","source":"landing-page"},"context":{"dev":["test",1]},"globals":{"lang":"elb"},"custom":{"completely":"random"},"user":{"id":"usr-789","email":"new@example.com"},"nested":[{"entity":"child","data":{"is":"subordinated"}}],"consent":{"functional":true},"id":"ev-1700001002","trigger":"test","entity":"user","action":"signup","timestamp":1700001002,"timing":3.14,"source":{"count":1,"trace":"0a1b2c3d4e5f60718293a4b5c6d7e8f9","type":"express","platform":"server"}}\n',
+              '{"name":"user signup","data":{"plan":"pro","source":"landing-page"},"context":{"dev":["test",1]},"globals":{"lang":"elb"},"custom":{"completely":"random"},"user":{"id":"usr-789","email":"new@example.com"},"nested":[{"entity":"child","data":{"is":"subordinated"}}],"consent":{"functional":true},"id":"ev-1700001002","trigger":"test","entity":"user","action":"signup","timestamp":1700001002000,"timing":3.14,"source":{"count":1,"trace":"0a1b2c3d4e5f60718293a4b5c6d7e8f9","type":"express","platform":"server"}}\n',
             ),
           },
         ],

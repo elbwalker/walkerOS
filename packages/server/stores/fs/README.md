@@ -6,8 +6,8 @@
 
 # @walkeros/server-store-fs
 
-Local filesystem store for walkerOS server flows. Reads and writes files
-relative to a base directory with path traversal protection.
+Local filesystem store for walkerOS server flows. It reads and writes files
+relative to a base directory, with path traversal protection.
 
 [Documentation](https://www.walkeros.io/docs/stores/server/fs) &bull;
 [NPM Package](https://www.npmjs.com/package/@walkeros/server-store-fs) &bull;
@@ -40,7 +40,7 @@ npm install @walkeros/server-store-fs
 
 ## Documentation
 
-Full configuration, mapping, and examples live in the docs:
+Full configuration and examples live in the docs:
 **https://www.walkeros.io/docs/stores/server/fs**
 
 ## Contribute

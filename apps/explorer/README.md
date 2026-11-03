@@ -66,11 +66,6 @@ Explorer ships the walkerOS design system:
 The `walkeros-design-check` command checks a package's own styles against the
 design system.
 
-## Documentation
-
-Full component reference, styling, and examples live in the docs:
-**https://www.walkeros.io/docs**
-
 ## Contribute
 
 Feel free to contribute by submitting an

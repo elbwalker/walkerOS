@@ -33,7 +33,10 @@ npm install @walkeros/server-destination-customerio
         "customerio": {
           "package": "@walkeros/server-destination-customerio",
           "config": {
-            "settings": { "siteId": "YOUR_SITE_ID", "apiKey": "YOUR_API_KEY" }
+            "settings": {
+              "siteId": "YOUR_SITE_ID",
+              "apiKey": "$secret.CUSTOMERIO_API_KEY"
+            }
           }
         }
       }

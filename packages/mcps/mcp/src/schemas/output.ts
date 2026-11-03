@@ -165,6 +165,12 @@ export const ExamplesListOutputShape = {
           .describe(
             'Where the example came from: "inline" (defined in the flow step) or "package" (shipped by the referenced package)',
           ),
+        version: z
+          .string()
+          .optional()
+          .describe(
+            'The package version the example was read from; package examples only',
+          ),
         title: z.string().optional().describe('Human-readable title if set'),
         description: z
           .string()

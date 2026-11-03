@@ -1,0 +1,372 @@
+{
+  "publisher": {
+    "description": "Events of a publisher or media site: the pieces people read, the videos they watch and the pieces they share.",
+    "extend": "default",
+    "events": {
+      "content": {
+        "view": {
+          "title": "Content view",
+          "description": "A page about one piece, such as an article or a video, was shown. Recommended for every publisher.",
+          "examples": [
+            {
+              "name": "content view",
+              "data": {
+                "id": "C_12345",
+                "type": "article",
+                "title": "How to clean leather",
+                "category": "guides"
+              },
+              "trigger": "load"
+            }
+          ],
+          "required": ["data"],
+          "properties": {
+            "data": {
+              "type": "object",
+              "description": "The piece.",
+              "required": ["id"],
+              "properties": {
+                "id": {
+                  "type": ["string", "number"],
+                  "description": "The id of the piece.",
+                  "examples": ["C_12345"]
+                },
+                "type": {
+                  "type": "string",
+                  "description": "The format of the piece, such as article or video.",
+                  "examples": ["article"]
+                },
+                "title": {
+                  "type": "string",
+                  "description": "The title of the piece.",
+                  "examples": ["How to clean leather"]
+                },
+                "category": {
+                  "type": "string",
+                  "description": "The category of the piece.",
+                  "examples": ["guides"]
+                },
+                "author": {
+                  "type": "string",
+                  "description": "The author named on the piece."
+                }
+              }
+            }
+          }
+        },
+        "share": {
+          "title": "Content share",
+          "description": "A reader shared a piece. Recommended for most publishers.",
+          "examples": [
+            {
+              "name": "content share",
+              "data": {
+                "id": "C_12345"
+              },
+              "trigger": "click"
+            }
+          ],
+          "required": ["data"],
+          "properties": {
+            "data": {
+              "type": "object",
+              "description": "The shared piece.",
+              "required": ["id"],
+              "properties": {
+                "id": {
+                  "type": ["string", "number"],
+                  "description": "The id of the piece.",
+                  "examples": ["C_12345"]
+                },
+                "method": {
+                  "type": "string",
+                  "description": "How the piece was shared."
+                }
+              }
+            }
+          }
+        }
+      },
+      "video": {
+        "start": {
+          "title": "Video start",
+          "description": "A video started to play for the first time. Every publisher with video needs it. The video is named by its id, its URL, or both.",
+          "examples": [
+            {
+              "name": "video start",
+              "data": {
+                "id": "0129370",
+                "title": "walkerOS in 3 minutes",
+                "duration": 183,
+                "position": 0,
+                "live": false
+              }
+            }
+          ],
+          "properties": {
+            "data": {
+              "type": "object",
+              "description": "The video.",
+              "properties": {
+                "id": {
+                  "type": ["string", "number"],
+                  "description": "The id of the video.",
+                  "examples": ["0129370"]
+                },
+                "url": {
+                  "type": "string",
+                  "description": "The address of the video."
+                },
+                "title": {
+                  "type": "string",
+                  "description": "The title of the video.",
+                  "examples": ["walkerOS in 3 minutes"]
+                },
+                "duration": {
+                  "type": "number",
+                  "description": "The length of the video in seconds.",
+                  "examples": [183]
+                },
+                "provider": {
+                  "type": "string",
+                  "description": "The player or video service that plays the video."
+                },
+                "position": {
+                  "type": "number",
+                  "description": "Where playback is, in seconds from the start.",
+                  "examples": [0]
+                },
+                "live": {
+                  "type": "boolean",
+                  "description": "True for a live stream.",
+                  "examples": [false]
+                }
+              }
+            }
+          },
+          "anyOf": [
+            {
+              "required": ["data"],
+              "properties": {
+                "data": {
+                  "required": ["id"]
+                }
+              }
+            },
+            {
+              "required": ["data"],
+              "properties": {
+                "data": {
+                  "required": ["url"]
+                }
+              }
+            }
+          ]
+        },
+        "progress": {
+          "title": "Video progress",
+          "description": "Playback passed 10, 25, 50 or 75 percent of the video. Recommended for publishers with video.",
+          "examples": [
+            {
+              "name": "video progress",
+              "data": {
+                "id": "0129370",
+                "title": "walkerOS in 3 minutes",
+                "duration": 183,
+                "percent": 25,
+                "position": 46
+              }
+            }
+          ],
+          "required": ["data"],
+          "properties": {
+            "data": {
+              "type": "object",
+              "description": "The video.",
+              "required": ["percent"],
+              "properties": {
+                "id": {
+                  "type": ["string", "number"],
+                  "description": "The id of the video.",
+                  "examples": ["0129370"]
+                },
+                "url": {
+                  "type": "string",
+                  "description": "The address of the video."
+                },
+                "title": {
+                  "type": "string",
+                  "description": "The title of the video.",
+                  "examples": ["walkerOS in 3 minutes"]
+                },
+                "duration": {
+                  "type": "number",
+                  "description": "The length of the video in seconds.",
+                  "examples": [183]
+                },
+                "percent": {
+                  "type": "number",
+                  "description": "The mark playback passed, in percent of the duration: 10, 25, 50 or 75.",
+                  "examples": [25]
+                },
+                "position": {
+                  "type": "number",
+                  "description": "Where playback is, in seconds from the start.",
+                  "examples": [46]
+                }
+              }
+            }
+          },
+          "anyOf": [
+            {
+              "required": ["data"],
+              "properties": {
+                "data": {
+                  "required": ["id"]
+                }
+              }
+            },
+            {
+              "required": ["data"],
+              "properties": {
+                "data": {
+                  "required": ["url"]
+                }
+              }
+            }
+          ]
+        },
+        "pause": {
+          "title": "Video pause",
+          "description": "The viewer paused the video. Recommended for publishers with video.",
+          "examples": [
+            {
+              "name": "video pause",
+              "data": {
+                "id": "0129370",
+                "title": "walkerOS in 3 minutes",
+                "duration": 183,
+                "position": 46
+              }
+            }
+          ],
+          "properties": {
+            "data": {
+              "type": "object",
+              "description": "The video.",
+              "properties": {
+                "id": {
+                  "type": ["string", "number"],
+                  "description": "The id of the video.",
+                  "examples": ["0129370"]
+                },
+                "url": {
+                  "type": "string",
+                  "description": "The address of the video."
+                },
+                "title": {
+                  "type": "string",
+                  "description": "The title of the video.",
+                  "examples": ["walkerOS in 3 minutes"]
+                },
+                "duration": {
+                  "type": "number",
+                  "description": "The length of the video in seconds.",
+                  "examples": [183]
+                },
+                "position": {
+                  "type": "number",
+                  "description": "Where playback was paused, in seconds from the start.",
+                  "examples": [46]
+                }
+              }
+            }
+          },
+          "anyOf": [
+            {
+              "required": ["data"],
+              "properties": {
+                "data": {
+                  "required": ["id"]
+                }
+              }
+            },
+            {
+              "required": ["data"],
+              "properties": {
+                "data": {
+                  "required": ["url"]
+                }
+              }
+            }
+          ]
+        },
+        "complete": {
+          "title": "Video complete",
+          "description": "The video played to its end. Every publisher with video needs it.",
+          "examples": [
+            {
+              "name": "video complete",
+              "data": {
+                "id": "0129370",
+                "title": "walkerOS in 3 minutes",
+                "duration": 183,
+                "position": 183
+              }
+            }
+          ],
+          "properties": {
+            "data": {
+              "type": "object",
+              "description": "The video.",
+              "properties": {
+                "id": {
+                  "type": ["string", "number"],
+                  "description": "The id of the video.",
+                  "examples": ["0129370"]
+                },
+                "url": {
+                  "type": "string",
+                  "description": "The address of the video."
+                },
+                "title": {
+                  "type": "string",
+                  "description": "The title of the video.",
+                  "examples": ["walkerOS in 3 minutes"]
+                },
+                "duration": {
+                  "type": "number",
+                  "description": "The length of the video in seconds.",
+                  "examples": [183]
+                },
+                "position": {
+                  "type": "number",
+                  "description": "Where playback ended, in seconds from the start.",
+                  "examples": [183]
+                }
+              }
+            }
+          },
+          "anyOf": [
+            {
+              "required": ["data"],
+              "properties": {
+                "data": {
+                  "required": ["id"]
+                }
+              }
+            },
+            {
+              "required": ["data"],
+              "properties": {
+                "data": {
+                  "required": ["url"]
+                }
+              }
+            }
+          ]
+        }
+      }
+    }
+  }
+}

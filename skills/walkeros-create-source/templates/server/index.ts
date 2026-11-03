@@ -1,118 +1,75 @@
-import type { Source } from '@walkeros/core';
-import type { Config, Input, Settings } from './types';
+import type { Source, WalkerOS } from '@walkeros/core';
+import { isObject, pushResultToOutcome } from '@walkeros/core';
+import type { Input, Push, Settings, Types } from './types';
 
-export * as SourceName from './types';
-// Note: schemas belong in ./dev (separate subpath export), never in the
-// main runtime entry — otherwise zod gets pulled into production bundles.
-export * as examples from '../../examples';
+export * as SourceMySource from './types';
+// Examples and schemas live on the ./dev subpath (dev.ts), never in this
+// runtime entry, so zod and test data stay out of production bundles.
 
 /**
- * Server source template using context pattern.
+ * Server source template (an HTTP handler that turns a platform's webhook
+ * body into walkerOS events).
  *
  * Key patterns:
- * 1. Context destructuring - extract config, env, logger, id from context
- * 2. Apply defaults inline - flow.json is developer-controlled
- * 3. Forward to collector - call env.push() to send events
- * 4. Error logging - use logger?.error() for errors only
- * 5. Return Source.Instance - return { type, config, push } object
+ * 1. Context destructuring: config and env from the context
+ * 2. Defaults inline: ./schemas describes the settings for `walkeros
+ *    validate` and walkerOS.json; nothing parses them at runtime
+ * 3. Forward to the collector with env.push and answer the producer from its
+ *    result: pushResultToOutcome gives 200, 400 (invalid input) or 500 (a
+ *    retryable failure)
+ * 4. Input the source cannot read is a 400; the collector reports every other
+ *    failure, so the source logs none itself
+ * 5. Return Source.Instance: { type, config, push }
  */
-export const sourceMySource: Source.Init<{
-  settings: Settings;
-  push: (request: Request) => Promise<Response>;
-  env: Source.Env;
-}> = async (context) => {
-  // Destructure what you need from context
+export const sourceMySource: Source.Init<Types> = async (context) => {
   const { config = {}, env } = context;
-  const { push: envPush, logger } = env;
 
-  // Apply defaults inline — flow.json is developer-controlled, so no
-  // runtime validation. Shape checks live in ./schemas and are used by
-  // `walkeros validate` and dev tooling, never at runtime.
-  const userSettings = config.settings || {};
-  const settings: Settings = {
-    validateSignature: userSettings.validateSignature ?? false,
-    apiKeyHeader: userSettings.apiKeyHeader ?? 'x-api-key',
-  };
+  // Apply defaults inline (this template has no settings)
+  const settings: Settings = { ...config.settings };
 
-  const fullConfig: Source.Config<{ settings: Settings }> = {
-    ...config,
-    settings,
-  };
+  const push: Push = async (request) => {
+    const body = await readJson(request);
+    if (!isInput(body)) return json(400, { error: 'Invalid input format' });
 
-  /**
-   * Push handler - receives incoming data and forwards to collector.
-   * The signature varies by source type (HTTP handler, DOM handler, etc.)
-   */
-  const push = async (request: Request): Promise<Response> => {
-    try {
-      const body = await parseRequestBody(request);
-
-      if (!isValidInput(body)) {
-        return createErrorResponse(400, 'Invalid input format');
-      }
-
-      // Transform to walkerOS event format
-      const eventData = transformInput(body);
-
-      // Forward to collector via env.push
-      await envPush(eventData);
-
-      return createSuccessResponse();
-    } catch (error) {
-      // Log errors per using-logger skill (only errors, not routine ops)
-      logger?.error('Source processing error', { error });
-      return createErrorResponse(500, 'Processing failed');
-    }
+    const outcome = pushResultToOutcome(await env.push(toEvent(body)));
+    return json(outcome.status ?? 200, outcome);
   };
 
   return {
     type: 'my-source',
-    config: fullConfig,
+    config: { ...config, settings },
     push,
   };
 };
 
-/**
- * Parse request body from incoming HTTP request.
- */
-async function parseRequestBody(request: Request): Promise<unknown> {
-  const text = await request.text();
-  return JSON.parse(text);
+/** The request body as JSON, or undefined when it is none. */
+async function readJson(request: Request): Promise<unknown> {
+  try {
+    return await request.json();
+  } catch {
+    return undefined;
+  }
+}
+
+/** Whether a body is the platform's input format. */
+function isInput(body: unknown): body is Input {
+  return isObject(body) && typeof body.event === 'string';
 }
 
 /**
- * Validate input has required fields.
+ * The platform's input as a walkerOS event. A source mapping renames the
+ * event (`page_view` to `page view`).
  */
-function isValidInput(body: unknown): body is Input {
-  return (
-    typeof body === 'object' &&
-    body !== null &&
-    'event' in body &&
-    typeof (body as Input).event === 'string'
-  );
-}
-
-/**
- * Transform incoming input to walkerOS event format.
- * Event renaming is handled by the mapping system, not here.
- */
-function transformInput(input: Input) {
+function toEvent(input: Input): WalkerOS.DeepPartialEvent {
   return {
     name: input.event,
     data: input.properties ?? {},
-    user: input.userId ? { id: input.userId } : undefined,
+    ...(input.userId ? { user: { id: input.userId } } : {}),
   };
 }
 
-function createSuccessResponse(): Response {
-  return new Response(JSON.stringify({ ok: true }), {
-    status: 200,
-    headers: { 'content-type': 'application/json' },
-  });
-}
-
-function createErrorResponse(status: number, message: string): Response {
-  return new Response(JSON.stringify({ error: message }), {
+function json(status: number, body: unknown): Response {
+  return new Response(JSON.stringify(body), {
     status,
     headers: { 'content-type': 'application/json' },
   });

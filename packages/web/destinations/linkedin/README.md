@@ -45,6 +45,10 @@ npm install @walkeros/web-destination-linkedin
 
 LinkedIn tracks only the events whose rule sets a `conversion`, see the docs.
 
+This quick start sets no consent, so the Insight Tag loads and sends every
+conversion you map without consent, and a revocation changes nothing: add
+`consent: { marketing: true }` to `config` before you go live, see the docs.
+
 ## Documentation
 
 Full configuration, mapping, and examples live in the docs:

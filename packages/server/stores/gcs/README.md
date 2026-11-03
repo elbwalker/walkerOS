@@ -6,7 +6,7 @@
 
 # @walkeros/server-store-gcs
 
-Google Cloud Storage store with zero runtime dependencies. Uses raw `fetch`
+Google Cloud Storage store with zero runtime dependencies. It uses raw `fetch`
 against the GCS JSON API with built-in auth via Application Default Credentials
 or an explicit service account JWT.
 
@@ -41,7 +41,7 @@ npm install @walkeros/server-store-gcs
 
 ## Documentation
 
-Full configuration, mapping, and examples live in the docs:
+Full configuration and examples live in the docs:
 **https://www.walkeros.io/docs/stores/server/gcs**
 
 ## Contribute

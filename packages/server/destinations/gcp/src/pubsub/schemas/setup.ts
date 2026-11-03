@@ -12,7 +12,7 @@ export const SetupSchema = z.object({
       allowedPersistenceRegions: z
         .array(z.string())
         .describe(
-          'Geographic regions for at-rest message storage. Default: EU multi-region (eu-west1, eu-west3, eu-west4).',
+          'Geographic regions for at-rest message storage (like europe-west1). Default: europe-west1, europe-west3 and europe-west4.',
         ),
     })
     .describe('Topic-level message storage policy.')

@@ -54,8 +54,8 @@ export const jsonlDefault: FileStepExample = {
   ],
 };
 
-/** Baersch-style TSV log: PHP parity case. */
-export const tsvBaerschLog: FileStepExample = {
+/** Compact TSV access log with selected fields. */
+export const tsvLog: FileStepExample = {
   title: 'TSV log',
   description:
     'An event is written as a tab-separated line selecting specific fields for a compact access-log style file.',
@@ -71,7 +71,7 @@ export const tsvBaerschLog: FileStepExample = {
     },
   }),
   settings: {
-    filename: 'storage/mblog.txt',
+    filename: 'logs/access.tsv',
     format: 'tsv',
     fields: [
       'timestamp',
@@ -85,7 +85,7 @@ export const tsvBaerschLog: FileStepExample = {
   out: [
     [
       'fs.writeFile',
-      'storage/mblog.txt',
+      'logs/access.tsv',
       '1700000000000\tsess-1\tpage view\thttps://example.com/docs\tDocs\thttps://example.com/\n',
     ],
   ],

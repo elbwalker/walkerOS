@@ -86,3 +86,27 @@ describe('Step Examples', () => {
 
 it('declares simulation paths that resolve', () =>
   expectSimulationResolves(examples.env));
+
+// The rule settings push.ts sends; a published example setting any other one
+// would teach a setting that has no effect.
+const sentRuleSettings = ['eventId', 'value', 'number_items', 'description'];
+
+describe('Step example rule settings', () => {
+  const published = Object.entries(examples.step).filter(
+    ([, example]) => example.public !== false,
+  );
+
+  it.each(published)(
+    '%s sets only rule settings the destination sends',
+    (_name, example) => {
+      const settings =
+        isObject(example.mapping) && isObject(example.mapping.settings)
+          ? example.mapping.settings
+          : {};
+
+      expect(
+        Object.keys(settings).filter((key) => !sentRuleSettings.includes(key)),
+      ).toEqual([]);
+    },
+  );
+});

@@ -16,6 +16,7 @@ describe('clickhouse conformance', () => {
       // No retry: the kit's failure answers are judged on the first attempt.
       settings: { url: 'https://clickhouse.example.com:8443', maxRetries: 0 },
       env: { push: examples.env.push, simulation: examples.env.simulation },
+      minimal: examples.minimal,
       root: path.join(__dirname, '..', '..'),
     });
   });

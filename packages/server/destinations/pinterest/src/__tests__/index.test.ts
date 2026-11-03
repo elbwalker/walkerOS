@@ -358,7 +358,7 @@ describe('Server Destination Pinterest', () => {
     expect(requestBody.data[0].custom_data).toBeDefined();
     expect(requestBody.data[0].custom_data.order_id).toBe('0rd3r1d');
     expect(requestBody.data[0].custom_data.currency).toBe('EUR');
-    expect(requestBody.data[0].custom_data.value).toBe(555);
+    expect(requestBody.data[0].custom_data.value).toBe(462);
     expect(requestBody.data[0].custom_data.contents).toEqual([
       {
         id: 'ers',

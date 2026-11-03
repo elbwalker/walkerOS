@@ -23,7 +23,7 @@ export const defaultEventForwarding: ClarityStepExample = {
   title: 'Default event',
   description:
     'A walker event becomes a Clarity.event call with the event name as the Clarity custom event.',
-  in: getEvent('product view', { timestamp: 1700000100 }),
+  in: getEvent('product view', { timestamp: 1700000100000 }),
   out: [['clarity.event', 'product view']],
 };
 
@@ -35,7 +35,7 @@ export const defaultEventForwarding: ClarityStepExample = {
  */
 export const wildcardIgnored: ClarityStepExample = {
   public: false,
-  in: createEvent({ name: 'debug noise', timestamp: 1700000101 }),
+  in: createEvent({ name: 'debug noise', timestamp: 1700000101000 }),
   mapping: { ignore: true },
   out: [],
 };
@@ -52,7 +52,7 @@ export const userLoginIdentify: ClarityStepExample = {
     'A user login fires Clarity.identify with custom id, session id, page id, and friendly name then tracks the event.',
   in: createEvent({
     name: 'user login',
-    timestamp: 1700000102,
+    timestamp: 1700000102000,
     data: { id: 'u-123', name: 'Jane Doe' },
     globals: { pagegroup: 'shop', pagetype: 'home' },
   }),
@@ -83,7 +83,7 @@ export const destinationLevelIdentify: ClarityStepExample = {
   title: 'Destination identify',
   description:
     "With settings.identify mapping customId to 'user.id', the destination calls Clarity.identify on every push, as Clarity recommends, before the event.",
-  in: getEvent('page view', { timestamp: 1700000103 }),
+  in: getEvent('page view', { timestamp: 1700000103000 }),
   settings: {
     identify: {
       map: {
@@ -106,7 +106,7 @@ export const productViewWithTags: ClarityStepExample = {
   title: 'Custom tags',
   description:
     'A product view sets Clarity session tags such as product color and id before firing the event.',
-  in: getEvent('product view', { timestamp: 1700000104 }),
+  in: getEvent('product view', { timestamp: 1700000104000 }),
   mapping: {
     settings: {
       set: {
@@ -135,7 +135,7 @@ export const arrayTagValue: ClarityStepExample = {
   description:
     'Array values such as product tags are passed through to Clarity.setTag preserving the array shape.',
   in: getEvent('product view', {
-    timestamp: 1700000105,
+    timestamp: 1700000105000,
     data: {
       id: 'ers',
       name: 'Everyday Ruck Snack',
@@ -168,7 +168,7 @@ export const orderCompleteUpgrade: ClarityStepExample = {
   title: 'Upgrade session',
   description:
     'A completed order upgrades the Clarity session priority so it is retained beyond the sampling cap.',
-  in: getEvent('order complete', { timestamp: 1700000106 }),
+  in: getEvent('order complete', { timestamp: 1700000106000 }),
   mapping: {
     name: 'Purchase',
     settings: {
@@ -191,16 +191,17 @@ export const orderCompleteInclude: ClarityStepExample = {
   title: 'Include data as tags',
   description:
     'A mapping include flattens the event data section into Clarity.setTag calls before the event fires.',
-  in: getEvent('order complete', { timestamp: 1700000107 }),
+  in: getEvent('order complete', { timestamp: 1700000107000 }),
   mapping: {
     include: ['data'],
   },
   out: [
     ['clarity.setTag', 'data_id', '0rd3r1d'],
     ['clarity.setTag', 'data_currency', 'EUR'],
+    ['clarity.setTag', 'data_value', '462'],
+    ['clarity.setTag', 'data_tax', '73.76'],
     ['clarity.setTag', 'data_shipping', '5.22'],
-    ['clarity.setTag', 'data_taxes', '73.76'],
-    ['clarity.setTag', 'data_value', '555'],
+    ['clarity.setTag', 'data_total', '467.22'],
     ['clarity.event', 'order complete'],
   ],
 };
@@ -215,7 +216,7 @@ export const combinedFeatures: ClarityStepExample = {
   title: 'Combined features',
   description:
     'A purchase identifies the user, sets an order tag, upgrades the session, and fires the Clarity event in order.',
-  in: getEvent('order complete', { timestamp: 1700000108 }),
+  in: getEvent('order complete', { timestamp: 1700000108000 }),
   mapping: {
     name: 'Purchase',
     settings: {
@@ -241,7 +242,7 @@ export const pageViewSilent: ClarityStepExample = {
   title: 'Tags without event',
   description:
     'A page view sets Clarity tags while silent suppresses the event, letting Clarity handle page tracking itself.',
-  in: getEvent('page view', { timestamp: 1700000109 }),
+  in: getEvent('page view', { timestamp: 1700000109000 }),
   mapping: {
     silent: true,
     settings: {
@@ -317,7 +318,7 @@ export const consentRevoke: ClarityStepExample = {
 export const silentRule: ClarityStepExample = {
   public: false,
   description: 'A rule with silent: true and no settings calls nothing.',
-  in: getEvent('page view', { timestamp: 1700000110 }),
+  in: getEvent('page view', { timestamp: 1700000110000 }),
   mapping: { silent: true },
   out: [],
 };
@@ -327,7 +328,7 @@ export const clarityUnreachable: ClarityStepExample = {
   public: false,
   description:
     'The Clarity SDK fails, so the destination does not start: the push fails with vendor-not-ready, retryable, and the event is in the DLQ.',
-  in: getEvent('product view', { timestamp: 1700000111 }),
+  in: getEvent('product view', { timestamp: 1700000111000 }),
   respond: { error: 'network' },
   out: [],
   outcome: { status: 'failed', code: 'vendor-not-ready', retryable: true },

@@ -22,6 +22,11 @@ const fetchOut = (name: string): Flow.StepOut => [
 ];
 const settings = fixtures.settings;
 
+/** A module helper: published code that calls it cannot resolve it. */
+function isPageView(event: unknown): boolean {
+  return isObject(event) && event.name === 'page view';
+}
+
 describe('runExamples', () => {
   beforeEach(() => {
     jest.useRealTimers();
@@ -114,25 +119,54 @@ describe('runExamples', () => {
       ).resolves.toBeUndefined();
     });
 
-    it('runs a mapping as published: a function that needs its module fails', async () => {
-      const scoped: Flow.StepExamples = {
-        scoped: {
-          in: getEvent('page view', { user: { id: 'user-1' } }),
+    it('runs every example as published: code that needs its module fails, naming the example and the identifier', async () => {
+      const event = getEvent('page view', { user: { id: 'user-1' } });
+      const run = (example: Flow.StepExample) =>
+        runExamples('destination', good, { example }, { settings });
+
+      await expect(
+        run({
+          in: event,
           mapping: {
-            condition: (event: unknown) =>
-              isObject(event) && event.name === 'page view',
+            condition: (event: unknown) => isPageView(event),
             silent: true,
           },
           out: [],
-        },
-      };
+        }),
+      ).rejects.toThrow(
+        'example example: published code fails: isPageView is not defined (a function in a published example can use only its parameters and standard globals)',
+      );
+
+      // Source text that is not an expression does not evaluate again.
+      await expect(
+        run({
+          in: event,
+          mapping: {
+            condition(event: unknown) {
+              return isObject(event);
+            },
+            silent: true,
+          },
+          out: [],
+        }),
+      ).rejects.toThrow(
+        /^example example: published code fails: its \$code does not evaluate: /,
+      );
 
       await expect(
-        runExamples('destination', good, scoped, { settings }),
+        run({
+          in: event,
+          mapping: {
+            condition: (event: unknown) =>
+              typeof event === 'object' &&
+              event !== null &&
+              'name' in event &&
+              event.name === 'page view',
+            silent: true,
+          },
+          out: [],
+        }),
       ).resolves.toBeUndefined();
-      await expect(
-        runExamples('destination', good, scoped, { settings, published: true }),
-      ).rejects.toThrow(/example scoped/);
     });
 
     it('looks claimed examples up by their standard event name (R1, R3)', async () => {
@@ -384,7 +418,9 @@ describe('runExamples', () => {
             const started = await startFlow(config);
             flow = { collector: started.collector, elb: started.elb };
           }
-          if (isEvent(content)) await flow.collector.sources.step.push(content);
+          const input: unknown =
+            typeof content === 'function' ? content() : content;
+          if (isEvent(input)) await flow.collector.sources.step.push(input);
         },
       };
     };
@@ -403,6 +439,32 @@ describe('runExamples', () => {
           { createTrigger },
         ),
       ).resolves.toBeUndefined();
+    });
+
+    it('runs code outside the mapping as published too: a function in in', async () => {
+      const label = 'page view';
+      const run = (input: () => unknown) =>
+        runExamples(
+          'source',
+          forwarding,
+          { input: { in: input, out: [['elb', { name: 'page view' }]] } },
+          { createTrigger },
+        );
+
+      await expect(
+        run(() => ({ name: isPageView({ name: label }) ? label : 'none' })),
+      ).rejects.toThrow(
+        'example input: published code fails: isPageView is not defined',
+      );
+      // No throw, another outcome: the closure's label is gone as published.
+      await expect(
+        run(() => ({
+          name: typeof label === 'string' ? label : 'none',
+        })),
+      ).rejects.toThrow(
+        'example input: published code fails: out differs: expected [["elb",{"name":"page view"}]], got [["elb",{"name":"none"}]]',
+      );
+      await expect(run(() => ({ name: 'page view' }))).resolves.toBeUndefined();
     });
   });
 });

@@ -270,7 +270,7 @@ const teaching = {
     chapter: 'web-entry',
     level: 'intermediate',
     useCases: ['consent', 'sessions'],
-    note: 'require holds the source until consent and session are known.',
+    note: 'require holds back the entries already in the dataLayer until consent and session are known; new pushes are captured from the start.',
     docs: [],
   },
   'source-mapping': {
@@ -959,11 +959,11 @@ const teaching = {
     docs: [{ page: 'guides/reference-syntax' }],
   },
   'ref-env': {
-    pointer: '/flows/server/transformers/fingerprint/config/settings/salt',
+    pointer: '/flows/web/collector/custom/environment',
     chapter: 'references',
     level: 'intermediate',
-    useCases: ['cookieless-id'],
-    note: '$env without a default must be set: a secret salt never gets a public default.',
+    useCases: [],
+    note: '$env without a default must be set: this web flow declares ENVIRONMENT in config.bundle.env, so the build never misses it.',
     docs: [{ page: 'guides/reference-syntax' }],
   },
   'ref-env-default': {
@@ -1020,7 +1020,7 @@ const teaching = {
     chapter: 'references',
     level: 'advanced',
     useCases: ['deploy'],
-    note: 'Web $env is resolved at build time from this declared set, so every build is the same.',
+    note: 'Web $env is resolved at build time: a local walkeros bundle reads the shell environment with this declared set on top.',
     docs: [{ page: 'guides/reference-syntax' }],
   },
 

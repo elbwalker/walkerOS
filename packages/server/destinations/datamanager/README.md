@@ -33,6 +33,7 @@ npm install @walkeros/server-destination-datamanager
         "datamanager": {
           "package": "@walkeros/server-destination-datamanager",
           "config": {
+            "data": { "map": { "transactionId": "id" } },
             "settings": {
               "destinations": [
                 {
@@ -51,6 +52,11 @@ npm install @walkeros/server-destination-datamanager
   }
 }
 ```
+
+The destination sends an event only when it carries a `transactionId`; this
+quick start maps the walkerOS event `id` to it. For an order that the Google tag
+also reports, map the order ID the tag sends instead, so Google can deduplicate
+the two.
 
 ## Documentation
 

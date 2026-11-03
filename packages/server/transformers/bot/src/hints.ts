@@ -26,7 +26,7 @@ const CONTEXT_FROM_TRANSPORT = [
 
 export const hints: Hint.Hints = {
   'ingest-prerequisite': {
-    text: 'The bot transformer reads its signals from ctx.ingest (path "ingest.<name>" by default). The upstream server source must populate them via config.ingest, which MUST use the map operator with direct request field paths (no req. prefix); a bare object like { userAgent: "req.headers.user-agent" } is silently inert and leaves ingest empty. With nothing in ingest the score is null and the category is "unknown". The map is also where the request context enters: lift the sender annotation with transport: { key: "query.transport" } and one instance then serves every transport, see the transport-wiring hint.',
+    text: 'The bot transformer reads its signals from ctx.ingest (path "ingest.<name>" by default). The upstream server source must populate them via config.ingest, which MUST use the map operator with direct request field paths (no req. prefix); a bare object like { userAgent: "req.headers.user-agent" } has no operator: walkeros validate and the bundle reject it (MAPPING_VALUE_NO_OPERATOR), and at runtime the collector logs an ERROR and ingest stays empty. With nothing in ingest the score is null and the category is "unknown". The map is also where the request context enters: lift the sender annotation with transport: { key: "query.transport" } and one instance then serves every transport, see the transport-wiring hint.',
     code: [
       {
         lang: 'json',

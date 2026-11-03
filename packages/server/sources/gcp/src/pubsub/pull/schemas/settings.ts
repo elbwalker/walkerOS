@@ -44,7 +44,7 @@ export const SettingsSchema = z.object({
   decoder: z
     .enum(['json', 'text', 'raw'])
     .describe(
-      'Decoder for the message data field. json (default) parses JSON, text decodes UTF-8, raw forwards the Buffer.',
+      'Decoder for the message data field. json (default) parses JSON; text forwards the UTF-8 string as data.payload; raw forwards the bytes base64 encoded as data.payload. text and raw events need a before transformer that sets the event name.',
     )
     .optional(),
   flowControl: z

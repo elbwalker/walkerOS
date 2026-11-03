@@ -27,16 +27,33 @@ Extend a shared config, for example in your `tsconfig.json`:
 {
   "extends": "@walkeros/config/tsconfig/base.json",
   "compilerOptions": {
-    "rootDir": "src"
+    "rootDir": "src",
+    "outDir": "dist",
+    "tsBuildInfoFile": "dist/tsconfig.tsbuildinfo"
   },
   "include": ["src/**/*"]
 }
 ```
 
+Set `outDir` and `tsBuildInfoFile` in your own file: TypeScript resolves a path
+in an extended config against that config's folder, so both inherited paths
+point into `node_modules/@walkeros/config/tsconfig/`, where every project that
+extends the base shares one build-info file. With the inherited build-info path,
+deleting `dist` and running `tsc` again exits 0 and writes nothing.
+
+## Entry points
+
+| Import                                                                   | Content                                                                                                                                                                                                                                                                                           |
+| ------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `@walkeros/config/tsconfig/base.json`, `web.json`, `node.json`           | TypeScript presets; `web` adds the DOM lib and targets ES2018.                                                                                                                                                                                                                                    |
+| `@walkeros/config/eslint`, `eslint/web`, `eslint/node`, `eslint/neutral` | ESLint flat configs: the base and one per platform.                                                                                                                                                                                                                                               |
+| `@walkeros/config/tsup`                                                  | tsup helpers: `baseConfig`, `defineConfig`, `buildModules`, `buildDev`, `buildBrowser`, `buildES5`, `buildExamples`. No type declarations resolve for this import, so a strict typecheck of a `tsup.config.ts` that imports it reports TS7016, and `tsup/index.d.ts` does not declare `buildDev`. |
+| `@walkeros/config/jest`, `jest/web.config`, `jest/node.config`           | Jest configs for packages inside the walkerOS repository: they map `@walkeros/*` imports to its package sources and throw anywhere else.                                                                                                                                                          |
+
 ## Documentation
 
-Full configuration, mapping, and examples live in the docs:
-**https://www.walkeros.io/docs**
+`buildDev` writes the `dist/walkerOS.json` a step package publishes; see
+[Build-time generation](https://www.walkeros.io/docs/destinations/create-your-own#build-time-generation).
 
 ## Contribute
 

@@ -98,15 +98,18 @@ export function buildBaseState(
  * The error a `FlowState` carries: name and message for an `Error`, the
  * message alone for anything else thrown, plus the failure code, whether a
  * retry can help and the HTTP status. A throw that is not a `StepError` gets
- * `code` (`transport` unless the position says otherwise).
+ * `code` when the position names one, else the reason the push result
+ * carries (`toFailureReason`).
  */
 export function observerStepError(
   err: unknown,
-  code = 'transport',
+  code?: string,
 ): NonNullable<FlowState['error']> {
   const message = err instanceof Error ? err.message : String(err);
   const reason = toFailureReason(
-    err instanceof StepError ? err : new StepError(message, { code }),
+    err instanceof StepError || code === undefined
+      ? err
+      : new StepError(message, { code }),
   );
   return {
     ...(err instanceof Error ? { name: err.name, message } : { message }),

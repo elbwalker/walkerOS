@@ -1,23 +1,20 @@
+import type { Flow } from './types';
+import { isStringRecord, parsePackageMeta } from './packageMeta';
+
 const JSDELIVR_BASE = 'https://cdn.jsdelivr.net/npm';
 const DEFAULT_SCHEMA_PATH = 'dist/walkerOS.json';
-
-function parsePlatform(value: unknown): string | string[] | undefined {
-  if (typeof value === 'string') return value;
-  if (Array.isArray(value) && value.every((v) => typeof v === 'string'))
-    return value as string[];
-  return undefined;
-}
 
 export interface ExampleSummary {
   name: string;
   description?: string;
 }
 
-export interface WalkerOSPackageMeta {
+export interface WalkerOSPackageMeta extends Pick<
+  Flow.PackageMeta,
+  'version' | 'type'
+> {
   packageName: string;
-  version: string;
   description?: string;
-  type?: string;
   platform?: string | string[];
 }
 
@@ -166,13 +163,6 @@ function isRecordOfRecords(
   return isObjectRecord(value) && Object.values(value).every(isObjectRecord);
 }
 
-function isStringRecord(value: unknown): value is Record<string, string> {
-  return (
-    isObjectRecord(value) &&
-    Object.values(value).every((entry) => typeof entry === 'string')
-  );
-}
-
 async function fetchJson(
   url: string,
   signal: AbortSignal,
@@ -183,20 +173,21 @@ async function fetchJson(
   return (await res.json()) as Record<string, unknown>;
 }
 
-function parsePackage(
-  packageName: string,
-  ver: string,
-  pkg: Record<string, unknown>,
+/**
+ * The walkerOS metadata of a package, parsed from its walkerOS.json the same
+ * way for every source: a CDN release or a local package on disk.
+ */
+export function parseWalkerOSJson(
   walkerOSJson: Record<string, unknown>,
-): WalkerOSPackage {
-  const meta = (walkerOSJson.$meta as Record<string, unknown>) || {};
+): Omit<WalkerOSPackage, 'packageName' | 'version' | 'description'> {
+  const meta = parsePackageMeta(walkerOSJson.$meta);
   const schemas = (walkerOSJson.schemas as Record<string, unknown>) || {};
   const examples = (walkerOSJson.examples as Record<string, unknown>) || {};
   const hints = walkerOSJson.hints as Record<string, unknown> | undefined;
   const hintKeys = hints ? Object.keys(hints) : [];
   const exportExamples = walkerOSJson.exportExamples;
   const exportSchemas = walkerOSJson.exportSchemas;
-  const exports = meta.exports;
+  const { docs, source, exports } = meta;
 
   const exampleSummaries: ExampleSummary[] = [];
   const stepExamples = (examples.step || {}) as Record<string, unknown>;
@@ -208,16 +199,9 @@ function parsePackage(
     exampleSummaries.push(summary);
   }
 
-  const docs = typeof meta.docs === 'string' ? meta.docs : undefined;
-  const source = typeof meta.source === 'string' ? meta.source : undefined;
-
   return {
-    packageName,
-    version: typeof pkg.version === 'string' ? pkg.version : ver,
-    description:
-      typeof pkg.description === 'string' ? pkg.description : undefined,
-    type: typeof meta.type === 'string' ? meta.type : undefined,
-    platform: parsePlatform(meta.platform),
+    type: meta.type,
+    platform: meta.platform,
     schemas,
     examples,
     ...(docs ? { docs } : {}),
@@ -227,7 +211,22 @@ function parsePackage(
     exampleSummaries,
     ...(isObjectRecord(exportExamples) ? { exportExamples } : {}),
     ...(isRecordOfRecords(exportSchemas) ? { exportSchemas } : {}),
-    ...(isStringRecord(exports) ? { exports } : {}),
+    ...(exports ? { exports } : {}),
+  };
+}
+
+function parsePackage(
+  packageName: string,
+  ver: string,
+  pkg: Record<string, unknown>,
+  walkerOSJson: Record<string, unknown>,
+): WalkerOSPackage {
+  return {
+    packageName,
+    version: typeof pkg.version === 'string' ? pkg.version : ver,
+    description:
+      typeof pkg.description === 'string' ? pkg.description : undefined,
+    ...parseWalkerOSJson(walkerOSJson),
   };
 }
 

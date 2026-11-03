@@ -1,99 +1,43 @@
+import { startFlow } from '@walkeros/collector';
+import { clone, createLogger, observeEnv } from '@walkeros/core';
+import type { Config } from './types';
 import { destinationVendor } from '.';
-import type { Destination } from '@walkeros/core';
-import { createMockContext } from '@walkeros/core';
-import type { Settings } from './types';
-import { events, outputs, env as mockEnv } from '../../examples';
+import { examples } from './dev';
 
 /**
- * Test template for simple destinations.
- *
- * Key patterns:
- * 1. Use createMockContext() - standardizes context creation with sensible defaults
- * 2. Include id field - required in context
- * 3. Use rule instead of mapping - property renamed in PushContext
- * 4. Use examples for test data - don't hardcode test values
- * 5. Await push: it returns a promise and a failure is a rejection
- *
- * The failure contract (a failing send is reported, a silent rule sends
- * nothing, consent reaches the vendor) is proven by conformance.test.ts on a
- * real collector. Do not prove delivery or loss with a mocked collector.
+ * Test template for the destination's own boundaries. The step examples are
+ * the tests: `runExamples` in conformance.test.ts runs every event example on
+ * a real collector. Keep tests here for what no example states, such as the
+ * init example (its `in` is a config, not an event), ordering or a boundary.
+ * Never hard-code a payload: add it to `examples.step` and read it from there.
  */
+describe('vendor destination', () => {
+  it('runs the init example', async () => {
+    const { init } = examples.step;
+    // `init.in` is `unknown`: the config is restated with its type so the
+    // init call typechecks, and the assertion pins it to the example
+    const config: Config = {
+      loadScript: true,
+      settings: { apiKey: 'YOUR_API_KEY' },
+    };
+    expect(init.in).toEqual(config);
 
-// Helper to create push context for testing
-function createPushContext(
-  overrides: Partial<Destination.PushContext<Settings>> = {},
-) {
-  return createMockContext({
-    env: mockEnv.push,
-    id: 'test-vendor',
-    data: {},
-    rule: undefined,
-    ...overrides,
-  });
-}
-
-describe('destinationVendor', () => {
-  beforeEach(() => {
-    jest.clearAllMocks();
-  });
-
-  test('page view produces correct output', async () => {
-    const mockSdk = jest.fn();
-    const context = createPushContext({
-      env: {
-        window: { vendorSdk: mockSdk },
-        document: {},
-      },
-      data: { url: '/home', title: 'Home Page' },
-    });
-
-    await destinationVendor.push(events.pageView, context);
-
-    // Verify against expected output from examples
-    expect(mockSdk).toHaveBeenCalledWith(
-      outputs.pageViewCall.method,
-      ...outputs.pageViewCall.args,
+    // Record the calls on the paths `examples.env.simulation` names
+    const observed = observeEnv(
+      clone(examples.env.push),
+      examples.env.simulation,
     );
-  });
-
-  test('purchase produces correct output', async () => {
-    const mockSdk = jest.fn();
-    const context = createPushContext({
-      env: {
-        window: { vendorSdk: mockSdk },
-        document: {},
-      },
-      data: {
-        transaction_id: 'T-123',
-        value: 99.99,
-        currency: 'USD',
-        items: [{ item_id: 'P-1', item_name: 'Widget', price: 99.99 }],
-      },
+    const { collector } = await startFlow();
+    await destinationVendor.init?.({
+      id: 'vendor',
+      config,
+      env: observed.env,
+      logger: createLogger(),
+      collector,
     });
 
-    await destinationVendor.push(events.purchase, context);
-
-    expect(mockSdk).toHaveBeenCalledWith(
-      outputs.purchaseCall.method,
-      ...outputs.purchaseCall.args,
-    );
-  });
-
-  test('custom event produces correct output', async () => {
-    const mockSdk = jest.fn();
-    const context = createPushContext({
-      env: {
-        window: { vendorSdk: mockSdk },
-        document: {},
-      },
-      data: { button_id: 'cta', button_text: 'Sign Up' },
-    });
-
-    await destinationVendor.push(events.buttonClick, context);
-
-    expect(mockSdk).toHaveBeenCalledWith(
-      outputs.customEventCall.method,
-      ...outputs.customEventCall.args,
+    expect(observed.calls.map(({ fn, args }) => [fn, ...args])).toEqual(
+      init.out,
     );
   });
 });

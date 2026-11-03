@@ -108,17 +108,20 @@ export interface ResponseBody {
   data?: Record<string, unknown>;
 }
 
-// Standard TikTok event names
+/**
+ * Some of TikTok's standard event names, for IDE autocomplete on
+ * `mapping.name`. TikTok's own list is the complete one:
+ * https://ads.tiktok.com/help/article/standard-events-parameters
+ * `| string` allows any other name.
+ */
 export type StandardEventName =
   | 'ViewContent'
-  | 'ClickButton'
   | 'Search'
   | 'AddToWishlist'
   | 'AddToCart'
   | 'InitiateCheckout'
   | 'AddPaymentInfo'
-  | 'CompletePayment'
-  | 'PlaceAnOrder'
+  | 'Purchase'
   | 'Contact'
   | 'Download'
   | 'SubmitForm'

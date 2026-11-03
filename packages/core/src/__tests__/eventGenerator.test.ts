@@ -80,8 +80,9 @@ describe('createEvent', () => {
       expect.objectContaining({
         name: 'promotion visible',
         data: {
+          id: 'promo_autumn26',
           name: 'Setting up tracking easily',
-          position: 'hero',
+          slot: 'hero',
         },
         trigger: 'visible',
       }),
@@ -113,9 +114,10 @@ describe('getEvent', () => {
     expect(getEvent('order complete').data).toStrictEqual({
       id: '0rd3r1d',
       currency: 'EUR',
+      value: 462,
+      tax: 73.76,
       shipping: 5.22,
-      taxes: 73.76,
-      value: 555,
+      total: 467.22,
     });
   });
 

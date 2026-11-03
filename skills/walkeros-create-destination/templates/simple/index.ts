@@ -1,6 +1,7 @@
 import type { Config, Destination, Env, Types } from './types';
 import type { Destination as CoreDestination, WalkerOS } from '@walkeros/core';
 import { getGrantedConsent, isObject, StepError } from '@walkeros/core';
+import type { DestinationWeb } from '@walkeros/web-core';
 import { getEnv, loadVendor } from '@walkeros/web-core';
 
 export * as DestinationVendor from './types';
@@ -34,9 +35,12 @@ function vendor(config: Config, env?: Env) {
   );
 }
 
-/** The SDK global, or a StepError when it is not there. */
-function sdk(env?: Env) {
-  const { vendorSdk } = getEnv<Env>(env).window;
+/**
+ * The SDK global, or a StepError when it is not there. Takes the web env
+ * every handler has: `on` receives no destination-typed env.
+ */
+function sdk(env?: DestinationWeb.Env) {
+  const { vendorSdk } = getEnv(env).window;
   if (!vendorSdk)
     throw new StepError('Vendor SDK not ready: window.vendorSdk is missing', {
       code: 'vendor-not-ready',

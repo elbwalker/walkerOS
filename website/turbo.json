@@ -14,7 +14,9 @@
         "src/css/custom.css",
         "static/fonts/**",
         "$TURBO_ROOT$/skills/INDEX.json",
-        "$TURBO_ROOT$/apps/scripts/validate-llms.ts"
+        "$TURBO_ROOT$/apps/scripts/validate-llms.ts",
+        "$TURBO_ROOT$/apps/scripts/validate-docs.ts",
+        "src/**/*.mdx"
       ]
     },
     "lint": {

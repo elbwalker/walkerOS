@@ -1,0 +1,708 @@
+{
+  "default": {
+    "description": "The core events every website shares: page views, visits, signup and login, forms, search and promotions. Its schema describes every part of a walkerOS event.",
+    "tagging": 1,
+    "schema": {
+      "title": "Every event",
+      "description": "The parts every walkerOS event has. None is required, so the schema holds for every event, custom ones included.",
+      "examples": [
+        {
+          "name": "page view",
+          "entity": "page",
+          "action": "view",
+          "data": {
+            "id": "/docs/",
+            "title": "walkerOS documentation",
+            "referrer": "https://www.walkeros.io/",
+            "domain": "www.example.com",
+            "search": "?foo=bar"
+          },
+          "context": {
+            "test": ["engagement", 0]
+          },
+          "globals": {
+            "pagegroup": "docs"
+          },
+          "user": {
+            "id": "us3r",
+            "device": "c00k13",
+            "session": "s3ss10n"
+          },
+          "consent": {
+            "functional": true
+          },
+          "id": "f0cc5f6fec3d8eeb",
+          "trigger": "load",
+          "timestamp": 1700000000000,
+          "timing": 3.14,
+          "source": {
+            "type": "browser",
+            "platform": "web",
+            "url": "https://www.example.com/docs/?foo=bar",
+            "referrer": "https://www.walkeros.io/",
+            "schema": "4",
+            "count": 1,
+            "trace": "0a1b2c3d4e5f60718293a4b5c6d7e8f9"
+          }
+        }
+      ],
+      "type": "object",
+      "properties": {
+        "name": {
+          "type": "string",
+          "description": "The entity and the action, separated by one space, in lowercase.",
+          "examples": ["page view"]
+        },
+        "entity": {
+          "type": "string",
+          "description": "The entity of the event, the first word of its name.",
+          "examples": ["page"]
+        },
+        "action": {
+          "type": "string",
+          "description": "The action of the event, the second word of its name.",
+          "examples": ["view"]
+        },
+        "data": {
+          "type": "object",
+          "description": "The properties of the event's own entity. It holds no personal data."
+        },
+        "context": {
+          "type": "object",
+          "description": "Where the event happened, such as a test variant or a stage of the journey. Each entry is a pair of a value and its order, counted from 0.",
+          "additionalProperties": {
+            "type": "array",
+            "prefixItems": [
+              {
+                "description": "The value."
+              },
+              {
+                "type": "number",
+                "description": "Its order."
+              }
+            ]
+          },
+          "examples": [
+            {
+              "test": ["engagement", 0]
+            }
+          ]
+        },
+        "globals": {
+          "type": "object",
+          "description": "Properties of the whole page, the same on every event of that page.",
+          "properties": {
+            "pagegroup": {
+              "type": "string",
+              "description": "The kind of page, such as shop, docs or homepage.",
+              "examples": ["docs"]
+            }
+          }
+        },
+        "custom": {
+          "type": "object",
+          "description": "Properties that belong in no other part of the event."
+        },
+        "user": {
+          "type": "object",
+          "description": "Who the visitor is. The ids are pseudonymous. Personal data, such as an email address, belongs here and never in data.",
+          "properties": {
+            "id": {
+              "type": "string",
+              "description": "The id of the logged-in user in your own system. Never an email address.",
+              "examples": ["us3r"]
+            },
+            "device": {
+              "type": "string",
+              "description": "The id of the browser or device.",
+              "examples": ["c00k13"]
+            },
+            "session": {
+              "type": "string",
+              "description": "The id of the visit.",
+              "examples": ["s3ss10n"]
+            },
+            "email": {
+              "type": "string",
+              "format": "email",
+              "description": "The email address of the user, unhashed.",
+              "examples": ["user@example.com"]
+            },
+            "country": {
+              "type": "string",
+              "description": "The country, as a two-letter code.",
+              "examples": ["DE"]
+            },
+            "language": {
+              "type": "string",
+              "description": "The language of the browser or device.",
+              "examples": ["de-DE"]
+            },
+            "deviceType": {
+              "type": "string",
+              "description": "The form factor of the device, such as desktop or mobile.",
+              "examples": ["desktop"]
+            },
+            "os": {
+              "type": "string",
+              "description": "The name of the operating system.",
+              "examples": ["Android"]
+            },
+            "osVersion": {
+              "type": "string",
+              "description": "The version of the operating system.",
+              "examples": ["14"]
+            },
+            "browser": {
+              "type": "string",
+              "description": "The name of the browser.",
+              "examples": ["Chrome"]
+            },
+            "browserVersion": {
+              "type": "string",
+              "description": "The version of the browser.",
+              "examples": ["136.0.7103.60"]
+            },
+            "screenSize": {
+              "type": "string",
+              "description": "The size of the screen in pixels, width x height.",
+              "examples": ["1440x900"]
+            },
+            "timezone": {
+              "type": "string",
+              "description": "The time zone of the device."
+            },
+            "userAgent": {
+              "type": "string",
+              "description": "The user agent string of the browser."
+            },
+            "ip": {
+              "type": "string",
+              "description": "The IP address of the visitor."
+            }
+          }
+        },
+        "nested": {
+          "type": "array",
+          "description": "Entities related to the event, such as the products of an order. Each has its entity name and its own data.",
+          "items": {
+            "type": "object",
+            "properties": {
+              "entity": {
+                "type": "string",
+                "description": "The name of the related entity, such as product.",
+                "examples": ["product"]
+              },
+              "data": {
+                "type": "object",
+                "description": "The properties of the related entity."
+              }
+            }
+          }
+        },
+        "consent": {
+          "type": "object",
+          "description": "The consent groups the visitor has granted, each set to true.",
+          "additionalProperties": {
+            "type": "boolean"
+          },
+          "examples": [
+            {
+              "functional": true
+            }
+          ]
+        },
+        "id": {
+          "type": "string",
+          "description": "The id of the event, 16 hex characters.",
+          "examples": ["f0cc5f6fec3d8eeb"]
+        },
+        "trigger": {
+          "type": "string",
+          "description": "What fired the event, such as load, click, submit or visible.",
+          "examples": ["load"]
+        },
+        "timestamp": {
+          "type": "number",
+          "description": "When the event happened, in milliseconds since 1970.",
+          "examples": [1700000000000]
+        },
+        "timing": {
+          "type": "number",
+          "description": "Seconds from the page load, or from the last route change of a single-page app, to the event.",
+          "examples": [3.14]
+        },
+        "source": {
+          "type": "object",
+          "description": "Where the event was captured.",
+          "properties": {
+            "type": {
+              "type": "string",
+              "description": "The kind of source that captured the event, such as browser.",
+              "examples": ["browser"]
+            },
+            "platform": {
+              "type": "string",
+              "description": "Where the source runs, such as web or server.",
+              "examples": ["web"]
+            },
+            "url": {
+              "type": "string",
+              "description": "The full URL of the page.",
+              "examples": ["https://www.example.com/docs/?foo=bar"]
+            },
+            "referrer": {
+              "type": "string",
+              "description": "The referrer of the page.",
+              "examples": ["https://www.walkeros.io/"]
+            },
+            "schema": {
+              "type": "string",
+              "description": "The version of the walkerOS event model.",
+              "examples": ["4"]
+            },
+            "count": {
+              "type": "number",
+              "description": "The number of the event within its page load, counted from 1.",
+              "examples": [1]
+            },
+            "trace": {
+              "type": "string",
+              "description": "An id of 32 hex characters that the events of one page load share.",
+              "examples": ["0a1b2c3d4e5f60718293a4b5c6d7e8f9"]
+            }
+          }
+        }
+      }
+    },
+    "events": {
+      "page": {
+        "view": {
+          "title": "Page view",
+          "description": "A page was shown, when it loaded or after a route change of a single-page app. Every website needs it.",
+          "examples": [
+            {
+              "name": "page view",
+              "data": {
+                "id": "/docs/",
+                "title": "walkerOS documentation",
+                "referrer": "https://www.walkeros.io/",
+                "domain": "www.example.com",
+                "search": "?foo=bar"
+              },
+              "globals": {
+                "pagegroup": "docs"
+              },
+              "trigger": "load"
+            }
+          ],
+          "required": ["data"],
+          "properties": {
+            "data": {
+              "type": "object",
+              "description": "The page.",
+              "required": ["id"],
+              "properties": {
+                "id": {
+                  "type": ["string", "number"],
+                  "description": "The path of the page, or the page id tagged on it.",
+                  "examples": ["/docs/"]
+                },
+                "title": {
+                  "type": "string",
+                  "description": "The title of the page.",
+                  "examples": ["walkerOS documentation"]
+                },
+                "referrer": {
+                  "type": "string",
+                  "description": "The URL the visitor came from. It can be empty.",
+                  "examples": ["https://www.walkeros.io/"]
+                },
+                "domain": {
+                  "type": "string",
+                  "description": "The host name of the page.",
+                  "examples": ["www.example.com"]
+                },
+                "search": {
+                  "type": "string",
+                  "description": "The query string of the URL, with its question mark.",
+                  "examples": ["?foo=bar"]
+                },
+                "hash": {
+                  "type": "string",
+                  "description": "The fragment of the URL, with its hash sign."
+                }
+              }
+            }
+          }
+        }
+      },
+      "session": {
+        "start": {
+          "title": "Session start",
+          "description": "A visit began. Every website needs it. When the visit came through a campaign link, the campaign sits in data.",
+          "examples": [
+            {
+              "name": "session start",
+              "data": {
+                "id": "s3ss10n",
+                "start": 1700000000000,
+                "isNew": true,
+                "count": 1,
+                "marketing": true,
+                "source": "google",
+                "medium": "cpc",
+                "campaign": "winter-sale"
+              },
+              "user": {
+                "device": "c00k13",
+                "session": "s3ss10n"
+              }
+            }
+          ],
+          "required": ["data"],
+          "properties": {
+            "data": {
+              "type": "object",
+              "description": "The visit.",
+              "required": ["id"],
+              "properties": {
+                "id": {
+                  "type": "string",
+                  "description": "The id of the visit, the same as user.session.",
+                  "examples": ["s3ss10n"]
+                },
+                "start": {
+                  "type": "number",
+                  "description": "When the visit began, in milliseconds since 1970.",
+                  "examples": [1700000000000]
+                },
+                "isNew": {
+                  "type": "boolean",
+                  "description": "True on the first visit of this device.",
+                  "examples": [true]
+                },
+                "count": {
+                  "type": "number",
+                  "description": "How many visits this device has made, this one included.",
+                  "examples": [1]
+                },
+                "marketing": {
+                  "type": "boolean",
+                  "description": "True when the visit came through a campaign link or an ad click.",
+                  "examples": [true]
+                },
+                "source": {
+                  "type": "string",
+                  "description": "The campaign source, as in utm_source.",
+                  "examples": ["google"]
+                },
+                "medium": {
+                  "type": "string",
+                  "description": "The campaign medium, as in utm_medium, such as email or cpc.",
+                  "examples": ["cpc"]
+                },
+                "campaign": {
+                  "type": "string",
+                  "description": "The campaign name, as in utm_campaign.",
+                  "examples": ["winter-sale"]
+                },
+                "clickId": {
+                  "type": "string",
+                  "description": "For an ad click, the name of the URL parameter that carried the click id."
+                }
+              }
+            }
+          }
+        }
+      },
+      "user": {
+        "signup": {
+          "title": "User signup",
+          "description": "A visitor created an account. Every website with accounts needs it.",
+          "examples": [
+            {
+              "name": "user signup",
+              "data": {
+                "method": "password"
+              },
+              "user": {
+                "id": "us3r",
+                "device": "c00k13",
+                "session": "s3ss10n"
+              },
+              "trigger": "submit"
+            }
+          ],
+          "required": ["user"],
+          "properties": {
+            "data": {
+              "type": "object",
+              "description": "The signup.",
+              "properties": {
+                "method": {
+                  "type": "string",
+                  "description": "How the account was created, such as password or single sign-on.",
+                  "examples": ["password"]
+                },
+                "type": {
+                  "type": "string",
+                  "description": "How the visitor came to sign up, such as organic or invited.",
+                  "examples": ["organic"]
+                }
+              }
+            },
+            "user": {
+              "type": "object",
+              "description": "The new account.",
+              "required": ["id"],
+              "properties": {
+                "id": {
+                  "type": "string",
+                  "description": "The id of the new account.",
+                  "examples": ["us3r"]
+                }
+              }
+            }
+          }
+        },
+        "login": {
+          "title": "User login",
+          "description": "A user logged in. Every website with accounts needs it.",
+          "examples": [
+            {
+              "name": "user login",
+              "data": {
+                "method": "password"
+              },
+              "user": {
+                "id": "us3r",
+                "device": "c00k13",
+                "session": "s3ss10n"
+              },
+              "trigger": "submit"
+            }
+          ],
+          "required": ["user"],
+          "properties": {
+            "data": {
+              "type": "object",
+              "description": "The login.",
+              "properties": {
+                "method": {
+                  "type": "string",
+                  "description": "How the user logged in, such as password or single sign-on.",
+                  "examples": ["password"]
+                }
+              }
+            },
+            "user": {
+              "type": "object",
+              "description": "The user who logged in.",
+              "required": ["id"],
+              "properties": {
+                "id": {
+                  "type": "string",
+                  "description": "The id of the user.",
+                  "examples": ["us3r"]
+                }
+              }
+            }
+          }
+        }
+      },
+      "form": {
+        "submit": {
+          "title": "Form submit",
+          "description": "A visitor sent a form. Recommended for websites with forms. The event names the form and holds none of the values typed into it.",
+          "examples": [
+            {
+              "name": "form submit",
+              "data": {
+                "id": "contact-form",
+                "name": "contact",
+                "destination": "https://example.com/thanks"
+              },
+              "trigger": "submit"
+            }
+          ],
+          "required": ["data"],
+          "properties": {
+            "data": {
+              "type": "object",
+              "description": "The form.",
+              "required": ["id"],
+              "properties": {
+                "id": {
+                  "type": ["string", "number"],
+                  "description": "The id of the form.",
+                  "examples": ["contact-form"]
+                },
+                "name": {
+                  "type": "string",
+                  "description": "The name of the form.",
+                  "examples": ["contact"]
+                },
+                "destination": {
+                  "type": "string",
+                  "description": "The URL the form sends to.",
+                  "examples": ["https://example.com/thanks"]
+                }
+              }
+            }
+          }
+        }
+      },
+      "search": {
+        "submit": {
+          "title": "Search submit",
+          "description": "A visitor searched the site. Recommended for websites with a search.",
+          "examples": [
+            {
+              "name": "search submit",
+              "data": {
+                "term": "t-shirts",
+                "results": 48
+              },
+              "trigger": "submit"
+            }
+          ],
+          "required": ["data"],
+          "properties": {
+            "data": {
+              "type": "object",
+              "description": "The search.",
+              "required": ["term"],
+              "properties": {
+                "term": {
+                  "type": ["string", "number"],
+                  "description": "What the visitor searched for.",
+                  "examples": ["t-shirts"]
+                },
+                "results": {
+                  "type": "number",
+                  "description": "How many results the search found, 0 when none.",
+                  "examples": [48]
+                }
+              }
+            }
+          }
+        }
+      },
+      "promotion": {
+        "visible": {
+          "title": "Promotion visible",
+          "description": "A promotion, such as a banner, came into view. Recommended for websites with promotions.",
+          "examples": [
+            {
+              "name": "promotion visible",
+              "data": {
+                "id": "promo_autumn26",
+                "name": "Setting up tracking easily",
+                "slot": "hero"
+              },
+              "context": {
+                "ab_test": ["engagement", 0]
+              },
+              "globals": {
+                "pagegroup": "homepage"
+              },
+              "trigger": "visible"
+            }
+          ],
+          "required": ["data"],
+          "properties": {
+            "data": {
+              "type": "object",
+              "description": "The promotion.",
+              "required": ["id"],
+              "properties": {
+                "id": {
+                  "type": ["string", "number"],
+                  "description": "The id of the promotion.",
+                  "examples": ["promo_autumn26"]
+                },
+                "name": {
+                  "type": "string",
+                  "description": "The name of the promotion.",
+                  "examples": ["Setting up tracking easily"]
+                },
+                "creative": {
+                  "type": "string",
+                  "description": "The creative shown, such as the banner.",
+                  "examples": ["summer_banner2"]
+                },
+                "slot": {
+                  "type": ["string", "number"],
+                  "description": "Where on the page the promotion sits, such as hero.",
+                  "examples": ["hero"]
+                },
+                "position": {
+                  "type": "number",
+                  "description": "The place of the promotion among the promotions shown, counted from 1.",
+                  "examples": [1]
+                }
+              }
+            }
+          }
+        },
+        "click": {
+          "title": "Promotion click",
+          "description": "A visitor clicked a promotion. Recommended for websites with promotions.",
+          "examples": [
+            {
+              "name": "promotion click",
+              "data": {
+                "id": "promo_autumn26",
+                "name": "Setting up tracking easily",
+                "slot": "hero"
+              },
+              "context": {
+                "ab_test": ["engagement", 0]
+              },
+              "globals": {
+                "pagegroup": "homepage"
+              },
+              "trigger": "click"
+            }
+          ],
+          "required": ["data"],
+          "properties": {
+            "data": {
+              "type": "object",
+              "description": "The promotion.",
+              "required": ["id"],
+              "properties": {
+                "id": {
+                  "type": ["string", "number"],
+                  "description": "The id of the promotion.",
+                  "examples": ["promo_autumn26"]
+                },
+                "name": {
+                  "type": "string",
+                  "description": "The name of the promotion.",
+                  "examples": ["Setting up tracking easily"]
+                },
+                "creative": {
+                  "type": "string",
+                  "description": "The creative shown, such as the banner.",
+                  "examples": ["summer_banner2"]
+                },
+                "slot": {
+                  "type": ["string", "number"],
+                  "description": "Where on the page the promotion sits, such as hero.",
+                  "examples": ["hero"]
+                },
+                "position": {
+                  "type": "number",
+                  "description": "The place of the promotion among the promotions shown, counted from 1.",
+                  "examples": [1]
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}

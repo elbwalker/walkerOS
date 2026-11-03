@@ -6,9 +6,9 @@
 
 # @walkeros/server-store-sheets
 
-Google Sheets store with zero runtime dependencies. Uses raw `fetch` against the
-Sheets v4 REST API with built-in auth. Designed for demos and small-scale
-prototyping, not as a production CRM substitute.
+Google Sheets store with zero runtime dependencies. It uses raw `fetch` against
+the Sheets v4 REST API with built-in auth. It is designed for demos and
+small-scale prototyping, not as a production CRM substitute.
 
 [Documentation](https://www.walkeros.io/docs/stores/server/sheets) &bull;
 [NPM Package](https://www.npmjs.com/package/@walkeros/server-store-sheets)
@@ -42,7 +42,7 @@ npm install @walkeros/server-store-sheets
 
 ## Documentation
 
-Full configuration, mapping, and examples live in the docs:
+Full configuration and examples live in the docs:
 **https://www.walkeros.io/docs/stores/server/sheets**
 
 ## Contribute

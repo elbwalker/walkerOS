@@ -50,8 +50,8 @@ describe('SettingsSchema', () => {
     });
   });
 
-  describe('deprecated path field', () => {
-    it('should accept deprecated path string', () => {
+  describe('single path field', () => {
+    it('should accept a path string', () => {
       const result = SettingsSchema.parse({ path: '/events' });
       expect(result.path).toBe('/events');
     });

@@ -17,14 +17,14 @@ flow.json also has `"version": 4` and its steps.
 
 ## The one rule
 
-walkerOS uses **two separator characters**, each with a clear meaning:
+walkerOS uses two separator characters:
 
 | Separator | Meaning |
 |---|---|
 | **`.`** | A key or path. The resolver looks up what follows in a map or walks it as a dotted path. |
-| **`:`** | A literal value or raw-code payload. The resolver uses what follows verbatim, it is not a name. |
+| **`:`** | A literal value or raw-code payload. The resolver uses what follows verbatim; it is not a name. |
 
-Every reference follows that rule. There are no exceptions.
+Every reference follows this rule, without exceptions.
 
 ## All references
 
@@ -36,7 +36,7 @@ $env.NAME:default      read NAME with a literal fallback
 $contract.name         inject a whole named contract entry
 $contract.name.events  walk the contract path
 $store.id              inject a store instance (resolved at bundle time)
-$secret.NAME           inject a secret value (resolved at deploy time)
+$secret.NAME           inject a secret (server only, read from the environment at start)
 $code:(event) => ...   inline JavaScript (resolved at bundle time)
 ```
 
@@ -97,8 +97,8 @@ walks the value.
 - A whole-string reference (`"$var.api.url"`) replaces the value with the
   variable's native type. Object, array, number, and boolean values are
   preserved.
-- An inline reference (`"Bearer $var.token"`) substitutes a scalar mid-string.
-  Object or array values throw, scalars only.
+- An inline reference (`"Bearer $var.token"`) substitutes a scalar mid-string;
+  an object or array value throws.
 - Variables may reference other variables. Resolution is recursive with cycle
   detection.
 
@@ -142,7 +142,7 @@ inside a longer string it becomes the text `undefined`. On both platforms the
 }
 ```
 
-The `:` here is the **default-value separator**, not a name delimiter. The
+The `:` here is the default-value separator, not a name delimiter. The
 token after `:` is used verbatim.
 
 Use `$env.` for non-secret config (IDs, hostnames, regions). For credentials,
@@ -153,8 +153,10 @@ deploy pipeline only injects values referenced as `$secret.NAME`.
 
 <FlowSlice feature="ref-env" />
 
-Web flows resolve `$env` at build time, from the set the flow declares under
-`config.bundle.env`:
+A local `walkeros bundle` resolves a web flow's `$env` from your shell
+environment with the set the flow declares under `config.bundle.env` on top; a
+hosted build reads the declared set alone (see
+[build-time values](/docs/apps/cli#build-time-values-configbundleenv)):
 
 <FlowSlice feature="bundle-env" />
 
@@ -236,14 +238,16 @@ Inject a store instance declared under `stores`. Wired through a component's
 ```
 
 Store IDs are plain identifiers (camelCase). The `.` is the separator, not a
-path walker, store IDs do not contain dots.
+path walker: store IDs contain no dots.
 
 <FlowSlice feature="ref-store" />
 
 ## `$secret.`: secrets {#secret--secrets}
 
-Inject a secret resolved at deploy time. Secrets are stored outside the config
-and never written into customer databases alongside the flow.
+Inject a secret into a server flow. The value is in neither the config nor the
+bundle: the bundle reads the environment variable of the same name when it
+starts, and stops with `required secret "NAME" is not set` when it is missing or
+empty.
 
 ```json
 {
@@ -266,11 +270,12 @@ and never written into customer databases alongside the flow.
 }
 ```
 
-Secret names are uppercase: `[A-Z0-9_]+`. The `.` is the separator, secrets
+Secret names are uppercase: `[A-Z0-9_]+`. The `.` is the separator; secrets
 have no internal structure.
 
 A `$secret.` reference must be the entire string value. Inside a longer string
-it is not resolved and stays literal text. When a header needs a prefix,
+it would not resolve, so `walkeros validate` and the bundle reject it
+(`MALFORMED_REFERENCE`). When a header needs a prefix,
 store the complete value in the secret, for example `Bearer abc123` for
 `API_AUTHORIZATION` above.
 
@@ -281,7 +286,8 @@ account JSON on `config.credentials`). The app's deploy pipeline detects
 `$secret.NAME` references and injects the managed secret value into the server
 runner's environment at runtime. A managed secret referenced as `$env.NAME` is
 **not** injected, so reach for `$secret.` whenever the value comes from the
-secret manager. Secrets resolve on server flows only.
+secret manager. In a web flow, a `$secret.` reference is a validate and bundle
+error.
 
 ## `$code:`: inline code {#code--inline-code}
 
@@ -292,14 +298,14 @@ real JS at build time. Everything after `$code:` is the raw function body.
 {
   "variables": {
     "onlyProducts": {
-      "condition": "$code:(entity) => entity.entity === 'product'"
+      "condition": "$code:(event) => event.entity === 'product'"
     }
   }
 }
 ```
 
-The `:` here marks the **payload**. Nothing after the colon is looked up, it
-is compiled as-is.
+The `:` here marks the payload. Nothing after the colon is looked up; it is
+compiled as is.
 
 <FlowSlice feature="ref-code" />
 
@@ -333,8 +339,10 @@ with its `config.ingest` mapping, and later steps read it by path
 2. Flow level (`flows.<name>.variables`)
 3. Config root (`variables`)
 
-Resolution runs at `getFlowSettings()` in `@walkeros/core`, the runtime
-replaces every reference before the bundler or collector sees the config.
+`walkeros bundle` resolves `$var`, `$contract`, `$flow` and a web flow's `$env`
+with `getFlowSettings()` from `@walkeros/core`, wires `$store` and compiles
+`$code:`. A server flow's `$env` and `$secret` stay reads of the environment
+when the bundle starts.
 
 ## Whole-value and inline references
 
@@ -350,16 +358,16 @@ whole-value reference that would not resolve:
   ship as literal text. Use the reference as the entire value, or compose the
   string with `$var` or `$env`.
 
-`$code:` values, `$comment` values, the root `contract` block, a step's
-`config.settings.contract`, and the `title` and `description` of the config, a
-flow, a step or a step example are not checked.
+This check skips `$code:` values, `$comment` values, the root `contract`
+block, a step's `config.settings.contract`, and the `title` and `description`
+of the config, a flow, a step or a step example.
 
 ## What else to read
 
 - [`@walkeros/core` reference exports](https://github.com/elbwalker/walkerOS/blob/main/packages/core/src/references.ts):
   `REF_VAR_FULL`, `REF_VAR_INLINE`, `REF_ENV`, `REF_CONTRACT`, `REF_FLOW`,
   `REF_FLOW_INLINE`, `REF_FLOW_NAME`, `REF_STORE`, `REF_SECRET`,
-  `REF_CODE_PREFIX`. The single source of truth for the regex patterns. Also
+  `REF_CODE_PREFIX`, the single source of truth for the regex patterns. It also
   exports `scanFlowRefs(value)` which walks any value (string, array, object)
   and returns every `$flow.<name>` reference found, including refs nested
   inside `$code:` snippets.

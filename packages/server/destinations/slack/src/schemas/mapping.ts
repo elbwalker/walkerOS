@@ -19,7 +19,9 @@ export const MappingSchema = z.object({
     .optional(),
   threadTs: z
     .string()
-    .describe('thread_ts for posting as a reply in a thread.')
+    .describe(
+      'thread_ts of the parent message, to post as a reply in its thread. A fixed value, sent as written (not read from the event).',
+    )
     .optional(),
   replyBroadcast: z
     .boolean()
@@ -31,7 +33,9 @@ export const MappingSchema = z.object({
     .optional(),
   user: z
     .string()
-    .describe('Slack user ID for ephemeral or DM delivery.')
+    .describe(
+      'Slack user ID for ephemeral or DM delivery. A fixed value, sent as written (not read from the event).',
+    )
     .optional(),
   dm: z
     .boolean()

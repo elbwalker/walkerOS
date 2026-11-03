@@ -1,8 +1,5 @@
-import {
-  assertExportMaps,
-  assertStepSettings,
-  publishedExports,
-} from '../exportMaps.mjs';
+import { STEP_TYPES } from '@walkeros/core/dev';
+import { assertExportMaps, assertStepSettings } from '../exportMaps.mjs';
 
 const two = { destinationA: 'A', destinationB: 'B' };
 const examples = { destinationA: {}, destinationB: {} };
@@ -84,12 +81,12 @@ describe('assertExportMaps', () => {
 });
 
 describe('assertStepSettings', () => {
-  it.each(['source', 'transformer', 'destination', 'store'])(
+  it.each([...STEP_TYPES])(
     'throws for a %s package without schemas.settings',
     (type) => {
-      expect(() => assertStepSettings('@walkeros/x', type, {})).toThrow(
-        new Error('@walkeros/x: schemas.settings is missing'),
-      );
+      expect(() =>
+        assertStepSettings('@walkeros/x', type, {}, STEP_TYPES),
+      ).toThrow(new Error('@walkeros/x: schemas.settings is missing'));
     },
   );
 
@@ -99,31 +96,7 @@ describe('assertStepSettings', () => {
     ['a non-step package', 'core', {}],
   ])('passes for %s', (_label, type, published) => {
     expect(() =>
-      assertStepSettings('@walkeros/x', type, published),
+      assertStepSettings('@walkeros/x', type, published, STEP_TYPES),
     ).not.toThrow();
-  });
-});
-
-describe('publishedExports', () => {
-  it.each([
-    [
-      'a multi-export package keeps its declared exports',
-      { type: 'destination', exports: two },
-      two,
-    ],
-    [
-      'a single-export package keeps its one declared export',
-      { type: 'destination', exports: { destinationA: 'A' } },
-      { destinationA: 'A' },
-    ],
-    [
-      'a step package without declared exports publishes an empty list',
-      { type: 'source' },
-      {},
-    ],
-    ['a non-step package publishes no list', { type: 'core' }, undefined],
-    ['a package without a type publishes no list', {}, undefined],
-  ])('%s', (_label, walkerOS, expected) => {
-    expect(publishedExports(walkerOS)).toEqual(expected);
   });
 });

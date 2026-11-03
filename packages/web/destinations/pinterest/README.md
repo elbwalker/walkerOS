@@ -41,6 +41,10 @@ npm install @walkeros/web-destination-pinterest
 }
 ```
 
+This quick start sets no consent, so the Pinterest Tag loads and receives every
+event without consent, and a revocation changes nothing: add
+`consent: { marketing: true }` to `config` before you go live, see the docs.
+
 ## Documentation
 
 Full configuration, mapping, and examples live in the docs:

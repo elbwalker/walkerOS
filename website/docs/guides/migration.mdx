@@ -5,7 +5,7 @@ sidebar_position: 1
 ---
 
 
-# Migration guide: from @elbwalker to @walkerOS
+# Migration guide: from @elbwalker to @walkeros
 
 This guide helps you migrate from the old elbwalker packages to the new walkerOS
 packages.
@@ -15,7 +15,8 @@ packages.
 ### Core package changes
 
 * `@elbwalker/walker.js` → `@walkeros/collector` +
-  `@walkeros/web-source-browser`
+  `@walkeros/web-source-browser`; loaded as a script tag →
+  [`@walkeros/walker.js`](/docs/getting-started/quickstart/walkerjs)
 * `@elbwalker/types` + `@elbwalker/utils` → `@walkeros/core`
 * `@elbwalker/destination-web-*` → `@walkeros/web-destination-*`
 * `@elbwalker/destination-node-*` → `@walkeros/server-destination-*`
@@ -41,9 +42,9 @@ packages.
 <CodeSnippet
   code={`{
   "dependencies": {
-    "@walkeros/collector": "^4.6.0",
-    "@walkeros/web-source-browser": "^4.6.0",
-    "@walkeros/web-destination-gtag": "^4.6.0"
+    "@walkeros/collector": "^4.8.2",
+    "@walkeros/web-source-browser": "^4.8.2",
+    "@walkeros/web-destination-gtag": "^4.8.2"
   }
 }`}
   language="json"
@@ -97,6 +98,7 @@ import type { WalkerOS } from '@walkeros/core';`}
     gtag: {
       code: destinationGtag,
       config: {
+        loadScript: true,
         settings: {
           ga4: { measurementId: 'G-XXXXXXXXXX' },
         },
@@ -106,6 +108,9 @@ import type { WalkerOS } from '@walkeros/core';`}
 });`}
   language="typescript"
 />
+
+`loadScript: true` makes walkerOS add gtag.js to the page. Without it, events
+reach GA4 only if your page loads gtag.js itself.
 
 ## Breaking changes
 
@@ -128,43 +133,6 @@ import type { WalkerOS } from '@walkeros/core';`}
 
 * GA4, Google Ads, and GTM are now unified in `@walkeros/web-destination-gtag`
 * Configure all Google services through a single destination
-
-## Destination configuration patterns
-
-### Unified configuration approach
-
-Configure all sources and destinations in a single `startFlow` call:
-
-<CodeSnippet
-  code={`const { elb } = await startFlow({
-  sources: {
-    browser: {
-      code: sourceBrowser,
-      config: {
-        settings: { scope: document.body },
-      },
-    },
-  },
-  destinations: {
-    gtag: {
-      code: destinationGtag,
-      config: {
-        settings: {
-          ga4: { measurementId: 'G-XXXXXXXXXX' },
-        },
-      },
-    },
-  },
-});`}
-  language="typescript"
-/>
-
-**Benefits:**
-
-* One configuration describes the entire tracking setup
-* Full type safety, with configs linked to their packages
-* No manual destination registration
-* Code and configuration stay separate
 
 ## Migration checklist
 
@@ -272,6 +240,7 @@ The tagger also provides both methods:
 
 <CodeSnippet
   code={`// Nearest entity only (data-elbaction)
+const tagger = createTagger(); // from @walkeros/web-source-browser
 tagger().action('click', 'select').get();
 
 // All entities (data-elbactions)
@@ -309,10 +278,8 @@ Update your HTML to use the new trigger names:
 
 #### Option 2: understand the behavior change
 
-If you keep using the old names, understand the behavior has changed:
-
-* Old `visible` behavior (single-fire) → Now use `impression`
-* Old `visibles` behavior (multiple-fire) → Now use `visible`
+If you keep the old names, `visible` fires each time the element re-enters the
+viewport. `visibles` is not a trigger: it fires no event, and nothing is logged.
 
 ### When to use each
 

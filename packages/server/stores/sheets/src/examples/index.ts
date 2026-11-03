@@ -16,7 +16,7 @@ export const serviceAccount: Store.Config = {
     id: '1AbCdEfGhIjKlMnOpQrStUvWxYz',
     sheet: 'Customers',
   },
-  credentials: '$env.SHEETS_SA_KEY',
+  credentials: '$secret.SHEETS_SA_KEY',
 };
 
 export * as step from './step';

@@ -13,7 +13,8 @@ describe('slack conformance', () => {
       profile: 'http',
       examples: examples.step,
       schema: schemas.settings,
-      settings: { webhookUrl: 'https://hooks.slack.com/services/x/y/z' },
+      settings: examples.minimal.settings,
+      minimal: examples.minimal,
       root: path.join(__dirname, '..', '..'),
     });
   });

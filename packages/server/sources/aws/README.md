@@ -6,9 +6,9 @@
 
 # @walkeros/server-source-aws
 
-AWS Lambda source for walkerOS. Works across API Gateway REST (v1), API Gateway
-HTTP (v2), Lambda Function URLs, and direct invocation. The package also ships
-an SQS source for ingesting from SQS queues.
+AWS Lambda source for walkerOS. It works across API Gateway REST (v1), API
+Gateway HTTP (v2) and Lambda Function URLs. The package also ships an SQS source
+for ingesting from SQS queues.
 
 [Documentation](https://www.walkeros.io/docs/sources/server/aws) &bull;
 [NPM Package](https://www.npmjs.com/package/@walkeros/server-source-aws) &bull;
@@ -29,12 +29,21 @@ npm install @walkeros/server-source-aws
     "default": {
       "config": { "platform": "server" },
       "sources": {
-        "lambda": { "package": "@walkeros/server-source-aws", "config": {} }
+        "lambda": {
+          "package": "@walkeros/server-source-aws",
+          "import": "sourceLambda",
+          "config": {}
+        }
       }
     }
   }
 }
 ```
+
+The package has no default export, so a step names the source with `"import"`
+(`sourceLambda` or `sourceSqs`). This quick-start bundle is for deploying to AWS
+Lambda: the walkerOS runtime serves only sources with an HTTP handler, such as
+the Express source.
 
 ## Documentation
 

@@ -40,6 +40,11 @@ npm install @walkeros/server-destination-amplitude
 }
 ```
 
+This config sends no `user_id` or `device_id`. Amplitude requires one of them on
+every event and answers 400, so every push fails until you map them in
+`settings.identify`, on the destination or per rule; see
+[Identity](https://www.walkeros.io/docs/destinations/server/amplitude#identity).
+
 ## Documentation
 
 Full configuration, mapping, and examples live in the docs:

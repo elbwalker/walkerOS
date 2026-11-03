@@ -27,11 +27,9 @@ describe('rudderstack conformance', () => {
       profile: 'sdk-env',
       examples: examples.step,
       schema: schemas.settings,
-      settings: {
-        writeKey: 'test-write-key',
-        dataPlaneUrl: 'https://hosted.rudderlabs.com',
-      },
+      settings: examples.minimal.settings,
       env: { push: examples.env.push, simulation: examples.env.simulation },
+      minimal: examples.minimal,
       root: path.join(__dirname, '..', '..'),
     });
   });

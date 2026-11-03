@@ -13,10 +13,7 @@ const CLAIMS: StandardEventName[] = [
   'order complete',
 ];
 
-const settings = {
-  url: 'https://your_account_name.piwik.pro/',
-  appId: 'e8f3a1c2-0b4d-4e5f-9a6b-7c8d9e0f1a2b',
-};
+const { settings } = examples.minimal;
 const env = { push: examples.env.push, simulation: examples.env.simulation };
 
 // The examples with their own settings run on their own.
@@ -33,6 +30,7 @@ describe('piwikpro conformance', () => {
       examples: examples.step,
       schema: schemas.settings,
       settings,
+      minimal: examples.minimal,
       root: path.join(__dirname, '..', '..'),
     });
   });
@@ -42,7 +40,6 @@ describe('piwikpro conformance', () => {
       settings,
       env,
       claims: CLAIMS,
-      published: true,
     });
   });
 
@@ -54,7 +51,7 @@ describe('piwikpro conformance', () => {
       'destination',
       destinationPiwikPro,
       { [name]: example },
-      { settings: { ...settings, ...example.settings }, env, published: true },
+      { settings: { ...settings, ...example.settings }, env },
     );
   });
 

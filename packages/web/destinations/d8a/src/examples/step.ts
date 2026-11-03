@@ -31,7 +31,7 @@ export const init: Flow.StepExample = {
 export const pageView: Flow.StepExample = {
   title: 'Page view',
   description: 'A page view event is forwarded as a d8a page_view event.',
-  in: getEvent('page view', { timestamp: 1700000300 }),
+  in: getEvent('page view', { timestamp: 1700000300000 }),
   mapping: undefined,
   out: [['d8a', 'event', 'page_view', { send_to: PROPERTY_ID }]],
 };
@@ -40,7 +40,7 @@ export const addToCart: Flow.StepExample = {
   title: 'Add to cart',
   description:
     'A product add event is mapped to the d8a add_to_cart event with item details and value.',
-  in: getEvent('product add', { timestamp: 1700000301 }),
+  in: getEvent('product add', { timestamp: 1700000301000 }),
   mapping: {
     name: 'add_to_cart',
     include: ['data'],
@@ -77,6 +77,8 @@ export const addToCart: Flow.StepExample = {
         data_color: 'black',
         data_size: 'l',
         data_price: 420,
+        data_quantity: 1,
+        data_currency: 'EUR',
         send_to: PROPERTY_ID,
       },
     ],
@@ -87,7 +89,7 @@ export const purchase: Flow.StepExample = {
   title: 'Purchase',
   description:
     'An order complete event is mapped to the d8a purchase event with transaction details and nested product items.',
-  in: getEvent('order complete', { timestamp: 1700000302 }),
+  in: getEvent('order complete', { timestamp: 1700000302000 }),
   mapping: {
     name: 'purchase',
     include: ['data', 'context'],
@@ -95,7 +97,7 @@ export const purchase: Flow.StepExample = {
       map: {
         transaction_id: 'data.id',
         value: 'data.value',
-        tax: 'data.taxes',
+        tax: 'data.tax',
         shipping: 'data.shipping',
         currency: { key: 'data.currency', value: 'EUR' },
         items: {
@@ -125,7 +127,7 @@ export const purchase: Flow.StepExample = {
       'purchase',
       {
         transaction_id: '0rd3r1d',
-        value: 555,
+        value: 462,
         tax: 73.76,
         shipping: 5.22,
         currency: 'EUR',
@@ -135,9 +137,10 @@ export const purchase: Flow.StepExample = {
         ],
         data_id: '0rd3r1d',
         data_currency: 'EUR',
+        data_value: 462,
+        data_tax: 73.76,
         data_shipping: 5.22,
-        data_taxes: 73.76,
-        data_value: 555,
+        data_total: 467.22,
         context_shopping: 'complete',
         send_to: PROPERTY_ID,
       },
@@ -181,7 +184,7 @@ export const consentMode: Flow.StepExample = {
 export const silentRule: Flow.StepExample = {
   public: false,
   description: 'A rule with silent: true sends no d8a event.',
-  in: getEvent('page view', { timestamp: 1700000302 }),
+  in: getEvent('page view', { timestamp: 1700000302000 }),
   mapping: { silent: true },
   out: [],
 };

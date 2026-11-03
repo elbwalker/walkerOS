@@ -27,7 +27,7 @@ export const PromotionCard = ({
       {
         entity: 'promotion',
         trigger: 'visible',
-        action: 'view',
+        action: 'visible',
         data: { category },
       },
       dataElb,

@@ -83,8 +83,8 @@ async function applyIdentity(
 
 /**
  * Resolve the group mapping value, call posthog.group(type, key, properties?).
- * Like identity, group changes are tracked in runtime state and only re-fired
- * when type or key changes.
+ * Like identity, group changes are tracked in runtime state: re-fired when
+ * type or key changes, or whenever properties are present.
  */
 async function applyGroup(
   posthog: PostHogSDK,

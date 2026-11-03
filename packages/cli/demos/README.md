@@ -7,22 +7,19 @@ installation.
 
 ## Usage
 
-Run `./quick-demo.sh` for a 5-minute interactive demo of the complete workflow.
+The two scripts in this folder, `quick-demo.sh` and `programmatic-example.js`,
+fail today: they call a `simulate` and a `run` command (and the `simulate()` and
+`run()` exports) that `@walkeros/cli` does not have, and `quick-demo.sh` builds
+a Docker image from `packages/docker`, which does not exist. Use the commands
+under [More Examples](#more-examples) instead.
 
 ---
 
-This directory contains practical demonstrations of walkerOS CLI and Docker
-functionality.
+This directory contains demonstrations of walkerOS CLI and Docker functionality.
 
 ## Quick Demo
 
-**5-minute interactive demo** showing the complete workflow:
-
-```bash
-./quick-demo.sh
-```
-
-This demonstrates:
+`quick-demo.sh` is meant as an interactive demo of the complete workflow:
 
 - Bundle generation
 - Event simulation
@@ -33,20 +30,14 @@ This demonstrates:
 
 **Prerequisites**:
 
-- Node.js 18+ or 22+
+- Node.js 22.12 or later
 - Docker installed and running
 - Built packages (`npm run build` from monorepo root)
 
 ## Programmatic API Example
 
-Shows how to use the CLI programmatically in Node.js applications:
-
-```bash
-# Run the example
-node programmatic-example.js
-```
-
-This demonstrates:
+`programmatic-example.js` is meant to show the CLI used programmatically in
+Node.js applications:
 
 - Using the `bundle()` function
 - Using the `simulate()` function
@@ -54,38 +45,32 @@ This demonstrates:
 - Custom output paths
 - Multiple event simulations
 
+`@walkeros/cli` exports `bundle()`, `push()`, `simulateSource()`,
+`simulateTransformer()`, `simulateDestination()` and `simulateCollector()`; it
+has no `simulate()`.
+
 ## More Examples
 
 ### Bundle a Flow Config
 
 ```bash
 # From monorepo root
-node packages/cli/dist/index.js bundle packages/docker/flows/demo.json
+node packages/cli/dist/cli.js bundle packages/cli/examples/flow-simple.json -o dist/
 ```
 
 ### Simulate an Event
 
 ```bash
-# First create a bundle
-node packages/cli/dist/index.js bundle packages/docker/flows/demo.json
-
-# Then simulate
-node packages/cli/dist/index.js simulate walker-bundle.js \
-    '{"name":"page view","data":{"title":"Home","path":"/"}}'
+node packages/cli/dist/cli.js push packages/cli/examples/flow-simple.json \
+    --event '{"name":"page view","data":{"title":"Home","path":"/"}}' \
+    --simulate destination.demo
 ```
 
 ### Run in Docker
 
-```bash
-# Build Docker image first
-docker build -f packages/docker/Dockerfile -t walkeros-local .
-
-# Run via CLI
-node packages/cli/dist/index.js run packages/docker/flows/demo.json \
-    --port 3000 \
-    --image walkeros-local \
-    --no-pull
-```
+The CLI builds flows; it does not run them. Run a built server flow with
+`runneros` or the `walkeros/flow` image, see the
+[runtime docs](https://www.walkeros.io/docs/apps/runtime).
 
 ## Documentation
 

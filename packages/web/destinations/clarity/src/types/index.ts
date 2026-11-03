@@ -16,7 +16,7 @@ declare global {
 /**
  * Settings (destination-level).
  *
- * apiKey is the Clarity project ID (e.g. "3t0wlogvdz").
+ * apiKey is the Clarity project ID.
  * consent translates walkerOS consent keys to Clarity's ConsentV2 categories.
  * identify resolves to positional args for Clarity.identify(...).
  */

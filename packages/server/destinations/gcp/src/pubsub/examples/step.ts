@@ -18,7 +18,7 @@ declare const __VERSION__: string;
 // collector, so they carry the run trace and per-run count. The collector
 // preserves these (stamp-if-absent), keeping the example deterministic.
 const orderEvent = getEvent('order complete', {
-  timestamp: 1700001100,
+  timestamp: 1700001100000,
   data: { id: 'ORD-500', value: 199.99, currency: 'EUR' },
   user: { id: 'usr-789' },
   source: {
@@ -30,7 +30,7 @@ const orderEvent = getEvent('order complete', {
 });
 
 const pageEvent = getEvent('page view', {
-  timestamp: 1700001101,
+  timestamp: 1700001101000,
   data: { title: 'Documentation', url: 'https://example.com/docs' },
   source: {
     type: 'express',

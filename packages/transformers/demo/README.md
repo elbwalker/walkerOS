@@ -21,14 +21,22 @@ npm install @walkeros/transformer-demo
 
 ## Quick start
 
-Add the transformer to a flow's `transformers` block and wire it into a source's
-chain:
+Add the transformer to a flow's `transformers` block and name it in a chain,
+here the demo source's `next`:
 
 ```json
 {
   "version": 4,
   "flows": {
     "default": {
+      "config": { "platform": "web" },
+      "sources": {
+        "demo": {
+          "package": "@walkeros/source-demo",
+          "config": { "settings": { "events": [{ "name": "page view" }] } },
+          "next": "demo"
+        }
+      },
       "transformers": {
         "demo": { "package": "@walkeros/transformer-demo" }
       }
@@ -37,9 +45,21 @@ chain:
 }
 ```
 
+Each event the demo source emits is logged to the console as
+`[transformer-demo] {...}` and passes on unchanged. A transformer that no chain
+names never runs, and nothing reports it.
+
+## Settings
+
+| Setting            | Type       | Required | Description                                                                          |
+| ------------------ | ---------- | -------- | ------------------------------------------------------------------------------------ |
+| `name`             | `string`   | no       | Prefix of each log line. Default: `transformer-demo`.                                |
+| `fields`           | `string[]` | no       | Dot-notation paths to log instead of the whole event, such as `data.title`.          |
+| `addProcessedFlag` | `boolean`  | no       | Adds `_processed: true` and `_processedBy` (the `name`) to `event.data` when `true`. |
+
 ## Documentation
 
-Full configuration, mapping, and examples live in the docs:
+How transformers are wired into a flow:
 **https://www.walkeros.io/docs/transformers**
 
 ## Contribute

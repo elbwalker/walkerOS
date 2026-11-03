@@ -1,7 +1,7 @@
 import path from 'path';
 import { conformance } from '@walkeros/collector/dev';
 import { destinationSNS } from '..';
-import { schemas } from '../../dev';
+import { exportExamples, schemas } from '../../dev';
 import * as examples from '../examples';
 
 describe('aws sns conformance', () => {
@@ -14,10 +14,10 @@ describe('aws sns conformance', () => {
       profile: 'sdk-env',
       examples: examples.step,
       schema: schemas.snsSettings,
-      settings: {
-        topicArn: 'arn:aws:sns:eu-central-1:123456789012:walkeros-events',
-      },
+      settings: examples.minimal.settings,
       env: { push: examples.env.push, simulation: examples.env.simulation },
+      exportName: 'destinationSNS',
+      exportExamples,
       root: path.join(__dirname, '..', '..', '..'),
     });
   });

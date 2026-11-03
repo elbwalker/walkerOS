@@ -18,7 +18,7 @@ export const defaultEvent: KafkaStepExample = {
   description:
     'An event is produced to the configured Kafka topic with the full JSON body and entity_action as the message key.',
   in: getEvent('page view', {
-    timestamp: 1700000100,
+    timestamp: 1700000100000,
   }),
   out: [
     [
@@ -30,7 +30,7 @@ export const defaultEvent: KafkaStepExample = {
             key: 'page_view',
             value: 'json:event',
             headers: { 'content-type': 'application/json' },
-            timestamp: '1700000100',
+            timestamp: '1700000100000',
           },
         ],
         acks: -1,
@@ -49,7 +49,7 @@ export const mappedEventName: KafkaStepExample = {
   description:
     'A mapping renames the event which also changes the default Kafka message key used for partitioning.',
   in: getEvent('order complete', {
-    timestamp: 1700000101,
+    timestamp: 1700000101000,
   }),
   mapping: {
     name: 'purchase',
@@ -64,7 +64,7 @@ export const mappedEventName: KafkaStepExample = {
             key: 'purchase',
             value: 'json:event',
             headers: { 'content-type': 'application/json' },
-            timestamp: '1700000101',
+            timestamp: '1700000101000',
           },
         ],
         acks: -1,
@@ -83,7 +83,7 @@ export const mappedData: KafkaStepExample = {
   description:
     'A data mapping transforms the event payload before producing it as the Kafka message value.',
   in: getEvent('order complete', {
-    timestamp: 1700000102,
+    timestamp: 1700000102000,
     data: { id: 'ORD-400', value: 99.99, currency: 'EUR' },
   }),
   mapping: {
@@ -106,7 +106,7 @@ export const mappedData: KafkaStepExample = {
             key: 'purchase',
             value: 'json:data',
             headers: { 'content-type': 'application/json' },
-            timestamp: '1700000102',
+            timestamp: '1700000102000',
           },
         ],
         acks: -1,
@@ -126,7 +126,7 @@ export const keyFromUser: KafkaStepExample = {
     'A settings.kafka.key path resolves the message key from the event, here using user.id for per-user partitioning.',
   in: createEvent({
     name: 'user signup',
-    timestamp: 1700000103,
+    timestamp: 1700000103000,
     user: { id: 'usr-789' },
     data: { plan: 'pro' },
   }),
@@ -147,7 +147,7 @@ export const keyFromUser: KafkaStepExample = {
             key: 'usr-789',
             value: 'json:event',
             headers: { 'content-type': 'application/json' },
-            timestamp: '1700000103',
+            timestamp: '1700000103000',
           },
         ],
         acks: -1,
@@ -166,7 +166,7 @@ export const topicOverride: KafkaStepExample = {
   description:
     'A mapping rule overrides the destination topic so specific events are routed to a dedicated stream.',
   in: getEvent('order complete', {
-    timestamp: 1700000104,
+    timestamp: 1700000104000,
     data: { id: 'ORD-500', value: 42 },
   }),
   mapping: {
@@ -184,7 +184,7 @@ export const topicOverride: KafkaStepExample = {
             key: 'order_complete',
             value: 'json:event',
             headers: { 'content-type': 'application/json' },
-            timestamp: '1700000104',
+            timestamp: '1700000104000',
           },
         ],
         acks: -1,
@@ -199,7 +199,7 @@ export const topicOverride: KafkaStepExample = {
  */
 export const ignoredEvent: KafkaStepExample = {
   public: false,
-  in: createEvent({ name: 'debug noise', timestamp: 1700000105 }),
+  in: createEvent({ name: 'debug noise', timestamp: 1700000105000 }),
   mapping: { ignore: true },
   out: [],
 };
@@ -210,7 +210,7 @@ export const ignoredEvent: KafkaStepExample = {
 export const silentRule: KafkaStepExample = {
   public: false,
   description: 'A rule with silent: true sends no message.',
-  in: getEvent('page view', { timestamp: 1700000106 }),
+  in: getEvent('page view', { timestamp: 1700000106000 }),
   mapping: { silent: true },
   out: [],
 };

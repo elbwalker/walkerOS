@@ -202,6 +202,10 @@ Fan-out is the `many` operator. Use it when one inbound event needs to feed seve
   "sources": {
     "http": {
       "package": "@walkeros/server-source-express",
+      "config": {
+        "settings": { "paths": ["/collect", "/purchase"] },
+        "ingest": { "map": { "path": "path" } }
+      },
       "next": {
         "many": [
           {
@@ -216,12 +220,21 @@ Fan-out is the `many` operator. Use it when one inbound event needs to feed seve
         ]
       }
     }
+  },
+  "transformers": {
+    "purchase_parser": {},
+    "audit_log": {}
   }
 }`}
   language="json"
 />
 
-A request to `/purchase` matches both entries, so it becomes two copies: one runs `purchase_parser`, the other `audit_log`, and each then continues to the collector and the destinations on its own. Any other request matches only `audit_log` and continues without a copy. If no entry matches, the event continues unchanged.
+The source serves `/collect` and `/purchase`, and its `config.ingest` copies
+the request path into `ingest.path`. Without that mapping `ingest.path` is
+empty, so the `/purchase` entry never matches, and nothing reports it. The two
+transformers are empty placeholders for your own steps.
+
+A request to `/purchase` matches both entries, so it becomes two copies: one runs `purchase_parser`, the other `audit_log`, and each then continues to the collector and the destinations on its own. A request to `/collect` matches only `audit_log` and continues without a copy. If no entry matches, the event continues unchanged.
 
 Each copy gets its own `event.id`, derived from the original id and the branch position, so deduplication on `event.id` (and vendor deduplication such as Meta's `event_id`) keeps every copy. The copies share the same `trace`. A transformer that returns an array of results forks the same way.
 

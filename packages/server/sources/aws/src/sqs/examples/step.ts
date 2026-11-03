@@ -11,12 +11,12 @@ import type { Flow } from '@walkeros/core';
  */
 
 const eventPayload = {
-  event: 'page view',
+  name: 'page view',
   data: { title: 'Documentation', url: 'https://example.com/docs' },
 };
 
 const orderPayload = {
-  event: 'order complete',
+  name: 'order complete',
   data: { id: 'ORD-500', value: 199.99, currency: 'EUR' },
 };
 
@@ -44,7 +44,7 @@ export const orderComplete: Flow.StepExample = {
 export const decoderText: Flow.StepExample = {
   title: 'Text decoder',
   description:
-    'When decoder is "text", the body string flows under data.payload.',
+    'When decoder is "text", the body string flows under data.payload. It has no event name, so without a before transformer that builds the event the collector rejects it and the message is acknowledged.',
   in: { MessageId: 'm-3', Body: 'raw text payload' },
   out: [['message.ack', 'm-3']],
 };

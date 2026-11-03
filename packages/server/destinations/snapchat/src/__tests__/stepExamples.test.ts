@@ -1,6 +1,6 @@
 import type { WalkerOS } from '@walkeros/core';
 import { startFlow } from '@walkeros/collector';
-import { clone } from '@walkeros/core';
+import { clone, isObject } from '@walkeros/core';
 import { examples } from '../dev';
 import { expectSimulationResolves } from '@walkeros/core/dev';
 
@@ -60,3 +60,11 @@ describe('Step Examples', () => {
 
 it('declares simulation paths that resolve', () =>
   expectSimulationResolves(examples.env));
+
+it('maps every published example to an uppercase Snapchat event name', () => {
+  for (const example of Object.values(examples.step)) {
+    if (example.public === false) continue;
+    const name = isObject(example.mapping) ? example.mapping.name : undefined;
+    expect(name).toMatch(/^[A-Z0-9_]+$/);
+  }
+});

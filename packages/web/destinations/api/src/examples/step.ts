@@ -19,7 +19,9 @@ const URL = 'https://api.example.com/events';
 const traceparent = (event: WalkerOS.Event): string =>
   `00-${event.source.trace}-${event.id}-01`;
 
-const entityActionEvent = getEvent('entity action', { timestamp: 1700000500 });
+const entityActionEvent = getEvent('entity action', {
+  timestamp: 1700000500000,
+});
 
 export const entityAction: Flow.StepExample = {
   title: 'Entity action',
@@ -48,7 +50,7 @@ export const entityAction: Flow.StepExample = {
   ],
 };
 
-const pageViewEvent = getEvent('page view', { timestamp: 1700000501 });
+const pageViewEvent = getEvent('page view', { timestamp: 1700000501000 });
 
 export const pageView: Flow.StepExample = {
   title: 'Page view',
@@ -80,7 +82,7 @@ export const pageView: Flow.StepExample = {
 };
 
 const orderCompleteEvent = getEvent('order complete', {
-  timestamp: 1700000502,
+  timestamp: 1700000502000,
 });
 
 export const customTransform: Flow.StepExample = {
@@ -93,7 +95,7 @@ export const customTransform: Flow.StepExample = {
       map: {
         order_id: 'data.id',
         amount: 'data.value',
-        tax: 'data.taxes',
+        tax: 'data.tax',
         shipping_cost: 'data.shipping',
         currency: 'data.currency',
         event_name: 'name',
@@ -107,7 +109,7 @@ export const customTransform: Flow.StepExample = {
       URL,
       JSON.stringify({
         order_id: '0rd3r1d',
-        amount: 555,
+        amount: 462,
         tax: 73.76,
         shipping_cost: 5.22,
         currency: 'EUR',
@@ -127,7 +129,7 @@ export const customTransform: Flow.StepExample = {
 export const silentRule: Flow.StepExample = {
   public: false,
   description: 'A rule with silent: true sends no request.',
-  in: getEvent('page view', { timestamp: 1700000502 }),
+  in: getEvent('page view', { timestamp: 1700000502000 }),
   mapping: { silent: true },
   out: [],
 };

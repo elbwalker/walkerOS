@@ -13,8 +13,9 @@ describe('customerio conformance', () => {
       profile: 'sdk-env',
       examples: examples.step,
       schema: schemas.settings,
-      settings: { siteId: 'site', apiKey: 'key' },
+      settings: examples.minimal.settings,
       env: { push: examples.env.push, simulation: examples.env.simulation },
+      minimal: examples.minimal,
       root: path.join(__dirname, '..', '..'),
     });
   });

@@ -27,7 +27,18 @@ npm install @walkeros/transformer-validate
 import { startFlow } from '@walkeros/collector';
 import { transformerValidate } from '@walkeros/transformer-validate';
 
+// An order complete event needs data.value and data.currency
+const contractWeb = {
+  events: {
+    order: {
+      complete: { properties: { data: { required: ['value', 'currency'] } } },
+    },
+  },
+};
+
 await startFlow({
+  // Collector chain: checks every event before any destination gets it
+  next: 'validate',
   transformers: {
     validate: {
       code: transformerValidate,
@@ -37,8 +48,8 @@ await startFlow({
 });
 ```
 
-The same step in a bundled flow, referencing a named contract from the top-level
-`contract` block:
+The same step in a bundled flow, wired into the collector chain and referencing
+a named contract from the top-level `contract` block:
 
 ```json
 {
@@ -56,13 +67,14 @@ The same step in a bundled flow, referencing a named contract from the top-level
   },
   "flows": {
     "default": {
+      "config": { "platform": "web" },
+      "collector": { "next": "validate" },
       "transformers": {
         "validate": {
           "package": "@walkeros/transformer-validate",
           "config": {
             "settings": { "contract": ["$contract.web"], "mode": "strict" }
-          },
-          "next": "ga4"
+          }
         }
       }
     }

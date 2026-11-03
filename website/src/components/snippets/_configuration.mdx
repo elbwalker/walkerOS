@@ -56,3 +56,32 @@ Object.keys(props.data.schemas.mapping.properties ?? {}).length > 0 ? (
     </>
   );
 })()}
+
+{(() => {
+  const failures = props.data?.examples?.step
+    ? Object.entries(props.data.examples.step).filter(
+        ([, example]) => example?.outcome,
+      )
+    : [];
+  if (failures.length === 0) return null;
+  return (
+    <>
+      <h2>When it fails</h2>
+      <ul>
+        {failures.map(([key, example]) => {
+          if (!example.description)
+            throw new Error(
+              `failure example ${key} of ${props.data?.$meta?.package} has no description`,
+            );
+          return (
+            <li key={key}>
+              <strong>{stepTitle(key, example)}</strong>: {example.description}{' '}
+              Reported as <code>{example.outcome.status}</code> with code{' '}
+              <code>{example.outcome.code}</code>.
+            </li>
+          );
+        })}
+      </ul>
+    </>
+  );
+})()}

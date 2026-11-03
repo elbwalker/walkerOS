@@ -14,8 +14,8 @@ walkerOS events are self-describing, stateless, vendor-agnostic data structures.
 They capture user interactions in a standardized format that can be transformed
 for any destination.
 
-**Core principle:** Events describe WHAT happened, not WHERE it goes. Stateless.
-Self-describing. Industry-agnostic.
+**Core principle:** Events describe what happened, not where it goes. They are
+stateless, self-describing and industry-agnostic.
 
 ## Entity-Action Naming (Critical)
 
@@ -60,9 +60,9 @@ for canonical types (Event interface, plus event helpers in `event.ts`).
 | `timestamp`       | number | Auto-generated Unix ms                                      | `1647261462000`                        |
 | `entity`          | string | Parsed from name                                            | `"product"`                            |
 | `action`          | string | Parsed from name                                            | `"view"`                               |
-| `source.type`     | string | Source kind (`browser`, `dataLayer`, `cookiefirst`, ...)    | `"browser"`                            |
+| `source.type`     | string | Source kind (`browser`, `dataLayer`, `session`, ...)        | `"browser"`                            |
 | `source.platform` | string | Runtime platform (`web`, `server`)                          | `"web"`                                |
-| `source.schema`   | string | Source-emitted schema/version (optional)                    | `"datalayer-v2"`                       |
+| `source.schema`   | string | Event-model version, set by the collector when no source    | `"4"`                                  |
 | `source.trace`    | string | Run-scoped W3C trace_id, shared by every event of a run     | `"0123...cdef"` (32 hex)               |
 | `source.count`    | number | Per-run emission sequence (1, 2, 3, ...)                    | `1`                                    |
 | `source.release`  | object | Per-flow config release map, accumulates across crossings   | `{ web: "3", server: "5" }`            |
@@ -93,7 +93,7 @@ context: {
 
 ### globals Property
 
-Properties that apply to ALL events in the session.
+Properties the collector merges into every event it creates.
 
 ```typescript
 globals: {
@@ -122,7 +122,7 @@ User identification across sessions.
 ```typescript
 user: {
   id: "user123",        // Your user ID
-  device: "device456",  // Device fingerprint
+  device: "device456",  // Device ID
   session: "sess789",   // Session ID
   hash: "a1b2c3...",    // Hashed identifier (for example a hashed email)
   optout: false,        // User opted out of tracking (boolean)
@@ -142,15 +142,15 @@ based on which source emitted it.
 
 ```typescript
 source: {
-  type: 'browser',         // source kind (browser, dataLayer, cookiefirst, ...)
+  type: 'browser',         // source kind (browser, dataLayer, session, ...)
   platform: 'web',         // runtime: 'web' or 'server'
-  version: '4.0.0',        // external source-emitter version (collector no longer sets this)
-  schema: 'datalayer-v2',  // optional schema/version emitted by the source
+  version: '3',            // external source-emitter version (the collector does not set it)
+  schema: '4',             // event-model version (the collector sets it on an event without a source)
   trace: '0123...cdef',    // run-scoped W3C trace_id, groups all events of a run
   count: 1,                // per-run emission sequence (1, 2, 3, ...)
   release: { web: '3' },   // per-flow config release map, accumulates web to server
-  url: 'https://...',      // page URL (web only, set by web-context transformer)
-  referrer: '...',         // page referrer (web only)
+  url: 'https://...',      // page URL (set by the browser, dataLayer and session sources)
+  referrer: '...',         // page referrer (same sources)
   tool: 'cli',             // tool that produced the event (optional)
   command: 'simulate',     // command name (optional)
 }
@@ -160,8 +160,9 @@ Steps may add their own keys to `source` (the validate transformer writes
 `valid`, GA4 decoding adds `pageLoadId` and `hitSequence`); each holds a
 property value.
 
-CMP and other non-page sources do NOT set `source.url`/`source.referrer` -
-that's the responsibility of a web-context transformer.
+The browser, dataLayer and session sources set `source.url` and
+`source.referrer` from the page. CMP sources emit `walker consent` commands, not
+events.
 
 `source.trace` is the run grouping key: the collector mints a fresh run-scoped
 trace_id on each run and stamps it (plus a per-run `source.count`) on every
@@ -173,20 +174,12 @@ Each flow the event passes through adds its own entry (that flow's config
 release), so an event captured on the web and processed on the server carries
 both flow releases, and a warehouse row shows exactly which config version
 touched it. This is distinct from `source.version`, the source package version
-set only by external source emitters (the collector no longer stamps it).
+set only by external source emitters; the collector does not stamp it.
 
-## Migration from v3
-
-If you have existing v3 events or configs, here is the v4 mapping:
-
-| v3                                | v4                                                                 |
-| --------------------------------- | ------------------------------------------------------------------ |
-| `event.id` = `"<ts>-<rnd>-<seq>"` | `event.id` = W3C span_id (16 lowercase hex chars)                  |
-| `event.version`                   | removed - see `source.version` and `source.schema`                 |
-| `event.group`                     | removed - use `source.trace` (run-scoped trace_id) for correlation |
-| `event.count`                     | removed - use `source.count` (per-run emission sequence)           |
-| `event.source.id`                 | `event.source.url` (when it meant page URL)                        |
-| `nested: [{ type, data }]`        | `nested: [{ entity, data }]` (`Entity.entity` replaces `.type`)    |
+Upgrading v3 events or configs: see
+[Migrating from v3 to v4](../../website/docs/migrating/v3-to-v4.mdx). Nested
+entities name their entity in `entity`, where v3 used `type`:
+`nested: [{ entity, data }]`.
 
 ## Design Principles
 
@@ -197,8 +190,7 @@ state.
 
 ### Self-Describing
 
-Events contain all context needed to understand them. No external lookups
-required.
+Events contain all context needed to understand them, without external lookups.
 
 ### Vendor-Agnostic
 
@@ -210,9 +202,9 @@ Transformation to vendor formats happens in **mapping**, not in event creation.
 ## Creating Events
 
 `elb` takes a partial event: `name` is required, every other field is optional.
-The collector adds `id`, `timestamp`, `entity`, `action` and `source`, and
-merges its own `globals`, `user` and `consent` key by key (the event's values
-win).
+The collector adds `id`, `timestamp`, `timing`, `entity`, `action` and `source`,
+and merges its own `globals`, `user` and `consent` key by key (the event's
+values win).
 
 ```typescript
 import { startFlow } from '@walkeros/collector';
@@ -228,8 +220,9 @@ const result = await elb({
   globals: { currency: 'USD' },
 });
 
-// A rejected event reaches no destination, e.g. 'Event name is invalid'
-if (!result.ok) console.error(result.error);
+// A failed destination is in result.failed (with its reason); a rejected
+// event reaches no destination and sets result.error, e.g. 'Event name is invalid'
+if (!result.ok) console.error(result.failed ?? result.error);
 ```
 
 Every event uses this partial event form. `walker` commands keep their string

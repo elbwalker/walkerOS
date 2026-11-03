@@ -20,13 +20,13 @@
 
 **Skill Coverage:**
 
-| Check               | Covered | Location                 |
-| ------------------- | ------- | ------------------------ |
-| Source verification | ✅      | Source debugging section |
-| Collector logging   | ✅      | Collector section        |
-| Destination config  | ✅      | Destination section      |
-| Mapping issues      | ✅      | Mapping section          |
-| Consent blocking    | ✅      | Consent section          |
+| Check               | Covered | Location                                      |
+| ------------------- | ------- | --------------------------------------------- |
+| Source verification | ✅      | Quick Diagnosis, Does the CMP Source Send ... |
+| Collector logging   | ✅      | 1. Console Logging                            |
+| Destination config  | ✅      | Simulated Destination Recorded Nothing        |
+| Mapping issues      | ✅      | Event Name Mismatch, Missing Nested Data      |
+| Consent blocking    | ✅      | Consent Blocking Events                       |
 
 **Result:** ✅ PASS
 
@@ -38,11 +38,11 @@
 
 **Skill Coverage:**
 
-| Check              | Covered | Location        |
-| ------------------ | ------- | --------------- |
-| Event structure    | ✅      | Event debugging |
-| Mapping transforms | ✅      | Mapping section |
-| Type coercion      | ✅      | Common issues   |
+| Check              | Covered   | Location                                 |
+| ------------------ | --------- | ---------------------------------------- |
+| Event structure    | ✅        | Missing Nested Data                      |
+| Mapping transforms | ✅        | Event Name Mismatch, 4. Simulate or Mock |
+| Type coercion      | ⚠️ Partly | Function Mapping Errors (a fallback)     |
 
 **Result:** ✅ PASS
 
@@ -54,11 +54,11 @@
 
 **Skill Coverage:**
 
-| Check           | Covered | Location           |
-| --------------- | ------- | ------------------ |
-| Race conditions | ✅      | Timing issues      |
-| Consent state   | ✅      | Consent section    |
-| Network issues  | ✅      | Destination errors |
+| Check           | Covered | Location                                     |
+| --------------- | ------- | -------------------------------------------- |
+| Race conditions | ✅      | Vendor SDK Not Loaded                        |
+| Consent state   | ✅      | Consent Blocking Events, pending in simulate |
+| Network issues  | ✅      | 2. Network Tab Inspection                    |
 
 **Result:** ✅ PASS
 

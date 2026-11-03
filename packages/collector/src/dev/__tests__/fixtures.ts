@@ -1,6 +1,7 @@
 import path from 'path';
 import type { Flow } from '@walkeros/core';
 import type { JSONSchema } from '@walkeros/core/dev';
+import type { ScriptDocument } from './fixture-package/src/vendor';
 
 export const schema: JSONSchema = {
   type: 'object',
@@ -43,9 +44,35 @@ export const blankPage: Flow.StepPage = {
   }),
 };
 
+/**
+ * A page whose document records the scripts a step inserts, marked or not
+ * (`scriptLoading` inserts a marked one). The real page is `page` from
+ * `@walkeros/web-core/dev`, which counts the scripts of the DOM.
+ */
+export const scriptPage: Flow.StepPage = {
+  open: () => {
+    const inserted: boolean[] = [];
+    const document: ScriptDocument = {
+      insert: (marked) => {
+        inserted.push(marked);
+      },
+    };
+    return {
+      globals: { document },
+      scripts: () => {
+        const marked = inserted.filter(Boolean).length;
+        return { marked, unmarked: inserted.length - marked };
+      },
+      failScripts: () => undefined,
+      close: () => undefined,
+    };
+  },
+};
+
 export const fixtures = {
   schema,
   examples,
   settings: { url: 'https://127.0.0.1:9/e' },
   root: path.join(__dirname, 'fixture-package'),
+  withoutMinimal: 'a kit fixture, not a published package',
 };

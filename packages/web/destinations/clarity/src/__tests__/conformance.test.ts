@@ -17,7 +17,8 @@ describe('clarity conformance', () => {
       schema: schemas.settings,
       // No settings.consent: the revocation reaches Clarity through the
       // destination's required consent alone.
-      settings: { apiKey: 'test-project' },
+      settings: examples.minimal.settings,
+      minimal: examples.minimal,
       env: { push: examples.env.push, simulation: examples.env.simulation },
       root: path.join(__dirname, '..', '..'),
     });

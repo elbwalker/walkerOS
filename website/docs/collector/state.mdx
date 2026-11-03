@@ -36,7 +36,7 @@ Add `state` to any step. It accepts a single operation or an array of operations
 - `event.` reads the event, for example `event.user.session` or `event.data.gclid`.
 - `ingest.` reads the pipeline context a server source lifted from the request through `config.ingest`, for example a site id from the URL or an API key header.
 
-A path without one of these prefixes never resolves. `walkeros validate` rejects it, and at runtime the entry logs a warning and is skipped.
+A path without one of these prefixes never resolves. `walkeros validate` rejects it. At runtime the entry is skipped: an unprefixed `key` is reported at `ERROR`, an unprefixed `get` target logs a warning.
 
 `key` names the slot in the store. What `value` means depends on the mode:
 
@@ -55,7 +55,7 @@ An `ingest.` write is shared by every event in the scope and lands in place. Whe
 
 ## The default store
 
-When `store` is omitted, state uses the same built-in in-memory store as [cache](./cache.mdx) (`__cache`). This store is an entry-capped LRU with a TTL sweep, so entries are **evictable**: treat the default store as best-effort, not durable. For persistence across restarts or instances, point `store` at a configured backing (filesystem, S3, GCS).
+When `store` is omitted, state uses the same built-in in-memory store as [cache](./cache.mdx) (`__cache`). This store is an entry-capped LRU with a TTL sweep, so entries are evictable: treat the default store as best-effort, not durable. For persistence across restarts or instances, point `store` at a configured backing (filesystem, S3, GCS).
 
 State keys on the default store are prefixed with `state:` so they cannot collide with cache entries that share the same store. Explicitly named stores use the key as-is.
 
@@ -69,15 +69,21 @@ Stores declared with `file: true` hold raw bytes and are not supported by `state
 
 - **Source:** `before` chain → state → `next` chain → `collector.push`. All entries run before the collector receives the event, in array order. The source's `next` route is resolved after state ran, so it can route on a value a `get` loaded (for example `ingest.tier`). State is skipped when the source declares a `terminus`, which receives the raw event with no pipeline.
 - **Transformer:** `before` chain → `get` → step mapping → `set` → `next` dispatch. `get` entries enrich the event before the mapping runs; `set` entries run after it settles, on every emitting path (straight-through, `next` routing, and per fork of a fan-out).
-- **Destination:** `get` → mapping-to-payload push → `set` (after a successful send). A failed push skips the `set`. For a batched destination, an event that is enqueued (not yet delivered) does not trigger `set`; the batched `set`-on-flush path is not yet wired.
+- **Destination:** `get` → mapping-to-payload push → `set` (after a successful send). A failed push skips the `set`. A batched destination never runs `set`: neither enqueuing an event nor flushing the batch writes it, and nothing reports it.
 
-State is **fail-open**: if a store call or value resolution throws, the error is logged and the event passes through unchanged. The chain always continues. A key that does not resolve logs a warning and the event still passes through; a `get` that finds nothing in the store is silent.
+State is **fail-open**: if a store call or value resolution throws, the error is logged and the event passes through unchanged. The chain always continues. A key that does not resolve is reported at `ERROR` (one line per store and minute, code `mapping`) and the event still passes through; a `get` that finds nothing in the store is silent.
 
 ## Shape what you read or write
 
 `mapping` runs a full [mapping](../mapping/index.mdx) value over the value a `get` read from the store, or over the payload a `set` is about to write. One lookup can then fill several fields, with a default for each:
 
 ```json
+"stores": {
+  "customers": {
+    "package": "@walkeros/server-store-fs",
+    "config": { "settings": { "basePath": "./customers" } }
+  }
+},
 "transformers": {
   "loadUser": {
     "state": {
@@ -173,9 +179,16 @@ and merges them into `user`, so the `id` and `hash` already there stay:
 A destination reads a per-product margin from a store and writes it onto the event before mapping it to the vendor payload:
 
 ```json
+"stores": {
+  "catalog": {
+    "package": "@walkeros/server-store-fs",
+    "config": { "settings": { "basePath": "./catalog" } }
+  }
+},
 "destinations": {
   "warehouse": {
     "package": "@walkeros/server-destination-api",
+    "config": { "settings": { "url": "https://warehouse.example.com/events" } },
     "state": { "mode": "get", "store": "catalog", "key": "event.data.product_id", "value": "event.data.margin" }
   }
 }
@@ -186,6 +199,12 @@ A destination reads a per-product margin from a store and writes it onto the eve
 One endpoint serves many sites, and the URL is the only thing that says which one. The source lifts the site id from the path into ingest. A transformer looks up that site's row in a registry store and keeps it in ingest, so routing can use it without it reaching any destination:
 
 ```json
+"stores": {
+  "registry": {
+    "package": "@walkeros/server-store-fs",
+    "config": { "settings": { "basePath": "./registry" } }
+  }
+},
 "sources": {
   "collect": {
     "package": "@walkeros/server-source-express",
@@ -210,9 +229,15 @@ One endpoint serves many sites, and the URL is the only thing that says which on
         "shared"
       ]
     }
-  }
+  },
+  "enterprise": {},
+  "shared": {}
 }
 ```
+
+`enterprise` and `shared` are empty placeholders for each tier's own steps. A
+route can name only a declared transformer: `walkeros validate` rejects any
+other id.
 
 The lookup sits on a transformer, which runs its `get` before its `next` route. A source also runs its state before its `next` route resolves, so a source-level `get` can feed that source's routing too.
 

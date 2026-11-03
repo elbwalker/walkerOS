@@ -27,8 +27,9 @@ describe('hubspot conformance', () => {
       profile: 'sdk-env',
       examples: examples.step,
       schema: schemas.settings,
-      settings: { accessToken: 'pat-test-xxx', eventNamePrefix: 'pe12345678_' },
+      settings: examples.minimal.settings,
       env: { push: examples.env.push, simulation: examples.env.simulation },
+      minimal: examples.minimal,
       root: path.join(__dirname, '..', '..'),
     });
   });

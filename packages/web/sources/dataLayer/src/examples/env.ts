@@ -12,10 +12,7 @@ const noop = () => {};
 
 // Create a properly typed elb/push/command function that returns a promise with PushResult
 const createMockElbFn = (): Elb.Fn => {
-  const fn = (() =>
-    Promise.resolve({
-      ok: true,
-    })) as Elb.Fn;
+  const fn: Elb.Fn = () => Promise.resolve({ ok: true });
   return fn;
 };
 
@@ -33,17 +30,28 @@ const noopLogger: Logger.Instance = {
 };
 
 /**
- * Environment interface for dataLayer source
+ * Minimal window surface the dataLayer source touches: the dataLayer array
+ * plus event registration.
+ */
+interface MockDataLayerWindow {
+  dataLayer: unknown[];
+  addEventListener: () => void;
+  removeEventListener: () => void;
+}
+
+/**
+ * Environment interface for dataLayer source. Its window is the mock's own
+ * narrowed shape, so the mock satisfies it directly.
  */
 interface DataLayerEnv extends Source.BaseEnv {
-  window?: typeof window;
+  window?: MockDataLayerWindow;
 }
 
 /**
  * Mock window object with dataLayer array
  */
-const createMockWindow = () => ({
-  dataLayer: [] as unknown[],
+const createMockWindow = (): MockDataLayerWindow => ({
+  dataLayer: [],
   addEventListener: noop,
   removeEventListener: noop,
 });
@@ -65,7 +73,7 @@ export const push: DataLayerEnv = {
     return createMockElbFn();
   },
   get window() {
-    return createMockWindow() as unknown as typeof window;
+    return createMockWindow();
   },
   logger: noopLogger,
 };

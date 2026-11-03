@@ -16,7 +16,7 @@ import Configuration from '@site/src/components/snippets/_configuration.mdx';
   npm="@walkeros/server-transformer-bot"
 />
 
-Annotates events with `user.botScore` (0-99, higher = more automated), `user.botCategory` (what kind of client), `user.botProduct` (the identified product, when a named detector matched) and `ingest.bot.reasons` (stable reason codes). Never drops events, destinations filter via mapping.
+Annotates events with `user.botScore` (0-99, higher = more automated), `user.botCategory` (what kind of client), `user.botProduct` (the identified product, when a named detector matched) and `ingest.bot.reasons` (stable reason codes). It never drops events; destinations filter on these fields in their mapping.
 
 ## Installation
 
@@ -33,6 +33,8 @@ Annotates events with `user.botScore` (0-99, higher = more automated), `user.bot
 import { transformerBot } from '@walkeros/server-transformer-bot';
 
 await startFlow({
+  // Collector chain: every event is scored before the destinations get it
+  next: 'bot',
   transformers: {
     bot: { code: transformerBot },
   },
@@ -44,7 +46,8 @@ language="typescript"
   <TabItem value="bundled" label="Bundled">
 
 <CodeSnippet
-  code={`"transformers": {
+  code={`"collector": { "next": "bot" },
+"transformers": {
   "bot": {
     "package": "@walkeros/server-transformer-bot"
   }
@@ -94,9 +97,9 @@ The transformer reads its signals from `ctx.ingest` (default path `ingest.<name>
   language="json"
 />
 
-`transport` is not a signal, it is how the request context enters the pipeline. See [Request context](#request-context).
+`transport` is not a signal: it is how the request context enters the pipeline. See [Request context](#request-context).
 
-Header-driven scoring works on the express and GCP Cloud Function sources. On AWS Lambda it depends on the API Gateway version's header casing, and on the `fetch` source it is unavailable: that source's raw scope is a WHATWG `Request`, whose `headers` is a `Headers` instance rather than a plain object, so dot paths resolve to `undefined`.
+The express, fetch, GCP Cloud Function and AWS Lambda sources all expose the request headers as a plain object with lowercase names, so the same `headers.<name>` keys work on each of them.
 
 ## Declared signals
 
@@ -138,7 +141,7 @@ The same header value means opposite things in different contexts: a wildcard `A
 
 **A fallback array tries its entries in order.** `[{ "key": "ingest.transport" }, { "value": "beacon" }]` uses the sender's annotation when there is one and pins `beacon` otherwise.
 
-A bare string is always read as a lookup path, so a string context that is not one of the six literals must contain a dot. A typo like `"beacn"` fails validation instead of silently becoming a lookup that resolves to nothing. The guard applies inside the array too: a literal there is written `{ "value": "beacon" }`, and the bare `["beacon"]` is rejected.
+A bare string is always read as a lookup path, so a string context that is not one of the six literals must contain a dot. `walkeros validate` reports a typo like `"beacn"` as a warning (an error under `--strict`); at runtime such a string resolves to nothing and the context falls back to `auto`. The guard applies inside the array too: a literal there is written `{ "value": "beacon" }`, and `walkeros validate` reports the bare `["beacon"]`.
 
 ### Wiring the transport
 
@@ -198,7 +201,7 @@ Pinning, however it is reached, unlocks the `Accept` shape check, the Fetch Meta
 
 ## Detection layers
 
-Deterministic, most specific first, first match wins. The graded layer does not run when one of these fires.
+The deterministic layers run most specific first, and the first match wins. The graded layer does not run when one of these fires.
 
 | Score | Category     | Trigger                                   |
 | ----- | ------------ | ----------------------------------------- |
@@ -208,7 +211,7 @@ Deterministic, most specific first, first match wins. The graded layer does not 
 | 80    | `automation` | `isbot`                                   |
 | 75    | `automation` | a value impossible for the pinned context |
 
-Graded, capped at 60, so the layers never overlap: `ch_version_mismatch` (30), `ch_missing_on_chromium` (25), `accept_generic_on_typed_context` (25), `fetchmeta_missing_on_modern_ua` (15), `fetchmeta_profile_mismatch` (15), `accept_language_missing` (10), `accept_encoding_missing` (5). The weights and the `suspiciousAt` default of 25 are provisional starting values, not calibrated against a labelled corpus.
+The graded layer is capped at 60, so the layers never overlap: `ch_version_mismatch` (30), `ch_missing_on_chromium` (25), `accept_generic_on_typed_context` (25), `fetchmeta_missing_on_modern_ua` (15), `fetchmeta_profile_mismatch` (15), `accept_language_missing` (10), `accept_encoding_missing` (5). The weights and the `suspiciousAt` default of 25 are provisional starting values, not calibrated against a labelled corpus.
 
 ## Categories
 
@@ -239,9 +242,9 @@ AI visibility report: `event.user.botCategory IN ('ai-agent', 'ai-crawler')`, gr
 
 `botScore` is `null` for category `unknown`, which means not measured rather than human, and evaluates false under a `> 50` filter. Cloudflare's `bot_score` runs the opposite way (1 = bot) because it is a trust score; ours matches its field name.
 
-## Not yet implemented
+## Not covered {#not-yet-implemented}
 
-Identity verification (`settings.verify`, a CIDR matcher and a `botVerified` output), Web Bot Auth signature verification, reverse DNS, ASN / datacenter-IP, web-side runtime checks, behavioral signals, and TLS / JA4. The input names `ja4` and `headerNames` are reserved and resolved but unconsumed. See the README for why each one is out.
+The transformer does not verify a claimed identity (no IP range or Web Bot Auth signature check, no reverse DNS), does not detect ASN or datacenter IPs, and has no web-side runtime checks, behavioral signals or TLS / JA4 fingerprinting. The input names `ja4` and `headerNames` are reserved and resolved but unconsumed. See the README for why each one is out.
 
 ## In the complete example
 
@@ -255,6 +258,6 @@ from the vendors:
 
 ## Limits
 
-Will not catch residential-proxy + stealth Chrome, CAPTCHA-solver farms, or real-browser-as-a-service. For that threat model use a commercial vendor (Cloudflare Bot Management, DataDome, HUMAN).
+It does not catch residential proxies combined with stealth Chrome, CAPTCHA-solver farms, or real-browser-as-a-service. For that threat model use a commercial vendor (Cloudflare Bot Management, DataDome, HUMAN).
 
 In-browser agents such as Claude for Chrome are undetectable here by construction: they drive a real browser session and produce headers identical to it. A UA-map match is a claim, not proof: Screaming Frog ships Googlebot and Bingbot presets, and any client can send any UA.

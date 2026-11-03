@@ -2,8 +2,8 @@
 
 ## Installation
 
-These are example configurations - see the main
-[AWS Source README](../README.md) for installation.
+These are example configurations. See the main [AWS Source README](../README.md)
+for installation.
 
 ## Usage
 
@@ -57,7 +57,7 @@ curl https://your-api-id.execute-api.us-east-1.amazonaws.com/Prod/health
 # Send event
 curl -X POST https://your-api-id.execute-api.us-east-1.amazonaws.com/Prod/collect \
   -H "Content-Type: application/json" \
-  -d '{"event": "page view", "data": {"title": "Test"}}'
+  -d '{"name": "page view", "data": {"title": "Test"}}'
 ```
 
 ## Local Testing
@@ -88,7 +88,8 @@ serverless offline
 ### API Gateway HTTP API (v2)
 
 - **Recommended**: Good balance of features and cost
-- **Lower cost**: ~70% cheaper than REST API
+- **Lower cost**: about 70% less per request than REST API
+  ([API Gateway pricing](https://aws.amazon.com/api-gateway/pricing/))
 - **Best for**: Production deployments
 - **Features**: JWT authorization, CORS, throttling
 

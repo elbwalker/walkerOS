@@ -56,6 +56,8 @@ describe('gtag conformance', () => {
       settings: { ga4: { measurementId: 'G-XXXXXX-1' } },
       env,
       root: path.join(__dirname, '..', '..'),
+      withoutMinimal:
+        'one package with one export serves four pages (index, GA4, Ads, GTM): one minimal example cannot serve them all',
     });
   });
 
@@ -65,7 +67,6 @@ describe('gtag conformance', () => {
       env,
       page,
       claims: CLAIMS,
-      published: true,
     });
   });
 
@@ -94,7 +95,6 @@ describe('gtag conformance', () => {
       settings,
       env,
       page,
-      published: true,
     });
   });
 

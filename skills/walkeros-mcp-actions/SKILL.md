@@ -75,9 +75,8 @@ filtering pattern; they belong in an interactive, authorized session.
 5. **Return the distilled answer.** Hand the model one line, not the full dump.
 
 ```ts
-// Pseudo-code in a code-execution host. `mcp` is the bound walkerOS client.
-// (Typed `@walkeros/mcp-actions` wrappers are planned/forthcoming; until then
-//  call the raw tools and read `structuredContent` yourself.)
+// Pseudo-code in a code-execution host. `mcp` is the bound walkerOS client:
+// call the raw tools and read `structuredContent` yourself.
 
 const flow = await readFile('flow.json', 'utf8');
 
@@ -106,7 +105,7 @@ for (const name of destinations) {
   const sim = await mcp.call('walkeros-flow:flow_simulate', {
     configPath: 'flow.json',
     step: `destination.${name}`,
-    event: 'product add',
+    event: { name: 'product add', data: { id: 'ers', price: 420 } },
   });
   // 3. Filter in code: keep only destinations that received nothing. The
   //    model never sees the per-destination call dump, only the verdict.

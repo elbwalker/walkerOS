@@ -159,7 +159,7 @@ export default function RootLayout({ children }: { children: ReactNode }) {
 Component usage is identical to React. Use the tagger helper and manual events.
 Here the tagger sends `product view` when the product is on the page, and the
 button sends `product add` manually. With the App Router, the `onClick` handler
-makes this a Client Component, so its file starts with `'use client'`:
+needs a Client Component, so its file starts with `'use client'`:
 
 <CodeSnippet
   code={`'use client';

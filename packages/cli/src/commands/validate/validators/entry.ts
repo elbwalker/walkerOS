@@ -55,7 +55,6 @@ export async function validateEntry(
     const outcome = await checkStepSettings(
       target,
       resolution.flow,
-      file?.flows[target.flow],
       'entry:settings',
       context,
     );

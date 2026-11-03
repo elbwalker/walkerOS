@@ -12,8 +12,7 @@ export const SettingsSchema = z
       .unknown()
       .describe(
         'walkerOS mapping value to resolve userId for experiment bucketing. Example: "user.id", or the fallback chain ["user.id", "user.device"]. An event where it resolves to no string fails with missing-input.',
-      )
-      .optional(),
+      ),
     attributes: z
       .unknown()
       .describe(

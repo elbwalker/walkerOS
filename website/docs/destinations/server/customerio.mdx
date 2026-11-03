@@ -7,6 +7,7 @@ package: '@walkeros/server-destination-customerio'
 ---
 import data from '@walkeros/server-destination-customerio/walkerOS.json';
 import Configuration from '@site/src/components/snippets/_configuration.mdx';
+import Quickstart from '@site/src/components/snippets/_quickstart.mdx';
 
 import WhereThisFits from '@site/src/components/snippets/_where-this-fits.mdx';
 
@@ -14,72 +15,27 @@ import WhereThisFits from '@site/src/components/snippets/_where-this-fits.mdx';
 
 <PackageLink env="server" github="packages/server/destinations/customerio" npm="@walkeros/server-destination-customerio" status="beta" />
 
-Server-side event delivery to [Customer.io](https://customer.io/) via the official [`customerio-node`](https://www.npmjs.com/package/customerio-node) SDK. Tracks events with `TrackClient.track()`, manages identities with `identify()`, and supports the full lifecycle: page views, device registration, suppress/unsuppress, profile merging, and transactional messaging via `APIClient.sendEmail()` / `sendPush()`.
+Server-side event delivery to [Customer.io](https://customer.io/) via the official [`customerio-node`](https://www.npmjs.com/package/customerio-node) SDK. Tracks events with `TrackClient.track()`, manages identities with `identify()`, and supports the customer lifecycle: page views, device registration, suppress/unsuppress and profile merging. Transactional messaging via `APIClient.sendEmail()` / `sendPush()` does not deliver today (see [Transactional messaging](#transactional-messaging)).
 
 <WhereThisFits
   pre={<>Customer.io is a <strong>server destination</strong> in the walkerOS flow:</>}
   flowMap={{
     destinations: { default: { label: 'Destination', text: 'Customer.io', highlight: true } },
   }}
-  post={<>Receives events server-side from the collector, resolves a `customerId` (or falls back to `anonymousId`), optionally fires `identify()`, then forwards the event to Customer.io for campaigns, broadcasts, and transactional messaging.</>}
+  post={<>Receives events server-side from the collector, resolves a `customerId` (or falls back to `anonymousId`), optionally fires `identify()`, then forwards the event to Customer.io for campaigns and broadcasts.</>}
 />
 
 ## Installation
 
-<CodeSnippet
-  code={`npm install @walkeros/server-destination-customerio`}
-  language="bash"
-/>
-
-<Tabs groupId="mode">
-  <TabItem value="integrated" label="Integrated" default>
-
-<CodeSnippet
-  code={`import { startFlow } from '@walkeros/collector';
-import { destinationCustomerIo } from '@walkeros/server-destination-customerio';
-
-await startFlow({
-  destinations: {
-    customerio: {
-      code: destinationCustomerIo,
-      config: {
-        settings: {
-          siteId: 'YOUR_SITE_ID',
-          apiKey: 'YOUR_API_KEY',
-        },
-      },
-    },
-  },
-});`}
-  language="typescript"
-/>
-
-  </TabItem>
-  <TabItem value="bundled" label="Bundled">
-
-Add to your `flow.json` destinations:
-
-<CodeSnippet
-  code={`"destinations": {
-  "customerio": {
-    "package": "@walkeros/server-destination-customerio",
-    "config": {
-      "settings": {
-        "siteId": "YOUR_SITE_ID",
-        "apiKey": "YOUR_API_KEY"
-      }
-    }
-  }
-}`}
-  language="json"
-/>
-
-[See bundled mode setup](/docs/getting-started/modes/bundled) | [CLI reference](/docs/apps/cli)
-
-  </TabItem>
-</Tabs>
+<Quickstart data={data} />
 
 <Configuration type="destination" data={data} />
+
+## Consent
+
+The quickstart sets no `config.consent`, so Customer.io receives every event, whatever consent the event carries. To send only events with consent, add `consent: { marketing: true }` to `config`, next to `settings` (with several keys listed, one granted key is enough). An event without that consent is skipped or queued, depending on the collector's `consentDenied`. Server flows built by the CLI skip it and count it in `skipped`. With `startFlow` it waits in the destination's queue by default: a later event that carries consent does not release it, and only a `walker consent` command does, which then sends the waiting events of every user at once. Pass `consentDenied: 'skip'` to `startFlow` to skip such events instead (see [Gate a destination with consent](/docs/guides/consent#gate-a-destination-with-consent) and [consent-denied events on a server](/docs/collector#consent-denied-events-on-a-server)).
+
+## Identity
 
 Identity is resolved automatically from each event: `customerId` defaults to `user.id` and `anonymousId` defaults to `user.session`. Customer.io requires a `customerId` or `anonymousId` per event. When `customerId` is missing, the destination automatically falls back to `trackAnonymous()` so anonymous visitor data is preserved.
 
@@ -90,16 +46,18 @@ Per-rule mapping settings control which lifecycle methods are called in addition
 | Mapping Setting | SDK Call                  | Use For                         |
 | --------------- | ------------------------- | ------------------------------- |
 | `identify`      | `identify()`              | Login, signup, profile updates  |
-| `page`          | `trackPageView()`         | Page view events                |
-| `destroy`       | `destroy()`               | GDPR delete / user removal      |
-| `suppress`      | `suppress()`              | Stop messaging (keep data)      |
-| `unsuppress`    | `unsuppress()`            | Resume messaging                |
+| `page`          | `trackPageView()`         | Page views (only the `url` is sent) |
+| `destroy`       | `destroy()`               | Delete a person (the id can be re-added) |
+| `suppress`      | `suppress()`              | Delete a person and block the id from being re-added (unlike `destroy`) |
+| `unsuppress`    | `unsuppress()`            | Allow a suppressed id to be re-added (the deleted person is not restored) |
 | `addDevice`     | `addDevice()`             | Register push notification token|
 | `deleteDevice`  | `deleteDevice()`          | Remove push token               |
 | `merge`         | `mergeCustomers()`        | Consolidate duplicate profiles  |
 
 Use `silent: true` on the rule to fire only the lifecycle call without tracking a second `track()` event.
 
+Every lifecycle call needs a resolved `customerId`. `addDevice` and `deleteDevice` also need `deviceId` and `platform`, and `merge` needs all four of its fields. When a value is missing, the destination skips the call without an error. If the rule also sets `silent: true`, nothing is sent and the push still counts as delivered, as with a `page` rule on an anonymous visitor's page view.
+
 ## Transactional messaging
 
-Set `settings.appApiKey` to enable `sendEmail` / `sendPush` via Customer.io's App API. These mappings resolve to the full request body expected by the SDK.
+Set `settings.appApiKey` to call `sendEmail` / `sendPush` via Customer.io's App API from a mapping rule. These calls do not deliver today. The SDK accepts only its own `SendEmailRequest` and `SendPushRequest` objects, so every call fails with `transport`, logged at ERROR, and nothing is sent. Without `appApiKey`, a `sendEmail` or `sendPush` rule skips the call without an error.

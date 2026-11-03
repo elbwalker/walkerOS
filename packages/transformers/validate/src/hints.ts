@@ -27,7 +27,7 @@ export const hints: Hint.Hints = {
     ],
   },
   'mode-strict-vs-pass': {
-    text: 'mode:"strict" drops invalid events by stopping the transformer chain (push returns false), so they never reach downstream destinations. mode:"pass" (the default) never drops: it annotates the event with the verdict and continues, and you route downstream on event.source.valid. Use strict to enforce a contract as a hard gate; use pass to observe quality without losing data.',
+    text: 'mode:"strict" drops invalid events by stopping the transformer chain (push returns false), so they never reach downstream destinations. mode:"pass" (the default) never drops: it annotates the event with the verdict and continues, and you route downstream on event.source.valid. Use strict to enforce a contract as a hard gate; use pass to observe quality without losing data. Wire the step into a chain, usually collector.next (every event, before the destinations): a step no chain names never runs.',
     code: [
       {
         lang: 'json',
@@ -110,6 +110,6 @@ export const hints: Hint.Hints = {
     ],
   },
   'known-limitations': {
-    text: 'The errors list may contain an extra parent entry pointing at a properties wrapper per failure, a quirk of the underlying JSON Schema engine output. The isValid verdict is unaffected: a single real failure can surface as more than one error entry, but isValid is still false exactly when there is at least one failure. v1 emits level:"error" only (no warn level yet).',
+    text: 'The errors list may contain an extra parent entry pointing at a properties wrapper per failure, a quirk of the underlying JSON Schema engine output. The isValid verdict is unaffected: a single real failure can surface as more than one error entry, but isValid is still false exactly when there is at least one failure. Issues carry level:"error" only; there is no warn level.',
   },
 };

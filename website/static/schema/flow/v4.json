@@ -168,7 +168,7 @@
       "type": "object",
       "properties": {
         "level": {
-          "description": "Managed-telemetry verbosity. 'off' disables telemetry entirely, 'standard' emits structural records, 'trace' emits full payloads.",
+          "description": "Telemetry verbosity. 'off' emits no records, 'standard' emits structural records, 'trace' emits full payloads.",
           "type": "string",
           "enum": ["off", "standard", "trace"]
         },
@@ -191,7 +191,7 @@
       },
       "additionalProperties": false,
       "title": "Flow.Observe",
-      "description": "Observability configuration: public web connect pair (url + binding) and managed-telemetry knobs (level + sample)."
+      "description": "Observability configuration of a web flow: public connect pair (url + binding), telemetry level and sample. A server flow ignores it."
     },
     "FlowConfig": {
       "type": "object",
@@ -223,7 +223,7 @@
           ]
         },
         "observe": {
-          "description": "Observability configuration: public web connect pair, managed-telemetry level and sample.",
+          "description": "Observability configuration of a web flow: public connect pair, telemetry level and sample. A server flow ignores it.",
           "allOf": [
             {
               "$ref": "#/definitions/FlowObserve"
@@ -274,7 +274,7 @@
       "type": "object",
       "properties": {
         "setup": {
-          "description": "One-time setup options applied during source registration (boolean enables defaults, object configures specifics)",
+          "description": "Provisioning options for `walkeros setup`, which runs only when invoked (boolean enables defaults, object configures specifics)",
           "anyOf": [
             {
               "type": "boolean"
@@ -825,7 +825,7 @@
       "type": "object",
       "properties": {
         "stop": {
-          "description": "Stop the chain on cache HIT (default: false). When true, skip remaining steps and return cached value.",
+          "description": "Stop the chain on cache HIT (default: false; sources default to true). When true, skip remaining steps and return cached value.",
           "type": "boolean"
         },
         "store": {
@@ -842,7 +842,7 @@
           "items": {
             "$ref": "#/definitions/EventCacheRule"
           },
-          "description": "Cache rules — at least one required"
+          "description": "Cache rules; at least one required"
         }
       },
       "required": ["rules"],
@@ -854,7 +854,7 @@
       "type": "object",
       "properties": {
         "match": {
-          "description": "Optional match expression — omit for always-match.",
+          "description": "Optional match expression; omit for always-match.",
           "allOf": [
             {
               "$ref": "#/definitions/MatcherExpression"
@@ -875,7 +875,7 @@
           "description": "Time-to-live in seconds"
         },
         "update": {
-          "description": "Response mutations applied on cache hit (key → Value mapping)",
+          "description": "Source caches only: response mutations applied on HIT and MISS (key → Value mapping). Transformer and destination caches do not apply them.",
           "type": "object",
           "propertyNames": {
             "type": "string"
@@ -888,7 +888,7 @@
       "required": ["key", "ttl"],
       "additionalProperties": false,
       "title": "EventCache.Rule",
-      "description": "Single event-cache rule: when it applies (match), what event fields it keys off, TTL, and optional response mutations on hit."
+      "description": "Single event-cache rule: when it applies (match), what event fields it keys off, TTL, and optional source response mutations."
     },
     "FlowSource": {
       "type": "object",
@@ -994,7 +994,7 @@
       "type": "object",
       "properties": {
         "setup": {
-          "description": "One-time setup options applied during destination registration (boolean enables defaults, object configures specifics)",
+          "description": "Provisioning options for `walkeros setup`, which runs only when invoked (boolean enables defaults, object configures specifics)",
           "anyOf": [
             {
               "type": "boolean"
@@ -1224,7 +1224,7 @@
       "type": "object",
       "properties": {
         "setup": {
-          "description": "One-time setup options applied during store registration (boolean enables defaults, object configures specifics)",
+          "description": "Provisioning options for `walkeros setup`, which runs only when invoked (boolean enables defaults, object configures specifics)",
           "anyOf": [
             {
               "type": "boolean"
@@ -1265,7 +1265,7 @@
           "items": {
             "$ref": "#/definitions/StoreCacheRule"
           },
-          "description": "Cache rules — at least one required"
+          "description": "Cache rules; at least one required"
         }
       },
       "required": ["rules"],

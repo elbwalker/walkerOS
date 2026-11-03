@@ -1,5 +1,5 @@
 import type { Flow } from '@walkeros/core';
-import { createEvent, getEvent, isObject } from '@walkeros/core';
+import { createEvent, getEvent } from '@walkeros/core';
 
 /**
  * TikTok Events API step examples.
@@ -28,9 +28,9 @@ const HEADERS = {
 };
 
 export const purchase: Flow.StepExample = {
-  title: 'Complete payment',
+  title: 'Purchase',
   description:
-    'A completed order is sent to the TikTok Events API as a CompletePayment with value, currency, and contents.',
+    'A completed order is sent to the TikTok Events API as a Purchase with value, currency, and contents.',
   in: getEvent('order complete', {
     id: 'd1e2f3a4b5c60001',
     timestamp: 1700000900000,
@@ -49,7 +49,7 @@ export const purchase: Flow.StepExample = {
     },
   }),
   mapping: {
-    name: 'CompletePayment',
+    name: 'Purchase',
     data: {
       map: {
         value: 'data.value',
@@ -61,7 +61,10 @@ export const purchase: Flow.StepExample = {
             'nested',
             {
               condition: (entity: unknown) =>
-                isObject(entity) && entity.entity === 'product',
+                typeof entity === 'object' &&
+                entity !== null &&
+                'entity' in entity &&
+                entity.entity === 'product',
               map: {
                 content_id: 'data.id',
                 content_name: 'data.name',
@@ -88,7 +91,7 @@ export const purchase: Flow.StepExample = {
         partner_name: 'walkerOS',
         data: [
           {
-            event: 'CompletePayment',
+            event: 'Purchase',
             event_id: 'd1e2f3a4b5c60001',
             timestamp: '2023-11-14T22:28:20.000Z',
             context: {
@@ -164,7 +167,10 @@ export const addToCart: Flow.StepExample = {
             'nested',
             {
               condition: (entity: unknown) =>
-                isObject(entity) && entity.entity === 'product',
+                typeof entity === 'object' &&
+                entity !== null &&
+                'entity' in entity &&
+                entity.entity === 'product',
               map: {
                 content_id: 'data.id',
                 content_name: 'data.name',

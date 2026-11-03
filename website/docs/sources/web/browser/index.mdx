@@ -13,7 +13,7 @@ import WhereThisFits from '@site/src/components/snippets/_where-this-fits.mdx';
 
 # Browser source
 
-Captures user interactions directly from the DOM using `data-elb-*` attributes. Extracts tracking data from markup, tracks pageviews automatically or manually, exposes an enhanced `elb` function with `walker init` support, and provides a trigger system covering click, submit, load, hover, scroll, and visible.
+The browser source captures user interactions from the DOM using `data-elb-*` attributes. It extracts tracking data from markup, tracks pageviews automatically or manually, exposes an enhanced `elb` function with `walker init` support, and provides a trigger system covering load, click, submit, hover, scroll, wait, pulse, impression, and visible.
 
 <WhereThisFits
   pre={<>The browser source is a <strong>source</strong> in the walkerOS flow:</>}
@@ -82,8 +82,10 @@ Add to your `flow.json` sources:
 
 ## Enhanced elb
 
-With a browser source in `sources`, the `elb` that `startFlow` returns is the
-browser source's own, and the source installs it as `window.elb` as well. It
+When the browser source is the
+[primary source](/docs/sources#primary-source), the first one in `sources` as
+above, the `elb` that `startFlow` returns is the browser source's own, and the
+source installs it as `window.elb` as well. It
 takes the same [partial event](/docs/getting-started/event-model#push-an-event)
 as the collector's `elb`:
 
@@ -96,11 +98,11 @@ await elb('walker init', document.querySelector('#app'));`}
   language="typescript"
 />
 
-**Browser source elb adds:**
-
-* **Page context**: the tagged globals on every event, plus `source.url` and `source.referrer` unless the event brings its own `source`
-* **DOM commands**: `walker init` for asynchronous DOM element loading
-* **elbLayer integration**: automatic processing of queued commands
+On top of the collector's `elb`, the browser source's `elb` adds the page
+context (the tagged globals on every event, plus `source.url` and
+`source.referrer` unless the event brings its own `source`), the DOM command
+`walker init` for elements loaded asynchronously, and the automatic processing of
+commands queued in `elbLayer`.
 
 See [Commands](/docs/sources/web/browser/commands) for complete API documentation.
 
@@ -132,8 +134,8 @@ browser source:
 />
 
 **What counts as a route change.** A `pushState` or a back or forward
-navigation that changes the path or the query, and a `replaceState` that
-changes the path. A `replaceState` that only rewrites the query (filters, search
+navigation that changes the path or the query counts, and so does a
+`replaceState` that changes the path. A `replaceState` that only rewrites the query (filters, search
 boxes) and hash-only changes do not count. Each comparison is against the URL
 right before that change.
 
@@ -183,6 +185,9 @@ call `elb('walker run')` from the router's post-render hook:
 | Astro | `astro:page-load` |
 | Next.js App Router | no reliable hook |
 
+When the hook also runs for the first render, skip that call: the run that
+started the flow already sent the landing page's `page view`.
+
 **Consent.** A destination that waits for consent holds the events from before
 the visitor's answer, and every run clears that buffer. A route change is a run,
 so when the visitor navigates before answering the banner, the landing page view
@@ -199,8 +204,8 @@ so those revisits send a `page view` but no `load` events; use `visible`
 instead.
 
 With `history: false` (the default) route changes are not followed,
-`data-elbobserve` containers work as before, and `elb('walker run')` re-scans
-the page.
+`data-elbobserve` containers are watched, also inside open shadow roots, and
+`elb('walker run')` re-scans the page.
 
 ## Multiple sources on one page
 
@@ -330,9 +335,9 @@ torn down. A shared scope root means both sources see the same containers.
   it. This only matters when both use the same layer name, which is what the
   contract above tells parallel flows not to do.
 * **The same script included twice.** Each copy scans the same markup into its
-  own pipeline, so every event is collected twice. That is a page
-  misconfiguration rather than something the source can resolve, and it is
-  diagnosable: both refusals log at initialization.
+  own pipeline, so every event is collected twice. The source cannot resolve
+  this page misconfiguration, but it is diagnosable: both refusals log at
+  initialization.
 
 ## Next steps
 

@@ -11,7 +11,7 @@ export const passthrough: Flow.StepExample = {
     trigger: 'load',
     entity: 'page',
     action: 'view',
-    timestamp: 1700000600,
+    timestamp: 1700000600000,
     source: { type: 'browser', platform: 'web', url: 'https://example.com/' },
   },
   out: [],
@@ -29,7 +29,7 @@ export const addProcessedFlag: Flow.StepExample = {
     trigger: 'click',
     entity: 'product',
     action: 'add',
-    timestamp: 1700000601,
+    timestamp: 1700000601000,
     source: { type: 'browser', platform: 'web', url: 'https://example.com/' },
   },
   out: [
@@ -47,7 +47,7 @@ export const addProcessedFlag: Flow.StepExample = {
         trigger: 'click',
         entity: 'product',
         action: 'add',
-        timestamp: 1700000601,
+        timestamp: 1700000601000,
         source: {
           type: 'browser',
           platform: 'web',

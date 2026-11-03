@@ -15,12 +15,12 @@ import { ValueSchema } from './mapping';
  * - match: MatchExpression — omit for always-match.
  * - key: array of dot-path strings used to compose the cache key from event fields.
  * - ttl: time-to-live in seconds (positive).
- * - update: optional record of response mutations applied on cache hit.
+ * - update: optional record of source response mutations, applied on HIT and MISS.
  */
 export const EventCacheRuleSchema = z
   .object({
     match: MatchExpressionSchema.optional().describe(
-      'Optional match expression — omit for always-match.',
+      'Optional match expression; omit for always-match.',
     ),
     key: z
       .array(z.string())
@@ -31,14 +31,14 @@ export const EventCacheRuleSchema = z
       .record(z.string(), ValueSchema)
       .optional()
       .describe(
-        'Response mutations applied on cache hit (key → Value mapping)',
+        'Source caches only: response mutations applied on HIT and MISS (key → Value mapping). Transformer and destination caches do not apply them.',
       ),
   })
   .meta({
     id: 'EventCacheRule',
     title: 'EventCache.Rule',
     description:
-      'Single event-cache rule: when it applies (match), what event fields it keys off, TTL, and optional response mutations on hit.',
+      'Single event-cache rule: when it applies (match), what event fields it keys off, TTL, and optional source response mutations.',
   });
 
 // ========================================
@@ -56,7 +56,7 @@ export const EventCacheSchema = z
       .boolean()
       .optional()
       .describe(
-        'Stop the chain on cache HIT (default: false). When true, skip remaining steps and return cached value.',
+        'Stop the chain on cache HIT (default: false; sources default to true). When true, skip remaining steps and return cached value.',
       ),
     store: z
       .string()
@@ -73,7 +73,7 @@ export const EventCacheSchema = z
     rules: z
       .array(EventCacheRuleSchema)
       .min(1)
-      .describe('Cache rules — at least one required'),
+      .describe('Cache rules; at least one required'),
   })
   .meta({
     id: 'EventCacheConfig',
@@ -146,7 +146,7 @@ export const StoreCacheSchema = z
     rules: z
       .array(StoreCacheRuleSchema)
       .min(1)
-      .describe('Cache rules — at least one required'),
+      .describe('Cache rules; at least one required'),
   })
   .meta({
     id: 'StoreCacheConfig',

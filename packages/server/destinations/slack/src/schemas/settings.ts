@@ -62,7 +62,9 @@ export const SettingsSchema = z
       .optional(),
     retryConfig: z
       .enum(['default', 'fiveRetriesInFiveMinutes', 'none'])
-      .describe('Retry policy passed to WebClient. Default: "default".')
+      .describe(
+        'Web API retry policy. "default" is the SDK policy (up to 10 retries over about 30 minutes), "fiveRetriesInFiveMinutes" 5 retries, "none" no retry. Retries continue after the destination timeout has failed the push. Default: "default".',
+      )
       .optional(),
   })
   .strict()

@@ -8,9 +8,8 @@ package: '@walkeros/core'
 
 # Core utilities
 
-Core utilities are a collection of platform-agnostic functions that can be used
-across all walkerOS environments. They provide standardized building blocks for
-data manipulation, validation, mapping, and more.
+Core utilities are platform-agnostic functions that work in every walkerOS
+environment, for data manipulation, validation, mapping, and more.
 
 ## Installation
 
@@ -22,9 +21,8 @@ Import the core utilities directly from the `@walkeros/core` package:
 
 ### assign
 
-`assign<T, U>(target: T, source: U, options?): T & U` merges two objects with
-advanced merging capabilities. It has special behavior for arrays: when merging,
-it concatenates arrays from both objects, removing duplicates.
+`assign<T, U>(target: T, source: U, options?): T & U` merges two objects. When
+merging, it concatenates arrays from both objects and removes duplicates.
 
 <CodeSnippet
   code={`interface AssignOptions {
@@ -51,16 +49,17 @@ iteration.
 
 <CodeSnippet
   code={`getByPath({ data: { id: 'wow' } }, 'data.id'); // Returns "wow"
-getByPath({ nested: [1, 2, { id: 'cool' }] }, 'nested.*.id'); // Returns ['', '', 'cool']
+getByPath({ nested: [1, 2, { id: 'cool' }] }, 'nested.*.id'); // Returns [undefined, undefined, 'cool']
 getByPath({ arr: ['foo', 'bar'] }, 'arr.1'); // Returns "bar"`}
   language="javascript"
 />
 
 #### setByPath
 
-`setByPath(object: WalkerOS.Event, path: string, value: unknown): WalkerOS.Event`
+`setByPath<T>(object: T, path: string, value: unknown, options?: { mutable?: boolean }): T`
 sets nested values using dot notation, returning a new object with the updated
-value.
+value (with `mutable: true`, it changes `object` itself). Setting `undefined`
+removes the key.
 
 <CodeSnippet
   code={`const updatedEvent = setByPath(event, 'data.id', 'new-value');
@@ -96,19 +95,22 @@ castValue('hello'); // Returns 'hello' (unchanged)`}
 
 ### anonymizeIP
 
-`anonymizeIP(ip: string): string` anonymizes IPv4 addresses by setting the last
-octet to zero.
+`anonymizeIP(ip: string): string` anonymizes an IP address: an IPv4 address
+keeps its first three octets and the last becomes `0`, an IPv6 address keeps its
+first 48 bits. An invalid address returns an empty string.
 
 <CodeSnippet
-  code={`anonymizeIP('192.168.1.100'); // Returns '192.168.1.0'`}
+  code={`anonymizeIP('192.168.1.100'); // Returns '192.168.1.0'
+anonymizeIP('2001:db8::1'); // Returns '2001:db8:0::'`}
   language="javascript"
 />
 
-### Hashing
+### Random IDs {#hashing}
 
 `getId(length?: number, charset?: string): string` generates random identifier
-strings. Defaults to a 6-character alphanumeric id; pass `charset` to restrict
-the allowed characters.
+strings from the platform's secure random source, falling back to
+`Math.random` when none is reachable. Defaults to a 6-character id
+from `0-9a-z`; pass `charset` to restrict the allowed characters.
 
 <CodeSnippet
   code={`getId(); // Returns random 6-char string like 'a1b2c3'
@@ -167,21 +169,22 @@ await getMappingValue(event, mapping, { collector });
 
 ### getMappingEvent
 
-`getMappingEvent(event: WalkerOS.PartialEvent, mapping?: Mapping.Rules): Promise<Mapping.Result>`
-finds the appropriate mapping rule for an event.
+`getMappingEvent(event: WalkerOS.PartialEvent, mapping?: Mapping.Rules, collector?: Collector.Instance): Promise<Mapping.Result>`
+finds the appropriate mapping rule for an event and returns it as
+`eventMapping`, with the matched `mappingKey`.
 
 ## Marketing and analytics
 
 ### getMarketingParameters
 
-`getMarketingParameters(url: URL, custom?: MarketingParameters): WalkerOS.Properties`
+`getMarketingParameters(url: URL, custom?: MarketingParameters, clickIds?: ClickIdEntry[]): WalkerOS.Properties`
 extracts UTM and click ID parameters from URLs.
 
 <CodeSnippet
   code={`getMarketingParameters(
   new URL('https://example.com/?utm_source=docs&gclid=123'),
 );
-// Returns { source: "docs", gclid: "123", clickId: "gclid" }
+// Returns { source: "docs", gclid: "123", clickId: "gclid", platform: "google" }
 
 // With custom parameters
 getMarketingParameters(url, { utm_custom: 'custom', partner: 'partnerId' });`}
@@ -192,18 +195,27 @@ getMarketingParameters(url, { utm_custom: 'custom', partner: 'partnerId' });`}
 
 ### Type checkers
 
-A comprehensive set of type checking functions:
+Type checking functions:
 
 * `isString(value)`, `isNumber(value)`, `isBoolean(value)`
 * `isArray(value)`, `isObject(value)`, `isFunction(value)`
 * `isDefined(value)`, `isSameType(a, b)`
-* `isPropertyType(value)` - Checks if value is valid walkerOS property
+* `isPropertyType(value)` - Checks if value is valid walkerOS property:
+  a string, number, boolean, `null` or `undefined`, or an object or array of
+  them
 
 ### Property utilities
 
-* `castToProperty(value)` - Casts to valid property type
-* `filterValues(object)` - Filters object to valid properties only
-* `isPropertyType(value)` - Type guard for property validation
+* `castToProperty(value)` - Returns the value when it is a valid property,
+  otherwise `undefined`. As in mapping, a value that is or contains `null` is
+  `undefined`
+* `filterValues(value)` - Copies only valid property values: it keeps `null`,
+  turns a date into its timestamp in milliseconds, and leaves out everything
+  else (functions, DOM elements, `undefined`, `NaN`, symbols, objects such as
+  `Map`, keys whose getter throws and `__proto__` keys). In a value without a
+  cycle, an object referenced twice is kept twice, as JSON keeps it. Once a
+  cycle is found, the back-reference and every later repeated reference in
+  that call are left out
 
 ## Request handling
 
@@ -225,7 +237,7 @@ URL-encoded query strings.
 
 <CodeSnippet
   code={`requestToParameter({ a: 1, b: true, arr: ['x', 'y'] });
-// Returns 'a=1&b=true&arr[0]=x&arr[1]=y'`}
+// Returns 'a=1&b=true&arr%5B0%5D=x&arr%5B1%5D=y'`}
   language="javascript"
 />
 
@@ -238,7 +250,7 @@ device information.
 
 <CodeSnippet
   code={`parseUserAgent(navigator.userAgent);
-// Returns { browser: 'Chrome', browserVersion: '91.0', os: 'Windows', ... }`}
+// Returns { userAgent: '...', browser: 'Chrome', browserVersion: '91', os: 'Windows', osVersion: '10.0', deviceType: 'Desktop' }`}
   language="javascript"
 />
 
@@ -255,7 +267,8 @@ Individual functions are also available:
 ### tryCatch
 
 `tryCatch(tryFn: Function, catchFn?: Function, finallyFn?: Function)` wraps
-functions with error handling.
+functions with error handling. Without `catchFn`, the wrapped function returns
+`undefined` when `tryFn` throws.
 
 <CodeSnippet
   code={`const safeParse = tryCatch(JSON.parse, () => ({}));
@@ -281,8 +294,8 @@ async operations.
 
 ### debounce
 
-`debounce(fn: Function, wait?: number)` delays function execution until after
-the wait time.
+`debounce(fn: Function, wait?: number, immediate?: boolean)` delays function
+execution until after the wait time (default 1000 ms).
 
 <CodeSnippet
   code={`const debouncedSearch = debounce(searchFunction, 300);
@@ -292,7 +305,8 @@ the wait time.
 
 ### throttle
 
-`throttle(fn: Function, wait?: number)` limits function execution frequency.
+`throttle(fn: Function, wait?: number)` limits function execution frequency
+(default 1000 ms). Calls inside the wait time are dropped.
 
 <CodeSnippet
   code={`const throttledScroll = throttle(scrollHandler, 100);
@@ -304,21 +318,15 @@ the wait time.
 
 ### trim
 
-`trim(str: string): string` removes whitespace from string ends.
+`trim(str: string): string` removes whitespace and surrounding single quotes
+from a string.
 
 ### throwError
 
-`throwError(message: string)` throws descriptive errors.
+`throwError(error: unknown): never` throws an `Error` with the value as its
+message.
 
-### onLog
-
-`onLog(message: unknown, verbose?: boolean)` provides consistent logging.
-
-<CodeSnippet
-  code={`onLog('Debug info', true); // Logs message
-onLog('Silent message'); // No output`}
-  language="javascript"
-/>
+For logging, see <Link to="/docs/collector/logger">Logger</Link>.
 
 For platform-specific utilities, see:
 

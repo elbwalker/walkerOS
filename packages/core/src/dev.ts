@@ -4,6 +4,9 @@ export { ClickIdEntrySchema } from './schemas';
 export { mergeConfigSchema, resolveBaseSchema } from './merge-config-schema';
 
 export { formatOut } from './examples/formatOut';
+export { toSerializable } from './toSerializable';
+export { composeQuickstart } from './quickstart';
+export { MINIMAL_EXAMPLE_FILE, packageMetaOf, STEP_TYPES } from './packageMeta';
 export { expectSimulationResolves } from './expectSimulationResolves';
 export * as routeCases from './examples/route-cases';
 export type { Flow } from './types/flow';

@@ -2,19 +2,13 @@
   "version": 4,
   "flows": {
     "web": {
-      "packages": {
-        "@walkeros/web-source-browser": {},
-        "@walkeros/destination-demo": {},
-        "@walkeros/web-destination-api": {},
-        "@walkeros/web-destination-gtag": {}
-      },
+      "config": { "platform": "web" },
       "sources": {
         "browser": {
           "package": "@walkeros/web-source-browser",
           "import": "sourceBrowser",
           "config": {
             "settings": {
-              "elb": "elb",
               "pageview": true
             }
           }
@@ -36,7 +30,7 @@
           "import": "destinationAPI",
           "config": {
             "settings": {
-              "url": "$ENDPOINT/collect"
+              "url": "$env.ENDPOINT/collect"
             },
             "mapping": {
               "batch": {
@@ -54,14 +48,12 @@
             "loadScript": true,
             "settings": {
               "ga4": {
-                "measurementId": "G-XXXXXXXXXX"
+                "measurementId": "G-XXXXXXXXXX",
+                "pageview": false
               }
             }
           }
         }
-      },
-      "config": {
-        "platform": "web"
       }
     }
   }

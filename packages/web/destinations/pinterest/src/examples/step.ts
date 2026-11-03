@@ -17,7 +17,7 @@ export const defaultForward: Flow.StepExample = {
   title: 'Default forward',
   description:
     'Without a mapping the walker event name is forwarded as-is to pintrk track with an event_id for dedup.',
-  in: getEvent('page view', { timestamp: 1700000100, id: 'ev-1700000100' }),
+  in: getEvent('page view', { timestamp: 1700000100000, id: 'ev-1700000100' }),
   mapping: undefined,
   out: [['pintrk', 'track', 'page view', { event_id: 'ev-1700000100' }]],
 };
@@ -28,7 +28,7 @@ export const defaultForward: Flow.StepExample = {
  */
 export const wildcardIgnored: Flow.StepExample = {
   public: false,
-  in: createEvent({ name: 'debug noise', timestamp: 1700000101 }),
+  in: createEvent({ name: 'debug noise', timestamp: 1700000101000 }),
   mapping: { ignore: true },
   out: [],
 };
@@ -42,30 +42,30 @@ export const pageViewRename: Flow.StepExample = {
   title: 'Page visit',
   description:
     'A mapping renames the walker event to the Pinterest standard pagevisit event for conversion tracking.',
-  in: getEvent('page view', { timestamp: 1700000102, id: 'ev-1700000102' }),
+  in: getEvent('page view', { timestamp: 1700000102000, id: 'ev-1700000102' }),
   mapping: { name: 'pagevisit' },
   out: [['pintrk', 'track', 'pagevisit', { event_id: 'ev-1700000102' }]],
 };
 
 /**
- * Search - walkerOS site search → Pinterest "search" with search_query.
+ * Search - walkerOS search submit → Pinterest "search" with search_query.
  * Illustrates single-field mapping.data resolution.
  */
 export const siteSearch: Flow.StepExample = {
   title: 'Search',
   description:
-    'A site search fires Pinterest search with the search_query field resolved from event data.',
+    'A search submit fires Pinterest search with the search_query field resolved from event data.',
   in: createEvent({
-    name: 'site search',
-    timestamp: 1700000103,
+    name: 'search submit',
+    timestamp: 1700000103000,
     id: 'ev-1700000103',
-    data: { query: 'leather jacket' },
+    data: { term: 'leather jacket' },
   }),
   mapping: {
     name: 'search',
     data: {
       map: {
-        search_query: 'data.query',
+        search_query: 'data.term',
       },
     },
   },
@@ -90,7 +90,7 @@ export const productViewContent: Flow.StepExample = {
   description:
     'A product view fires Pinterest viewcontent with value, currency, and a single-item line_items array.',
   in: getEvent('product view', {
-    timestamp: 1700000104,
+    timestamp: 1700000104000,
     id: 'ev-1700000104',
   }),
   mapping: {
@@ -142,7 +142,7 @@ export const productAddToCart: Flow.StepExample = {
   description:
     'A product add fires Pinterest addtocart with value, currency, and a single-item line_items array.',
   in: getEvent('product add', {
-    timestamp: 1700000105,
+    timestamp: 1700000105000,
     id: 'ev-1700000105',
   }),
   mapping: {
@@ -198,7 +198,7 @@ export const orderCompleteCheckout: Flow.StepExample = {
   description:
     'A completed order fires Pinterest checkout with value, order_id, currency, and a nested line_items array.',
   in: getEvent('order complete', {
-    timestamp: 1700000106,
+    timestamp: 1700000106000,
     id: 'ev-1700000106',
   }),
   mapping: {
@@ -238,7 +238,7 @@ export const orderCompleteCheckout: Flow.StepExample = {
       'track',
       'checkout',
       {
-        value: 555,
+        value: 462,
         order_id: '0rd3r1d',
         currency: 'EUR',
         line_items: [
@@ -270,7 +270,7 @@ export const userLoginLead: Flow.StepExample = {
     'A user login fires pintrk set for enhanced matching and then a lead conversion track call.',
   in: createEvent({
     name: 'user login',
-    timestamp: 1700000107,
+    timestamp: 1700000107000,
     id: 'ev-1700000107',
     data: {
       id: 'usr_123',
@@ -317,7 +317,7 @@ export const identifyOnlySilent: Flow.StepExample = {
     'A user update fires pintrk set for enhanced matching without a track call via mapping silent.',
   in: createEvent({
     name: 'user update',
-    timestamp: 1700000108,
+    timestamp: 1700000108000,
     id: 'ev-1700000108',
     data: {
       id: 'usr_456',
@@ -368,7 +368,7 @@ export const consentGrant: Flow.StepExample = {
 export const silentRule: Flow.StepExample = {
   public: false,
   description: 'A rule with silent: true sends no pintrk track call.',
-  in: createEvent({ name: 'page view', timestamp: 1700000109 }),
+  in: createEvent({ name: 'page view', timestamp: 1700000109000 }),
   mapping: { silent: true },
   out: [],
 };

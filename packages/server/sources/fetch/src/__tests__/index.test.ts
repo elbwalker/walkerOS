@@ -738,7 +738,7 @@ describe('sourceFetch', () => {
       expect(source.config.settings?.paths).toEqual(['/collect']);
     });
 
-    it('should accept deprecated path setting', async () => {
+    it('should register a single path setting as its route', async () => {
       const source = await sourceFetch(
         createSourceContext(
           { settings: { path: '/events' } },

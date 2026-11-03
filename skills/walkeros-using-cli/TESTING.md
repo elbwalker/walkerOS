@@ -148,8 +148,7 @@ Per writing-skills guidelines, technique skills require:
 The walkeros-using-cli skill is **PRODUCTION READY** with:
 
 1. ✅ Description has triggers only (no summary)
-2. ✅ SKILL.md under 500 lines
-3. ✅ Progressive disclosure (commands-reference.md, flow-configuration.md)
-4. ✅ All test scenarios pass
-5. ✅ Cross-references to related skills
-6. ✅ Quick reference tables for scanning
+2. ✅ Progressive disclosure (commands-reference.md, flow-configuration.md)
+3. ✅ All test scenarios pass
+4. ✅ Cross-references to related skills
+5. ✅ Quick reference tables for scanning

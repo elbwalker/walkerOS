@@ -35,7 +35,7 @@ npm install @walkeros/server-destination-snapchat
           "package": "@walkeros/server-destination-snapchat",
           "config": {
             "settings": {
-              "accessToken": "YOUR_ACCESS_TOKEN",
+              "accessToken": "$secret.SNAPCHAT_ACCESS_TOKEN",
               "pixelId": "YOUR_PIXEL_ID"
             }
           }
@@ -45,6 +45,9 @@ npm install @walkeros/server-destination-snapchat
   }
 }
 ```
+
+This quick start sets no consent: add `consent: { marketing: true }` to `config`
+before you go live, see the docs.
 
 ## Documentation
 

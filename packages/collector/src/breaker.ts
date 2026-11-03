@@ -6,9 +6,10 @@ import { stepId } from '@walkeros/core';
  *
  * State lives in `collector.status.breakers`, keyed by `stepId()` so the
  * breaker is step-agnostic (destinations are the primary use today). All sites
- * — the skip gate, the per-event failure/success accounting, the batch flush —
- * drive their state changes through this one module so the gate and the
- * accounting can never disagree about a step's health.
+ * (the gate that fails events with `breaker-open`, the per-event
+ * failure/success accounting, the batch flush) drive their state changes
+ * through this one module so the gate and the accounting can never disagree
+ * about a step's health.
  *
  * The breaker is presence-gated: a step with no `breaker` config never trips
  * (the caller skips this module entirely when {@link resolveBreakerConfig}
@@ -86,15 +87,15 @@ export function ensureBreakerState(
 }
 
 /**
- * The skip gate. Returns true when the step should be skipped (breaker open
- * and no probe slot available for this caller).
+ * The gate. Returns true when the step's events fail with `breaker-open`
+ * (breaker open and no probe slot available for this caller).
  *
  * On the open→half-open boundary the transition is atomic within this
  * synchronous call: the FIRST event at/after `openUntil` claims the probe
  * (sets `state='half-open'`, `probing=true`, re-arms `openUntil`) and is
  * admitted; every concurrent event then sees half-open with the probe taken
- * and skips. Single-threaded JS guarantees this mutate-before-return is not
- * interleaved with another gate call.
+ * and fails with `breaker-open`. Single-threaded JS guarantees this
+ * mutate-before-return is not interleaved with another gate call.
  */
 export function isBreakerOpen(
   breakers: Record<string, BreakerState>,
@@ -116,7 +117,8 @@ export function isBreakerOpen(
   }
 
   // Cooldown elapsed: this caller becomes the single probe. Re-arm the window
-  // and take the probe slot so concurrent callers still skip.
+  // and take the probe slot so concurrent callers still fail with
+  // `breaker-open`.
   breaker.state = 'half-open';
   breaker.probing = true;
   breaker.openUntil = now + cooldown;
@@ -190,7 +192,7 @@ export function releaseProbe(
 
 /**
  * Predicate exposed for the BigQuery self-heal re-open (Task 4): true when a
- * probe would be permitted at `now` — the breaker is closed, half-open, or
+ * probe would be permitted at `now`: the breaker is closed, half-open, or
  * open with its cooldown elapsed. Task 4 gates its re-open on this.
  */
 export function isBreakerProbePermitted(

@@ -1,20 +1,18 @@
 import { z } from '@walkeros/core/dev';
 
 /**
- * Standard TikTok Event Names
- * https://business-api.tiktok.com/portal/docs?id=1771100865818625
+ * Some of TikTok's standard event names. TikTok's own list is the complete
+ * one: https://ads.tiktok.com/help/article/standard-events-parameters
  */
 export const StandardEventNameSchema = z.union([
   z.enum([
     'ViewContent',
-    'ClickButton',
     'Search',
     'AddToWishlist',
     'AddToCart',
     'InitiateCheckout',
     'AddPaymentInfo',
-    'CompletePayment',
-    'PlaceAnOrder',
+    'Purchase',
     'Contact',
     'Download',
     'SubmitForm',

@@ -8,6 +8,7 @@ package: '@walkeros/server-destination-kafka'
 
 import data from '@walkeros/server-destination-kafka/walkerOS.json';
 import Configuration from '@site/src/components/snippets/_configuration.mdx';
+import Quickstart from '@site/src/components/snippets/_quickstart.mdx';
 
 import WhereThisFits from '@site/src/components/snippets/_where-this-fits.mdx';
 
@@ -15,7 +16,7 @@ import WhereThisFits from '@site/src/components/snippets/_where-this-fits.mdx';
 
 <PackageLink env="server" github="packages/server/destinations/kafka" npm="@walkeros/server-destination-kafka" status="beta" />
 
-Server-side event streaming to [Apache Kafka](https://kafka.apache.org/) via the [`kafkajs`](https://kafka.js.org/) client. Each event is serialized as JSON, keyed for partition-friendly ordering, and produced to a configurable topic. Supports SASL/SSL authentication (Confluent Cloud, AWS MSK, SCRAM), configurable compression (gzip, snappy, lz4, zstd), per-rule topic and key overrides, and graceful shutdown via `destroy()`.
+Server-side event streaming to [Apache Kafka](https://kafka.apache.org/) via the [`kafkajs`](https://kafka.js.org/) client. Each event is serialized as JSON, keyed for partition-friendly ordering, and produced to a configurable topic. It supports TLS and SASL authentication (PLAIN, SCRAM), gzip compression, per-rule topic and key overrides, and graceful shutdown via `destroy()`.
 
 <WhereThisFits
   pre={<>Kafka is a <strong>server destination</strong> in the walkerOS flow:</>}
@@ -27,83 +28,30 @@ Server-side event streaming to [Apache Kafka](https://kafka.apache.org/) via the
 
 ## Installation
 
-<CodeSnippet
-  code={`npm install @walkeros/server-destination-kafka`}
-  language="bash"
-/>
-
-<Tabs groupId="mode">
-  <TabItem value="integrated" label="Integrated" default>
-
-<CodeSnippet
-  code={`import { startFlow } from '@walkeros/collector';
-import { destinationKafka } from '@walkeros/server-destination-kafka';
-
-await startFlow({
-  destinations: {
-    kafka: {
-      code: destinationKafka,
-      config: {
-        settings: {
-          kafka: {
-            brokers: ['kafka1:9092', 'kafka2:9092'],
-            topic: 'walkeros-events',
-          },
-        },
-      },
-    },
-  },
-});`}
-  language="typescript"
-/>
-
-  </TabItem>
-  <TabItem value="bundled" label="Bundled">
-
-Add to your `flow.json` destinations:
-
-<CodeSnippet
-  code={`"destinations": {
-  "kafka": {
-    "package": "@walkeros/server-destination-kafka",
-    "config": {
-      "settings": {
-        "kafka": {
-          "brokers": ["kafka1:9092", "kafka2:9092"],
-          "topic": "walkeros-events"
-        }
-      }
-    }
-  }
-}`}
-  language="json"
-/>
-
-[See bundled mode setup](/docs/getting-started/modes/bundled) | [CLI reference](/docs/apps/cli)
-
-  </TabItem>
-</Tabs>
+<Quickstart data={data} />
 
 <Configuration type="destination" data={data} />
 
-The destination creates a single long-lived `kafkajs` producer and connects it at the first push, so a flow starts without a reachable broker. A failed send fails the push (dead-letter queue, one ERROR line) instead of being logged and counted delivered, and it is retried only when kafkajs marks the error as retriable, and an unknown topic is a `config` error with the setup hint. On flow hot-swap or server shutdown, `destroy()` calls `producer.disconnect()` to flush in-flight messages and close TCP connections.
+The destination creates a single long-lived `kafkajs` producer and connects it at the first push, so a flow starts without a reachable broker. kafkajs retries a failed connect or send as `settings.kafka.retry` allows. When a send still fails, the event fails with a `transport` error, marked `retryable` unless no retry can fix it (such as `MESSAGE_TOO_LARGE`), and goes to the dead-letter queue ([when delivery fails](/docs/destinations#when-delivery-fails)). A topic that does not exist fails every event ([below](#runtime-error-when-the-topic-is-missing)). On flow hot-swap or server shutdown, `destroy()` calls `producer.disconnect()` to close the connections.
 
 ## Message format
 
 Events are serialized as JSON and produced with the following structure:
 
 - **topic**, from `settings.kafka.topic` (or `mapping.settings.topic` override)
-- **key**, resolved from `settings.kafka.key` (or `mapping.settings.key` override) mapping path; defaults to the event name with spaces replaced by `_` (e.g. `page_view`, `order_complete`) for partition-based ordering
-- **value**, mapped payload (when `data.map` is configured) or the full walkerOS event, `JSON.stringify()`-ed
+- **key**, resolved from `settings.kafka.key` (or `mapping.settings.key` override) mapping path; defaults to the event name with spaces replaced by `_` (e.g. `page_view`, `order_complete`) for partition-based ordering. A key path whose value is not a non-empty string (a number, for example) falls back to that default
+- **value**, the mapped `data` when a `data` mapping resolves to an object with at least one field, otherwise the full walkerOS event, `JSON.stringify()`-ed
 - **headers**, `content-type: application/json` plus any static `settings.kafka.headers`
 - **timestamp**, event timestamp as string (ms since epoch)
 
 Use `mapping.settings.topic` to route specific events to dedicated topics (e.g. orders to `orders-stream`, identities to `identity-stream`). Use `mapping.settings.key` to set a key path per rule (e.g. `data.order_id` for order events).
 
+`settings.kafka.compression` defaults to `gzip`, which kafkajs ships. `snappy`, `lz4` and `zstd` need a codec registered in kafkajs's `CompressionCodecs` in the same process. The destination registers none, so register the codec in your own code before the first send (integrated mode). Without one, every send fails with a `transport` error.
+
 ## Setup
 
 :::caution No safe defaults
-Kafka topic creation requires explicit `numPartitions` and `replicationFactor`.
+This destination's setup requires explicit `numPartitions` and `replicationFactor`.
 There is no universally correct default for either: `replicationFactor` must be
 less than or equal to broker count, and `numPartitions` is a function of
 expected throughput and consumer parallelism. The boolean form `setup: true` is
@@ -118,16 +66,18 @@ Provision a topic once per environment with the CLI:
   language="bash"
 />
 
-Output: `setup: ok destination.kafka` plus a JSON line reporting
-`{ topicCreated, schemaRegistered }`. The command is idempotent, safe to
-re-run. Drift on `numPartitions`, `replicationFactor`, or `configEntries` is
-logged as `WARN setup.drift {...}` and never auto-mutates the broker.
+The command prints `setup: ok destination.kafka`; with `--json` it prints a JSON
+result with `{ topicCreated, schemaRegistered }`. The command is idempotent and
+safe to re-run. Drift on `numPartitions`, `replicationFactor`, or
+`configEntries` is logged as a `setup.drift` warning with the field, the
+declared and the actual value, and never auto-mutates the broker.
 
 `config.setup`:
 
-- `false` (default): no provisioning. Operator must run setup explicitly.
-- `true`: rejected at runtime with an actionable error. There are no safe
-  defaults for partition count or replication factor.
+- omitted or `false` (default): no provisioning; the command prints
+  `setup: skipped destination.kafka (config.setup is unset)` (or `is false`).
+- `true`: the command fails with an error that names the required fields.
+  There are no safe defaults for partition count or replication factor.
 - `{ numPartitions, replicationFactor, ... }`: object form is the only valid
   form. See the `Setup` interface in the package for full options.
 
@@ -137,12 +87,12 @@ logged as `WARN setup.drift {...}` and never auto-mutates the broker.
 | ------------------- | ------ | --------------------------------------------------------- |
 | `numPartitions`     | number | Required at runtime. No safe default.                     |
 | `replicationFactor` | number | Required at runtime. Must be `<= broker count`.           |
-| `topic`             | string | Falls back to `settings.kafka.topic` when omitted.        |
 
 ### Optional fields
 
 | Field            | Type    | Notes                                                       |
 | ---------------- | ------- | ----------------------------------------------------------- |
+| `topic`          | string  | Falls back to `settings.kafka.topic` when omitted.          |
 | `configEntries`  | object  | Topic-level config, e.g. `{ "retention.ms": "604800000" }`. |
 | `schemaRegistry` | object  | Confluent Schema Registry binding (see below).              |
 | `validateOnly`   | boolean | kafkajs broker-side dry-run. No topic is created.           |
@@ -194,10 +144,12 @@ optional `compatibility` level is set on the subject after registration.
 
 ### Runtime error when the topic is missing
 
-When `setup` was not run and the topic does not exist on the cluster, `push()`
-catches the kafkajs `UNKNOWN_TOPIC_OR_PARTITION` error and logs an actionable
-message pointing the operator at `walkeros setup destination.<id>`. Run setup
-with explicit `numPartitions` and `replicationFactor` to provision the topic.
+When `setup` was not run and the topic does not exist on the cluster, every
+event fails with `Kafka push failed`, a retryable `transport` error, once the
+kafkajs retries are used up. kafkajs hands over the broker's
+`UNKNOWN_TOPIC_OR_PARTITION` inside its retry error, so in the event's
+dead-letter entry it is the cause of the error's cause. Run setup with explicit
+`numPartitions` and `replicationFactor` to provision the topic.
 
 ## Authentication
 
@@ -211,28 +163,34 @@ with explicit `numPartitions` and `replicationFactor` to provision the topic.
     "ssl": true,
     "sasl": {
       "mechanism": "plain",
-      "username": "$env.CONFLUENT_API_KEY",
-      "password": "$env.CONFLUENT_API_SECRET"
+      "username": "$secret.CONFLUENT_API_KEY",
+      "password": "$secret.CONFLUENT_API_SECRET"
     }
   }
 }`}
   language="json"
 />
 
-### AWS MSK (IAM)
+### SASL/SCRAM
 
 <CodeSnippet
   code={`{
   "kafka": {
-    "brokers": ["broker.msk.us-east-1.amazonaws.com:9098"],
+    "brokers": ["broker.example.com:9096"],
     "topic": "walkeros-events",
     "ssl": true,
     "sasl": {
-      "mechanism": "aws",
-      "accessKeyId": "$env.AWS_ACCESS_KEY",
-      "secretAccessKey": "$env.AWS_SECRET_KEY"
+      "mechanism": "scram-sha-512",
+      "username": "$secret.KAFKA_USERNAME",
+      "password": "$secret.KAFKA_PASSWORD"
     }
   }
 }`}
   language="json"
 />
+
+`mechanism: "aws"` is kafkajs's own AWS mechanism: it needs
+`authorizationIdentity` next to `accessKeyId` and `secretAccessKey`, and a
+broker that offers the `AWS` SASL mechanism. `oauthbearer` needs a token
+provider function, which these settings cannot hold, so it does not
+authenticate.

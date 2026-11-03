@@ -3,7 +3,7 @@ import { conformance, runExamples } from '@walkeros/collector/dev';
 import { destinationPinterest } from '..';
 import { examples, schemas } from '../dev';
 
-const settings = { accessToken: 's3cr3t', adAccountId: '123456789' };
+const { settings } = examples.minimal;
 
 describe('pinterest conformance', () => {
   beforeEach(() => {
@@ -16,6 +16,7 @@ describe('pinterest conformance', () => {
       examples: examples.step,
       schema: schemas.settings,
       settings,
+      minimal: examples.minimal,
       root: path.join(__dirname, '..', '..'),
     });
   });

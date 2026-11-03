@@ -20,9 +20,9 @@ things.
   `.env` file. Run this once in the repo root before the server lines: `GCP_SA`
   holds a service account JSON (a throwaway key is enough for simulation: every
   Google client runs on its mock), `FINGERPRINT_SALT`, `EMAIL_SALT` and
-  `META_ACCESS_TOKEN` have no defaults on purpose, and `CUSTOMERS_DIR` points
-  the customers store at the demo data. Every other value is `$env.NAME:default`
-  and works out of the box.
+  `META_ACCESS_TOKEN` are secrets (`$secret.`) with no defaults, and
+  `CUSTOMERS_DIR` points the customers store at the demo data. Every other value
+  is `$env.NAME:default` and works out of the box.
 
 ```bash
 export CUSTOMERS_DIR="$PWD/packages/cli/examples/customers"
@@ -104,7 +104,8 @@ walkeros push packages/cli/examples/flow-complete.json -f web -e '{"name":"page 
   - `datalayer-source` at `/flows/web/sources/dataLayer`: The dataLayer source
     reads the pushes the shop already makes, so nothing on the page changes.
   - `source-require` at `/flows/web/sources/dataLayer/config/require`: require
-    holds the source until consent and session are known.
+    holds back the entries already in the dataLayer until consent and session
+    are known; new pushes are captured from the start.
   - `source-mapping` at `/flows/web/sources/dataLayer/config/mapping`: Source
     mapping renames dataLayer add_to_cart to product add and picks its fields.
   - `browser-source` at `/flows/web/sources/browser`: The browser source reads
@@ -123,8 +124,9 @@ walkeros push packages/cli/examples/flow-complete.json -f web -e '{"name":"page 
     flows reach it with $flow.
   - `config-settings` at `/flows/web/config/settings`: Platform settings:
     windowCollector names the global collector instance.
-- `require: ["consent", "session"]` on the dataLayer source means nothing is
-  read before the banner decision and the session are known.
+- `require: ["consent", "session"]` on the dataLayer source holds back the
+  entries already in the dataLayer until the banner decision and the session are
+  known. New pushes are captured at once.
 - The browser source is `primary`: its `elb` is the one the page calls.
 - Usercentrics and session examples are shown in the browser (their simulation
   in jsdom is still waiting), the dataLayer and browser examples simulate.
@@ -476,9 +478,9 @@ walkeros push packages/cli/examples/flow-complete.json -f server -e events/order
   - `ref-var-inline` at
     `/flows/warehouse/sources/pubsub/config/setup/deadLetterPolicy/deadLetterTopic`:
     Inside a longer string $var is replaced in place, here in a full topic name.
-  - `ref-env` at `/flows/server/transformers/fingerprint/config/settings/salt`:
-    $env without a default must be set: a secret salt never gets a public
-    default.
+  - `ref-env` at `/flows/web/collector/custom/environment`: $env without a
+    default must be set: this web flow declares ENVIRONMENT in
+    config.bundle.env, so the build never misses it.
   - `ref-env-default` at `/variables/gcp/project`: $env.NAME:default works out
     of the box and takes the environment value when set.
   - `ref-secret` at `/flows/server/destinations/pubsub/config/credentials`:
@@ -495,11 +497,13 @@ walkeros push packages/cli/examples/flow-complete.json -f server -e events/order
   - `ref-store` at `/flows/server/transformers/file/env/store`: $store.assets
     injects a store into a step.
   - `bundle-env` at `/flows/web/config/bundle/env`: Web $env is resolved at
-    build time from this declared set, so every build is the same.
+    build time: a local walkeros bundle reads the shell environment with this
+    declared set on top.
 - **Kinds:** `$var` (whole, deep, inline), `$env.NAME` and `$env.NAME:default`,
   `$secret`, `$flow`, `$code:`, `$contract`, `$store`.
-- **Secrets:** `$secret` is used only for `GCP_SA`, on the server and in the
-  warehouse; web flows reject `$secret`.
+- **Secrets:** `$secret` holds `GCP_SA` (server and warehouse) and, on the
+  server, `FINGERPRINT_SALT`, `EMAIL_SALT` and `META_ACCESS_TOKEN`; web flows
+  reject `$secret`.
 - **CLI:** `runneros` reads a private env file:
 
 ```bash

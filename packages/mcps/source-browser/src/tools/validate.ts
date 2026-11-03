@@ -16,7 +16,7 @@ export function registerValidateTool(server: McpServer) {
       title: 'Validate Tagging',
       description:
         'Validate HTML data-elb tagging for common mistakes. ' +
-        'Checks for orphan actions, missing entities, unknown triggers, and more.',
+        'Checks for empty entity names, orphan actions, unknown triggers, orphan properties, and entities without actions.',
       inputSchema: {
         html: z.string().describe('HTML snippet to validate'),
         prefix: z
@@ -90,7 +90,7 @@ export function registerValidateTool(server: McpServer) {
               const name = el.getAttribute(prefix);
               info.push({
                 check: 'entity_without_action',
-                message: `Entity "${name}" has no action — won't produce events without a trigger`,
+                message: `Entity "${name}" has no action: won't produce events without a trigger`,
                 element: snip(el),
               });
             }
@@ -147,9 +147,9 @@ export function registerValidateTool(server: McpServer) {
           const total = errors.length + warnings.length + info.length;
           const summary = valid
             ? total === 0
-              ? 'Valid — no issues found'
-              : `Valid — ${warnings.length} warning(s), ${info.length} info(s)`
-            : `Invalid — ${errors.length} error(s), ${warnings.length} warning(s), ${info.length} info(s)`;
+              ? 'Valid: no issues found'
+              : `Valid: ${warnings.length} warning(s), ${info.length} info(s)`
+            : `Invalid: ${errors.length} error(s), ${warnings.length} warning(s), ${info.length} info(s)`;
 
           return mcpResult({ valid, errors, warnings, info, summary });
         });

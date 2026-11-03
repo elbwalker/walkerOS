@@ -26,5 +26,7 @@ export const JavaScriptVarName = z
  */
 export const ScopeSelector = z
   .string()
-  .describe('DOM scope for event tracking (CSS selector or "document")')
+  .describe(
+    'DOM node to track: an Element, Document or ShadowRoot, not a selector',
+  )
   .optional();

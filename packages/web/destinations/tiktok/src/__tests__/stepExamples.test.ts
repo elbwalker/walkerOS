@@ -34,7 +34,27 @@ function spyTtq(env: Env): {
   return { env, collected: () => calls, reset: () => (calls.length = 0) };
 }
 
-describe('tiktok destination — step examples', () => {
+describe('tiktok destination: step examples', () => {
+  // StepExample renders the description, in, mapping and out, not the
+  // settings and config.include an example merges in or the config.consent
+  // the runner sets for a consent command, so a public example names them.
+  it('public examples name the settings and config they run with', () => {
+    const unnamed = Object.entries(examples.step).flatMap(([name, example]) =>
+      example.public === false
+        ? []
+        : [
+            ...Object.keys(example.settings ?? {}).map(
+              (key) => `settings.${key}`,
+            ),
+            ...(example.configInclude ? ['config.include'] : []),
+            ...(example.command === 'consent' ? ['config.consent'] : []),
+          ]
+            .filter((term) => !example.description?.includes(term))
+            .map((term) => `${name}: ${term}`),
+    );
+    expect(unnamed).toEqual([]);
+  });
+
   it.each<[string, TikTokStepExample]>(Object.entries(examples.step))(
     '%s',
     async (name, example) => {
@@ -85,8 +105,8 @@ describe('tiktok destination — step examples', () => {
         await elb(event);
       }
 
-      // Drop ttq.load — it's an init-time call, not part of per-push `out`.
-      // Consent examples name the vendor call by its env path (window.ttq.*).
+      // Drop ttq.load: it's an init-time call, not part of per-push `out`.
+      // Examples name the vendor call by its simulation path (window.ttq.*).
       const expected = ((example.out ?? []) as ReadonlyArray<CallRecord>).map(
         ([path, ...args]): CallRecord => [
           path.replace(/^window\./, ''),

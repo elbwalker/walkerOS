@@ -4,3 +4,4 @@
  */
 export * as events from './events';
 export * as config from './config';
+export * as step from './step';

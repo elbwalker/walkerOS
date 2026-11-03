@@ -18,6 +18,8 @@ describe('sqlite conformance', () => {
       settings: { sqlite: { url: ':memory:', schema: 'auto' } },
       env: { push: examples.env.push, simulation: examples.env.simulation },
       root: path.join(__dirname, '..', '..'),
+      withoutMinimal:
+        'the install line cannot express the driver choice (better-sqlite3 or @libsql/client)',
     });
   });
 });

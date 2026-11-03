@@ -1,150 +1,41 @@
-import { sourceMySource } from '.';
-import type { Source, Collector } from '@walkeros/core';
-import { createMockLogger } from '@walkeros/core';
-import type { Settings } from './types';
-import { inputs, outputs } from '../../examples';
+import type { Collector, WalkerOS } from '@walkeros/core';
+import { sourceMySource } from '..';
+import { examples } from '../dev';
 
 /**
- * Test template for server sources.
- *
- * Key patterns:
- * 1. Use createSourceContext() helper - standardizes context creation
- * 2. Mock env.push - verify events are forwarded to collector
- * 3. Use examples for test data - don't hardcode test values
- * 4. Test error paths - verify graceful error handling and logging
+ * Test template for server sources. The step examples are the tests: each
+ * example's request goes through `examples.createTrigger`, and what the source
+ * hands the collector is compared with `out`. Never hard-code a request or an
+ * event: add it to `examples.step` and read it from there.
  */
 
-// Helper to create source context for testing
-function createSourceContext(
-  config: Partial<Source.Config<{ settings: Settings }>> = {},
-  env: Partial<Source.Env> = {},
-): Source.Context<{ settings: Settings; env: Source.Env }> {
-  return {
-    config,
-    env: env as Source.Env,
-    logger: env.logger || createMockLogger(),
-    id: 'test-my-source',
-    collector: {} as Collector.Instance,
+/** Starts the source with a terminus that records what it hands over. */
+async function trigger(content: unknown) {
+  const received: WalkerOS.DeepPartialEvent[] = [];
+  // The boundary: the event exactly as the source emits it, before the
+  // collector's pipeline (mapping, destinations) runs.
+  const terminus: Collector.PushFn = async (event) => {
+    received.push(event);
+    return { ok: true };
   };
+
+  const instance = await examples.createTrigger({
+    sources: { mySource: { code: sourceMySource, terminus } },
+  });
+  const result = await instance.trigger()(content);
+  return { result, received };
 }
 
-// Helper to create mock request
-function createMockRequest(body: unknown): Request {
-  return new Request('https://example.com/events', {
-    method: 'POST',
-    headers: { 'content-type': 'application/json' },
-    body: JSON.stringify(body),
-  });
-}
+describe('sourceMySource step examples', () => {
+  it.each(Object.entries(examples.step))('%s', async (name, example) => {
+    const { received } = await trigger(example.in);
 
-describe('sourceMySource', () => {
-  let mockPush: jest.MockedFunction<(...args: unknown[]) => unknown>;
-  let mockLogger: ReturnType<typeof createMockLogger>;
-
-  beforeEach(() => {
-    mockPush = jest.fn().mockResolvedValue({
-      event: { id: 'test-id' },
-      ok: true,
-    });
-    mockLogger = createMockLogger();
+    expect(received.map((event) => ['elb', event])).toEqual(example.out);
   });
 
-  describe('initialization', () => {
-    it('should initialize with default settings', async () => {
-      const source = await sourceMySource(
-        createSourceContext(
-          {},
-          {
-            push: mockPush as never,
-            command: jest.fn() as never,
-            elb: jest.fn() as never,
-            logger: mockLogger,
-          },
-        ),
-      );
+  it('answers 400 for a body it cannot read', async () => {
+    const { result } = await trigger(examples.step.invalidBody.in);
 
-      expect(source.type).toBe('my-source');
-      expect(typeof source.push).toBe('function');
-    });
-
-    it('should merge custom settings with defaults', async () => {
-      const source = await sourceMySource(
-        createSourceContext(
-          { settings: { validateSignature: true } },
-          {
-            push: mockPush as never,
-            command: jest.fn() as never,
-            elb: jest.fn() as never,
-            logger: mockLogger,
-          },
-        ),
-      );
-
-      expect(source.config.settings?.validateSignature).toBe(true);
-    });
-  });
-
-  describe('event processing', () => {
-    it('should process valid input and call env.push', async () => {
-      const source = await sourceMySource(
-        createSourceContext(
-          {},
-          {
-            push: mockPush as never,
-            command: jest.fn() as never,
-            elb: jest.fn() as never,
-            logger: mockLogger,
-          },
-        ),
-      );
-
-      // Use examples for test input
-      const request = createMockRequest(inputs.pageViewInput);
-      const response = await source.push(request);
-
-      expect(response.status).toBe(200);
-      expect(mockPush).toHaveBeenCalled();
-    });
-
-    it('should reject invalid input', async () => {
-      const source = await sourceMySource(
-        createSourceContext(
-          {},
-          {
-            push: mockPush as never,
-            command: jest.fn() as never,
-            elb: jest.fn() as never,
-            logger: mockLogger,
-          },
-        ),
-      );
-
-      const request = createMockRequest(inputs.invalidInput);
-      const response = await source.push(request);
-
-      expect(response.status).toBe(400);
-      expect(mockPush).not.toHaveBeenCalled();
-    });
-
-    it('should handle errors gracefully', async () => {
-      const errorPush = jest.fn().mockRejectedValue(new Error('Failed'));
-      const source = await sourceMySource(
-        createSourceContext(
-          {},
-          {
-            push: errorPush as never,
-            command: jest.fn() as never,
-            elb: jest.fn() as never,
-            logger: mockLogger,
-          },
-        ),
-      );
-
-      const request = createMockRequest(inputs.pageViewInput);
-      const response = await source.push(request);
-
-      expect(response.status).toBe(500);
-      expect(mockLogger.error).toHaveBeenCalled();
-    });
+    expect(result.status).toBe(400);
   });
 });

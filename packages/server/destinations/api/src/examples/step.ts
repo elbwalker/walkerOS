@@ -18,7 +18,7 @@ export const fullEvent: Flow.StepExample = {
   description:
     'A page view is POSTed to the configured endpoint with the event data serialized as the JSON body.',
   in: getEvent('page view', {
-    timestamp: 1700000800,
+    timestamp: 1700000800000,
     data: { title: 'Docs', url: 'https://example.com/docs' },
     source: { type: 'express', platform: 'server' },
   }),
@@ -41,10 +41,10 @@ export const fullEvent: Flow.StepExample = {
 export const customHeaders: Flow.StepExample = {
   title: 'Custom headers',
   description:
-    'A form submission is sent to the API with custom request headers such as an API key for authentication.',
+    'A form submission is sent to the API with the request headers from settings.headers, here { "X-API-Key": "YOUR_API_KEY" } for authentication.',
   in: createEvent({
     name: 'form submit',
-    timestamp: 1700000801,
+    timestamp: 1700000801000,
     data: { type: 'contact', email: 'user@example.com' },
     source: { type: 'express', platform: 'server' },
   }),
@@ -73,7 +73,7 @@ export const customTransform: Flow.StepExample = {
   description:
     'An order event is reshaped via a data mapping into a custom JSON payload with renamed fields for the API.',
   in: getEvent('order complete', {
-    timestamp: 1700000802,
+    timestamp: 1700000802000,
     data: { id: 'ORD-500', value: 199.99, currency: 'USD' },
     user: { id: 'buyer-42' },
     source: { type: 'express', platform: 'server' },
@@ -109,7 +109,7 @@ export const customTransform: Flow.StepExample = {
 export const silentRule: Flow.StepExample = {
   public: false,
   description: 'A rule with silent: true sends no request to the endpoint.',
-  in: getEvent('page view', { timestamp: 1700000802 }),
+  in: getEvent('page view', { timestamp: 1700000802000 }),
   mapping: { silent: true },
   out: [],
 };

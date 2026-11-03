@@ -2,7 +2,7 @@ import type { WalkerOS } from '@walkeros/core';
 import type { DestinationPlausible } from '.';
 import type { DestinationWeb } from '@walkeros/web-core';
 import { startFlow } from '@walkeros/collector';
-import { getEvent, mockEnv } from '@walkeros/core';
+import { createLogger, getEvent, mockEnv } from '@walkeros/core';
 import { examples } from './dev';
 
 describe('destination plausible', () => {
@@ -85,5 +85,24 @@ describe('destination plausible', () => {
     );
     expect(injected?.src).toBe(script);
     expect(injected?.dataset.domain).toBe(domain);
+  });
+
+  // Plausible attributes every event to data-domain: without it, none counts
+  test('init with script load and no domain throws a config error naming domain', async () => {
+    const { collector } = await startFlow();
+    await expect(
+      Promise.resolve().then(() =>
+        destination.init?.({
+          id: 'plausible',
+          config: { loadScript: true, settings: {} },
+          env: examples.env.push,
+          logger: createLogger(),
+          collector,
+        }),
+      ),
+    ).rejects.toMatchObject({
+      code: 'config',
+      message: 'Plausible with loadScript needs settings domain',
+    });
   });
 });

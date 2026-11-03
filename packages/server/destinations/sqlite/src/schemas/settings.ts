@@ -21,7 +21,7 @@ export const SqliteSettingsSchema = z
     schema: z
       .enum(['auto', 'manual'])
       .describe(
-        '[DEPRECATED] Use config.setup instead. "auto" maps to "setup: true" (run `walkeros setup destination.<id>`); "manual" maps to "setup: false". Removed in the next major.',
+        '"auto" creates the table (and each rule table) at the first push, with the columns every insert writes. "manual" skips the table check: the table is yours, and init fails without a config.mapping. Either value logs a WARN at init.',
       )
       .optional(),
   })

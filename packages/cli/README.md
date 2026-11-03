@@ -6,8 +6,8 @@
 
 # @walkeros/cli
 
-Command-line tool for building, testing, and running walkerOS event collection
-flows, from configuration to deployment.
+Command-line tool for building, testing and validating walkerOS event collection
+flows. Requires Node.js 22.12 or later.
 
 [Documentation](https://www.walkeros.io/docs/apps/cli) &bull;
 [NPM Package](https://www.npmjs.com/package/@walkeros/cli) &bull;

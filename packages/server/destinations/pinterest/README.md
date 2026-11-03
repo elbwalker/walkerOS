@@ -7,8 +7,7 @@
 # @walkeros/server-destination-pinterest
 
 Server-side event delivery to Pinterest's Conversions API for enhanced
-conversion tracking, bypassing browser limitations for improved data quality and
-privacy compliance.
+conversion tracking, bypassing browser limitations for improved data quality.
 
 [Documentation](https://www.walkeros.io/docs/destinations/server/pinterest)
 &bull;
@@ -35,8 +34,8 @@ npm install @walkeros/server-destination-pinterest
           "package": "@walkeros/server-destination-pinterest",
           "config": {
             "settings": {
-              "accessToken": "YOUR_ACCESS_TOKEN",
-              "adAccountId": "YOUR_AD_ACCOUNT_ID"
+              "accessToken": "$secret.PINTEREST_ACCESS_TOKEN",
+              "adAccountId": "123456789"
             }
           }
         }
@@ -45,6 +44,9 @@ npm install @walkeros/server-destination-pinterest
   }
 }
 ```
+
+This quick start sets no consent: add `consent: { marketing: true }` to `config`
+before you go live, see the docs.
 
 ## Documentation
 

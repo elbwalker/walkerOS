@@ -20,11 +20,11 @@
           "package": "@walkeros/server-destination-gcp",
           "import": "destinationBigQuery",
           "config": {
+            "setup": { "location": "$env.BQ_LOCATION:EU" },
             "settings": {
               "projectId": "$env.GCP_PROJECT_ID",
               "datasetId": "$env.BQ_DATASET:walkerOS",
-              "tableId": "$env.BQ_TABLE:events",
-              "location": "$env.BQ_LOCATION:EU"
+              "tableId": "$env.BQ_TABLE:events"
             }
           }
         }

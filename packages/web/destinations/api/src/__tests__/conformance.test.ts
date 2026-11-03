@@ -15,7 +15,8 @@ describe('api conformance', () => {
       page,
       examples: examples.step,
       schema: schemas.settings,
-      settings: { url: 'https://api.example.com/events' },
+      settings: examples.minimal.settings,
+      minimal: examples.minimal,
       root: path.join(__dirname, '..', '..'),
     });
   });

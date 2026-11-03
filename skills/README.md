@@ -1,7 +1,8 @@
 # walkerOS Skills
 
 Skills are the source of truth for AI assistants working with this repository.
-Tool-agnostic and accessible to Claude, Cursor, Copilot, and other AI tools.
+They are tool-agnostic: Claude, Cursor, Copilot and other AI tools can read
+them.
 
 ## Available Skills
 
@@ -17,6 +18,7 @@ Tool-agnostic and accessible to Claude, Cursor, Copilot, and other AI tools.
 | [understanding-destinations](./walkeros-understanding-destinations/SKILL.md) | Destination interface, env pattern, configuration          |
 | [understanding-sources](./walkeros-understanding-sources/SKILL.md)           | Source interface, capture patterns                         |
 | [understanding-stores](./walkeros-understanding-stores/SKILL.md)             | Store interface, $store. wiring, lifecycle                 |
+| [using-cli](./walkeros-using-cli/SKILL.md)                                   | Bundle, simulate, push, run and deploy flows; Flow JSON    |
 | [using-logger](./walkeros-using-logger/SKILL.md)                             | Logger access, DRY principles, API logging patterns        |
 | [using-step-examples](./walkeros-using-step-examples/SKILL.md)               | Step examples, Three Type Zones, in/out format             |
 | [using-store-cache](./walkeros-using-store-cache/SKILL.md)                   | Recipes for store-level cache, multi-tier composition      |
@@ -29,6 +31,7 @@ Tool-agnostic and accessible to Claude, Cursor, Copilot, and other AI tools.
 | ------------------------------------------------------------------ | ---------------------------------------------- |
 | [testing-strategy](./walkeros-testing-strategy/SKILL.md)           | Testing patterns, env mocking, dev examples    |
 | [create-transformer](./walkeros-create-transformer/SKILL.md)       | Step-by-step transformer creation              |
+| [create-cmp-source](./walkeros-create-cmp-source/SKILL.md)         | Step-by-step consent (CMP) source creation     |
 | [create-destination](./walkeros-create-destination/SKILL.md)       | Step-by-step destination creation              |
 | [create-source](./walkeros-create-source/SKILL.md)                 | Step-by-step source creation                   |
 | [mapping-configuration](./walkeros-mapping-configuration/SKILL.md) | Mapping recipes for GA4, Meta, custom APIs     |
@@ -39,15 +42,22 @@ Tool-agnostic and accessible to Claude, Cursor, Copilot, and other AI tools.
 
 ```
 skills/                  <- Primary content (tool-agnostic)
-.claude/skills/          <- Claude Code references (auto-discovery)
+.claude/skills/          <- Symlink to skills/ (Claude Code auto-discovery)
+.claude-plugin/          <- Claude Code plugin manifest listing every skill
 ```
 
 ## Usage
 
 ### Claude Code
 
-Skills in `.claude/skills/` are auto-discovered and reference primary files
-here.
+In this repository, `.claude/skills/` is a symlink to this directory, so Claude
+Code discovers the skills directly. Anywhere else, the walkerOS plugin installs
+them together with the MCP servers:
+
+```
+/plugin marketplace add elbwalker/walkerOS
+/plugin install walkeros@elbwalker
+```
 
 ### Other AI Tools
 
@@ -58,4 +68,6 @@ Reference skills in this directory directly.
 See the "Creating/Maintaining Skills" section in [AGENT.md](../AGENT.md) for the
 full process. In short: create `skills/<name>/SKILL.md` (no separate
 `.claude/skills/` copy, that path is a symlink to `../skills/`), then register
-the skill in `.claude-plugin/plugin.json`, AGENT.md, and this README.
+the skill in `.claude-plugin/plugin.json`, AGENT.md, and this README, and run
+`npm run generate:skills-index` to regenerate `INDEX.json` (CI fails on a stale
+index).

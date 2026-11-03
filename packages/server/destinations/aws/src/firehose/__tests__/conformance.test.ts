@@ -1,7 +1,7 @@
 import path from 'path';
 import { conformance } from '@walkeros/collector/dev';
 import { destinationFirehose } from '..';
-import { schemas } from '../../dev';
+import { exportExamples, schemas } from '../../dev';
 import * as examples from '../examples';
 
 describe('aws firehose conformance', () => {
@@ -14,8 +14,10 @@ describe('aws firehose conformance', () => {
       profile: 'sdk-env',
       examples: examples.step,
       schema: schemas.settings,
-      settings: { streamName: 'walkeros-events', region: 'eu-central-1' },
+      settings: examples.minimal.settings,
       env: { push: examples.env.push, simulation: examples.env.simulation },
+      exportName: 'destinationFirehose',
+      exportExamples,
       root: path.join(__dirname, '..', '..', '..'),
     });
   });

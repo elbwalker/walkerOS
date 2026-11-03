@@ -26,9 +26,9 @@ walkerOS is an open-source event data collection platform by elbwalker. This sys
 ## Typography
 
 - Site UI is set in the system stack (`sans`) with `mono` for commands and code: the same stacks the Docusaurus docs use, so marketing and docs feel like one product.
-- Product visualisations use **Geist** and **Geist Mono** (`viz`, `viz-mono`, Google Fonts) to read as product UI inside the page.
-- Headings are bold (700) with tight negative tracking (`display` −0.025em, `heading-lg` −0.02em) and `text-wrap: balance`. All display and heading sizes are fluid `clamp()` values; the token holds the max.
-- Body is 16px / 1.65 (`body`); explainers 17px (`body-lg`); leads 18–21px (`lead`) in `fg-2`, max ~58ch.
+- Product visualisations use **Geist** and **Geist Mono** (`viz`, `viz-mono`) to read as product UI inside the page; walkeros.io self-hosts both.
+- Headings are bold (700) with tight negative tracking (`display` -0.025em, `heading-lg` -0.02em) and `text-wrap: balance`. All display and heading sizes are fluid `clamp()` values; the token holds the max.
+- Body is 16px / 1.65 (`body`); explainers 17px (`body-lg`); leads 18 to 21px (`lead`) in `fg-2`, max ~58ch.
 - `eyebrow`: 13px / 600 / 0.12em / uppercase in `link`, always directly above a heading. `label`: 12px / 700 / 0.12em / uppercase in `fg-3`.
 - Inline code: `code-inline` (mono, 0.88em) on `surface-2` with a `border` outline and `radius-sm`.
 
@@ -79,10 +79,10 @@ The app, the explorer and Tag Mode use these tokens with a few more rules.
 
 `AnnouncementBar`, `SiteHeader`, `Button`, `InstallCommand`, `CheckList`, `SectionHeading`, `ProblemCard`, `FeatureItem`, `PlanCard`, `FaqItem`, `InlineCode`, `EventLegend`, `SiteFooter`. Each card below states what it needs. They are hand-written from the relaunch design and paint only with these tokens.
 
-Three product visualisations show the mechanism instead of describing it: `HeroTaggingViz` under the hero, `ArticleTeaserTracking` in the tagging feature, `DestinationMappingViz` in the mapping feature. Place each full container width directly below its feature's heading/explainer row, 40px gap. They stay dark in both themes, use Geist, and colour every event part with its `event-*` token; syntax uses `viz-tag`, `viz-string`, `viz-number`, `viz-punct`. Give animated ones a static frame (`playing={false}` / `autoplay={false}` with a start point) when the viewer prefers reduced motion.
+Three product visualisations show the mechanism instead of describing it: `HeroTaggingViz` under the hero, `ArticleTeaserTracking` in the tagging feature, `DestinationMappingViz` in the mapping feature. Place each full container width directly below its feature's heading/explainer row, 40px gap. They stay dark in both themes, use Geist, and colour every event part with its `event-*` token; syntax uses `viz-tag`, `viz-string`, `viz-number`, `viz-punct`. When the viewer prefers reduced motion, the code components in `@walkeros/explorer/design/components` hold a static frame by themselves; give the artifact copies one with `playing={false}` / `autoplay={false}` and a start point.
 
 ## Not synced
 
 - The Bundled / Integrated / MCP setup tabs are not rebuilt as a component.
-- Font files: Geist and Geist Mono load from Google Fonts; the site stacks are system fonts, so none are stored.
+- Font files: none are stored here. walkeros.io self-hosts Geist and Geist Mono (`website/static/fonts/geist/`); the site stacks are system fonts.
 - `@walkeros/explorer` components (ArchitectureFlow, CodeBox) used on the live site are not included.

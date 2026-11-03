@@ -1,0 +1,11 @@
+{
+  "name": "kit-fixture-destination",
+  "version": "1.0.0",
+  "private": true,
+  "walkerOS": {
+    "type": "destination",
+    "platform": [
+      "server"
+    ]
+  }
+}

@@ -1,8 +1,20 @@
+import {
+  copyFileSync,
+  mkdirSync,
+  mkdtempSync,
+  readdirSync,
+  rmSync,
+  symlinkSync,
+  writeFileSync,
+} from 'fs';
+import { tmpdir } from 'os';
+import path from 'path';
 import type { Flow, Store, Trigger, WalkerOS } from '@walkeros/core';
 import { isObject } from '@walkeros/core';
+import { MINIMAL_EXAMPLE_FILE } from '@walkeros/core/dev';
 import { startFlow } from '../../flow';
-import { conformance } from '../conformance';
-import { blankPage, fixtures } from './fixtures';
+import { conformance, ConformanceError } from '../conformance';
+import { blankPage, fixtures, scriptPage } from './fixtures';
 import {
   batching,
   batchingByDefault,
@@ -14,6 +26,7 @@ import {
   loud,
   loudCoded,
   rawHttps,
+  siteScript,
   swallowing,
   swallowingByDefault,
 } from './fixture-package/src';
@@ -32,10 +45,40 @@ import {
   consentAware,
   consentIgnoring,
   initCalling,
+  scriptLoading,
   swallowingSdk,
   vendorGlobal,
 } from './fixture-package/src/vendor';
 import { eitherId, ga4Only } from './fixture-package/src/alternatives';
+
+/** A module helper: published code that calls it cannot resolve it. */
+function isPageView(event: unknown): boolean {
+  return isObject(event) && event.name === 'page view';
+}
+
+/**
+ * A package root that publishes a minimal example: the fixture package's
+ * source files, linked, plus `src/examples/minimal.ts`, and the fixture's
+ * package.json unless the test gives its own.
+ */
+function publishingRoot(packageJson?: object): string {
+  const root = mkdtempSync(path.join(tmpdir(), 'kit-minimal-'));
+  const src = path.join(fixtures.root, 'src');
+  mkdirSync(path.join(root, 'src'));
+  for (const name of readdirSync(src))
+    symlinkSync(path.join(src, name), path.join(root, 'src', name));
+  const file = path.join(root, 'src', MINIMAL_EXAMPLE_FILE);
+  mkdirSync(path.dirname(file), { recursive: true });
+  writeFileSync(file, `export const minimal = { settings: {} };\n`);
+  if (packageJson)
+    writeFileSync(path.join(root, 'package.json'), JSON.stringify(packageJson));
+  else
+    copyFileSync(
+      path.join(fixtures.root, 'package.json'),
+      path.join(root, 'package.json'),
+    );
+  return root;
+}
 
 describe('conformance kit', () => {
   beforeEach(() => {
@@ -46,6 +89,28 @@ describe('conformance kit', () => {
     await expect(
       conformance('destination', good, { profile: 'http', ...fixtures }),
     ).resolves.toBeUndefined();
+  });
+
+  it('fails item 1 for an example whose published code needs its module, naming the example', async () => {
+    const examples: Flow.StepExamples = {
+      ...fixtures.examples,
+      pageView: {
+        ...fixtures.examples.pageView,
+        mapping: { condition: (event: unknown) => isPageView(event) },
+      },
+    };
+    await expect(
+      conformance('destination', good, {
+        profile: 'http',
+        ...fixtures,
+        examples,
+      }),
+    ).rejects.toMatchObject({
+      items: [1],
+      message: expect.stringContaining(
+        'example pageView: published code fails: isPageView is not defined',
+      ),
+    });
   });
 
   it('fails a conditional send on item 10 only (it passes items 1 to 9)', async () => {
@@ -459,6 +524,34 @@ describe('conformance kit, other step kinds', () => {
         conformance('source', chatty, options),
       ).rejects.toMatchObject({ items: [7] });
     });
+
+    it('fails item 1 for an example whose run throws, naming the example', async () => {
+      const throwing: Trigger.CreateFn = async (config) => {
+        const instance = await createTrigger(config);
+        return {
+          get flow() {
+            return instance.flow;
+          },
+          trigger: (type, triggerOptions) => async (content) => {
+            if (!isEvent(content))
+              throw new Error('the trigger takes an event');
+            return instance.trigger(type, triggerOptions)(content);
+          },
+        };
+      };
+      await expect(
+        conformance('source', forwarding, {
+          ...options,
+          createTrigger: throwing,
+          examples: { ...options.examples, broken: { in: 'no event' } },
+        }),
+      ).rejects.toMatchObject({
+        items: [1],
+        message: expect.stringContaining(
+          'example broken: its run throws: the trigger takes an event',
+        ),
+      });
+    });
   });
 });
 
@@ -499,6 +592,7 @@ describe('conformance kit, vendor-global profile', () => {
   const options = {
     profile: 'vendor-global' as const,
     root: fixtures.root,
+    withoutMinimal: fixtures.withoutMinimal,
     schema: { type: 'object', properties: { site: { type: 'string' } } },
     settings: { site: 'docs' },
     env: {
@@ -530,6 +624,59 @@ describe('conformance kit, vendor-global profile', () => {
     await expect(
       conformance('destination', vendorGlobal, options),
     ).resolves.toBeUndefined();
+  });
+
+  describe('item 12 checks that the minimal example loads the vendor script', () => {
+    let root: string;
+
+    beforeAll(() => {
+      root = publishingRoot();
+    });
+
+    afterAll(() => rmSync(root, { recursive: true, force: true }));
+
+    const onPage = { ...options, page: scriptPage, withoutMinimal: undefined };
+    // The schema requires nothing, so the minimal example sets nothing.
+    const minimal: Flow.MinimalExample = { settings: {} };
+    /** The items a run fails: the fixture reports no failed script, so item 2 fails by design. */
+    const failedItems = (run: Promise<void>): Promise<number[]> =>
+      run.then(
+        () => [],
+        (error: unknown) => {
+          if (error instanceof ConformanceError) return error.items;
+          throw error;
+        },
+      );
+
+    it('fails item 12 for a minimal example without the loadScript its step needs', async () => {
+      await expect(
+        conformance('destination', scriptLoading, {
+          ...onPage,
+          root,
+          minimal,
+        }),
+      ).rejects.toThrow(
+        'item 12: the minimal example loads no vendor script: the step loads it only with config.loadScript',
+      );
+    });
+
+    it('passes item 12 for a minimal example with loadScript', async () => {
+      await expect(
+        failedItems(
+          conformance('destination', scriptLoading, {
+            ...onPage,
+            root,
+            minimal: { ...minimal, config: { loadScript: true } },
+          }),
+        ),
+      ).resolves.not.toContain(12);
+    });
+
+    it('passes a step that never inserts a script (the site loads it)', async () => {
+      await expect(
+        conformance('destination', vendorGlobal, { ...onPage, root, minimal }),
+      ).resolves.toBeUndefined();
+    });
   });
 
   describe('a destination whose init calls its vendor', () => {
@@ -705,6 +852,7 @@ describe('conformance kit, item 4 with alternatives (anyOf)', () => {
   const options = {
     profile: 'http' as const,
     root: fixtures.root,
+    withoutMinimal: fixtures.withoutMinimal,
     settings: { ga4: { measurementId: 'G-1' } },
     schema: {
       type: 'object',
@@ -759,6 +907,274 @@ describe('conformance kit, item 4 with alternatives (anyOf)', () => {
     ).rejects.toMatchObject({
       items: [4],
       message: expect.stringContaining('although the schema requires nothing'),
+    });
+  });
+});
+
+describe('conformance kit, item 12: the minimal example delivers', () => {
+  beforeEach(() => {
+    jest.useRealTimers();
+  });
+
+  let root: string;
+
+  beforeAll(() => {
+    root = publishingRoot();
+  });
+
+  afterAll(() => rmSync(root, { recursive: true, force: true }));
+
+  const minimal: Flow.MinimalExample = { settings: fixtures.settings };
+  /** The fixtures on a root that publishes its minimal example. */
+  const publishing = () => ({
+    profile: 'http' as const,
+    ...fixtures,
+    root,
+    withoutMinimal: undefined,
+  });
+
+  it('passes a minimal example whose settings deliver the public example', async () => {
+    await expect(
+      conformance('destination', good, { ...publishing(), minimal }),
+    ).resolves.toBeUndefined();
+  });
+
+  it('fails item 12 only for a minimal example that lacks a required key, naming it', async () => {
+    await expect(
+      conformance('destination', good, {
+        ...publishing(),
+        minimal: { settings: {} },
+      }),
+    ).rejects.toMatchObject({
+      items: [12],
+      message: expect.stringContaining(
+        'item 12: the minimal example lacks the required url',
+      ),
+    });
+  });
+
+  it('fails item 12 only for a minimal example that sets a key the schema does not require', async () => {
+    await expect(
+      conformance('destination', good, {
+        ...publishing(),
+        minimal: { settings: { ...fixtures.settings, extra: 'x' } },
+      }),
+    ).rejects.toMatchObject({
+      items: [12],
+      message: expect.stringContaining(
+        'item 12: the minimal example sets extra, which neither the schema nor its config requires',
+      ),
+    });
+  });
+
+  describe('a key init requires only under the config (loadScript)', () => {
+    const siteOptions = () => ({
+      ...publishing(),
+      schema: {
+        type: 'object',
+        properties: { url: { type: 'string' }, siteId: { type: 'string' } },
+        required: ['url'],
+        additionalProperties: false,
+      },
+    });
+    const settings = { ...fixtures.settings, siteId: '1' };
+
+    it('passes a minimal example that sets it with that config', async () => {
+      await expect(
+        conformance('destination', siteScript, {
+          ...siteOptions(),
+          minimal: { settings, config: { loadScript: true } },
+        }),
+      ).resolves.toBeUndefined();
+    });
+
+    it('fails item 12 for the same settings without that config', async () => {
+      await expect(
+        conformance('destination', siteScript, {
+          ...siteOptions(),
+          minimal: { settings },
+        }),
+      ).rejects.toMatchObject({
+        items: [12],
+        message: expect.stringContaining(
+          'item 12: the minimal example sets siteId, which neither the schema nor its config requires',
+        ),
+      });
+    });
+  });
+
+  it('fails item 12 when the minimal example sets no alternative', async () => {
+    await expect(
+      conformance('destination', eitherId, {
+        profile: 'http',
+        root,
+        examples: fixtures.examples,
+        settings: { ga4: { measurementId: 'G-1' } },
+        schema: {
+          type: 'object',
+          properties: { ga4: { type: 'object' }, ads: { type: 'object' } },
+          anyOf: [{ required: ['ga4'] }, { required: ['ads'] }],
+        },
+        minimal: { settings: {} },
+      }),
+    ).rejects.toMatchObject({
+      message: expect.stringContaining(
+        'item 12: the minimal example sets no alternative of ga4 or ads',
+      ),
+    });
+  });
+
+  it('fails item 12 for a minimal example that sends nothing', async () => {
+    const anonymous = { name: 'page view', data: { title: 'Home' } };
+    await expect(
+      conformance('destination', conditional, {
+        ...publishing(),
+        examples: {
+          pageView: { ...fixtures.examples.pageView, in: anonymous },
+          silent: { ...fixtures.examples.silent, in: anonymous },
+        },
+        minimal,
+      }),
+    ).rejects.toMatchObject({
+      items: expect.arrayContaining([12]),
+      message: expect.stringContaining(
+        'item 12: the minimal example sends nothing',
+      ),
+    });
+  });
+
+  describe('a package with two exports', () => {
+    let root: string;
+
+    beforeAll(() => {
+      root = publishingRoot({
+        name: 'kit-fixture-exports',
+        version: '1.0.0',
+        walkerOS: {
+          type: 'destination',
+          platform: ['server'],
+          exports: { good: 'Delivers', other: 'Another export' },
+        },
+      });
+    });
+
+    afterAll(() => rmSync(root, { recursive: true, force: true }));
+
+    it('fails item 12 naming the export without a minimal example', async () => {
+      await expect(
+        conformance('destination', good, {
+          profile: 'http',
+          ...fixtures,
+          root,
+          withoutMinimal: undefined,
+          exportName: 'good',
+          exportExamples: { good: { minimal }, other: {} },
+        }),
+      ).rejects.toMatchObject({
+        items: [12],
+        message: expect.stringContaining(
+          'item 12: export other has no minimal example',
+        ),
+      });
+    });
+
+    it('passes when every export has its minimal example', async () => {
+      await expect(
+        conformance('destination', good, {
+          profile: 'http',
+          ...fixtures,
+          root,
+          withoutMinimal: undefined,
+          exportName: 'good',
+          exportExamples: { good: { minimal }, other: { minimal } },
+        }),
+      ).resolves.toBeUndefined();
+    });
+  });
+});
+
+describe('conformance kit, item 12 runs for every destination', () => {
+  beforeEach(() => {
+    jest.useRealTimers();
+  });
+
+  let root: string;
+
+  beforeAll(() => {
+    root = publishingRoot();
+  });
+
+  afterAll(() => rmSync(root, { recursive: true, force: true }));
+
+  const minimal: Flow.MinimalExample = { settings: fixtures.settings };
+  // The fixture package publishes no minimal example; root does.
+  const options = { profile: 'http' as const, ...fixtures };
+
+  it('fails item 12 for a test that passes neither minimal nor withoutMinimal', async () => {
+    await expect(
+      conformance('destination', good, {
+        ...options,
+        withoutMinimal: undefined,
+      }),
+    ).rejects.toMatchObject({
+      items: [12],
+      message: expect.stringContaining(
+        'item 12: no minimal example: pass minimal (examples.minimal, published from src/examples/minimal.ts), or withoutMinimal with the reason the package has none',
+      ),
+    });
+  });
+
+  it('passes withoutMinimal with a reason for a package that publishes no minimal example', async () => {
+    await expect(
+      conformance('destination', good, options),
+    ).resolves.toBeUndefined();
+  });
+
+  it('fails withoutMinimal for a package that publishes its minimal example', async () => {
+    await expect(
+      conformance('destination', good, { ...options, root }),
+    ).rejects.toMatchObject({
+      items: [12],
+      message: expect.stringContaining(
+        'item 12: the package publishes examples/minimal.ts, so its docs render a quickstart this test never runs: pass minimal instead of withoutMinimal',
+      ),
+    });
+  });
+
+  it('fails a minimal example the package does not publish', async () => {
+    await expect(
+      conformance('destination', good, {
+        ...options,
+        withoutMinimal: undefined,
+        minimal,
+      }),
+    ).rejects.toMatchObject({
+      items: [12],
+      message: expect.stringContaining(
+        'item 12: the minimal example is not published: put it in src/examples/minimal.ts (per export: src/<export>/examples/minimal.ts) and re-export it as examples.minimal',
+      ),
+    });
+  });
+
+  it('fails a test that passes both a minimal example and withoutMinimal', async () => {
+    await expect(
+      conformance('destination', good, { ...options, root, minimal }),
+    ).rejects.toMatchObject({
+      items: [12],
+      message: expect.stringContaining(
+        'item 12: the test passes both a minimal example and withoutMinimal: keep one',
+      ),
+    });
+  });
+
+  it('fails withoutMinimal without a reason', async () => {
+    await expect(
+      conformance('destination', good, { ...options, withoutMinimal: ' ' }),
+    ).rejects.toMatchObject({
+      items: [12],
+      message: expect.stringContaining(
+        'item 12: withoutMinimal needs the reason the package has no minimal example',
+      ),
     });
   });
 });

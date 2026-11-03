@@ -6,7 +6,7 @@ import type { Source, Elb } from '@walkeros/core';
  * for your specific CMP.
  */
 
-/** CMP consent object -- adapt shape per CMP */
+/** CMP consent object: adapt the shape per CMP */
 export interface CmpConsent {
   necessary?: boolean;
   functional?: boolean;
@@ -15,7 +15,7 @@ export interface CmpConsent {
   [category: string]: boolean | undefined;
 }
 
-/** CMP global API interface -- adapt per CMP */
+/** CMP global API interface: adapt per CMP */
 export interface CmpAPI {
   consent: CmpConsent | null;
 }
@@ -51,7 +51,7 @@ export type InitSettings = Partial<Settings>;
 /** No mapping configuration for CMP sources */
 export interface Mapping {}
 
-/** Push function type -- uses elb for consent commands */
+/** Push function type: uses elb for consent commands */
 export type Push = Elb.Fn;
 
 /**
@@ -61,8 +61,8 @@ export type Push = Elb.Fn;
  *
  * Narrowing the env window here (instead of `Window & typeof globalThis`) lets
  * test mocks satisfy `Env['window']` directly, with no `as unknown as Window`
- * cast. See create-destination §3.3.1 for the same declare-global +
- * narrowed-`Env` pattern.
+ * cast. See create-destination, Phase 7, Key Patterns 3, for the same
+ * declare-global + narrowed-`Env` pattern.
  */
 export interface CmpWindow {
   addEventListener: Window['addEventListener'];
@@ -75,7 +75,7 @@ export interface Env extends Source.BaseEnv {
   window?: CmpWindow;
 }
 
-/** Types bundle -- InitSettings as 5th param makes config.settings partial */
+/** Types bundle: InitSettings as 5th param makes config.settings partial */
 export type Types = Source.Types<Settings, Mapping, Push, Env, InitSettings>;
 
 /** Config type alias */

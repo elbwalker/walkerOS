@@ -54,8 +54,8 @@ dataLayer.push({
 });
 ```
 
-You gather all values yourself and make sure the push happens after DOM ready
-and after consent is granted.
+You gather all values yourself and make sure each push runs once those values
+exist on the page.
 
 **walkerOS tagging:** You add HTML attributes to your components. walkerOS reads
 the DOM, detects interactions, and pushes events automatically.
@@ -90,7 +90,7 @@ its own.
 
 ## Can they work together?
 
-Yes. Keeping GTM no longer means hand-written pushes:
+Yes. You can keep GTM without hand-written pushes:
 [walker.js](/docs/getting-started/quickstart/walkerjs) is one script tag that turns `data-elb`
 attributes into dataLayer pushes for your existing GTM tags, with a complete
 [GTM setup](/docs/getting-started/quickstart/walkerjs#use-it-in-gtm). For pushes shaped by a flow you

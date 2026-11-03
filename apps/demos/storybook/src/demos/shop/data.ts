@@ -171,12 +171,12 @@ export const cartItems: CartItem[] = [
 ];
 
 export const checkoutSummary: SummaryLine[] = [
-  { label: 'Subtotal', property: 'subtotal', amount: 249, currency: 'EUR' },
+  { label: 'Subtotal', property: 'value', amount: 249, currency: 'EUR' },
   { label: 'Shipping', property: 'shipping', amount: 5, currency: 'EUR' },
-  { label: 'Taxes', property: 'taxes', amount: 5.52, currency: 'EUR' },
+  { label: 'Taxes', property: 'tax', amount: 5.52, currency: 'EUR' },
   {
     label: 'Total',
-    property: 'value',
+    property: 'total',
     amount: 259.52,
     currency: 'EUR',
     emphasis: true,
@@ -204,10 +204,10 @@ export const order: OrderContent = {
   text: "We appreciate your order, we're currently processing it. So hang tight and we'll send you confirmation very soon!",
   trackingNumber: '51547878755545848512',
   summary: [
-    { label: 'Subtotal', property: 'subtotal', amount: 249, currency: 'EUR' },
+    { label: 'Subtotal', property: 'value', amount: 249, currency: 'EUR' },
     { label: 'Shipping', property: 'shipping', amount: 5 },
-    { label: 'Taxes', property: 'taxes', amount: 5.52 },
-    { label: 'Total', property: 'value', amount: 259.52, emphasis: true },
+    { label: 'Taxes', property: 'tax', amount: 5.52 },
+    { label: 'Total', property: 'total', amount: 259.52, emphasis: true },
   ],
   address: {
     lines: ['elbwalker GmbH', 'Gerhofstraße 1-3'],

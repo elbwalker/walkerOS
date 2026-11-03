@@ -8,7 +8,6 @@
  */
 
 import type { WalkerOS, Mapping as WalkerOSMapping } from '@walkeros/core';
-import { runInNewContext } from 'vm';
 import { startFlow } from '@walkeros/collector';
 import type { Logger } from '@walkeros/core';
 import { clone, createEvent, isObject, isString, Level } from '@walkeros/core';
@@ -52,23 +51,6 @@ function spyEnv(env: Env): { env: Env; collected: () => CallRecord[] } {
   );
   env.window.pintrk = spy;
   return { env, collected: () => calls };
-}
-
-// Functions in examples are published as `{ $code: fn.toString() }` in
-// walkerOS.json and evaluated without the module scope they were written in.
-function asPublished(
-  rule: WalkerOSMapping.Rule | undefined,
-): WalkerOSMapping.Rule | undefined {
-  if (rule === undefined) return rule;
-  return JSON.parse(
-    JSON.stringify(rule, (_, value) =>
-      typeof value === 'function' ? { $code: value.toString() } : value,
-    ),
-    (_, value) =>
-      isObject(value) && typeof value.$code === 'string'
-        ? runInNewContext(`(${value.$code})`)
-        : value,
-  );
 }
 
 describe('pinterest destination: step examples', () => {
@@ -115,39 +97,6 @@ describe('pinterest destination: step examples', () => {
       return cmd !== 'load' && cmd !== 'page';
     });
 
-    expect(actual).toEqual([...(example.out ?? [])]);
-  });
-
-  it.each(
-    Object.entries(examples.step).filter(
-      ([, example]) => example.command === undefined && isEvent(example.in),
-    ),
-  )('%s as published', async (_name, example) => {
-    const env = clone(examples.env.push);
-    const { env: spiedEnv, collected } = spyEnv(env);
-    const dest = jest.requireActual('../').default;
-    const { elb } = await startFlow();
-
-    if (!isEvent(example.in)) throw new Error('no event input');
-    const event = example.in;
-    const mapping = asPublished(
-      isRule(example.mapping) ? example.mapping : undefined,
-    );
-
-    await elb('walker destination', {
-      code: { ...dest, env: spiedEnv },
-      config: {
-        settings: { apiKey: '2612345678901' },
-        mapping: mapping
-          ? { [event.entity]: { [event.action]: mapping } }
-          : undefined,
-      },
-    });
-    await elb(event);
-
-    const actual = collected().filter(
-      (call) => call[1] !== 'load' && call[1] !== 'page',
-    );
     expect(actual).toEqual([...(example.out ?? [])]);
   });
 

@@ -30,6 +30,7 @@ Serves static files from a [store](/docs/stores) backend. Reads the file by `ing
 
 <CodeSnippet
   code={`import { startFlow } from '@walkeros/collector';
+import { sourceExpress } from '@walkeros/server-source-express';
 import { transformerFile } from '@walkeros/server-transformer-file';
 import { storeFsInit } from '@walkeros/server-store-fs';
 
@@ -42,6 +43,16 @@ const files = {
 
 await startFlow({
   stores: { files },
+  sources: {
+    http: {
+      code: sourceExpress,
+      config: {
+        settings: { port: 8080, paths: ['/collect', '/static/*path'] },
+        ingest: { map: { path: { key: 'path' } } },
+      },
+      next: 'file',
+    },
+  },
   transformers: {
     file: {
       code: transformerFile,
@@ -69,6 +80,16 @@ Add to your `flow.json`:
     "config": { "settings": { "basePath": "./public" }, "file": true }
   }
 },
+"sources": {
+  "http": {
+    "package": "@walkeros/server-source-express",
+    "config": {
+      "settings": { "port": 8080, "paths": ["/collect", "/static/*path"] },
+      "ingest": { "map": { "path": { "key": "path" } } }
+    },
+    "next": "file"
+  }
+},
 "transformers": {
   "file": {
     "package": "@walkeros/server-transformer-file",
@@ -84,6 +105,8 @@ Add to your `flow.json`:
   </TabItem>
 </Tabs>
 
+The source maps the request path into `ingest.path`, which the transformer reads, and runs the transformer in its `next` chain. `file: true` on the store makes it hand back each file's raw bytes. Without it every read fails with the `decode` code (one ERROR line per cause and minute) and the express source answers a GET with its 200 tracking pixel instead of the file; `walkeros validate` warns about the missing flag.
+
 <Configuration type="transformer" data={data} />
 
 ## How it works
@@ -91,22 +114,28 @@ Add to your `flow.json`:
 1. Reads `ingest.path` from the request context
 2. Strips the configured `prefix` (if set), e.g. `/static/image.png` becomes `image.png`
 3. Looks up the remaining path in the store via `store.get(key)`
-4. If found, derives the Content-Type from the file extension and responds with the content
+4. If found, derives the Content-Type from the file extension, sets Content-Length for string and Buffer content, and responds with the content
 5. Returns `false` to stop the chain. No further transformers or destinations run.
-6. If the file is not found or the path doesn't match the prefix, the event passes through unchanged
+6. If the file is not found or the path doesn't match the prefix, the request goes on unchanged like any other request on the source; for a GET the express source answers with its 200 tracking pixel
 
 ## Environment
 
 | Key | Type | Required | Description |
 |-----|------|----------|-------------|
-| `store` | `Store.Instance` | Yes | Store providing file content. Without one, the transformer warns and passes through. |
+| `store` | `Store.Instance` | Yes | Store providing file content. Without one, every request passes through with a WARN line, which the default `ERROR` log level does not show, and `walkeros validate` does not report it. |
 
 ## Cache and file chain
 
 Put a cache on the source to answer repeated file requests from memory, without reading the store again. A cache on the file transformer itself never stores an entry, because the transformer stops the chain once it responds:
 
 <CodeSnippet
-  code={`"sources": {
+  code={`"stores": {
+  "files": {
+    "package": "@walkeros/server-store-fs",
+    "config": { "settings": { "basePath": "./public" }, "file": true }
+  }
+},
+"sources": {
   "http": {
     "package": "@walkeros/server-source-express",
     "config": {
@@ -164,13 +193,6 @@ Put a cache on the source to answer repeated file requests from memory, without 
   language="typescript"
 />
 
-## Behavior notes
-
-- **Requires a store**: without `env.store`, every request logs a warning and passes through
-- **Prefix matching**: if `prefix` is set and the path doesn't start with it, the event passes through (not an error)
-- **Returns `false`**: a served file stops the chain; no destinations receive the event
-- **Content-Length**: automatically set for string and Buffer content
-
 ## In the complete example
 
 The server flow of [`flow-complete.json`](https://github.com/elbwalker/walkerOS/blob/main/packages/cli/examples/flow-complete.json), the tested example flow, serves the web bundle
@@ -183,6 +205,6 @@ script request never becomes an event:
 
 ## Next steps
 
-- **[Cache](../collector/cache)** - Add response caching before file serving (integrated collector mode)
+- **[Cache](../collector/cache)** - Add response caching before file serving
 - **[Stores](/docs/stores)** - Configure store backends
 - **[Runtime: serving files](/docs/apps/runtime#serving-files)** - Bake files into the flow image

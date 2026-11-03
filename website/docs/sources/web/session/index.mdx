@@ -116,21 +116,27 @@ utm_campaign  → campaign
 utm_term      → term
 utm_content   → content
 
-// Click IDs → stored as clickId + original key
-gclid, dclid, fbclid, msclkid, ttclid, twclid, igshid, sclid`}
+// Click IDs → stored as clickId, platform and the parameter itself
+gclid, wbraid, gbraid, dclid, fbclid, msclkid, ttclid, li_fat_id, sclid, ...`}
   language="typescript"
 />
 
-To capture additional URL parameters, pass a `parameters` map. Each entry maps a URL parameter name to the property name it should be stored as in the session data:
+The click IDs come from a built-in registry of over 30 parameters from ad,
+affiliate and email platforms, matched case-insensitively. The `clickIds`
+setting overrides a platform name or adds parameters.
+
+To capture additional URL parameters, pass a `parameters` map in `settings`. Each entry maps a URL parameter name to the property name it should be stored as in the session data:
 
 <CodeSnippet
   code={`session: {
   code: sourceSession,
   config: {
-    settings: { storage: true },
-    parameters: {
-      ref: 'referral',           // ?ref=newsletter → { referral: 'newsletter' }
-      affiliate_id: 'affiliate', // ?affiliate_id=abc → { affiliate: 'abc' }
+    settings: {
+      storage: true,
+      parameters: {
+        ref: 'referral',           // ?ref=newsletter → { referral: 'newsletter' }
+        affiliate_id: 'affiliate', // ?affiliate_id=abc → { affiliate: 'abc' }
+      },
     },
   },
 }`}
@@ -194,14 +200,15 @@ When a new session is detected, the source pushes a `session start` event. It ca
   name: 'session start',
   data: {
     isStart: true,           // Always true when this event fires
-    isNew: true,             // True only on the device's very first session
+    isNew: true,             // True when no stored session was found (storage mode only)
     id: 'abc123',            // Session ID
     device: 'xyz789',        // Device ID (storage mode only)
     storage: true,           // Whether storage is active
-    count: 5,                // Total session count for this device
-    runs: 1,                 // Page views in this session
-    start: 1704067200,       // Session start timestamp
-    referrer: 'google.com',  // Hostname only (not full URL)
+    count: 1,                // Sessions counted for this device (storage mode only)
+    runs: 1,                 // Runs (page loads) in this session (storage mode only)
+    start: 1704067200000,    // Session start timestamp in milliseconds
+    updated: 1704067200000,  // Last update in milliseconds (storage mode only)
+    referrer: 'www.google.com', // Hostname only (not full URL)
     marketing: true,         // Set when marketing parameters are present
     source: 'google',        // utm_source
     medium: 'cpc',           // utm_medium
@@ -213,7 +220,7 @@ When a new session is detected, the source pushes a `session start` event. It ca
   source: {
     type: 'session',
     platform: 'web',
-    url: 'https://example.com/?utm_source=google&utm_medium=cpc',
+    url: 'https://example.com/?utm_source=google&utm_medium=cpc&utm_campaign=winter-sale&gclid=AW-123',
     referrer: 'https://www.google.com/',
   }
 }`}
@@ -225,27 +232,38 @@ When a new session is detected, the source pushes a `session start` event. It ca
 | Field | Meaning |
 |-------|---------|
 | `isStart: true` | A new session began on this page load |
-| `isNew: true` | This is the device's very first session ever (storage mode only) |
+| `isNew: true` | No stored session was found for this device (storage mode only) |
 
-A returning visitor starting their second session has `isStart: true` but `isNew: false`. `isNew` only appears in storage mode since window-only mode has no device memory.
+A returning visitor starting a new session while the previous one is still stored has `isStart: true` but `isNew: false`, and `count` goes up by one. The stored session is kept for twice the session `length` (60 minutes by default) after its last update; a visitor who returns later starts with `isNew: true` and `count: 1` again, while the device ID (kept for `deviceAge` days) stays the same. `isNew` only appears in storage mode since window-only mode has no device memory.
 
 The landing (navigation type, referrer, marketing parameters) is evaluated once per page load, so a route change in a single-page app that calls `walker run` does not start a new session, even when the new URL carries campaign parameters. Storage mode still counts each run in `runs` and starts a new session after inactivity.
 
-**User IDs only with storage:** `user.session` and `user.device` are set only in storage mode, so they are present exactly when storage consent was given. In window mode the session ID would vanish on the next page load, so it is not a user ID and lives only in `data.id` of the `session start` event. Without storage consent, use a server-side key such as `user.hash` to group events.
+**User IDs only with storage:** `user.session` and `user.device` are set only in storage mode, so with a `consent` setting they appear only after storage consent was given. In window mode the session ID would vanish on the next page load, so it is not a user ID and lives only in `data.id` of the `session start` event. Without storage consent, use a server-side key such as `user.hash` to group events.
 
-**Click ID parameters** are stored twice: `clickId` identifies which platform originated the click (e.g. `'gclid'`), and a separate field stores the actual value (e.g. `gclid: 'AW-123...'`). This makes it easy to filter by platform without inspecting the value.
+**Click ID parameters** are stored in three fields: `clickId` names the matched parameter (e.g. `'gclid'`), `platform` its ad platform (e.g. `'google'`), and a field named after the parameter holds the actual value (e.g. `gclid: 'AW-123...'`). This makes it easy to filter by platform without inspecting the value.
 
 <Configuration type="source" data={data} />
 
 ## Consent integration
 
-Session detection adapts to consent state:
+With a `consent` setting, session detection follows the consent state:
 
 | Consent State | Behavior |
 |---------------|----------|
-| No consent | Window-only detection (no storage) |
+| No consent state yet | No detection until a `walker consent` that sets the configured key arrives |
+| Consent denied | Window-only detection (no storage) |
 | Consent granted | Storage-based with device ID |
-| Consent revoked | Falls back to window-only |
+| Consent revoked | Later detections run in window mode; IDs already set are kept (see below) |
+
+A grant switches to storage mode whether or not `storage` is set. Each mode
+detects once per page load. On a landing that starts a session (campaign
+parameters, a referrer from another site, or no referrer), consent denied and later granted
+on the same page gives a window-mode and then a storage-mode `session start`; on
+other pages only storage mode can start one.
+
+Revoking consent does not remove `user.session` and `user.device` from the
+collector, nor the IDs from storage: events pushed later on the same page still
+carry them.
 
 <CodeSnippet
   code={`// Configure consent requirement
@@ -253,7 +271,7 @@ session: {
   code: sourceSession,
   config: {
     settings: {
-      consent: 'analytics', // Wait for this consent key
+      consent: 'analytics', // Storage mode once this consent is granted
       storage: true,
     },
   },
@@ -266,7 +284,7 @@ elb('walker consent', { analytics: true });`}
 
 ## Pulse mode
 
-With `pulse: true`, the source updates the session's last-seen timestamp on each page load without counting it as a new page view and without triggering a new `session start` event. Use this for heartbeat-style presence tracking where you want to extend session lifetime without inflating `runs`:
+With `pulse: true`, the source updates an existing session's last-seen timestamp on each page load without counting it as a new page view and without triggering a new `session start` event. Use this for heartbeat-style presence tracking where you want to extend session lifetime without inflating `runs`:
 
 <CodeSnippet
   code={`session: {
@@ -303,7 +321,7 @@ The `cb` setting lets you hook into session detection. It receives the detected 
   language="typescript"
 />
 
-Set `cb: false` to completely disable the default behavior. No `user` commands and no `session start` event will be emitted. This is useful when you want full control over what happens after detection.
+Set `cb: false` to disable the default behavior completely: the source emits no `user` commands and no `session start` event. Use it when you want full control over what happens after detection.
 
 ## Next steps
 

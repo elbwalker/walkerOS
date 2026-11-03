@@ -4,8 +4,6 @@
 // the default export included, so a reader never falls back to another
 // export's examples or settings schema.
 
-const STEP_TYPES = ['source', 'transformer', 'destination', 'store'];
-
 function isRecord(value) {
   return typeof value === 'object' && value !== null && !Array.isArray(value);
 }
@@ -58,21 +56,14 @@ function assertExportMaps(packageName, declaredExports, maps) {
   }
 }
 
-/** Throw when a step package (source, transformer, destination, store) publishes no settings schema. */
-function assertStepSettings(packageName, type, schemas) {
-  if (!STEP_TYPES.includes(type)) return;
+/**
+ * Throw when a step package publishes no settings schema. `stepTypes` is
+ * `STEP_TYPES` from `@walkeros/core/dev`, which the build loads.
+ */
+function assertStepSettings(packageName, type, schemas, stepTypes) {
+  if (!stepTypes.includes(type)) return;
   if (!isRecord(schemas) || !isRecord(schemas.settings))
     throw new Error(`${packageName}: schemas.settings is missing`);
 }
 
-/**
- * The `$meta.exports` a package publishes: its declared `walkerOS.exports`,
- * else an empty list for a step package, so a reader can tell a package
- * without named exports from an older package that published no list.
- */
-function publishedExports(walkerOS) {
-  if (isRecord(walkerOS.exports)) return walkerOS.exports;
-  return STEP_TYPES.includes(walkerOS.type) ? {} : undefined;
-}
-
-export { assertExportMaps, assertStepSettings, publishedExports };
+export { assertExportMaps, assertStepSettings };

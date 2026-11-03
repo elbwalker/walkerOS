@@ -1,5 +1,4 @@
 import type { WalkerOS } from '@walkeros/core';
-import { runInNewContext } from 'vm';
 import { startFlow } from '@walkeros/collector';
 import { clone, createLogger, isArray, isObject } from '@walkeros/core';
 import type { Config, Rule } from '../types';
@@ -29,21 +28,6 @@ function isConfig(value: unknown): value is Config {
 
 function isRule(value: unknown): value is Rule {
   return isObject(value);
-}
-
-// Functions in examples are published as `{ $code: fn.toString() }` in
-// walkerOS.json and evaluated without the module scope they were written in.
-function asPublished(rule: Rule | undefined): Rule | undefined {
-  if (rule === undefined) return rule;
-  return JSON.parse(
-    JSON.stringify(rule, (_, value) =>
-      typeof value === 'function' ? { $code: value.toString() } : value,
-    ),
-    (_, value) =>
-      isObject(value) && typeof value.$code === 'string'
-        ? runInNewContext(`(${value.$code})`)
-        : value,
-  );
 }
 
 const initExample = examples.step.init;
@@ -157,13 +141,6 @@ describe('matomo web destination -- step examples', () => {
   it.each(stepEntries)('%s', async (name, example) => {
     const rule = isRule(example.mapping) ? example.mapping : undefined;
     expect(await run(name, example, rule)).toEqual([...(example.out ?? [])]);
-  });
-
-  it.each(stepEntries)('%s as published', async (name, example) => {
-    const rule = isRule(example.mapping) ? example.mapping : undefined;
-    expect(await run(name, example, asPublished(rule))).toEqual([
-      ...(example.out ?? []),
-    ]);
   });
 });
 

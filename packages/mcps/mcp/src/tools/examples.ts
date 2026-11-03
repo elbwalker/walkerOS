@@ -1,7 +1,18 @@
 import { z } from 'zod';
-import { fetchPackage, mcpResult, mcpError } from '@walkeros/core';
-import type { Flow, WalkerOSPackage } from '@walkeros/core';
-import { resolveExportName, selectDevExamples } from '@walkeros/cli/dev';
+import {
+  createLogger,
+  getErrorMessage,
+  mcpResult,
+  mcpError,
+} from '@walkeros/core';
+import {
+  readStepPackageInfo,
+  resolveExportName,
+  resolveStepPackage,
+  selectDevExamples,
+  type ResolvedStepPackage,
+  type StepPackageInfo,
+} from '@walkeros/cli/dev';
 import { ExamplesListOutputShape } from '../schemas/output.js';
 import { CLIENT_HEADER } from '../catalog.js';
 
@@ -17,12 +28,17 @@ import {
 /** Upper bound on distinct package example lookups per call. */
 export const MAX_PACKAGE_LOOKUPS = 25;
 
+// Resolving a step's package logs only a warning (a bundle pin over a
+// disagreeing inline version); each package example names the version read.
+const LOGGER = createLogger();
+
 const TITLE = 'Flow Examples';
 const DESCRIPTION =
   'List all step examples in a walkerOS flow configuration. ' +
   'Shows example names, step locations, and in/out shapes. ' +
   'Inline examples on a step take precedence; steps without inline examples ' +
   'fall back to the examples shipped by their referenced package. ' +
+  'Package examples are read at the version or local path the flow pins, and carry the version read. ' +
   'Each result is tagged with its source ("inline" or "package"). ' +
   'configPath: inline JSON, or a reference this server can read (locally a file path or an http(s) URL). ' +
   'Use this to discover available test fixtures and simulation data.';
@@ -105,6 +121,7 @@ async function flowExamplesHandlerBody(runtime: FlowRuntime, input: unknown) {
       stepName: string;
       exampleName: string;
       source: 'inline' | 'package';
+      version?: string;
       title?: string;
       description?: string;
       public?: boolean;
@@ -124,6 +141,7 @@ async function flowExamplesHandlerBody(runtime: FlowRuntime, input: unknown) {
       type: string,
       name: string,
       source: 'inline' | 'package',
+      version?: string,
     ): ExampleItem[] => {
       const items: ExampleItem[] = [];
       for (const [exName, ex] of Object.entries(stepExamples)) {
@@ -134,6 +152,7 @@ async function flowExamplesHandlerBody(runtime: FlowRuntime, input: unknown) {
           stepName: name,
           exampleName: exName,
           source,
+          ...(version ? { version } : {}),
           title: ex.title,
           description: ex.description,
           public: ex.public,
@@ -154,47 +173,49 @@ async function flowExamplesHandlerBody(runtime: FlowRuntime, input: unknown) {
       return items;
     };
 
-    // Pull a referenced package's shipped examples via the same path
-    // package_get uses. A failed fetch must not break the whole tool: the
-    // step is skipped and inline examples from other steps still return.
-    const loadPackage = async (
-      packageName: string,
-    ): Promise<WalkerOSPackage | undefined> => {
-      try {
-        return await fetchPackage(packageName, { client: CLIENT_HEADER });
-      } catch {
-        // Swallow: graceful fallback skip for this package.
-      }
-      return undefined;
-    };
+    // The directory a local path package resolves against, the same seam
+    // flow_validate uses; absent where the runtime has no filesystem.
+    const configDir = runtime.baseDir?.(configPath);
 
-    // One lookup per distinct package, capped per call, so a config naming
-    // many packages cannot fan out into an unbounded number of fetches.
-    const packageLookups = new Map<
-      string,
-      Promise<WalkerOSPackage | undefined>
-    >();
+    type PackageRead =
+      | { ok: true; info: StepPackageInfo }
+      | { ok: false; reason: string };
+
+    // One read per package, capped per call, so a config naming many
+    // packages cannot fan out into an unbounded number of fetches. A
+    // packages key has one source per flow, so the key is the read's key.
+    const packageReads = new Map<string, Promise<PackageRead>>();
     let skippedPackages = false;
     const skippedExamples: string[] = [];
+    const unreadable: string[] = [];
     const packageFor = (
-      packageName: string,
-    ): Promise<WalkerOSPackage | undefined> => {
-      const existing = packageLookups.get(packageName);
+      resolved: ResolvedStepPackage,
+    ): Promise<PackageRead> | undefined => {
+      const existing = packageReads.get(resolved.packageName);
       if (existing) return existing;
-      if (packageLookups.size >= MAX_PACKAGE_LOOKUPS) {
+      if (packageReads.size >= MAX_PACKAGE_LOOKUPS) {
         skippedPackages = true;
-        return Promise.resolve(undefined);
+        return undefined;
       }
-      const lookup = loadPackage(packageName);
-      packageLookups.set(packageName, lookup);
-      return lookup;
+      const read = readStepPackageInfo(resolved, {
+        configDir,
+        client: CLIENT_HEADER,
+      }).then(
+        (info): PackageRead => ({ ok: true, info }),
+        (error: unknown): PackageRead => ({
+          ok: false,
+          reason: getErrorMessage(error),
+        }),
+      );
+      packageReads.set(resolved.packageName, read);
+      return read;
     };
 
     // The step examples of the step's own export: a multi-export package
     // ships `exportExamples` keyed by export name, the same rule simulate
     // uses (an export missing from the map has no examples).
     const stepExamplesFor = (
-      info: WalkerOSPackage,
+      info: StepPackageInfo,
       exportName: string | undefined,
     ): ReturnType<typeof stepExamplesOf> => {
       const selected = selectDevExamples(
@@ -222,16 +243,40 @@ async function flowExamplesHandlerBody(runtime: FlowRuntime, input: unknown) {
           continue;
         }
 
-        // No inline examples: fall back to the referenced package's shipped
-        // examples (only for refs that actually name a package).
+        // No inline examples: fall back to the examples of the package the
+        // bundle would install (only for refs that actually name a package).
         if (!ref.package) continue;
-        const info = await packageFor(ref.package);
-        if (!info) continue;
-        const { exportName } = resolveExportName(flowSettings, type, name);
-        const packageExamples = stepExamplesFor(info, exportName);
+        let resolved: ResolvedStepPackage;
+        try {
+          resolved = resolveStepPackage(flowSettings, type, name, LOGGER);
+        } catch (error) {
+          unreadable.push(`${type}.${name}: ${getErrorMessage(error)}`);
+          continue;
+        }
+        const read = packageFor(resolved);
+        if (!read) continue;
+        const outcome = await read;
+        if (!outcome.ok) {
+          unreadable.push(
+            `${type}.${name} (${resolved.label}): ${outcome.reason}`,
+          );
+          continue;
+        }
+        const { exportName } = resolveExportName(
+          resolved.normalizedFlow,
+          type,
+          name,
+        );
+        const packageExamples = stepExamplesFor(outcome.info, exportName);
         if (!packageExamples) continue;
         examples.push(
-          ...toItems(packageExamples.examples, type, name, 'package'),
+          ...toItems(
+            packageExamples.examples,
+            type,
+            name,
+            'package',
+            outcome.info.version,
+          ),
         );
         for (const exampleName of packageExamples.skipped)
           skippedExamples.push(`${type}.${name}.${exampleName}`);
@@ -253,6 +298,12 @@ async function flowExamplesHandlerBody(runtime: FlowRuntime, input: unknown) {
     if (skippedExamples.length > 0) {
       warnings.push(
         `Skipped ${skippedExamples.length} package example(s) that do not match the step example schema: ${skippedExamples.join(', ')}.`,
+      );
+    }
+    if (unreadable.length > 0) {
+      const list = unreadable.join('; ');
+      warnings.push(
+        `Could not read the package of ${unreadable.length} step(s), so their package examples are missing: ${list}${list.endsWith('.') ? '' : '.'}`,
       );
     }
     if (skippedPackages) {

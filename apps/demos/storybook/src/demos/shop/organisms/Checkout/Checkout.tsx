@@ -86,7 +86,7 @@ export const Checkout = ({
         {...createTrackingProps({
           entity: 'checkout',
           trigger: 'visible',
-          action: 'view',
+          action: 'start',
         })}
         onSubmit={preventSubmit}
         className="grid gap-10 lg:grid-cols-2 lg:gap-x-12"

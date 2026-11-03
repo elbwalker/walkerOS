@@ -6,14 +6,15 @@
 
 # @walkeros/storybook-addon
 
-Visualize, debug, and validate walkerOS events directly in your Storybook
-stories.
+Visualize and debug walkerOS events directly in your Storybook stories.
 
 [Documentation](https://www.walkeros.io/docs/apps/storybook) &bull;
 [NPM Package](https://www.npmjs.com/package/@walkeros/storybook-addon) &bull;
 [Source Code](https://github.com/elbwalker/walkerOS/tree/main/apps/storybook-addon)
 
 ## Installation
+
+The addon needs Storybook 10.
 
 ```bash
 npm install --save-dev @walkeros/storybook-addon

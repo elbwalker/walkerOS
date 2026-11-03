@@ -15,7 +15,8 @@ describe('heap conformance', () => {
       page,
       examples: examples.step,
       schema: schemas.settings,
-      settings: { appId: 'test-app-id' },
+      settings: examples.minimal.settings,
+      minimal: examples.minimal,
       env: { push: examples.env.push, simulation: examples.env.simulation },
       root: path.join(__dirname, '..', '..'),
     });

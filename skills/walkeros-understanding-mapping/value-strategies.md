@@ -1,7 +1,7 @@
 # Value Mapping Strategies (Detailed Reference)
 
-This file provides comprehensive examples for each value mapping strategy. For
-quick reference, see the cheatsheet in [SKILL.md](SKILL.md#quick-reference).
+This file has examples for each value mapping strategy. For quick reference, see
+the cheatsheet in [SKILL.md](SKILL.md#quick-reference).
 
 ---
 
@@ -45,10 +45,10 @@ Fixed value regardless of event:
 {
   value: true;
 }
-{
-  value: ['a', 'b'];
-}
 ```
+
+`value` takes a string, number or boolean. For a fixed array, use `set` with
+`value` entries.
 
 ## Function Transform
 
@@ -182,7 +182,7 @@ Create array from multiple values:
 
 ## Fallback Array
 
-Try multiple extractions in order - first success wins:
+Try multiple extractions in order; the first success wins:
 
 ```typescript
 // Try sku first, fall back to id, then static value

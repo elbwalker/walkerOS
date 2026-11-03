@@ -6,8 +6,8 @@
 
 # @walkeros/server-source-gcp
 
-Google Cloud Functions source for walkerOS. A lightweight runtime adapter with
-plug-and-play assignment to a Cloud Functions handler, batch processing, and
+Google Cloud Functions source for walkerOS: a runtime adapter whose `push` you
+assign directly as a Cloud Functions handler, with batch processing and
 configurable CORS. The package also ships Pub/Sub sources for ingesting from
 Pub/Sub topics.
 
@@ -30,12 +30,21 @@ npm install @walkeros/server-source-gcp @google-cloud/functions-framework
     "default": {
       "config": { "platform": "server" },
       "sources": {
-        "gcp": { "package": "@walkeros/server-source-gcp", "config": {} }
+        "gcp": {
+          "package": "@walkeros/server-source-gcp",
+          "import": "sourceCloudFunction",
+          "config": {}
+        }
       }
     }
   }
 }
 ```
+
+The package has no default export, so a step names the source with `"import"`
+(`sourceCloudFunction`, `sourcePubSubPull` or `sourcePubSubPush`). This
+quick-start bundle is for deploying to Cloud Functions: the walkerOS runtime
+serves only sources with an HTTP handler, such as the Express source.
 
 ## Documentation
 

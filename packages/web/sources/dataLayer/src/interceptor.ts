@@ -1,5 +1,11 @@
-import type { WalkerOS, Source, Collector } from '@walkeros/core';
-import { isArray, isObject, isString, tryCatch } from '@walkeros/core';
+import type { WalkerOS, Source, Collector, Logger } from '@walkeros/core';
+import {
+  filterValues,
+  isArray,
+  isObject,
+  isString,
+  tryCatch,
+} from '@walkeros/core';
 
 // Global flag to prevent infinite loops
 let isProcessing = false;
@@ -10,6 +16,7 @@ let isProcessing = false;
 export function interceptDataLayer(
   push: Collector.PushFn,
   config: Source.Config,
+  logger: Logger.Instance,
   win: Record<string, unknown> = globalThis.window as unknown as Record<
     string,
     unknown
@@ -42,9 +49,9 @@ export function interceptDataLayer(
 
     isProcessing = true;
     try {
-      // Process each argument
+      // Process each argument; one that fails skips only itself
       for (const arg of args) {
-        processEvent(push, settings, arg, win);
+        processEvent(push, settings, arg, win, logger);
       }
     } finally {
       isProcessing = false;
@@ -61,6 +68,7 @@ export function interceptDataLayer(
 export function processExistingEvents(
   push: Collector.PushFn,
   config: Source.Config,
+  logger: Logger.Instance,
   limit?: number,
   win: Record<string, unknown> = globalThis.window as unknown as Record<
     string,
@@ -84,7 +92,7 @@ export function processExistingEvents(
   try {
     const count = limit ?? dataLayer.length;
     for (let i = 0; i < count; i++) {
-      processEvent(push, settings, dataLayer[i], win);
+      processEvent(push, settings, dataLayer[i], win, logger);
     }
   } finally {
     isProcessing = false;
@@ -92,51 +100,55 @@ export function processExistingEvents(
 }
 
 /**
- * Process a single event - handles filtering, transformation, and WalkerOS event creation
+ * Process a single event - handles filtering, transformation, and WalkerOS event creation.
+ * Never throws: the page's own push must not fail because of walkerOS.
  */
 function processEvent(
   push: Collector.PushFn,
   settings: { prefix?: string; filter?: (event: unknown) => boolean } = {},
   rawEvent: unknown,
   win: Record<string, unknown>,
+  logger: Logger.Instance,
 ): void {
-  // Apply filter if provided
-  if (settings.filter) {
-    const filterFn = tryCatch(
-      () => settings.filter!(rawEvent),
-      () => false, // If filter throws, don't skip the event
-    );
-    const filterResult = filterFn();
-    if (filterResult === true) {
-      return; // Skip filtered events
+  try {
+    // Apply filter if provided
+    const filter = settings.filter;
+    if (filter) {
+      const filterFn = tryCatch(
+        () => filter(rawEvent),
+        () => false, // If filter throws, don't skip the event
+      );
+      const filterResult = filterFn();
+      if (filterResult === true) {
+        return; // Skip filtered events
+      }
     }
+
+    // Only event values are copied: DOM elements, functions and cycles are
+    // left out, a date becomes its timestamp.
+    const transformedEvent = transformDataLayerEvent(filterValues(rawEvent));
+    if (!transformedEvent) {
+      return; // Skip invalid events
+    }
+
+    const prefix = settings.prefix || 'dataLayer';
+
+    // Create partial WalkerOS event structure (collector will enrich it).
+    // The source identity is stamped here: without it the collector falls back to
+    // `type: 'collector'`, and destinations that echo events back into the
+    // dataLayer lose the `source.type !== 'dataLayer'` guard against feedback loops.
+    const partialEvent: WalkerOS.DeepPartialEvent = {
+      name: `${prefix} ${transformedEvent.name}`,
+      data: transformedEvent.data,
+      source: { type: 'dataLayer', platform: 'web', ...getPageContext(win) },
+    };
+
+    // Push to collector
+    push(partialEvent);
+  } catch (error) {
+    // A throwing log handler must not skip the page's own push either.
+    tryCatch(() => logger.error('dataLayer push not processed', { error }))();
   }
-
-  // Transform the event (handles gtag format and direct objects)
-  const transformedEvent = transformDataLayerEvent(rawEvent);
-  if (!transformedEvent) {
-    return; // Skip invalid events
-  }
-
-  const prefix = settings.prefix || 'dataLayer';
-  const eventName = `${prefix} ${transformedEvent.name}`;
-
-  // Create partial WalkerOS event structure (collector will enrich it).
-  // The source identity is stamped here: without it the collector falls back to
-  // `type: 'collector'`, and destinations that echo events back into the
-  // dataLayer lose the `source.type !== 'dataLayer'` guard against feedback loops.
-  const { name: _name, ...data } = transformedEvent;
-  const partialEvent: WalkerOS.DeepPartialEvent = {
-    name: eventName,
-    data: data as WalkerOS.Properties,
-    source: { type: 'dataLayer', platform: 'web', ...getPageContext(win) },
-  };
-
-  // Push to collector
-  tryCatch(
-    () => push(partialEvent),
-    () => {}, // Silently handle push errors
-  )();
 }
 
 /**
@@ -174,28 +186,28 @@ function isObjectLike(value: unknown): value is object {
   return typeof value === 'object' && value !== null;
 }
 
+/** A dataLayer push as the collector receives it. */
+interface DataLayerEvent {
+  name: string;
+  data: WalkerOS.Properties;
+}
+
 /**
  * Transform dataLayer events to standardized format
- * Handles: gtag arguments, direct objects, existing events
+ * Handles: gtag arguments (an array once filtered), direct objects, existing events
  */
 function transformDataLayerEvent(
-  rawEvent: unknown,
-): { name: string; [key: string]: unknown } | null {
+  value: WalkerOS.Property | undefined,
+): DataLayerEvent | null {
   // Handle direct object format: { event: 'test', data: 'value' }
-  if (isObject(rawEvent) && isString(rawEvent.event)) {
-    const { event, ...rest } = rawEvent;
-    return { name: event, ...rest };
+  if (isObject(value)) {
+    const { event, ...data } = value;
+    return isString(event) ? { name: event, data } : null;
   }
 
   // Handle gtag argument format: ['consent', 'update', { ad_storage: 'granted' }]
-  if (isArray(rawEvent) && rawEvent.length >= 2) {
-    return transformGtagArgs(rawEvent);
-  }
-
-  // Handle arguments object (from gtag function calls)
-  if (isGtagArguments(rawEvent)) {
-    const argsArray = Array.from(rawEvent as ArrayLike<unknown>);
-    return transformGtagArgs(argsArray);
+  if (isArray(value) && value.length >= 2) {
+    return transformGtagArgs(value);
   }
 
   return null;
@@ -203,17 +215,17 @@ function transformDataLayerEvent(
 
 /**
  * Transform gtag-style arguments to event object
- * ['consent', 'update', { ad_storage: 'granted' }] → { event: 'consent update', ad_storage: 'granted' }
+ * ['consent', 'update', { ad_storage: 'granted' }] → { name: 'consent update', data: { ad_storage: 'granted' } }
  */
 function transformGtagArgs(
-  args: unknown[],
-): { name: string; [key: string]: unknown } | null {
+  args: WalkerOS.PropertyType[],
+): DataLayerEvent | null {
   const [command, action, params] = args;
 
   if (!isString(command)) return null;
 
   let eventName: string;
-  let eventData: Record<string, unknown> = {};
+  let eventData: WalkerOS.Properties = {};
 
   switch (command) {
     case 'consent':
@@ -221,8 +233,8 @@ function transformGtagArgs(
       if (!isString(action) || args.length < 3) return null;
       // Only allow 'default' and 'update' actions for consent
       if (action !== 'default' && action !== 'update') return null;
-      // Params must be a valid object (not null)
-      if (!isObject(params) || params === null) return null;
+      // Params must be a valid object
+      if (!isObject(params)) return null;
 
       eventName = `${command} ${action}`;
       eventData = { ...params };
@@ -265,21 +277,5 @@ function transformGtagArgs(
       return null;
   }
 
-  return {
-    name: eventName,
-    ...eventData,
-  };
-}
-
-/**
- * Check if object is gtag arguments object
- */
-function isGtagArguments(obj: unknown): boolean {
-  return (
-    obj != null &&
-    typeof obj === 'object' &&
-    'length' in obj &&
-    typeof (obj as ArrayLike<unknown>).length === 'number' &&
-    (obj as ArrayLike<unknown>).length > 0
-  );
+  return { name: eventName, data: eventData };
 }

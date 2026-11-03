@@ -1,0 +1,240 @@
+{
+  "leadgen": {
+    "description": "Events of a B2B lead generation site, from the lead form to the won deal and the company account.",
+    "extend": "default",
+    "schema": {
+      "description": "What every lead generation event adds.",
+      "type": "object",
+      "properties": {
+        "user": {
+          "type": "object",
+          "properties": {
+            "account": {
+              "type": "string",
+              "description": "The id of the company account the user belongs to.",
+              "examples": ["0e8c78ea9d97a7b8185e8632"]
+            }
+          }
+        }
+      }
+    },
+    "events": {
+      "lead": {
+        "submit": {
+          "title": "Lead submit",
+          "description": "A visitor sent a form that makes them a lead, such as a contact, demo or quote request. Every lead generation site needs it. The lead is named by its id, its form, or both.",
+          "examples": [
+            {
+              "name": "lead submit",
+              "data": {
+                "type": "contact",
+                "source": "Trade show",
+                "value": 2500,
+                "currency": "EUR"
+              },
+              "nested": [
+                {
+                  "entity": "form",
+                  "data": {
+                    "id": "contact-form",
+                    "name": "contact"
+                  }
+                }
+              ],
+              "trigger": "submit"
+            }
+          ],
+          "properties": {
+            "data": {
+              "type": "object",
+              "description": "The lead.",
+              "dependentRequired": {
+                "value": ["currency"]
+              },
+              "properties": {
+                "id": {
+                  "type": ["string", "number"],
+                  "description": "The id of the lead in your own system."
+                },
+                "type": {
+                  "type": "string",
+                  "description": "What the visitor asked for, such as contact, demo or quote.",
+                  "examples": ["contact"]
+                },
+                "source": {
+                  "type": "string",
+                  "description": "Where the lead came from, such as a trade show.",
+                  "examples": ["Trade show"]
+                },
+                "value": {
+                  "type": "number",
+                  "description": "The expected value of the lead.",
+                  "examples": [2500]
+                },
+                "currency": {
+                  "type": "string",
+                  "description": "The currency of value, as a three-letter code.",
+                  "examples": ["EUR"]
+                }
+              }
+            },
+            "nested": {
+              "type": "array",
+              "description": "The form that was sent.",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "entity": {
+                    "type": "string",
+                    "description": "A form.",
+                    "examples": ["form"]
+                  },
+                  "data": {
+                    "type": "object",
+                    "description": "The form.",
+                    "properties": {
+                      "id": {
+                        "type": ["string", "number"],
+                        "description": "The id of the form.",
+                        "examples": ["contact-form"]
+                      },
+                      "name": {
+                        "type": "string",
+                        "description": "The name of the form.",
+                        "examples": ["contact"]
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "anyOf": [
+            {
+              "required": ["data"],
+              "properties": {
+                "data": {
+                  "required": ["id"]
+                }
+              }
+            },
+            {
+              "required": ["nested"],
+              "properties": {
+                "nested": {
+                  "contains": {
+                    "required": ["entity"],
+                    "properties": {
+                      "entity": {
+                        "enum": ["form"]
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          ]
+        },
+        "convert": {
+          "title": "Lead convert",
+          "description": "A lead became a customer, and the deal is won. Recommended for lead generation sites.",
+          "examples": [
+            {
+              "name": "lead convert",
+              "data": {
+                "id": "lead_4711",
+                "value": 2500,
+                "currency": "EUR"
+              }
+            }
+          ],
+          "required": ["data"],
+          "properties": {
+            "data": {
+              "type": "object",
+              "description": "The won lead.",
+              "required": ["id"],
+              "dependentRequired": {
+                "value": ["currency"]
+              },
+              "properties": {
+                "id": {
+                  "type": ["string", "number"],
+                  "description": "The id of the lead in your own system.",
+                  "examples": ["lead_4711"]
+                },
+                "value": {
+                  "type": "number",
+                  "description": "The value of the won deal.",
+                  "examples": [2500]
+                },
+                "currency": {
+                  "type": "string",
+                  "description": "The currency of value, as a three-letter code.",
+                  "examples": ["EUR"]
+                }
+              }
+            }
+          }
+        }
+      },
+      "account": {
+        "create": {
+          "title": "Account create",
+          "description": "A company account was created. Recommended for B2B sites with company accounts.",
+          "examples": [
+            {
+              "name": "account create",
+              "data": {
+                "id": "0e8c78ea9d97a7b8185e8632",
+                "name": "Initech",
+                "industry": "Technology",
+                "employees": 329,
+                "plan": "enterprise"
+              },
+              "user": {
+                "id": "us3r",
+                "account": "0e8c78ea9d97a7b8185e8632"
+              }
+            }
+          ],
+          "required": ["data"],
+          "properties": {
+            "data": {
+              "type": "object",
+              "description": "The company account.",
+              "required": ["id"],
+              "properties": {
+                "id": {
+                  "type": ["string", "number"],
+                  "description": "The id of the company account.",
+                  "examples": ["0e8c78ea9d97a7b8185e8632"]
+                },
+                "name": {
+                  "type": "string",
+                  "description": "The name of the company.",
+                  "examples": ["Initech"]
+                },
+                "industry": {
+                  "type": "string",
+                  "description": "The industry of the company.",
+                  "examples": ["Technology"]
+                },
+                "employees": {
+                  "type": "number",
+                  "description": "How many people work at the company.",
+                  "examples": [329]
+                },
+                "plan": {
+                  "type": "string",
+                  "description": "The plan of the account.",
+                  "examples": ["enterprise"]
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}

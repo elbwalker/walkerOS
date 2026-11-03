@@ -4,7 +4,7 @@ export const serverFingerprint: Flow.StepExample = {
   title: 'Server fingerprint',
   description:
     'Default server fingerprint: the anonymized ingest.ip, the reduced ingest.userAgent and the site, keyed with settings.salt and rotated daily. ' +
-    'Config: { salt: "$env.FINGERPRINT_SALT", length: 16 }. Requires source config.ingest. The hash depends on the salt and the day.',
+    'Config: { salt: "$secret.FINGERPRINT_SALT", length: 16 }. Requires source config.ingest. The hash depends on the salt and the day.',
   in: {
     name: 'page view',
     data: {
@@ -16,7 +16,7 @@ export const serverFingerprint: Flow.StepExample = {
     trigger: 'load',
     entity: 'page',
     action: 'view',
-    timestamp: 1700000600,
+    timestamp: 1700000600000,
     source: { type: 'express', platform: 'server' },
   },
   out: [
@@ -35,7 +35,7 @@ export const serverFingerprint: Flow.StepExample = {
           trigger: 'load',
           entity: 'page',
           action: 'view',
-          timestamp: 1700000600,
+          timestamp: 1700000600000,
           source: { type: 'express', platform: 'server' },
         },
       },
@@ -53,7 +53,7 @@ export const missingIngest: Flow.StepExample = {
     trigger: 'load',
     entity: 'page',
     action: 'view',
-    timestamp: 1700000601,
+    timestamp: 1700000601000,
     source: { type: 'express', platform: 'server' },
   },
   out: [],
@@ -64,7 +64,7 @@ export const ipAnonymization: Flow.StepExample = {
   title: 'IP anonymization',
   description:
     'The ip input anonymizes the IP before hashing (IPv4 /24, IPv6 /48), so visitors from the same 10.0.42.* subnet ' +
-    'with the same browser, major version and OS share a hash within a day. No custom fn needed. Config: { salt: "$env.FINGERPRINT_SALT", length: 16 }',
+    'with the same browser, major version and OS share a hash within a day. No custom fn needed. Config: { salt: "$secret.FINGERPRINT_SALT", length: 16 }',
   in: {
     name: 'page view',
     data: {
@@ -76,7 +76,7 @@ export const ipAnonymization: Flow.StepExample = {
     trigger: 'load',
     entity: 'page',
     action: 'view',
-    timestamp: 1700000602,
+    timestamp: 1700000602000,
     source: { type: 'express', platform: 'server' },
   },
   out: [
@@ -95,7 +95,7 @@ export const ipAnonymization: Flow.StepExample = {
           trigger: 'load',
           entity: 'page',
           action: 'view',
-          timestamp: 1700000602,
+          timestamp: 1700000602000,
           source: { type: 'express', platform: 'server' },
         },
       },

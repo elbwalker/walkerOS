@@ -18,9 +18,9 @@
  * always grabbed `mod.default`).
  */
 
-import type { Flow } from '@walkeros/core';
+import type { Flow, StepType } from '@walkeros/core';
 
-export type ComponentKind = 'source' | 'transformer' | 'destination' | 'store';
+export type ComponentKind = StepType;
 
 export type ResolveSource = 'import' | 'imports' | 'default';
 

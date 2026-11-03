@@ -284,7 +284,8 @@ interface EventFloors {
 
 /**
  * Creates a full event from a partial event, floored with the collector's
- * current state (globals, user, consent).
+ * current state (globals, user, consent). An event JSON cannot carry is
+ * refused as invalid input.
  *
  * @param collector The walkerOS collector instance.
  * @param partialEvent The partial event to transform.
@@ -295,11 +296,30 @@ export function createEvent(
   partialEvent: WalkerOS.PartialEvent,
   ingest?: Ingest,
 ): WalkerOS.Event {
-  return buildEvent(collector, partialEvent, ingest, {
+  const event = buildEvent(collector, partialEvent, ingest, {
     globals: collector.globals,
     user: collector.user,
     consent: collector.consent,
   });
+  assertSerializable(event);
+  return event;
+}
+
+/**
+ * Checked once per incoming event: an event JSON cannot carry (a cycle, a
+ * BigInt, a throwing getter or `toJSON`) fails in every step that serializes
+ * it (a request body, the server transport, Observe). Refused here, it is
+ * reported once, as the producer's invalid input.
+ */
+function assertSerializable(event: WalkerOS.Event): void {
+  try {
+    JSON.stringify(event);
+  } catch (error) {
+    throw new InvalidEventError(
+      'Event cannot be serialized: ' +
+        (error instanceof Error ? error.message : String(error)),
+    );
+  }
 }
 
 /**

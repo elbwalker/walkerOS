@@ -11,7 +11,7 @@ export const SettingsSchema = z
     headers: z
       .record(z.string(), z.string())
       .describe(
-        "Additional HTTP headers to include with requests (like { 'Authorization': 'Bearer token', 'Content-Type': 'application/json' })",
+        "Additional HTTP headers to include with requests (like { 'Content-Type': 'application/json' }). Every visitor's browser receives them, so a header may carry a public key but never a secret.",
       )
       .optional(),
     method: z.string().default('POST').describe('HTTP method for the request'),

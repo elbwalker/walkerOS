@@ -6,9 +6,9 @@
 
 # @walkeros/server-store-s3
 
-S3-compatible object storage store using s3mini (~20 KB, zero dependencies).
-Works with AWS S3, Cloudflare R2, Scaleway, DigitalOcean Spaces, Backblaze B2,
-MinIO, and any S3-compatible provider.
+S3-compatible object storage store using s3mini (about 26 KB minified, no
+dependencies). It works with AWS S3, Cloudflare R2, Scaleway, DigitalOcean
+Spaces, Backblaze B2, MinIO, and any S3-compatible provider.
 
 [Documentation](https://www.walkeros.io/docs/stores/server/s3) &bull;
 [NPM Package](https://www.npmjs.com/package/@walkeros/server-store-s3) &bull;
@@ -31,12 +31,13 @@ npm install @walkeros/server-store-s3
       "stores": {
         "assets": {
           "package": "@walkeros/server-store-s3",
+          "import": "storeS3Init",
           "config": {
             "settings": {
               "bucket": "my-assets",
               "endpoint": "https://s3.eu-west-1.amazonaws.com",
-              "accessKeyId": "YOUR_ACCESS_KEY",
-              "secretAccessKey": "YOUR_SECRET_KEY"
+              "accessKeyId": "$secret.S3_ACCESS_KEY",
+              "secretAccessKey": "$secret.S3_SECRET_KEY"
             }
           }
         }
@@ -48,7 +49,7 @@ npm install @walkeros/server-store-s3
 
 ## Documentation
 
-Full configuration, mapping, and examples live in the docs:
+Full configuration and examples live in the docs:
 **https://www.walkeros.io/docs/stores/server/s3**
 
 ## Contribute

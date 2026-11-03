@@ -41,8 +41,6 @@ serve bytes with `file: true` and no cache, or cache a structured store with no
   metadata)
 - You need to deduplicate concurrent reads on a cold key (thundering herd)
 - You want to compose multi-tier caches (memory → GCS → Sheets)
-- You're migrating off `@walkeros/store-memory` (removed in favor of the
-  built-in tier)
 
 ## Minimal recipe: cache a Sheets store
 
@@ -55,7 +53,7 @@ in a session share the same key.
     "sessions": {
       "package": "@walkeros/server-store-sheets",
       "config": {
-        "credentials": "$var.sheetsCredentials",
+        "credentials": "$secret.SHEETS_CREDENTIALS",
         "settings": {
           "id": "1AbC...",
           "sheet": "Sessions"
@@ -84,9 +82,9 @@ The first lookup hits Sheets and populates the built-in in-memory tier with a
 300-second TTL. The next 300 seconds of identical reads hit memory and skip the
 Sheets API.
 
-Without the cache: 60 events in 60 seconds = 60 Sheets reads = quota tripped (60
-req/min limit) in one minute. With the cache: 60 events in 60 seconds = 1 Sheets
-read.
+Without the cache: 60 events in 60 seconds = 60 Sheets reads, each counted
+against the Sheets API read quota. With the cache: 60 events in 60 seconds = 1
+Sheets read.
 
 ## Recipe: memoize an object storage store
 
@@ -107,8 +105,8 @@ Same shape, longer TTL because every read is a network round-trip to the bucket:
 ```
 
 One-hour TTL is reasonable when user records change rarely. Use `flow_validate`
-to verify the config; use `flow_simulate` with a representative event to confirm
-the cache hit rate.
+to verify the config; the hit rate shows at runtime in the store's `counters`
+(see Observability).
 
 ## Recipe: TTL by key prefix
 
@@ -136,8 +134,9 @@ A rule without `match` always matches. Place it last as a fallback.
 When the working set exceeds the memory tier's capacity, or cached values should
 survive restarts and be shared across instances, add an object storage layer
 between memory and the cold backing. The consumer still wires to `$store.crm`;
-the tiers resolve automatically. The cache tier must be fs, S3, GCS, or the
-built-in memory tier: the Sheets store cannot hold cache entries.
+the tiers resolve automatically. Use fs, S3, GCS or the built-in memory tier as
+a cache tier (a `cache.store` target). Nothing rejects the Sheets store there,
+but every cache read and write then costs a Sheets request.
 
 ```json
 {
@@ -179,15 +178,15 @@ Lookup chain on `crm.get(K)`:
    on the unwind: `crm` writes to `files`, which writes GCS and then memory.
 
 TTL ordering: shortest at the top (the `files` memory tier, 300s), longest at
-the cold end (the `crm` entries in GCS, 86400s). A hit in a lower tier restarts
-the TTL of every tier above it, so the bound on staleness is the sum of the TTLs
-along the chain (86400s + 300s here), not the longest one.
+the cold end (the `crm` entries in GCS, 86400s). Each wrapper checks the expiry
+of its own entries, also when a lower tier serves them, so a value is served
+stale for at most the longest TTL in the chain (86400s here).
 
 **Async-safe by design.** Whether your cache store's `get` is synchronous (the
 built-in `__cache`, an in-memory store) or asynchronous
 (`@walkeros/server-store-fs`, S3, GCS, the cache wrapper itself), the collector
 reads through with an `await` internally. You can mix sync and async stores
-freely in a multi-tier chain without any extra configuration — the same HIT/MISS
+freely in a multi-tier chain without any extra configuration; the same HIT/MISS
 semantics apply.
 
 ## Recipe: prevent thundering herd on a cold key
@@ -207,21 +206,24 @@ Store rules are a stricter subset:
 
 - **No `key` field.** The cache key comes from the caller (`store.get(K)`);
   there is no event path to compose.
-- **No `update` field.** Stores have no event to mutate on hit.
+- **No `update` field.** `update` changes the response a source cache sends; a
+  store read has no response to change.
 - **No `stop` field.** Stores always fall through on miss; halting the pipeline
   is an event-cache concept.
 - **Empty `namespace: ""` is rejected** by the schema (re-introduces the
   collision footgun across stores sharing `__cache`).
 
-Use the [event-level Cache](../../website/docs/collector/cache.mdx) on sources,
-transformers, or destinations when you need `key`, `update`, or `stop`.
+The schema rejects `key`, `update` and `stop` on a store cache. Use the
+[event-level Cache](../../website/docs/collector/cache.mdx) when you need them:
+`key` and `stop` on sources, transformers or destinations, `update` on a source
+cache only.
 
 ## Default tier: built-in `__cache`
 
 Omitting `cache.store` falls back to the collector's built-in `__cache`. It is
 an in-memory LRU map with:
 
-- `maxEntries: 10000` (fixed in v1)
+- `maxEntries: 10000` (not configurable)
 - LRU access ordering on reads
 - Batched eviction down to 80% on overflow
 - Active TTL sweep every 60 seconds
@@ -230,10 +232,10 @@ Each wrapped store gets an automatic namespace prefix (the store id) so multiple
 stores sharing `__cache` do not collide. Override with `cache.namespace: "myns"`
 if you want explicit control.
 
-The collector logs one line per wrapped store at startup:
+At the `INFO` level the collector logs one line per wrapped store at startup:
 
 ```
-store "sessions" caches with namespace "sessions:" via __cache
+INFO [store-cache:sessions] store "sessions" caches with namespace "sessions:" via __cache
 ```
 
 ## Write-through error policy
@@ -246,8 +248,8 @@ store "sessions" caches with namespace "sessions:" via __cache
    cache. If this throws, log a warning and return success.
 
 `wrapped.delete(K)` follows the same shape. A failed cache delete leaves a
-poisoned entry that serves stale data until TTL; the warning lets operators
-react.
+poisoned entry that serves stale data until TTL. Both warnings are `WARN` lines,
+which the default log level (`ERROR`) does not show.
 
 Backing is the source of truth. Code that wraps `set` / `delete` should assume
 the cache may be lagging.
@@ -269,19 +271,22 @@ staleness is tolerable.
 
 ## Observability
 
-Each wrapped store exposes counters. Per-store telemetry keys:
-`walkeros.store_cache.<store_id>.<counter>`.
+Each wrapped store exposes counters:
 
-| Counter             | Use this to detect                  |
-| ------------------- | ----------------------------------- |
-| `hits`              | Cache is actually working           |
-| `misses`            | Working-set size, cold start        |
-| `populates`         | New keys being added to cache       |
-| `writes`            | Set call volume                     |
-| `deletes`           | Delete call volume                  |
-| `evictions_entries` | `maxEntries` cap being hit          |
-| `evictions_ttl`     | TTL sweeper finding expired entries |
-| `inflight_dedups`   | Concurrent reads on a cold key      |
+| Counter           | Use this to detect             |
+| ----------------- | ------------------------------ |
+| `hits`            | Cache is actually working      |
+| `misses`          | Working-set size, cold start   |
+| `populates`       | New keys being added to cache  |
+| `writes`          | Set call volume                |
+| `deletes`         | Delete call volume             |
+| `inflight_dedups` | Concurrent reads on a cold key |
+
+The eviction counters (`evictions_entries` for the `maxEntries` cap,
+`evictions_ttl` for expired entries) belong to the built-in tier:
+`collector.stores.__cache.counters`. Each read through a wrapped store also
+emits a flow record to the collector's observers (`meta.op: "cache"`,
+`meta.status` `hit` or `miss`).
 
 For interactive debugging at runtime:
 
@@ -289,10 +294,10 @@ For interactive debugging at runtime:
 const { collector } = await startFlow({
   /* ... */
 });
-const snapshot = collector.stores.sessions.counters;
-console.log(snapshot);
+const sessions = collector.stores.sessions;
+if ('counters' in sessions) console.log(sessions.counters);
 // { hits: 412, misses: 18, populates: 18, writes: 0, deletes: 0,
-//   evictions_entries: 0, evictions_ttl: 0, inflight_dedups: 7 }
+//   inflight_dedups: 7 }
 ```
 
 Healthy cache: `hits / (hits + misses)` rises over time. `inflight_dedups`
@@ -307,8 +312,11 @@ proves the herd prevention worked.
 - **No cross-process invalidation.** Writes from one process do not invalidate
   caches in other processes. TTL is the only mechanism.
 - **Cycles are rejected at startup.** `A.cache.store = B` and
-  `B.cache.store = A` throws during init. The collector logs the cycle path
-  before exiting.
+  `B.cache.store = A` make `startFlow` reject with
+  `Cycle in cache.store chain: a -> b -> a`.
+- **A cached store is not destroyed at shutdown.** The cache wrapper does not
+  forward `destroy`, so a store declared with `cache` never has its `destroy`
+  called.
 - **Renaming a store is a breaking change** to anything caching through it
   (`cache.store: "X"` references break). Migrate explicitly.
 
@@ -317,7 +325,8 @@ proves the herd prevention worked.
 When a step only needs to read a value out of a store or write one into it, you
 do not need to wire `$store` into the step's `env` and hand-write a `$code:`
 push. The declarative `state` block on a source, transformer, or destination
-does both directions through the mapping engine.
+does both directions through the mapping engine. The example uses the `sessions`
+store declared in the first recipe:
 
 ```json
 "transformers": {
@@ -354,7 +363,8 @@ from ingest:
 ```
 
 A transformer runs its `get` before its own `next` route, so the route can match
-on `ingest.tenant`. A source picks its route before its state runs.
+on `ingest.tenant`. A source runs its state before its `next` route too, so a
+source-level `get` can feed that route.
 
 To fill several fields from one lookup, add `mapping`. Its paths are relative to
 the value read, and the result merges into the target:
@@ -382,21 +392,6 @@ declared in `flow.stores`, or one with `file: true`, is a validation error
 reach for `$code:` only when the logic is genuinely non-declarative.
 
 Full reference: [Website: State](../../website/docs/collector/state.mdx).
-
-## Migration from `@walkeros/store-memory`
-
-The dedicated `@walkeros/store-memory` package was deleted once the built-in
-`__cache` reached feature parity. One-line migration per occurrence:
-
-- If used **only** as a cache target (`cache.store: "memory"`): drop the store
-  declaration and omit `cache.store`. The wrapper falls back to `__cache`
-  automatically.
-- If wired into a component's `env` for non-cache use: replace with a small
-  inline `Map` inside the component, or use one of the persistent stores
-  (`@walkeros/server-store-fs`, `-s3`, `-gcs`, `-sheets`).
-
-`flow_validate` rejects `package: "@walkeros/store-memory"` and points at the
-replacement.
 
 ## Related Skills
 

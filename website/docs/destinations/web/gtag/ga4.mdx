@@ -16,9 +16,9 @@ import Configuration from '@site/src/components/snippets/_configuration.mdx';
   npm="@walkeros/web-destination-gtag"
 />
 
-[Google Analytics 4 (GA4)](https://support.google.com/analytics/answer/10089681?hl=en&ref_topic=14089939&sjid=11701302784514925217-EU)
-is configured within the unified gtag destination. walkerOS loads the gtag
-script and forwards mapped events to GA4.
+[Google Analytics 4 (GA4)](https://support.google.com/analytics/answer/10089681)
+is configured within the unified gtag destination. With `loadScript: true`
+walkerOS loads gtag.js and forwards mapped events to GA4.
 
 ## Installation
 
@@ -36,6 +36,7 @@ await startFlow({
     ga4: {
       code: destinationGtag,
       config: {
+        loadScript: true,
         settings: {
           ga4: {
             measurementId: 'G-XXXXXXXXXX',
@@ -48,11 +49,21 @@ await startFlow({
   language="typescript"
 />
 
+`loadScript: true` makes walkerOS add gtag.js to the page. Without it walkerOS
+injects no gtag.js and only queues its calls in `dataLayer`, so events reach
+GA4 only if your page loads gtag.js itself.
+
+This snippet sets no consent, so `config`, and with it Google's own
+`page_view`, goes out before any Consent Mode default. Add
+`consent: { analytics: true }` to `config`, next to `settings`, before you go
+live (see [Google Consent Mode](/docs/guides/consent#google-consent-mode)).
+
 ## Let a tag manager own the configuration
 
 If a container (for example GTM) already configures your measurement ID, set
 `init: false`. walkerOS then skips the gtag bootstrap entirely, no `js`, no
-`config`, no script load, and only sends events, routed by `send_to`.
+`config`, no script load, and only sends events, routed by `send_to`, plus its
+Consent Mode commands while `como` is on.
 
 <CodeSnippet
   code={`settings: {
@@ -64,20 +75,21 @@ If a container (for example GTM) already configures your measurement ID, set
   language="typescript"
 />
 
-This matters for attribution. A `config` command affects user and session
-identity for the rest of the page, so a second one arriving later than the
-container's own can disturb the session GA4 already established. When the
-container configures the tag, let it stay authoritative and put
-`server_container_url` and related settings on the container's tag rather than
-here.
+The container's own `config` then stays the only one on the page. The settings
+walkerOS would put into `config` or use to load the script
+(`server_container_url`, `transport_url`, `pageview`, `scriptSrc`) have no
+effect with `init: false`: set them on the container's tag. The Consent Mode
+default has to come from the page as well, set by your CMP or inside the
+container. With `config.consent`, walkerOS sends its denied default and its
+updates only after the container's `config`.
 
 ## Serve gtag.js first-party
 
 By default gtag.js loads from `googletagmanager.com`. To serve it from your own
 tagging server instead, set `scriptSrc` to the
 [tag serving path](https://developers.google.com/tag-platform/tag-manager/server-side/dependency-serving)
-configured in your server container. The path maps to the measurement ID inside
-the container, so the ID is not part of the URL.
+configured in your server container. walkerOS loads that URL as it is, without
+adding the measurement ID.
 
 <CodeSnippet
   code={`settings: {
@@ -90,11 +102,11 @@ the container, so the ID is not part of the URL.
   language="typescript"
 />
 
-`server_container_url` routes measurement data and must **not** include the tag
-serving path. Setting it alone does not change where the script loads from,
-because serving gtag.js is a separate capability your container may not have. If
-`scriptSrc` fails to load, walkerOS falls back to `googletagmanager.com` so a
-misconfigured container degrades to working measurement rather than none.
+`server_container_url` goes into gtag's `config` and does not change where the
+script loads from: without `scriptSrc`, gtag.js still loads from
+`googletagmanager.com`. If `scriptSrc` fails to load, walkerOS falls back to
+`googletagmanager.com`, so measurement keeps working when the container is
+misconfigured.
 
 ## A page view needs no mapping
 
@@ -107,7 +119,9 @@ gtag also sends a `page_view` of its own when `config` runs. With the default
 settings a pushed `page view` therefore reaches GA4 in addition to that
 automatic one, and the page is counted twice. Set `pageview: false` on the
 `ga4` settings to keep only the walkerOS event; gtag still adds the page
-location and title to it.
+location and title to it. On a single-page app, also turn off *Page changes
+based on browser history events* in the web stream's enhanced measurement
+settings: gtag.js still sends those page views with `pageview: false`.
 
 <CodeSnippet
   code={`settings: {
@@ -179,12 +193,11 @@ produces the GA4 `add_to_cart` event:
 
 ## Parameter names
 
-A parameter name carrying a character GA4 does not accept, a hyphen most
-commonly, is discarded on ingestion without an error. The destination therefore
-rewrites those characters to underscores before sending. Tagging `creative-type`
-under `include: ['data']` produces the parameter `data_creative-type`, which is
-sent as `data_creative_type` rather than going missing. Case is left alone, since
-GA4 treats parameter names case-sensitively.
+Before sending, the destination replaces every run of characters other than
+letters, digits and underscores in a parameter name with one underscore; a
+hyphen is the most common case. Tagging `creative-type` under `include: ['data']` produces the
+parameter `data_creative-type`, which is sent as `data_creative_type`. Case is
+left alone.
 
 Event names are never rewritten this way. `snakeCase` lowercases the event name
 and replaces its spaces with underscores; set it to `false` and the name is sent
@@ -192,10 +205,10 @@ exactly as configured.
 
 Two parameters are dropped rather than renamed:
 
-| Parameter         | Why                                                                                                                                                                            |
-| ----------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| `source_platform` | Produced by `include` from `event.source.platform`. GA4 reads it as a manual campaign carrying no source or medium, which reports traffic as **Unassigned**                     |
-| `user_id`         | Produced by `include` from `event.user.id`. GA4 takes identity through its own configuration and ignores the name as an event parameter                                          |
+| Parameter         | Produced by `include` from |
+| ----------------- | -------------------------- |
+| `source_platform` | `event.source.platform`    |
+| `user_id`         | `event.user.id`            |
 
 Required ecommerce parameters such as `currency`, `value` and `transaction_id`
 are unaffected. To keep the platform value, map it to a name of your own:
@@ -207,9 +220,13 @@ are unaffected. To keep the platform value, map it to a name of your own:
 
 ## Verify in GA4
 
-Copy your Measurement ID from GA4 > Admin > Data Streams and open your web
-stream. Watch Reports > Realtime to confirm the `page_view` event, then open
-Admin > DebugView to inspect the `add_to_cart` event and its parameters as they
-arrive.
+In GA4, open Admin > Data collection and modification > Data streams, click your
+web stream and copy its Measurement ID. Watch Reports > Realtime to confirm the
+`page_view` event.
+
+DebugView lists only events sent in debug mode, so while you test, add
+`debug: true` to `settings.ga4`: the destination then adds `debug_mode: true` to
+every event. Open Admin > Data display > DebugView to inspect the `add_to_cart`
+event and its parameters as they arrive, and remove `debug` before going live.
 
 <Configuration type="destination" data={data} />

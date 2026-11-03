@@ -180,7 +180,7 @@ export const purchase: Flow.StepExample = {
         ],
         currency: 'EUR',
         num_items: 2,
-        value: 555,
+        value: 462,
       },
       { eventID: '235d0d7bd7a213f2' },
     ],

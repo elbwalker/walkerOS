@@ -16,7 +16,7 @@ focuses on streaming event data to data warehouses.
 | Company location     | USA                              | Germany                     |
 | Data hosting         | Self-host anywhere, US-hosting for Cloud version                         | Self-host anywhere, EU-hosting for the hosted app |
 | Pricing              | Free up to 200k events, then start at $99 per month for 2M events (Cloud) | Free, self-hosted (Paid support available) |
-| Consent handling     | Config option (privacy mode)     | First-class (consent in events)   |
+| Consent handling     | Privacy settings, consent categories sent with each event | Consent in every event, checked per destination |
 | Event model          | Schema-less, freeform naming     | Structured entity-action          |
 | Primary destinations | Data warehouses                  | Warehouses + ad platforms         |
 | Composable tagging   | No                               | Yes (tag once in component, use everywhere)    |
@@ -31,7 +31,7 @@ focuses on streaming event data to data warehouses.
 
 ### Choose walkerOS if
 
-- You need consent state in every event, built into the event model for GDPR
+- You want consent checked per destination before events leave the flow
 - You're routing to ad platforms (Meta, Google) and need match quality
 - You're a European company needing pure EU data hosting
 - You want structured event naming (entity-action prevents chaos at scale)
@@ -41,14 +41,15 @@ focuses on streaming event data to data warehouses.
 
 ### Consent handling
 
-**Jitsu:** A "privacy mode" can be enabled in the configuration. When it is
-active, Jitsu uses fingerprints instead of cookies and truncates IP addresses.
-Consent is a configuration setting, though, and the consent state does not
-travel with events to destinations.
+**Jitsu:** The JavaScript SDK has privacy settings. `dontSend` stores no
+cookies and sends nothing, `disableUserIds` drops user identifiers, `ipPolicy`
+keeps, shortens or removes the IP address, and `consentCategories` adds the
+consent state to every event as `context.categoryPreferences`.
 
-**walkerOS:** Every event carries its consent state, so destinations always know
-what permissions were granted. For GDPR accountability, this means you can prove
-what consent existed when each event was collected.
+**walkerOS:** Every event carries its consent state, and each destination
+declares the consent it needs. Events without it wait or are
+dropped before they reach that destination. See
+[consent management](/docs/guides/consent).
 
 ### Data residency
 
@@ -87,14 +88,13 @@ same event stream.
 
 ### Tagging approach
 
-**Jitsu:** A JavaScript SDK similar to Google Analytics. You add a tracking
+**Jitsu:** A JavaScript SDK compatible with Segment's API. You add a tracking
 script and call tracking functions in your code. It is quick to start, but the
 tracking code lives apart from your components.
 
 **walkerOS:** HTML attribute-based tagging with first-class React/Next.js support.
 You add `data-elb` attributes to components, and events are captured
-automatically from user interactions. The tracking lives with your components
-instead of in a separate tracking layer.
+automatically from user interactions. The tracking lives with your components.
 
 ### Cost
 
@@ -111,12 +111,12 @@ support and SLAs.
 Jitsu optimizes for speed of setup: you add a script tag, start collecting, and
 let it infer schemas and stream to the warehouse.
 
-walkerOS optimizes for data quality over time, with structured events, consent in
-every event, ad platform routing, and EU hosting.
+walkerOS optimizes for data quality over time, with structured events, consent
+checked per destination, ad platform routing, and EU hosting.
 
 If you need to collect data fast and your destination is a warehouse, Jitsu's
-simplicity is compelling. If you need consent in every event, route to ad
-platforms, or require EU data residency, walkerOS is the better fit.
+simplicity is compelling. If you need consent checked per destination, route to
+ad platforms, or require EU data residency, walkerOS is the better fit.
 
 ## Can they work together?
 

@@ -34,7 +34,7 @@ export const defaultEvent: KlaviyoStepExample = {
     'An event is sent to Klaviyo as a metric with an inline profile resolved from the user email and id.',
   in: getEvent('product view', {
     id: 'a1b2c3d4e5f60100',
-    timestamp: 1700000100,
+    timestamp: 1700000100000,
     user: { id: 'us3r', email: 'user@example.com' },
   }),
   out: [
@@ -60,7 +60,7 @@ export const defaultEvent: KlaviyoStepExample = {
               },
             },
             properties: {},
-            time: new Date(1700000100).toISOString(),
+            time: new Date(1700000100000).toISOString(),
             uniqueId: 'a1b2c3d4e5f60100',
           },
         },
@@ -79,7 +79,7 @@ export const mappedEventName: KlaviyoStepExample = {
     'A product view is mapped to the Klaviyo Viewed Product metric with properties such as product name and price.',
   in: getEvent('product view', {
     id: 'a1b2c3d4e5f60101',
-    timestamp: 1700000101,
+    timestamp: 1700000101000,
     user: { id: 'us3r', email: 'user@example.com' },
     data: {
       name: 'USB Cable',
@@ -124,7 +124,7 @@ export const mappedEventName: KlaviyoStepExample = {
               ProductID: 'PROD-1',
               Price: 9.99,
             },
-            time: new Date(1700000101).toISOString(),
+            time: new Date(1700000101000).toISOString(),
             uniqueId: 'a1b2c3d4e5f60101',
           },
         },
@@ -140,10 +140,10 @@ export const mappedEventName: KlaviyoStepExample = {
 export const revenueEvent: KlaviyoStepExample = {
   title: 'Placed order',
   description:
-    'An order complete is sent to Klaviyo as Placed Order with value and currency for revenue attribution.',
+    'An order complete is sent to Klaviyo as Placed Order with value and currency for revenue attribution: the rule maps settings.value, the currency (EUR) comes from settings.currency on the destination.',
   in: getEvent('order complete', {
     id: 'a1b2c3d4e5f60102',
-    timestamp: 1700000102,
+    timestamp: 1700000102000,
     user: { id: 'us3r', email: 'user@example.com' },
     data: {
       id: 'ORD-123',
@@ -192,7 +192,7 @@ export const revenueEvent: KlaviyoStepExample = {
               OrderId: 'ORD-123',
               ItemNames: ['Widget A', 'Widget B'],
             },
-            time: new Date(1700000102).toISOString(),
+            time: new Date(1700000102000).toISOString(),
             value: 99.99,
             valueCurrency: 'EUR',
             uniqueId: 'a1b2c3d4e5f60102',
@@ -214,7 +214,7 @@ export const userLoginIdentify: KlaviyoStepExample = {
   in: createEvent({
     name: 'user login',
     id: 'a1b2c3d4e5f60103',
-    timestamp: 1700000103,
+    timestamp: 1700000103000,
     user: { id: 'us3r', email: 'user@acme.com' },
     data: {
       firstName: 'Jane',
@@ -269,10 +269,10 @@ export const userLoginIdentify: KlaviyoStepExample = {
 export const destinationIdentify: KlaviyoStepExample = {
   title: 'Destination identify',
   description:
-    'Destination-level identify upserts the Klaviyo profile with a first name before each event is sent.',
+    'With settings.identify mapping user.firstName, the destination upserts the Klaviyo profile before the event, on the first push and again when the identifiers or the attributes change.',
   in: getEvent('page view', {
     id: 'a1b2c3d4e5f60104',
-    timestamp: 1700000104,
+    timestamp: 1700000104000,
     user: { id: 'us3r', email: 'user@example.com', firstName: 'Jane' },
   }),
   settings: {
@@ -318,7 +318,7 @@ export const destinationIdentify: KlaviyoStepExample = {
               },
             },
             properties: {},
-            time: new Date(1700000104).toISOString(),
+            time: new Date(1700000104000).toISOString(),
             uniqueId: 'a1b2c3d4e5f60104',
           },
         },
@@ -337,7 +337,7 @@ export const emailOnly: KlaviyoStepExample = {
   in: createEvent({
     name: 'newsletter signup',
     id: 'a1b2c3d4e5f60105',
-    timestamp: 1700000105,
+    timestamp: 1700000105000,
     user: { email: 'subscriber@example.com' },
   }),
   settings: {
@@ -365,7 +365,7 @@ export const emailOnly: KlaviyoStepExample = {
               },
             },
             properties: {},
-            time: new Date(1700000105).toISOString(),
+            time: new Date(1700000105000).toISOString(),
             uniqueId: 'a1b2c3d4e5f60105',
           },
         },
@@ -383,7 +383,7 @@ export const wildcardIgnored: KlaviyoStepExample = {
   in: createEvent({
     name: 'debug noise',
     id: 'a1b2c3d4e5f60106',
-    timestamp: 1700000106,
+    timestamp: 1700000106000,
     user: { id: 'us3r', email: 'user@example.com' },
   }),
   mapping: { ignore: true },
@@ -402,7 +402,7 @@ export const dedupedOrder: KlaviyoStepExample = {
     'An order carries a stable unique id so Klaviyo keeps only the first copy when the same order arrives from another producer.',
   in: getEvent('order complete', {
     id: 'a1b2c3d4e5f60107',
-    timestamp: 1700000107,
+    timestamp: 1700000107000,
     user: { id: 'us3r', email: 'user@example.com' },
     data: { id: 'ORD-123', value: 49.5 },
   }),
@@ -434,7 +434,7 @@ export const dedupedOrder: KlaviyoStepExample = {
               },
             },
             properties: { OrderId: 'ORD-123' },
-            time: new Date(1700000107).toISOString(),
+            time: new Date(1700000107000).toISOString(),
             uniqueId: 'ORD-123',
           },
         },
@@ -452,7 +452,7 @@ export const numericUniqueId: KlaviyoStepExample = {
   public: false,
   in: getEvent('order complete', {
     id: 'a1b2c3d4e5f60108',
-    timestamp: 1700000108,
+    timestamp: 1700000108000,
     user: { id: 'us3r', email: 'user@example.com' },
     data: { id: 90210 },
   }),
@@ -483,7 +483,7 @@ export const numericUniqueId: KlaviyoStepExample = {
               },
             },
             properties: {},
-            time: new Date(1700000108).toISOString(),
+            time: new Date(1700000108000).toISOString(),
             uniqueId: '90210',
           },
         },

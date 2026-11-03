@@ -45,11 +45,11 @@ interface BrowserInput {
  *
  * @example
  * const { trigger } = await createTrigger(config);
- * await trigger('click', 'button')('<button data-elb="cta" data-elbaction="click:cta click">Click</button>');
+ * await trigger('click', 'button')('<button data-elb="cta" data-elbaction="click">Click</button>');
  *
  * @example
  * // Impression trigger, handleTrigger reads data-elbaction directly
- * await trigger('impression', '[data-elb="promo"]')('<div data-elb="promo" data-elbaction="visible:promo seen">Ad</div>');
+ * await trigger('impression', '[data-elb="promo"]')('<div data-elb="promo" data-elbaction="impression:view">Ad</div>');
  *
  * @example
  * // Route change, for a source with `history: true`: lands on `url`, then

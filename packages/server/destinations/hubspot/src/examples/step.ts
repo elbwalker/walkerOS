@@ -34,7 +34,7 @@ export const defaultEvent: HubSpotStepExample = {
   description:
     'A walker event is sent to HubSpot as a custom behavioral event keyed by the user email.',
   in: getEvent('product view', {
-    timestamp: 1700000100,
+    timestamp: 1700000100000,
     user: { email: 'user@example.com' },
   }),
   out: [
@@ -43,7 +43,7 @@ export const defaultEvent: HubSpotStepExample = {
       {
         eventName: 'pe12345678_product_view',
         email: 'user@example.com',
-        occurredAt: new Date(1700000100),
+        occurredAt: new Date(1700000100000),
         properties: {},
       },
     ],
@@ -59,7 +59,7 @@ export const mappedEventName: HubSpotStepExample = {
   description:
     'A mapping supplies a custom HubSpot event name and maps order data into properties for the behavioral event.',
   in: getEvent('order complete', {
-    timestamp: 1700000101,
+    timestamp: 1700000101000,
     user: { email: 'user@example.com' },
     data: { value: 99.5, currency: 'EUR', id: 'ord-123' },
   }),
@@ -82,7 +82,7 @@ export const mappedEventName: HubSpotStepExample = {
       {
         eventName: 'pe12345678_purchase_completed',
         email: 'user@example.com',
-        occurredAt: new Date(1700000101),
+        occurredAt: new Date(1700000101000),
         properties: {
           revenue: '99.5',
           currency: 'EUR',
@@ -100,9 +100,9 @@ export const mappedEventName: HubSpotStepExample = {
 export const defaultProperties: HubSpotStepExample = {
   title: 'Default properties',
   description:
-    'Destination-level default properties are merged into every HubSpot event payload, such as traffic source metadata.',
+    'Destination-level settings.defaultProperties are merged into every HubSpot event payload, such as traffic source metadata.',
   in: getEvent('page view', {
-    timestamp: 1700000102,
+    timestamp: 1700000102000,
     user: { email: 'user@example.com' },
   }),
   settings: {
@@ -117,7 +117,7 @@ export const defaultProperties: HubSpotStepExample = {
       {
         eventName: 'pe12345678_page_view',
         email: 'user@example.com',
-        occurredAt: new Date(1700000102),
+        occurredAt: new Date(1700000102000),
         properties: {
           hs_touchpoint_source: 'walkerOS',
           hs_page_content_type: 'STANDARD_PAGE',
@@ -134,9 +134,9 @@ export const defaultProperties: HubSpotStepExample = {
 export const destinationIdentify: HubSpotStepExample = {
   title: 'Destination identify',
   description:
-    'Destination-level identify upserts the HubSpot contact with mapped properties before sending the behavioral event.',
+    'With settings.identify mapping the email and name properties, the destination updates the HubSpot contact by email before sending the behavioral event.',
   in: getEvent('page view', {
-    timestamp: 1700000103,
+    timestamp: 1700000103000,
     user: { email: 'user@example.com', firstName: 'Jane', lastName: 'Doe' },
   }),
   settings: {
@@ -164,7 +164,7 @@ export const destinationIdentify: HubSpotStepExample = {
       {
         eventName: 'pe12345678_page_view',
         email: 'user@example.com',
-        occurredAt: new Date(1700000103),
+        occurredAt: new Date(1700000103000),
         properties: {},
       },
     ],
@@ -178,10 +178,10 @@ export const destinationIdentify: HubSpotStepExample = {
 export const userLoginIdentify: HubSpotStepExample = {
   title: 'User login identify',
   description:
-    'A user login only upserts the HubSpot contact with profile and lifecycle properties, skipping the event send.',
+    'A user login only updates the HubSpot contact by email with profile and lifecycle properties, skipping the event send.',
   in: createEvent({
     name: 'user login',
-    timestamp: 1700000104,
+    timestamp: 1700000104000,
     user: { email: 'user@example.com' },
     data: {
       email: 'login@acme.com',
@@ -230,9 +230,9 @@ export const userLoginIdentify: HubSpotStepExample = {
 export const objectIdAssociation: HubSpotStepExample = {
   title: 'Object id association',
   description:
-    'The HubSpot event is associated via objectId instead of email, resolved from the walker user id.',
+    'With settings.objectId set to user.id, the HubSpot event is associated via objectId instead of email.',
   in: getEvent('product view', {
-    timestamp: 1700000105,
+    timestamp: 1700000105000,
     user: { id: 'hs-contact-789' },
   }),
   settings: {
@@ -245,7 +245,7 @@ export const objectIdAssociation: HubSpotStepExample = {
       {
         eventName: 'pe12345678_product_view',
         objectId: 'hs-contact-789',
-        occurredAt: new Date(1700000105),
+        occurredAt: new Date(1700000105000),
         properties: {},
       },
     ],
@@ -268,10 +268,10 @@ function withoutIdentity(name: string, timestamp: number): HubSpotStepExample {
   };
 }
 
-export const noIdentity = withoutIdentity('product view', 1700000106);
-export const noIdentityOrder = withoutIdentity('order complete', 1700000108);
-export const noIdentityPage = withoutIdentity('page view', 1700000109);
-export const noIdentityLogin = withoutIdentity('user login', 1700000110);
+export const noIdentity = withoutIdentity('product view', 1700000106000);
+export const noIdentityOrder = withoutIdentity('order complete', 1700000108000);
+export const noIdentityPage = withoutIdentity('page view', 1700000109000);
+export const noIdentityLogin = withoutIdentity('user login', 1700000110000);
 
 /**
  * Silent rule -- no custom event is sent; without an identify mapping there
@@ -283,7 +283,7 @@ export const silentRule: HubSpotStepExample = {
     'A rule with silent: true sends no HubSpot event; without an identify mapping nothing is called.',
   in: createEvent({
     name: 'page view',
-    timestamp: 1700000111,
+    timestamp: 1700000111000,
     user: { email: 'user@example.com' },
   }),
   mapping: { silent: true },
@@ -298,7 +298,7 @@ export const wildcardIgnored: HubSpotStepExample = {
   public: false,
   in: createEvent({
     name: 'debug noise',
-    timestamp: 1700000107,
+    timestamp: 1700000107000,
     user: { email: 'user@example.com' },
   }),
   mapping: { ignore: true },
@@ -318,7 +318,7 @@ export const userLoginWithoutEmail: HubSpotStepExample = {
     name: 'user login',
     entity: 'user',
     action: 'login',
-    timestamp: 1700000112,
+    timestamp: 1700000112000,
     user: { email: 'user@example.com' },
   },
   mapping: userLoginIdentify.mapping,

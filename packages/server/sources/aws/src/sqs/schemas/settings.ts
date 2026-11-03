@@ -39,7 +39,7 @@ export const SettingsSchema = z.object({
   decoder: z
     .enum(['json', 'text', 'raw'])
     .describe(
-      'Decoder for the message body. json (default) parses JSON, text forwards UTF-8, raw forwards a Buffer.',
+      'Decoder for the message body. json (default) parses JSON; text forwards the body as data.payload; raw forwards it base64 encoded as data.payload. text and raw events need a before transformer that sets the event name.',
     )
     .optional(),
   maxMessages: z

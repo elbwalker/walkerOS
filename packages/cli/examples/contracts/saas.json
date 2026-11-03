@@ -1,0 +1,229 @@
+{
+  "saas": {
+    "description": "Events of a SaaS product: trials and subscriptions.",
+    "extend": "default",
+    "schema": {
+      "description": "What every SaaS event adds.",
+      "type": "object",
+      "properties": {
+        "user": {
+          "type": "object",
+          "properties": {
+            "account": {
+              "type": "string",
+              "description": "The id of the company account the user belongs to.",
+              "examples": ["0e8c78ea9d97a7b8185e8632"]
+            }
+          }
+        }
+      }
+    },
+    "events": {
+      "trial": {
+        "start": {
+          "title": "Trial start",
+          "description": "A free trial of a paid plan began. Every SaaS product with trials needs it.",
+          "examples": [
+            {
+              "name": "trial start",
+              "data": {
+                "end": "2026-10-15T00:00:00Z"
+              },
+              "nested": [
+                {
+                  "entity": "plan",
+                  "data": {
+                    "id": "business",
+                    "name": "Business"
+                  }
+                }
+              ],
+              "user": {
+                "id": "us3r",
+                "account": "0e8c78ea9d97a7b8185e8632"
+              }
+            }
+          ],
+          "required": ["nested"],
+          "properties": {
+            "data": {
+              "type": "object",
+              "description": "The trial.",
+              "properties": {
+                "end": {
+                  "type": "string",
+                  "format": "date-time",
+                  "description": "When the trial ends.",
+                  "examples": ["2026-10-15T00:00:00Z"]
+                }
+              }
+            },
+            "nested": {
+              "type": "array",
+              "description": "The plan on trial.",
+              "contains": {
+                "type": "object",
+                "required": ["entity", "data"],
+                "properties": {
+                  "entity": {
+                    "type": "string",
+                    "enum": ["plan"],
+                    "description": "The entity name, plan.",
+                    "examples": ["plan"]
+                  },
+                  "data": {
+                    "type": "object",
+                    "description": "The plan.",
+                    "required": ["id"],
+                    "properties": {
+                      "id": {
+                        "type": ["string", "number"],
+                        "description": "The id of the plan.",
+                        "examples": ["business"]
+                      },
+                      "name": {
+                        "type": "string",
+                        "description": "The name of the plan.",
+                        "examples": ["Business"]
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "subscription": {
+        "start": {
+          "title": "Subscription start",
+          "description": "An account started to pay for a plan. Every SaaS product needs it. A renewal is no subscription start.",
+          "examples": [
+            {
+              "name": "subscription start",
+              "data": {
+                "id": "sub_9f21",
+                "value": 49,
+                "currency": "EUR",
+                "interval": "month"
+              },
+              "nested": [
+                {
+                  "entity": "plan",
+                  "data": {
+                    "id": "business",
+                    "name": "Business"
+                  }
+                }
+              ],
+              "user": {
+                "id": "us3r",
+                "account": "0e8c78ea9d97a7b8185e8632"
+              }
+            }
+          ],
+          "required": ["data", "nested"],
+          "properties": {
+            "data": {
+              "type": "object",
+              "description": "The subscription.",
+              "required": ["id", "value", "currency"],
+              "properties": {
+                "id": {
+                  "type": ["string", "number"],
+                  "description": "The id of the subscription.",
+                  "examples": ["sub_9f21"]
+                },
+                "value": {
+                  "type": "number",
+                  "description": "The amount of the first billing period, without tax.",
+                  "examples": [49]
+                },
+                "currency": {
+                  "type": "string",
+                  "description": "The currency of value, as a three-letter code.",
+                  "examples": ["EUR"]
+                },
+                "interval": {
+                  "type": "string",
+                  "description": "How often the subscription is billed, such as month or year.",
+                  "examples": ["month"]
+                }
+              }
+            },
+            "nested": {
+              "type": "array",
+              "description": "The plan subscribed to.",
+              "contains": {
+                "type": "object",
+                "required": ["entity", "data"],
+                "properties": {
+                  "entity": {
+                    "type": "string",
+                    "enum": ["plan"],
+                    "description": "The entity name, plan.",
+                    "examples": ["plan"]
+                  },
+                  "data": {
+                    "type": "object",
+                    "description": "The plan.",
+                    "required": ["id"],
+                    "properties": {
+                      "id": {
+                        "type": ["string", "number"],
+                        "description": "The id of the plan.",
+                        "examples": ["business"]
+                      },
+                      "name": {
+                        "type": "string",
+                        "description": "The name of the plan.",
+                        "examples": ["Business"]
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "cancel": {
+          "title": "Subscription cancel",
+          "description": "An account cancelled its subscription. Recommended for every SaaS product.",
+          "examples": [
+            {
+              "name": "subscription cancel",
+              "data": {
+                "id": "sub_9f21",
+                "reason": "too expensive"
+              },
+              "user": {
+                "id": "us3r",
+                "account": "0e8c78ea9d97a7b8185e8632"
+              }
+            }
+          ],
+          "required": ["data"],
+          "properties": {
+            "data": {
+              "type": "object",
+              "description": "The cancelled subscription.",
+              "required": ["id"],
+              "properties": {
+                "id": {
+                  "type": ["string", "number"],
+                  "description": "The id of the subscription.",
+                  "examples": ["sub_9f21"]
+                },
+                "reason": {
+                  "type": "string",
+                  "description": "Why the account cancelled.",
+                  "examples": ["too expensive"]
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}

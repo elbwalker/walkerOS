@@ -54,7 +54,7 @@
       "web"
     ],
     "renderer": "codebox",
-    "docs": "https://www.walkeros.io/docs/sources/web/session/detection"
+    "docs": "https://www.walkeros.io/docs/sources/web/session"
   },
   "keywords": [
     "walkerOS",

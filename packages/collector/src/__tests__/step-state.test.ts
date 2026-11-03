@@ -121,8 +121,8 @@ describe('store records', () => {
     expect(error?.error).toEqual({
       name: 'TypeError',
       message: 'store down',
-      code: 'transport',
-      retryable: true,
+      code: 'runtime',
+      retryable: false,
     });
     expect(typeof error?.durationMs).toBe('number');
   });

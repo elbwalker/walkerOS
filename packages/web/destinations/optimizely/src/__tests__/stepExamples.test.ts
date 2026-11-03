@@ -44,6 +44,25 @@ function spyEnv(): { env: Env; collected: () => CallRecord[] } {
 }
 
 describe('optimizely destination -- step examples', () => {
+  // StepExample renders the description, in, mapping and out, not the
+  // settings an example merges in or the config.consent the runner sets for
+  // a consent command, so a public example names them.
+  it('public examples name the settings and consent they run with', () => {
+    const unnamed = Object.entries(examples.step).flatMap(([name, example]) =>
+      example.public === false
+        ? []
+        : [
+            ...Object.keys(example.settings ?? {}).map(
+              (key) => `settings.${key}`,
+            ),
+            ...(example.command === 'consent' ? ['config.consent'] : []),
+          ]
+            .filter((term) => !example.description?.includes(term))
+            .map((term) => `${name}: ${term}`),
+    );
+    expect(unnamed).toEqual([]);
+  });
+
   // Non-public examples (silent, failures) run in the conformance test.
   it.each<[string, OptimizelyStepExample]>(
     Object.entries(examples.step).filter(

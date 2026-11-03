@@ -15,8 +15,12 @@ export const SettingsSchema = z.object({
     )
     .optional(),
 
-  /** @deprecated Use `paths` instead */
-  path: z.string().describe('Deprecated: use paths instead').optional(),
+  path: z
+    .string()
+    .describe(
+      'Single route path, registered for GET and POST. Ignored when paths is set; paths takes several routes.',
+    )
+    .optional(),
 
   paths: z
     .array(z.union([z.string(), RouteConfigSchema]))

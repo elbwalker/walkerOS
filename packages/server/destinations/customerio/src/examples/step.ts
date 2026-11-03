@@ -18,7 +18,7 @@ export const defaultTrack: CustomerIoStepExample = {
   description:
     'A walkerOS event is forwarded to Customer.io as a track call keyed by the user id.',
   in: getEvent('product view', {
-    timestamp: 1700000100,
+    timestamp: 1700000100000,
     user: { id: 'us3r', session: 's3ss10n' },
   }),
   out: [
@@ -28,7 +28,7 @@ export const defaultTrack: CustomerIoStepExample = {
       {
         name: 'product view',
         data: {},
-        timestamp: 1700000,
+        timestamp: 1700000100,
       },
     ],
   ],
@@ -42,7 +42,7 @@ export const mappedEventName: CustomerIoStepExample = {
   description:
     'A mapping rule renames the walker event to a Customer.io-specific event name such as purchase.',
   in: getEvent('order complete', {
-    timestamp: 1700000101,
+    timestamp: 1700000101000,
     user: { id: 'us3r', session: 's3ss10n' },
   }),
   mapping: {
@@ -55,7 +55,7 @@ export const mappedEventName: CustomerIoStepExample = {
       {
         name: 'purchase',
         data: {},
-        timestamp: 1700000,
+        timestamp: 1700000101,
       },
     ],
   ],
@@ -69,7 +69,7 @@ export const mappedData: CustomerIoStepExample = {
   description:
     'A data mapping transforms the event payload into Customer.io track properties for an order.',
   in: getEvent('order complete', {
-    timestamp: 1700000102,
+    timestamp: 1700000102000,
     user: { id: 'us3r', session: 's3ss10n' },
     data: { id: '0rd3r1d', value: 555, currency: 'EUR' },
   }),
@@ -90,7 +90,7 @@ export const mappedData: CustomerIoStepExample = {
       {
         name: 'purchase',
         data: { order_id: '0rd3r1d', value: 555, currency: 'EUR' },
-        timestamp: 1700000,
+        timestamp: 1700000102,
       },
     ],
   ],
@@ -104,7 +104,7 @@ export const anonymousTrack: CustomerIoStepExample = {
   description:
     'When no customer id is resolved the event is sent via trackAnonymous keyed by the session id.',
   in: getEvent('product view', {
-    timestamp: 1700000103,
+    timestamp: 1700000103000,
     user: { session: 's3ss10n' },
   }),
   settings: {
@@ -117,7 +117,7 @@ export const anonymousTrack: CustomerIoStepExample = {
       {
         name: 'product view',
         data: {},
-        timestamp: 1700000,
+        timestamp: 1700000103,
       },
     ],
   ],
@@ -130,9 +130,9 @@ export const anonymousTrack: CustomerIoStepExample = {
 export const destinationIdentify: CustomerIoStepExample = {
   title: 'Destination identify',
   description:
-    'Destination-level identify fires a Customer.io identify call once on the first push, before the track, attaching user attributes.',
+    'With settings.identify mapping user.email, the destination fires a Customer.io identify call before the track, on the first push and again when the customer or the attributes change.',
   in: getEvent('page view', {
-    timestamp: 1700000104,
+    timestamp: 1700000104000,
     user: { id: 'us3r', session: 's3ss10n', email: 'user@example.com' },
   }),
   settings: {
@@ -150,7 +150,7 @@ export const destinationIdentify: CustomerIoStepExample = {
       {
         name: 'page view',
         data: {},
-        timestamp: 1700000,
+        timestamp: 1700000104,
       },
     ],
   ],
@@ -165,7 +165,7 @@ export const userLoginIdentify: CustomerIoStepExample = {
     'A user login triggers only a Customer.io identify call with profile attributes, skipping the track.',
   in: createEvent({
     name: 'user login',
-    timestamp: 1700000105,
+    timestamp: 1700000105000,
     user: { id: 'us3r', session: 's3ss10n' },
     data: {
       email: 'user@acme.com',
@@ -201,9 +201,9 @@ export const userLoginIdentify: CustomerIoStepExample = {
 export const pageView: CustomerIoStepExample = {
   title: 'Page view',
   description:
-    'A page view fires trackPageView with the URL and referrer instead of a generic track call.',
+    'A page view fires trackPageView instead of a generic track call. Customer.io receives only the URL: the SDK does not send the mapped referrer.',
   in: getEvent('page view', {
-    timestamp: 1700000106,
+    timestamp: 1700000106000,
     user: { id: 'us3r', session: 's3ss10n' },
     data: {
       url: 'https://example.com/pricing',
@@ -240,7 +240,7 @@ export const destroyPerson: CustomerIoStepExample = {
     'A user delete event permanently removes the person from Customer.io via trackClient.destroy.',
   in: createEvent({
     name: 'user delete',
-    timestamp: 1700000107,
+    timestamp: 1700000107000,
     user: { id: 'us3r', session: 's3ss10n' },
   }),
   mapping: {
@@ -253,15 +253,15 @@ export const destroyPerson: CustomerIoStepExample = {
 };
 
 /**
- * Suppress -- stops messaging without deleting data.
+ * Suppress -- unlike destroy, the id cannot be re-added.
  */
 export const suppressPerson: CustomerIoStepExample = {
   title: 'Suppress person',
   description:
-    'A user suppress event stops messaging for the person without deleting their profile data.',
+    'A user suppress event suppresses the person via trackClient.suppress; unlike destroy, the id cannot be re-added.',
   in: createEvent({
     name: 'user suppress',
-    timestamp: 1700000108,
+    timestamp: 1700000108000,
     user: { id: 'us3r', session: 's3ss10n' },
   }),
   mapping: {
@@ -279,10 +279,10 @@ export const suppressPerson: CustomerIoStepExample = {
 export const unsuppressPerson: CustomerIoStepExample = {
   title: 'Unsuppress person',
   description:
-    'A user unsuppress event resumes messaging for a previously suppressed Customer.io profile.',
+    'A user unsuppress event lifts an earlier suppress for the person via trackClient.unsuppress.',
   in: createEvent({
     name: 'user unsuppress',
-    timestamp: 1700000109,
+    timestamp: 1700000109000,
     user: { id: 'us3r', session: 's3ss10n' },
   }),
   mapping: {
@@ -302,7 +302,7 @@ export const wildcardIgnored: CustomerIoStepExample = {
   public: false,
   in: createEvent({
     name: 'debug noise',
-    timestamp: 1700000110,
+    timestamp: 1700000110000,
     user: { id: 'us3r', session: 's3ss10n' },
   }),
   mapping: { ignore: true },

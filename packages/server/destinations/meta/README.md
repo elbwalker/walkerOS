@@ -6,8 +6,11 @@
 
 # @walkeros/server-destination-meta
 
-Server-side event delivery to Meta's Conversions API for enhanced tracking
-accuracy and privacy compliance.
+Server-side event delivery to Meta's Conversions API. Customer information in
+`user_data` (email, phone, name, date of birth, gender, city, state, zip code,
+country, external ID) is normalized and SHA-256 hashed before it leaves your
+server; the client IP, the user agent and the other parameters are sent as they
+are.
 
 [Documentation](https://www.walkeros.io/docs/destinations/server/meta-capi)
 &bull;
@@ -34,7 +37,7 @@ npm install @walkeros/server-destination-meta
           "package": "@walkeros/server-destination-meta",
           "config": {
             "settings": {
-              "accessToken": "YOUR_ACCESS_TOKEN",
+              "accessToken": "$secret.META_ACCESS_TOKEN",
               "pixelId": "1234567890"
             }
           }
@@ -44,6 +47,9 @@ npm install @walkeros/server-destination-meta
   }
 }
 ```
+
+This quick start sets no consent: add `consent: { marketing: true }` to `config`
+before you go live, see the docs.
 
 ## Documentation
 

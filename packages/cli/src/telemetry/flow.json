@@ -2,7 +2,7 @@
   "version": 4,
   "contract": {
     "telemetry": {
-      "description": "walkerOS internal usage telemetry from @walkeros/cli and @walkeros/mcp. Anonymous, opt-out, no PII.",
+      "description": "walkerOS internal usage telemetry from @walkeros/cli and @walkeros/mcp. Anonymous, opt-in, no PII.",
       "schema": {
         "type": "object",
         "properties": {

@@ -21,14 +21,18 @@ mapping rule matched, and the vendor calls it would have made:
   code={`success: true
   destination.gtag
     mapping: product add
+    call window.gtag("config","G-XXXXXX",{})
     call window.gtag("event","add_to_cart",{...})
   Duration: 4302ms`}
   language="text"
 />
 
+`mapping: none` with calls means no rule matched and the destination sent the
+event as it is. The calls can include the destination's own start, such as
+gtag's `config` call, so look for the event's call.
 `mapping: none (skipped before mapping)` with `no calls` means the event never
-reached the destination's mapping (consent, a filter, or no rule). When consent
-is the reason, a line says which kind:
+reached the destination's mapping, because of consent or a transformer in its
+`before` chain. When consent is the reason, a line says which kind:
 
 - `pending: waits for consent (require)`: the destination has
   `require: ["consent"]` and never started. Pass starting consent with
@@ -40,8 +44,8 @@ is the reason, a line says which kind:
 See [consent in simulate](/docs/apps/cli#consent-in-simulate). Add `--json`
 to get the same result as machine-readable output, with the recorded calls under
 `simulations` (see [simulation output](/docs/apps/cli#simulation-output)). Your `flow.json` must carry
-`config.platform` (`"web"` or `"server"`), otherwise bundling throws before the
-simulation runs.
+`config.platform` (`"web"` or `"server"`), otherwise the push stops with
+`Invalid configuration` before the simulation runs.
 
 ## Symptom to cause
 
@@ -106,7 +110,8 @@ simulation is one tool call. `step` is required and uses the `type.name` form
 />
 
 The response includes `_hints.warnings`, which flags when no destination received
-the event, and a destination that sent nothing carries `skipped` with the reason.
+the event. When consent held the destination back, the response itself carries
+`skipped` with the reason.
 Pass `state: { consent: { functional: true } }` to start a destination that
 waits for consent. For transformer, collector and destination steps, pass `ingest` (for
 example `{ ip, userAgent }`) to simulate the request context an HTTP source would

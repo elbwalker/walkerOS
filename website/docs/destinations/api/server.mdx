@@ -8,6 +8,7 @@ sidebar_position: 2
 
 import data from '@walkeros/server-destination-api/walkerOS.json';
 import Configuration from '@site/src/components/snippets/_configuration.mdx';
+import Quickstart from '@site/src/components/snippets/_quickstart.mdx';
 
 import WhereThisFits from '@site/src/components/snippets/_where-this-fits.mdx';
 
@@ -32,35 +33,11 @@ using `fetch`. It supports configurable timeouts (default 5000ms), custom transf
 
 ## Installation
 
-<CodeSnippet
-  code={`npm install @walkeros/server-destination-api`}
-  language="bash"
-/>
+<Quickstart data={data} />
 
 <Configuration type="destination" data={data} />
 
 ## Usage
-
-### Basic usage
-
-<CodeSnippet
-  code={`import { startFlow } from '@walkeros/collector';
-import { destinationAPI } from '@walkeros/server-destination-api';
-
-await startFlow({
-  destinations: {
-    api: {
-      code: destinationAPI,
-      config: {
-        settings: {
-          url: 'https://api.example.com/events',
-        },
-      },
-    },
-  },
-});`}
-  language="typescript"
-/>
 
 ### With headers and timeout
 

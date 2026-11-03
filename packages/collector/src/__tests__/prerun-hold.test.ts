@@ -117,13 +117,13 @@ describe('pre-run hold buffer', () => {
     });
 
     await elb('walker consent', { essential: true });
-    await elb({ name: 'checkout view', data: { step: 2 } });
+    await elb({ name: 'checkout start', data: { step: 2 } });
     await elb({ name: 'product view', data: { id: 'p1' } });
 
     await collector.command('run');
 
     const names = captured.map((e) => e.name);
-    expect(names).toEqual(['checkout view', 'product view']); // FIFO
+    expect(names).toEqual(['checkout start', 'product view']); // FIFO
     // Replay ran the pipeline post-run: consent recorded pre-run is on the event.
     expect(captured[0].consent).toEqual(
       expect.objectContaining({ essential: true }),
@@ -132,6 +132,6 @@ describe('pre-run hold buffer', () => {
 
     // A second run must not re-deliver held events.
     await collector.command('run');
-    expect(captured.filter((e) => e.name === 'checkout view')).toHaveLength(1);
+    expect(captured.filter((e) => e.name === 'checkout start')).toHaveLength(1);
   });
 });

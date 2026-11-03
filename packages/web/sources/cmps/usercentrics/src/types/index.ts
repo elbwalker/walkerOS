@@ -7,10 +7,11 @@ declare module '@walkeros/core' {
 }
 
 /**
- * Usercentrics consent event detail structure.
+ * Usercentrics consent detail structure.
  *
- * Fired as event.detail on the configured window event (e.g. 'ucEvent').
- * Contains both category-level (ucCategory) and service-level consent.
+ * Built by the V2 and V3 adapters from the CMP's API and passed to the
+ * consent parser. Contains both category-level (ucCategory) and
+ * service-level consent.
  */
 export interface UsercentricsEventDetail {
   /** Always 'consent_status' for consent events */
@@ -27,7 +28,6 @@ export interface UsercentricsEventDetail {
 
 declare global {
   interface WindowEventMap {
-    ucEvent: CustomEvent<UsercentricsEventDetail>;
     UC_UI_INITIALIZED: Event;
     UC_UI_CMP_EVENT: CustomEvent<UsercentricsV3CmpEventDetail>;
   }

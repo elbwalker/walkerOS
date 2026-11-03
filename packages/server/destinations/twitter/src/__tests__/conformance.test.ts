@@ -13,14 +13,8 @@ describe('twitter conformance', () => {
       profile: 'http',
       examples: examples.step,
       schema: schemas.settings,
-      settings: {
-        pixelId: 'o8z6j',
-        eventId: 'tw-o8z6j-o8z21',
-        consumerKey: 'consumer-key',
-        consumerSecret: 'consumer-secret',
-        accessToken: 'access-token',
-        accessTokenSecret: 'access-token-secret',
-      },
+      settings: examples.minimal.settings,
+      minimal: examples.minimal,
       root: path.join(__dirname, '..', '..'),
     });
   });

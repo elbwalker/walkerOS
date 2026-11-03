@@ -68,7 +68,7 @@ describe('Step Examples', () => {
     mockBucketExists.mockResolvedValue(true);
   });
 
-  it('readAwsS3 — read object from S3 bucket', async () => {
+  it('readAwsS3: read object from S3 bucket', async () => {
     const example = examples.step.readAwsS3;
     const input = example.in as { operation: string; key: string };
 
@@ -87,7 +87,7 @@ describe('Step Examples', () => {
     expect(mockGetObjectArrayBuffer).toHaveBeenCalledWith(input.key);
   });
 
-  it('prefixScoping — key is scoped under configured prefix', async () => {
+  it('prefixScoping: key is scoped under configured prefix', async () => {
     const example = examples.step.prefixScoping;
     const input = example.in as {
       operation: string;
@@ -106,5 +106,18 @@ describe('Step Examples', () => {
     await store.get(input.key);
 
     expect(mockGetObjectArrayBuffer).toHaveBeenCalledWith(s3Path);
+  });
+});
+
+describe('Config examples', () => {
+  it.each([
+    ['awsAssets', examples.awsAssets],
+    ['structuredKv', examples.structuredKv],
+    ['r2Bucket', examples.r2Bucket],
+  ])('%s references the access keys as secrets', (_name, example) => {
+    expect(example.settings).toMatchObject({
+      accessKeyId: expect.stringMatching(/^\$secret\./),
+      secretAccessKey: expect.stringMatching(/^\$secret\./),
+    });
   });
 });

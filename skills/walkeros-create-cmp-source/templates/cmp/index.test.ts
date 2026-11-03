@@ -1,4 +1,8 @@
+import type { Elb } from '@walkeros/core';
+import { createIngest, createMockLogger } from '@walkeros/core';
+import { startFlow } from '@walkeros/collector';
 import { sourceCmpName, DEFAULT_CATEGORY_MAP } from '../index';
+import type { Types } from '../types';
 import * as inputs from '../examples/inputs';
 import * as outputs from '../examples/outputs';
 import {
@@ -7,6 +11,11 @@ import {
   createCmpSource,
   ConsentCall,
 } from './test-utils';
+
+/** A complete env for a destroy context; destroy itself never reads it. */
+function destroyEnv(elb: Elb.Fn): Types['env'] {
+  return { push: elb, command: elb, elb, logger: createMockLogger() };
+}
 
 /**
  * Test suite template for CMP sources.
@@ -259,7 +268,12 @@ describe('[CmpName] Source', () => {
 
       const source = await createCmpSource(mockWindow, mockElb);
 
-      await source.destroy?.();
+      await source.destroy?.({
+        id: 'test-cmp-source',
+        config: source.config,
+        env: destroyEnv(mockElb),
+        logger: createMockLogger(),
+      });
 
       expect(mockWindow.removeEventListener).toHaveBeenCalledWith(
         'cmp_init', // TODO: Your init event
@@ -277,39 +291,16 @@ describe('[CmpName] Source', () => {
 
   describe('no window environment', () => {
     test('handles missing window gracefully', async () => {
+      const { collector } = await startFlow({ run: false });
+      const env: Types['env'] = { ...destroyEnv(mockElb), window: undefined };
       const source = await sourceCmpName({
-        collector: {} as never,
+        collector,
         config: {},
-        env: {
-          push: mockElb,
-          command: mockElb,
-          elb: mockElb,
-          window: undefined,
-          logger: {
-            error: () => {},
-            info: () => {},
-            debug: () => {},
-            throw: (m: string | Error) => {
-              throw typeof m === 'string' ? new Error(m) : m;
-            },
-            scope: function () {
-              return this;
-            },
-          },
-        },
+        env,
         id: 'test-cmp-source',
-        logger: {
-          error: () => {},
-          info: () => {},
-          debug: () => {},
-          throw: (m: string | Error) => {
-            throw typeof m === 'string' ? new Error(m) : m;
-          },
-          scope: function () {
-            return this;
-          },
-        },
-        withScope: async (_r, _resp, body) => body({} as never),
+        logger: createMockLogger(),
+        withScope: async (_r, respond, body) =>
+          body({ ...env, ingest: createIngest('test-cmp-source'), respond }),
       });
 
       expect(source.type).toBe('cmp-name'); // TODO: Your CMP type

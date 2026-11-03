@@ -18,7 +18,7 @@ import Configuration from '@site/src/components/snippets/_configuration.mdx';
 
 Decoder transformer that turns Google Analytics 4 v2 hits sent by gtag.js (`/g/collect`) into walkerOS events. Drop it in a server source's `before` chain to ingest traffic from an existing `gtag`/Google Tag setup: you point the tag's transport URL at your own collector, and your `gtag('event', ...)` calls stay as they are. One HTTP request can carry many GA4 events; the transformer returns one walkerOS event per GA4 event in the hit.
 
-The scope: server-side decoding in front of a server source, GA4 v2 only. See [Caveats](#caveats) and [Roadmap](#roadmap) for the boundaries.
+It decodes on the server, in front of a server source, and handles GA4 v2 only. See [Caveats](#caveats) for the boundaries.
 
 ## Installation
 
@@ -147,7 +147,7 @@ The transformer expects the source to populate `ctx.ingest` with these keys:
 
 `config.ingest` must use the `map` operator with **direct field paths on the request scope** (no `req.` prefix), as shown above. A bare object like `{ "url": "req.url" }` has no operator: `walkeros validate` and the bundle reject it (`MAPPING_VALUE_NO_OPERATOR`). If it still runs, the value is dropped with an ERROR line from the collector, `ctx.ingest` stays empty, and the transformer fails every hit with `missing-input`.
 
-If `url` is missing or not a string the transformer fails the event with the `missing-input` code instead of dropping it. A request that cannot be decoded fails with the `transformer` code. Both show as one ERROR line per cause and minute, and the source answers 200 because resending the same request would fail again.
+If `url` is missing or not a string, the transformer fails the event with the `missing-input` code. A request that cannot be decoded fails with the `transformer` code. Both show as one ERROR line per cause and minute, and the source answers 200 because resending the same request would fail again.
 
 ### GA4 hits and walkerOS events on one source
 
@@ -234,7 +234,7 @@ Every decoded event carries the hit's page and visitor context, each field only 
 
 `timestamp` is the time the hit was received (GA4 `sid` is the session start, not the event time). Consent comes from `gcs`, the event `id` is derived from the hit, and `source.type` is `ga4`.
 
-Because decoded events now carry `source.url`, the [fingerprint transformer](/docs/transformers/fingerprint)'s default `site` component resolves for them, so fingerprint hashes of GA4-decoded events differ from those computed before `source.url` was set.
+Decoded events carry `source.url`, so the [fingerprint transformer](/docs/transformers/fingerprint)'s default `site` input resolves for them.
 
 <Configuration type="transformer" data={data} />
 
@@ -317,6 +317,8 @@ Any GA4 event name not listed above falls through to `'*'` and produces a generi
 ## Override a default field
 
 User config applies per event name; other events keep their defaults. A rule with `extend` or `remove` patches the matching default rule. A rule with neither replaces it.
+
+A GA4 rule reads `name`, `ignore`, `data`, `extend` and `remove`. A value in `data` is a path string, `{ "key": ... }`, `{ "value": ... }`, `{ "map": { ... } }`, or a fallback array that takes the first value it finds. Paths read from the decoded hit: `hit.<param>` for hit-level parameters (`hit.dl`, `hit.dt`), `params.ep.<name>` and `params.epn.<name>` for string and number event parameters, `params.up.<name>` and `params.upn.<name>` for user properties, `params._et` for the engagement time, `items`, `firstItem` (the first item) and `en` (the GA4 event name). Other mapping features, such as `fn`, `loop`, `set` or a rule's `condition`, have no effect in a GA4 rule, and neither `walkeros validate` nor the transformer reports them.
 
 ### Patch a default rule
 
@@ -404,7 +406,7 @@ Two patterns:
   "mapping": {
     "*": {
       "name": "custom event",
-      "data": { "map": { "event_name": "name" } }
+      "data": { "map": { "event_name": "en" } }
     }
   }
 }
@@ -448,6 +450,7 @@ Every decoded event continues through the pipeline as its own push, and a source
 ## Caveats
 
 - **Replace unless `extend` or `remove` is set.** A user mapping rule without either keyword fully replaces the matching default rule.
+- **Rules use part of the mapping syntax.** Paths, `key`, `value`, `map` and fallback arrays work; `fn`, `loop`, `set` and `condition` have no effect. See [Override a default field](#override-a-default-field).
 - **GA4 v2 only.** Assumes the v2 Measurement Protocol layout (`ep.`, `epn.`, `up.`, `upn.`, `prN`, `gcs`). v1 is out of scope.
 - **`G-` tids only by default.** Override `tidPattern` to capture Ads and DC traffic.
 - **Basic `gcs` only.** Maps `G1XX` to `marketing`/`analytics` booleans. Functional/preferences flags and the newer `gcd` parameter are not decoded.
@@ -455,12 +458,6 @@ Every decoded event continues through the pipeline as its own push, and a source
 - **Batched POST hits need a raw body.** The source must keep a `text/plain` body that is not JSON as `ingest.body`. The express, fetch, Cloud Function, and Lambda sources do; the Lambda source rejects a POST without a body. See [Batched POST hits](#batched-post-hits).
 - **At most 100 events per request by default.** A POST body with more lines than `settings.maxEvents` is dropped whole, and no event from it is decoded. See [Batch size limit](#batch-size-limit).
 - **Ingest contract is required.** Source wiring must populate `ctx.ingest.url` (required) and `ctx.ingest.body` (optional) for batched hits.
-
-## Roadmap
-
-- **Web ingest via interception sources** for capturing `gtag` traffic from the browser
-- **More vendor decoders** (Segment, Snowplow, Adobe) following the same `before`-chain pattern
-- **Richer consent decoding** (`gcd`, functional/preferences flags)
 
 ## Next steps
 

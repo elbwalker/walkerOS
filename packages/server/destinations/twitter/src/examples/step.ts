@@ -42,7 +42,6 @@ export const purchase: Flow.StepExample = {
   mapping: {
     settings: {
       value: 'data.value',
-      currency: { key: 'data.currency', value: 'EUR' },
     },
   },
   out: [
@@ -121,7 +120,6 @@ export const purchaseWithTwclid: Flow.StepExample = {
   mapping: {
     settings: {
       value: 'data.value',
-      currency: { key: 'data.currency', value: 'USD' },
     },
     data: {
       map: {

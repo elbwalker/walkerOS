@@ -8,8 +8,8 @@ Most teams looking at walkerOS already run Google Tag Manager, so the first
 question is a fair one: GTM already sends one event to many tools and has a
 consent trigger, so why add anything?
 
-They are two different jobs. GTM is good at routing, and it was never built to
-be the place where your data gets its shape.
+GTM and walkerOS do different jobs: GTM is good at routing, and it was never
+built to be the place where your data gets its shape.
 
 ## Where the two differ
 
@@ -45,27 +45,28 @@ destination sees it.
 
 ```json
 {
+  "collector": { "next": "validate" },
   "transformers": {
     "validate": {
       "package": "@walkeros/transformer-validate",
       "config": {
         "settings": { "contract": ["$contract.web"], "mode": "strict" }
-      },
-      "next": "ga4"
+      }
     }
   }
 }
 ```
 
-In `strict` mode an event that fails its contract stops the chain and never
+`collector.next` runs the step on every event before the destinations. In
+`strict` mode an event that fails its contract stops the chain and never
 arrives downstream. In `pass` mode the verdict is written onto the event instead,
 so a later step can route on it. See the
 [validate transformer](/docs/transformers/validate) and
 [contracts](/docs/getting-started/flow/contract).
 
 A developer writes that contract today. walkerOS does not derive it from a
-planning document on its own, so the event is blocked by a rule someone authored
-rather than by the plan itself.
+planning document on its own, so what blocks the event is a rule someone
+authored.
 
 ## Your existing setup keeps working
 
@@ -86,17 +87,16 @@ You can move one page, one entity, or one destination at a time, and re-tag with
 
 ## Where GTM wins
 
-These advantages are real, and they are why GTM won in the first place.
+These advantages are why GTM won in the first place.
 
 - **Marketing ships without a developer.** A campaign pixel is a point-and-click
   change in a web interface. With walkerOS it is a configuration change, which
   means a diff and a reviewer.
-- **The template gallery.** It has hundreds of vendor-maintained tag templates
-  you can add without writing anything.
+- **The template gallery.** Vendors and other organizations publish and
+  maintain tag templates there that you add without writing anything.
 - **Nobody has to learn a repository.** There is no git, pull request, or build
   step involved.
-- **Your team is already trained.** Retraining is a real cost of switching, and
-  not a small one.
+- **Your team is already trained.** Retraining is a large cost of switching.
 
 If your tracking is a handful of standard tags on a stable site and nobody is
 asking hard questions about the data, GTM alone is a reasonable answer.
@@ -118,11 +118,11 @@ ago.
 
 GTM gives you a preview pane. walkerOS moves testing into the pipeline itself.
 
-The [CLI](/docs/apps/cli) runs a real event through your exact flow with
-destinations mocked, before anything deploys:
+The [CLI](/docs/apps/cli) runs a real event through your exact flow with the
+destination you name mocked, before anything deploys:
 
 ```bash
-walkeros push flow.json --event '{"name":"page view"}' --simulate
+walkeros push flow.json --event '{"name":"page view"}' --simulate destination.ga4
 ```
 
 Because the command is scriptable, it runs in CI on every change. For live

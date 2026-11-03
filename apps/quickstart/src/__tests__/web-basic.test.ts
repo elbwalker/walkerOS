@@ -160,7 +160,7 @@ describe('walkerOS Web Basic Example', () => {
       expect.objectContaining({
         transaction_id: orderEvent.data.id,
         value: orderEvent.data.value,
-        data_value: 555,
+        data_value: 462,
         currency: 'EUR',
       }),
     );
@@ -171,7 +171,7 @@ describe('walkerOS Web Basic Example', () => {
         send_to: 'AW-XXXXXXXXX/purchase',
         currency: 'EUR',
         transaction_id: '0rd3r1d',
-        value: 555,
+        value: 462,
       }),
     );
   });

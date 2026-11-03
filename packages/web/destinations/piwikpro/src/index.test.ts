@@ -165,7 +165,7 @@ describe('Destination PiwikPro', () => {
 
       expect(paq).toEqual([
         ...toAnonymous,
-        ['trackGoal', 'g1', 555, { dimension1: '0rd3r1d' }],
+        ['trackGoal', 'g1', 462, { dimension1: '0rd3r1d' }],
         ['enableLinkTracking'],
       ]);
     });

@@ -1,12 +1,13 @@
 ---
 title: PostHog
-description: "Server-side event delivery to PostHog for product analytics and feature flags"
+description: "Server-side event delivery to PostHog for product analytics with identity and groups"
 path: /docs/destinations/server/posthog
 sidebar_position: 7
 package: '@walkeros/server-destination-posthog'
 ---
 import data from '@walkeros/server-destination-posthog/walkerOS.json';
 import Configuration from '@site/src/components/snippets/_configuration.mdx';
+import Quickstart from '@site/src/components/snippets/_quickstart.mdx';
 
 import WhereThisFits from '@site/src/components/snippets/_where-this-fits.mdx';
 
@@ -14,7 +15,7 @@ import WhereThisFits from '@site/src/components/snippets/_where-this-fits.mdx';
 
 <PackageLink env="server" github="packages/server/destinations/posthog" npm="@walkeros/server-destination-posthog" />
 
-Server-side event delivery to PostHog for product analytics, identity resolution, group analytics, and feature flags via the official `posthog-node` SDK.
+Server-side event delivery to PostHog for product analytics, identity resolution, and group analytics via the official `posthog-node` SDK.
 
 <WhereThisFits
   pre={<>PostHog is a <strong>server destination</strong> in the walkerOS flow:</>}
@@ -26,64 +27,18 @@ Server-side event delivery to PostHog for product analytics, identity resolution
 
 ## Installation
 
-<CodeSnippet
-  code={`npm install @walkeros/server-destination-posthog`}
-  language="bash"
-/>
-
-<Tabs groupId="mode">
-  <TabItem value="integrated" label="Integrated" default>
-
-<CodeSnippet
-  code={`import { startFlow } from '@walkeros/collector';
-import { destinationPostHog } from '@walkeros/server-destination-posthog';
-
-await startFlow({
-  destinations: {
-    posthog: {
-      code: destinationPostHog,
-      config: {
-        settings: {
-          apiKey: 'phc_XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX',
-          host: 'https://eu.i.posthog.com',
-        },
-      },
-    },
-  },
-});`}
-  language="typescript"
-/>
-
-  </TabItem>
-  <TabItem value="bundled" label="Bundled">
-
-Add to your `flow.json` destinations:
-
-<CodeSnippet
-  code={`"destinations": {
-  "posthog": {
-    "package": "@walkeros/server-destination-posthog",
-    "import": "destinationPostHog",
-    "config": {
-      "settings": {
-        "apiKey": "phc_XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX",
-        "host": "https://eu.i.posthog.com"
-      }
-    }
-  }
-}`}
-  language="json"
-/>
-
-[See bundled mode setup](/docs/getting-started/modes/bundled) | [CLI reference](/docs/apps/cli)
-
-  </TabItem>
-</Tabs>
+<Quickstart data={data} />
 
 <Configuration type="destination" data={data} />
 
+## Identity
+
+Without `settings.identify` the `distinctId` is the event's `user.id`, then `user.hash`, then `user.session`. An event without any of them is sent with the `distinctId` `anonymous`, so all such events share one distinct id.
+
 ## Batching and delivery
 
-This destination batches by default: `config.batch` sends after 20 events or 10 seconds, and each event keeps its own outcome. Set `config.batch: { size: 1 }` to send each event at once. How batching, retries, deduplication and acknowledgement work for the server SDK destinations is described in [Server SDK destinations](/docs/destinations#server-sdk-destinations).
+This destination batches by default: `config.batch` sends a batch at 20 events, 10 seconds after the last event, or 30 seconds after the first, whichever comes first, and each event keeps its own outcome. Set `config.batch: { size: 1 }` to send each event at once. How batching, retries, deduplication and acknowledgement work for the server SDK destinations is described in [Server SDK destinations](/docs/destinations#server-sdk-destinations).
 
-`settings.include` no longer exists; use `config.include`.
+## Consent
+
+The quickstart sets no `config.consent`, so PostHog receives every event and a `walker consent` command changes nothing. Add `consent: { analytics: true }` to `config`, next to `settings`, to send only with analytics consent ([consent management](/docs/guides/consent)): a revocation then calls `client.disable()` and a grant `client.enable()`. Events still waiting in the batch at a revocation are dropped by the disabled client and still count as delivered, with no ERROR line and no failed count.

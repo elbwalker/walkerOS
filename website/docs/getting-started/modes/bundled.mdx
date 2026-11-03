@@ -183,8 +183,9 @@ Add destinations to your `flow.json`:
         "ga4": {
           "package": "@walkeros/web-destination-gtag",
           "config": {
+            "loadScript": true,
             "settings": {
-              "ga4": { "measurementId": "G-XXXXXXXXXX" }
+              "ga4": { "measurementId": "G-XXXXXXXXXX", "pageview": false }
             }
           }
         }
@@ -195,6 +196,10 @@ Add destinations to your `flow.json`:
 }`}
   language="json"
 />
+
+`"loadScript": true` adds gtag.js to the page; without it, events reach GA4
+only if your page loads gtag.js itself. `"pageview": false` stops gtag from
+sending a page view of its own, because the browser source already sends one.
 
 Rebuild: `walkeros bundle flow.json -o ./dist/walker.js`
 
@@ -216,7 +221,8 @@ Add consent requirements in the destination config:
   "ga4": {
     "package": "@walkeros/web-destination-gtag",
     "config": {
-      "settings": { "ga4": { "measurementId": "G-XXXXXXXXXX" } },
+      "loadScript": true,
+      "settings": { "ga4": { "measurementId": "G-XXXXXXXXXX", "pageview": false } },
       "consent": { "analytics": true }
     }
   }
@@ -269,6 +275,7 @@ Use variables for environment-specific values:
         "ga4": {
           "package": "@walkeros/web-destination-gtag",
           "config": {
+            "loadScript": true,
             "settings": { "ga4": { "measurementId": "$var.GA_ID" } }
           }
         }
@@ -301,6 +308,7 @@ Define different flows for different environments:
         "ga4": {
           "package": "@walkeros/web-destination-gtag",
           "config": {
+            "loadScript": true,
             "settings": { "ga4": { "measurementId": "G-XXXXXXXXXX" } }
           }
         }

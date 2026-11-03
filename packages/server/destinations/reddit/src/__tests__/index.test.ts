@@ -434,7 +434,7 @@ describe('Server Destination Reddit', () => {
     expect(capiEvent.event_at_ms).toBe(event.timestamp);
     expect(capiEvent.event_metadata.conversion_id).toBe(event.id);
     expect(capiEvent.event_metadata.currency).toBe('EUR');
-    expect(capiEvent.event_metadata.value_decimal).toBe(555);
+    expect(capiEvent.event_metadata.value_decimal).toBe(462);
     expect(capiEvent.event_metadata.item_count).toBe(2);
     expect(capiEvent.event_metadata.products).toEqual([
       { id: 'ers', name: 'Everyday Ruck Snack', category: 'uncategorized' },

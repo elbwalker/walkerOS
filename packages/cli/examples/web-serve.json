@@ -59,15 +59,19 @@
         "bundle": {
           "packages": {
             "@walkeros/collector": {
+              "version": "latest",
               "imports": ["startFlow"]
             },
             "@walkeros/source-demo": {
+              "version": "latest",
               "imports": ["sourceDemo"]
             },
             "@walkeros/destination-demo": {
+              "version": "latest",
               "imports": ["destinationDemo"]
             },
             "@walkeros/web-destination-api": {
+              "version": "latest",
               "imports": ["destinationAPI"]
             }
           }

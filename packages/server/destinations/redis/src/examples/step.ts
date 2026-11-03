@@ -17,7 +17,7 @@ export const jsonDefault: RedisStepExample = {
   description:
     'An event is appended to the configured Redis stream via XADD with the full event JSON as a single field.',
   in: getEvent('page view', {
-    timestamp: 1700000100,
+    timestamp: 1700000100000,
   }),
   out: [['client.xadd', ['walkeros:events', '*', 'event', 'json:event']]],
 };
@@ -30,7 +30,7 @@ export const orderComplete: RedisStepExample = {
   description:
     'An order complete event is appended to the Redis stream alongside other event types for downstream consumers.',
   in: getEvent('order complete', {
-    timestamp: 1700000101,
+    timestamp: 1700000101000,
     data: { id: 'ORD-400', value: 99.99, currency: 'EUR' },
   }),
   out: [['client.xadd', ['walkeros:events', '*', 'event', 'json:event']]],
@@ -44,7 +44,7 @@ export const withMaxLen: RedisStepExample = {
   description:
     'XADD uses approximate MAXLEN trimming to cap the Redis stream length, discarding older entries efficiently.',
   in: getEvent('product view', {
-    timestamp: 1700000102,
+    timestamp: 1700000102000,
     data: { id: 'SKU-123', name: 'Widget' },
   }),
   settings: {
@@ -69,7 +69,7 @@ export const withExactTrim: RedisStepExample = {
   description:
     'XADD uses exact MAXLEN trimming to enforce a precise Redis stream length at the cost of extra work.',
   in: getEvent('page view', {
-    timestamp: 1700000103,
+    timestamp: 1700000103000,
   }),
   settings: {
     redis: {
@@ -94,7 +94,7 @@ export const streamKeyOverride: RedisStepExample = {
   description:
     'A mapping rule routes the event to a dedicated Redis stream instead of the destination default.',
   in: getEvent('order complete', {
-    timestamp: 1700000104,
+    timestamp: 1700000104000,
     data: { id: 'ORD-500', value: 42 },
   }),
   mapping: {
@@ -110,7 +110,7 @@ export const streamKeyOverride: RedisStepExample = {
  */
 export const ignoredEvent: RedisStepExample = {
   public: false,
-  in: createEvent({ name: 'debug noise', timestamp: 1700000105 }),
+  in: createEvent({ name: 'debug noise', timestamp: 1700000105000 }),
   mapping: { ignore: true },
   out: [],
 };
@@ -121,7 +121,7 @@ export const ignoredEvent: RedisStepExample = {
 export const silentRule: RedisStepExample = {
   public: false,
   description: 'A rule with silent: true appends nothing to the stream.',
-  in: getEvent('page view', { timestamp: 1700000106 }),
+  in: getEvent('page view', { timestamp: 1700000106000 }),
   mapping: { silent: true },
   out: [],
 };

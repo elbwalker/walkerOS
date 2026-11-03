@@ -1,5 +1,5 @@
 import type { Flow } from '@walkeros/core';
-import { getEvent, isObject } from '@walkeros/core';
+import { getEvent } from '@walkeros/core';
 
 /**
  * Criteo Events API step examples.
@@ -54,7 +54,10 @@ export const purchase: Flow.StepExample = {
             'nested',
             {
               condition: (entity: unknown) =>
-                isObject(entity) && entity.entity === 'product',
+                typeof entity === 'object' &&
+                entity !== null &&
+                'entity' in entity &&
+                entity.entity === 'product',
               map: {
                 id: 'data.id',
                 price: 'data.price',
@@ -135,7 +138,10 @@ export const addToCart: Flow.StepExample = {
             'nested',
             {
               condition: (entity: unknown) =>
-                isObject(entity) && entity.entity === 'product',
+                typeof entity === 'object' &&
+                entity !== null &&
+                'entity' in entity &&
+                entity.entity === 'product',
               map: {
                 id: 'data.id',
                 price: 'data.price',
@@ -205,7 +211,10 @@ export const viewItem: Flow.StepExample = {
             'nested',
             {
               condition: (entity: unknown) =>
-                isObject(entity) && entity.entity === 'product',
+                typeof entity === 'object' &&
+                entity !== null &&
+                'entity' in entity &&
+                entity.entity === 'product',
               map: {
                 id: 'data.id',
               },

@@ -24,11 +24,11 @@ export interface DepViolation {
  * lookup) to a version that does NOT satisfy the declared range.
  *
  * Defense-in-depth observability for the bundler's resolver. Returns the list
- * of violations and emits a `logger.warn` for each. Does NOT throw — many
+ * of violations and emits a `logger.warn` for each. Does NOT throw: many
  * mismatches are benign npm transitives that nft will prune from the shipped
  * bundle. If a runtime error like "X is not a function" surfaces despite the
- * resolver fix, look at these warnings to find the culprit, then add an
- * `overrides` entry in your flow's package.json.
+ * resolver fix, look at these warnings to find the culprit, then add an entry
+ * to `config.bundle.overrides` in the flow file.
  */
 export async function assertConsumerDepsSatisfied(
   root: string,
@@ -54,7 +54,7 @@ export async function assertConsumerDepsSatisfied(
         );
         continue;
       }
-      // git/file:/tag — can't statically verify
+      // git/file:/tag: can't statically verify
       if (
         semver.validRange(declaredRange) === null &&
         semver.valid(declaredRange) === null
@@ -80,7 +80,7 @@ export async function assertConsumerDepsSatisfied(
         };
         violations.push(violation);
         logger.warn(
-          `Bundler dep mismatch: ${violation.consumerName}@${violation.consumerVersion} declares ${depName}@${declaredRange} but resolved to ${installed.version} at ${installed.dir}. If this surfaces at runtime, add an "overrides" entry to your flow's package.json.`,
+          `Bundler dep mismatch: ${violation.consumerName}@${violation.consumerVersion} declares ${depName}@${declaredRange} but resolved to ${installed.version} at ${installed.dir}. If this surfaces at runtime, add an entry to config.bundle.overrides in the flow file.`,
         );
       }
     }

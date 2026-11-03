@@ -34,7 +34,7 @@ const PAGE_VIEW = {
 
 const PROMOTION_VISIBLE = {
   name: 'promotion visible',
-  data: { name: 'Winter sale', position: 'hero' },
+  data: { name: 'Winter sale', slot: 'hero' },
   ...base,
   id: `${START + 1200}-gr0up-2`,
   trigger: 'visible',

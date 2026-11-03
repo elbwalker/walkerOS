@@ -181,10 +181,8 @@ export async function createEmitter(opts: EmitterOptions): Promise<Emitter> {
  *
  * Reuses `resolveAppUrl()` from `lib/config-file`, so telemetry goes to the
  * same app as every other CLI request. Order: env (`WALKEROS_APP_URL`) > user
- * config (`~/.config/walkeros/config.json:appUrl`) > undefined (telemetry
- * no-ops).
- *
- * Hard-cut: `TELEMETRY_ENDPOINT` is no longer recognized.
+ * config (`~/.config/walkeros/config.json:appUrl`) > the default app URL
+ * (`https://app.walkeros.io`).
  */
 export function resolveTelemetryEndpoint(): string | undefined {
   const appUrl = resolveAppUrl();

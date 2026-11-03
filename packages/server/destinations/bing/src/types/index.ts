@@ -58,7 +58,7 @@ export type Rules = WalkerOSMapping.Rules<Rule>;
 
 /**
  * Microsoft Advertising (Bing) UET Conversions API
- * https://learn.microsoft.com/en-us/advertising/guides/universal-event-tracking-capi
+ * https://learn.microsoft.com/en-us/advertising/guides/uet-conversion-api-integration
  */
 export type EventType = 'pageLoad' | 'custom';
 

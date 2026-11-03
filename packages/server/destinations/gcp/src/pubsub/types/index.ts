@@ -84,7 +84,7 @@ export interface Mapping {
  * Subscription provisioning is owned by the source side, not here.
  */
 export interface Setup {
-  /** Geographic regions for at-rest storage. Default: EU multi-region (['eu-west1','eu-west3','eu-west4']). */
+  /** Geographic regions for at-rest storage. Default: ['europe-west1', 'europe-west3', 'europe-west4']. */
   messageStoragePolicy?: { allowedPersistenceRegions: string[] };
   /** Topic-level retention. Default: undefined (project default). */
   messageRetentionDuration?: { seconds: number };

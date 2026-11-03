@@ -1,5 +1,6 @@
 import { StepError } from '@walkeros/core';
 import type { Destination } from '@walkeros/core';
+import { send } from './send';
 
 /** One of the two ids is required, as gtag requires one of its tools. */
 type Settings = {
@@ -24,7 +25,7 @@ function oneOfIds(message: string): Destination.Instance<Types> {
     },
     push: async (event, { config, rule }) => {
       if (rule?.silent) return;
-      const res = await fetch(URL, {
+      const res = await send(URL, {
         method: 'POST',
         body: JSON.stringify({ id: idOf(config.settings), name: event.name }),
       });

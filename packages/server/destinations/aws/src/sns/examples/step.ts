@@ -49,14 +49,14 @@ export const init: Flow.StepExample = {
 
 const pageEvent = getEvent('page view', {
   id: 'ev-1700001000',
-  timestamp: 1700001000,
+  timestamp: 1700001000000,
   data: { title: 'Home', url: 'https://example.com/' },
   source: { type: 'express', platform: 'server' },
 });
 
 const orderEvt = getEvent('order complete', {
   id: 'ev-1700001001',
-  timestamp: 1700001001,
+  timestamp: 1700001001000,
   data: { id: 'ORD-400', value: 99.99, currency: 'EUR' },
   user: { id: 'usr-789' },
   source: { type: 'express', platform: 'server' },
@@ -64,7 +64,7 @@ const orderEvt = getEvent('order complete', {
 
 const productViewEvt = getEvent('product view', {
   id: 'ev-1700001002',
-  timestamp: 1700001002,
+  timestamp: 1700001002000,
   data: { id: 'SKU-1', tenant_id: 'acme' },
   source: { type: 'express', platform: 'server' },
 });

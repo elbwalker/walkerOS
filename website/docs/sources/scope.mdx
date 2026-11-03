@@ -10,7 +10,7 @@ Every server source adapts its platform's request into one normalized shape, the
 against that shape, so a mapping written once resolves the same on Express, on
 Cloud Functions, on Lambda and on any Fetch runtime.
 
-Paths have no prefix. `headers.user-agent`, not `req.headers.user-agent`.
+Paths have no prefix: write `headers.user-agent`, not `req.headers.user-agent`.
 
 ## Fields
 
@@ -29,11 +29,11 @@ Paths have no prefix. `headers.user-agent`, not `req.headers.user-agent`.
 
 The required fields are always present: when a platform cannot form one, it
 carries the documented empty value rather than a guess (`url` is `''` without a
-host header). `ip` is the one optional field, and it is simply absent where the
+host header). `ip` is the one optional field, and it is absent where the
 platform reports none. A bare Fetch `Request` carries no client IP, so
 `scope.ip` is `undefined` there rather than being derived from
-`x-forwarded-for`. That header is still in `headers` for anyone who wants it,
-which keeps the guess in your configuration where you can see it.
+`x-forwarded-for`. That header is still in `headers`, so deriving an IP from it
+is a choice you make visibly in your configuration.
 
 The body is parsed once, at the boundary. A `navigator.sendBeacon` payload
 arrives as `text/plain` on several platforms and an API Gateway body can be
@@ -42,8 +42,9 @@ mappings and the event pipeline read the same normalized value rather than one
 seeing the raw string and the other the parsed object.
 
 A body that does not parse to an object is kept as-is and yields one empty
-event, so a `source.before` transformer can decode it from `ingest.body`. That
-case is the one where the two deliberately differ; see the
+event, so a `source.before` transformer can decode it from `ingest.body`, once
+`config.ingest` maps it there (`body: { key: 'body' }`). That case is the one
+where the two deliberately differ; see the
 [event envelope](/docs/sources/envelope).
 
 ## Escape hatch: `raw`
@@ -65,9 +66,8 @@ ingest: {
 }
 ```
 
-A mapping that reads `raw` is a mapping that stops being portable. That is a
-fair trade when you need it, and it is visible in the config rather than hidden
-in the runtime.
+A mapping that reads `raw` works only on that platform. When you need it, the
+dependency is at least visible in the config.
 
 ## Web and queue sources have no scope
 

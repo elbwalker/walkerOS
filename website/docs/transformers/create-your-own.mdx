@@ -15,7 +15,7 @@ Transformers are functions that receive a context object and return a transforme
 <CodeSnippet
   code={`type Transformer.Init<Types> = (
   context: Transformer.Context<Types>,
-) => Transformer.Instance<Types>;`}
+) => Transformer.Instance<Types> | Promise<Transformer.Instance<Types>>;`}
   language="typescript"
 />
 
@@ -23,12 +23,12 @@ The context contains:
 
 <CodeSnippet
   code={`interface Transformer.Context<Types> {
-  config: Partial<Transformer.Config<Types>>;  // Settings, mapping, next chain
-  env: Types['env'];                          // Environment dependencies
-  logger: Logger;                             // Logging functions
-  id: string;                                 // Transformer identifier
-  collector: Collector.Instance;              // Collector reference
-  ingest?: Ingest;                            // Request metadata from source
+  config: Transformer.Config<Types>;  // Settings, mapping, next chain
+  env: Types['env'];                 // Environment dependencies
+  logger: Logger;                    // Logging functions
+  id: string;                        // Transformer identifier
+  collector: Collector.Instance;     // Collector reference
+  ingest: Ingest;                    // Only _meta at init; request data comes with each push
 }`}
   language="typescript"
 />
@@ -39,7 +39,10 @@ The returned instance must implement:
   code={`interface Transformer.Instance {
   type: string;           // Unique identifier
   config: Transformer.Config;
-  push(event, context): Transformer.Result | false | void;
+  // Each of these may also return a Promise
+  push(event, context): Transformer.Result | Transformer.Result[] | false | void;
+  init?(context): Transformer.Config | void;  // Optional, runs once before the first push
+  destroy?(context): void;                    // Optional, runs at shutdown
 }`}
   language="typescript"
 />
@@ -105,7 +108,7 @@ The `push` function receives an event and a push context:
 * **`logger`**: Scoped logger for output
 * **`id`**: Transformer identifier
 * **`collector`**: Access to collector instance
-* **`ingest`**: Request metadata from source (optional)
+* **`ingest`**: Request metadata from source
 
 <CodeSnippet
   code={`push(event, context) {
@@ -161,6 +164,8 @@ The `push` function receives an event and a push context:
 import { transformerRedact } from './transformerRedact';
 
 await startFlow({
+  // Collector chain: runs once per event, before every destination
+  next: 'redact',
   transformers: {
     redact: {
       code: transformerRedact,
@@ -187,7 +192,7 @@ Three variants exist:
 
 ### 1. Before/next chain only
 
-A named hop in the chain. Useful for reusing a chain prefix across destinations.
+A named hop in the chain, useful for reusing a chain prefix across destinations.
 
 ```json
 "enrichServer": { "before": ["filterBots", "sessionLookup"] }
@@ -224,8 +229,9 @@ The `mapping` field uses the same `Mapping.Config` shape on destinations and
 transformer steps, but the semantic differs by position. On a destination,
 `mapping` shapes the vendor payload. On a transformer step, it mutates the
 event itself. Only `policy` and a rule's `condition`, `policy`, `name` and
-`ignore` apply there; every other field does nothing and is named in a
-one-time warning at init.
+`ignore` apply there; every other field does nothing and is named in
+one ERROR line at registration, and `walkeros validate` rejects it
+(`MAPPING_NO_OP`).
 :::
 
 :::note Closed schema
@@ -236,50 +242,43 @@ of a step (forgot the `cache:` wrapper).
 
 ## Testing
 
+Test the transformer the way it runs: through `startFlow`, in a chain, with a
+destination that records what arrives.
+
 <CodeSnippet
-  code={`import { transformerRedact } from '../index';
-import type { Transformer, Collector } from '@walkeros/core';
-import { createMockLogger } from '@walkeros/core';
-
-// Helper to create transformer context for testing
-function createTransformerContext(
-  config: Partial<Transformer.Config<Types>> = {},
-): Transformer.Context<Types> {
-  return {
-    config,
-    env: {} as Types['env'],
-    logger: createMockLogger(),
-    id: 'test-redact',
-    collector: {} as Collector.Instance,
-  };
-}
-
-// Helper to create push context for testing
-function createPushContext(): Transformer.Context<Types> {
-  return {
-    config: {},
-    env: {} as Types['env'],
-    logger: createMockLogger(),
-    id: 'test-redact',
-    collector: {} as Collector.Instance,
-  };
-}
+  code={`import { startFlow } from '@walkeros/collector';
+import type { Destination, WalkerOS } from '@walkeros/core';
+import { transformerRedact } from '../index';
 
 describe('Redact Transformer', () => {
-  it('removes specified fields', () => {
-    const transformer = transformerRedact(
-      createTransformerContext({
-        settings: { removeFields: ['email'] },
-      }),
-    );
+  it('removes specified fields', async () => {
+    const received: WalkerOS.Event[] = [];
+    const capture: Destination.Instance = {
+      type: 'capture',
+      config: {},
+      push: (event) => {
+        received.push(event);
+      },
+    };
 
-    const event = { data: { id: '123', email: 'test@example.com' } };
-    const pushContext = createPushContext();
+    const { elb } = await startFlow({
+      next: 'redact',
+      transformers: {
+        redact: {
+          code: transformerRedact,
+          config: { settings: { removeFields: ['email'] } },
+        },
+      },
+      destinations: { capture: { code: capture } },
+    });
 
-    const result = transformer.push(event, pushContext);
+    await elb({
+      name: 'form submit',
+      data: { id: '123', email: 'test@example.com' },
+    });
 
-    expect(result.event.data.email).toBeUndefined();
-    expect(result.event.data.id).toBe('123');
+    expect(received[0].data.email).toBeUndefined();
+    expect(received[0].data.id).toBe('123');
   });
 });`}
   language="typescript"
@@ -294,7 +293,7 @@ Every walkerOS package includes machine-readable metadata for tooling and discov
 <CodeSnippet
   code={`{
   "walkerOS": { "type": "transformer" },
-  "keywords": ["walkeros", "walkeros-transformer"]
+  "keywords": ["walkerOS", "walkerOS-transformer"]
 }`}
   language="json"
 />
@@ -318,12 +317,12 @@ This file contains your package's JSON Schemas and examples, enabling MCP tools 
 
 ### Optional: Hints
 
-Packages can export a `hints` record from `src/dev.ts` to provide lightweight, actionable context beyond schemas and examples, such as validation behavior, enrichment patterns, or troubleshooting tips. Hints are serialized into `walkerOS.json` and surfaced via MCP tools. See the `walkeros-create-transformer` skill for details.
+Packages can export a `hints` record from `src/dev.ts` to give context that schemas and examples do not carry, such as validation behavior, enrichment patterns, or troubleshooting tips. Hints are serialized into `walkerOS.json` and surfaced via MCP tools. See the `walkeros-create-transformer` skill for details.
 
 ## Publishing checklist
 
 - [ ] `walkerOS` field in package.json
-- [ ] Keywords include `walkeros` and `walkeros-transformer`
+- [ ] Keywords include `walkerOS` and `walkerOS-transformer`
 - [ ] `buildDev()` in tsup.config.ts
 - [ ] `schemas.settings` exported from `src/dev.ts` (per export for multi-export packages)
 - [ ] `dist/walkerOS.json` generated on build

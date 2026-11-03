@@ -15,10 +15,7 @@ const noop = () => {};
  * Create a properly typed elb/push function mock that returns a promise with PushResult
  */
 export const createMockElbFn = (): Elb.Fn => {
-  const fn = (() =>
-    Promise.resolve({
-      ok: true,
-    })) as Elb.Fn;
+  const fn: Elb.Fn = () => Promise.resolve({ ok: true });
   return fn;
 };
 
@@ -38,10 +35,17 @@ export const noopLogger: Logger.Instance = {
 };
 
 /**
- * Environment interface for CookieFirst source
+ * Minimal window surface the CookieFirst source touches: the CookieFirst
+ * global plus event registration.
+ */
+type MockCookieFirstWindow = Partial<Window> & { CookieFirst: CookieFirstAPI };
+
+/**
+ * Environment interface for CookieFirst source. Its window is the mock's own
+ * narrowed shape, so the mock satisfies it directly.
  */
 interface CookieFirstEnv extends Source.BaseEnv {
-  window?: typeof window;
+  window?: MockCookieFirstWindow;
 }
 
 /**
@@ -58,7 +62,7 @@ export const createMockCookieFirstAPI = (
  */
 export const createMockWindow = (
   consent: CookieFirstConsent | null = null,
-): Partial<Window> & { CookieFirst: CookieFirstAPI } => ({
+): MockCookieFirstWindow => ({
   CookieFirst: createMockCookieFirstAPI(consent),
   addEventListener: noop,
   removeEventListener: noop,
@@ -81,7 +85,7 @@ export const mockEnv: CookieFirstEnv = {
     return createMockElbFn();
   },
   get window() {
-    return createMockWindow() as unknown as typeof window;
+    return createMockWindow();
   },
   logger: noopLogger,
 };

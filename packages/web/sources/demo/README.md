@@ -7,9 +7,9 @@
 # @walkeros/source-demo
 
 Generates walkerOS events from a configuration array for testing,
-demonstrations, and examples. Zero external dependencies.
+demonstrations, and examples, with no external dependencies.
 
-[Documentation](https://www.walkeros.io/docs) &bull;
+[Documentation](https://www.walkeros.io/docs/sources) &bull;
 [NPM Package](https://www.npmjs.com/package/@walkeros/source-demo) &bull;
 [Source Code](https://github.com/elbwalker/walkerOS/tree/main/packages/web/sources/demo)
 
@@ -38,10 +38,15 @@ npm install @walkeros/source-demo
 }
 ```
 
+## Settings
+
+| Setting  | Type    | Required | Description                                                                                                          |
+| -------- | ------- | -------- | -------------------------------------------------------------------------------------------------------------------- |
+| `events` | `array` | yes      | Partial walkerOS events, each pushed once when the source starts. An event's `delay` holds it back, in milliseconds. |
+
 ## Documentation
 
-Full configuration, mapping, and examples live in the docs:
-**https://www.walkeros.io/docs**
+How sources feed a flow: **https://www.walkeros.io/docs/sources**
 
 ## Contribute
 

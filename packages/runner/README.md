@@ -8,6 +8,17 @@
 
 Runs prebuilt walkerOS flow artifacts. Ships the `runneros` binary.
 
+## Installation
+
+```bash
+npm install @walkeros/runner
+```
+
+It needs Node.js 22.12 or later. The `walkeros/flow:<version>` Docker image runs
+`@walkeros/runner@<version>` as its entrypoint.
+
+## Usage
+
 This package cannot bundle. Build a flow with `walkeros bundle` (from
 [`@walkeros/cli`](https://www.npmjs.com/package/@walkeros/cli)), then start the
 artifact:
@@ -25,12 +36,15 @@ directory. Anything else, a `.json` flow config above all, is refused.
 Stdin is read only when the given path (argument or `BUNDLE`) does not exist:
 piped content is then written to `/app/flow/flow.mjs` (or
 `/tmp/walkeros-flow.mjs` outside a container) and started. An empty stdin is
-ignored, so a missing file is reported as missing.
+ignored, so a missing file is reported as missing. Stdin carries no
+`node_modules/`, so a server flow built by `walkeros bundle` fails there with
+`Cannot find package`: start its directory or its archive instead.
 
 Credentials come from the environment only: `WALKEROS_DEPLOY_TOKEN` (or
 `WALKEROS_TOKEN`) and `WALKEROS_APP_URL`, used with `--flow-id` and `--project`
 (or `WALKEROS_FLOW_ID` and `WALKEROS_PROJECT_ID`) to enable the heartbeat and
-secret injection.
+secret injection. The app accepts a heartbeat only with `WALKEROS_DEPLOYMENT_ID`
+set to the deployment the token belongs to.
 
-[Documentation](https://www.walkeros.io/docs) &bull;
+[Documentation](https://www.walkeros.io/docs/apps/runtime) &bull;
 [Source Code](https://github.com/elbwalker/walkerOS/tree/main/packages/runner)

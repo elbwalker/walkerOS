@@ -67,9 +67,9 @@ export interface Settings {
   objectId?: string;
 
   /**
-   * Destination-level contact upsert mapping.
-   * Resolves to { email, properties } and upserts the contact on each push
-   * (with dedup via state hash).
+   * Destination-level contact update mapping.
+   * Resolves to { email, properties } and updates the contact with that email
+   * (not an upsert) on each push, with dedup via state hash.
    */
   identify?: WalkerOSMapping.Value;
 
@@ -105,7 +105,7 @@ export interface Mapping {
   eventName?: string;
 
   /**
-   * Per-event contact upsert. Resolves to { email, properties }.
+   * Per-event contact update. Resolves to { email, properties }.
    * Overrides destination-level identify.
    */
   identify?: WalkerOSMapping.Value;

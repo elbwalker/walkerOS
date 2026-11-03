@@ -15,6 +15,9 @@ Add `cache` to any step in your flow config:
 "sources": {
   "express": {
     "package": "@walkeros/server-source-express",
+    "config": {
+      "ingest": { "map": { "method": "method", "path": "path" } }
+    },
     "cache": {
       "rules": [
         {
@@ -28,6 +31,10 @@ Add `cache` to any step in your flow config:
 }
 ```
 
+`ingest.method` and `ingest.path` exist because `config.ingest` lifts them from
+the request. Without it the rule's `match` and `key` find nothing, and nothing
+is cached (see [Key Resolution](#key-resolution)).
+
 ### Cache Rule Properties
 
 | Property | Type | Description |
@@ -35,7 +42,7 @@ Add `cache` to any step in your flow config:
 | `match` | `MatchExpression` | When to apply this cache rule |
 | `key` | `string[]` | Dot-paths to build the cache key from |
 | `ttl` | `number` | Time-to-live in seconds |
-| `update` | `Record<string, Value>` | Optional modifications applied on read |
+| `update` | `Record<string, Value>` | Source caches only: changes to the cached response, applied on HIT and MISS |
 
 `match` is optional, omit it for an always-match rule.
 
@@ -48,27 +55,18 @@ Add `cache` to any step in your flow config:
 | `namespace` | `string` | _(none)_ | Optional key prefix. Omit to write keys directly to the store. Same store + same key + same namespace = same cache entry. |
 | `rules` | `CacheRule[]` | Required | At least one cache rule |
 
+`walkeros validate` does not reject an unknown key in `cache` or in a rule;
+such a key has no effect.
+
 ## Behavior by Step Type
 
 ### Source Cache (stop by default)
 
-Source cache intercepts requests before the pipeline runs. Sources default to `stop: true`. On cache HIT, the cached respond value is returned immediately and the pipeline is skipped. Set `stop: false` to skip only the source step and let the pipeline continue.
-
-```json
-"sources": {
-  "express": {
-    "cache": {
-      "rules": [
-        { "match": { "key": "ingest.method", "operator": "eq", "value": "GET" }, "key": ["ingest.method", "ingest.path"], "ttl": 300 }
-      ]
-    }
-  }
-}
-```
+Source cache intercepts requests before the pipeline runs. Sources default to `stop: true`. On cache HIT, the cached respond value is returned immediately and the pipeline is skipped, as in the example above. With `stop: false`, a HIT changes nothing: the pipeline runs as on a MISS, and `update` is not applied.
 
 ### Transformer Cache (step-level)
 
-Transformer cache skips the transformer's execution on HIT but continues the chain with the cached event. Useful for expensive computations like API enrichment. With `stop: true`, the remaining chain stops on HIT and downstream transformers and destinations are skipped.
+Transformer cache skips the transformer's execution on HIT but continues the chain with the cached event. This helps with expensive computations such as API enrichment. With `stop: true`, the remaining chain stops on HIT and downstream transformers and destinations are skipped.
 
 :::note Halt scopes
 Transformer caches with `stop: true` in a source chain (`source.before`, `source.next`) or in the collector chain (`collector.next`) halt the event on HIT: no destination sees it. In a destination's `before` chain, a HIT skips the rest of that chain and the destination receives the cached event. Destination caches with `stop: true` halt only the per-destination delivery; sibling destinations still receive the event. To drop an event by rule rather than by cache, use a route `stop` (see [Dropping an event with `stop`](/docs/getting-started/flow/routing#dropping-an-event-with-stop)).
@@ -115,9 +113,14 @@ Cache keys use dot-path resolution from a structured context:
 - `event.data.id`: nested event data field
 - `event.user.loggedIn`: user properties
 
+Ingest holds only the fields the source's `config.ingest` maps. A source cache
+sees only `ingest`: `event.` paths resolve in transformer and destination
+caches. The resolved paths are joined with `:`; when every path of the rule
+resolves empty, the event is not cached, and nothing reports it.
+
 ## Update Rules
 
-Use `update` to modify the result on both HIT and MISS:
+In a source cache, use `update` to modify the response on both HIT and MISS:
 
 ```json
 "cache": {
@@ -132,7 +135,7 @@ Use `update` to modify the result on both HIT and MISS:
 }
 ```
 
-`cache.status` resolves to `"HIT"` or `"MISS"`. Static values use `{ "value": "..." }`.
+`cache.status` resolves to `"HIT"` or `"MISS"`. Static values use `{ "value": "..." }`. Transformer and destination caches do not apply `update`, and `walkeros validate` does not flag it there.
 
 ## Custom Store
 
@@ -148,18 +151,24 @@ By default, cache uses a shared in-memory store. Reference a custom store for pe
   },
   "sources": {
     "express": {
+      "package": "@walkeros/server-source-express",
+      "config": {
+        "ingest": { "map": { "method": "method", "path": "path" } }
+      },
       "cache": {
         "store": "files",
-        "rules": [...]
+        "rules": [{ "key": ["ingest.method", "ingest.path"], "ttl": 300 }]
       }
     }
   }
 }
 ```
 
-The filesystem store keeps entries on the local disk of one instance. To share cache entries across instances, use `@walkeros/server-store-s3` or `@walkeros/server-store-gcs` instead. The Sheets store cannot be a cache tier (a `cache.store` target); a cache can still wrap it.
+The filesystem store keeps entries on the local disk of one instance. To share cache entries across instances, use `@walkeros/server-store-s3` or `@walkeros/server-store-gcs` instead. Do not use the Sheets store as a cache tier (a `cache.store` target): nothing rejects it, but every cache read and write then costs a Sheets request. A cache can still wrap it.
 
-The filesystem store rejects a key that begins with `/`, so start `key` with a field such as `ingest.method`, or set `namespace`.
+The filesystem store rejects a key that begins with `/` (a `WARN` line, `Path traversal rejected`, and no entry), so start `key` with a field such as `ingest.method`, or set `namespace`.
+
+A cache write that fails writes no log line and the push still reports `ok: true`, so a dedup cache on a store that refuses writes lets duplicates through.
 
 A store can carry a cache of its own. In the complete example, reads from the
 `customers` store are memoized for five minutes:
@@ -167,11 +176,3 @@ A store can carry a cache of its own. In the complete example, reads from the
 <FlowSlice feature="store-cache" />
 
 Custom stores can be either synchronous (in-memory) or asynchronous (file system, S3, GCS, the cache wrapper). Cache lookups await the underlying `store.get` internally, so HIT/MISS semantics behave identically regardless of which backing you wire.
-
-## Migration from prior v4 cache
-
-If you're upgrading from an earlier v4 build, three breaking changes apply:
-
-- **`cache.full` is now `cache.stop`.** Search-and-replace `"full"` for `"stop"` in every `cache` block. Default behavior unchanged (sources default to `stop: true`, transformers and destinations default to `stop: false`).
-- **`cache.match: "*"` is now omitted.** Drop the `"match": "*"` entry from rules. A rule with no `match` matches every event, the behavior is identical to the previous wildcard.
-- **Implicit per-step namespacing is gone.** Previous builds prefixed cache keys with `s:`, `t:`, or `d:` based on step type, so a source and a destination writing the same key never collided. That prefix is no longer applied. If you share a store across step types and need isolation, set `cache.namespace` explicitly (for example `"namespace": "source"`).

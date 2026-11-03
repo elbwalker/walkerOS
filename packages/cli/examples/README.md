@@ -49,11 +49,24 @@ npx --package=@walkeros/runner runneros start dist/server/flow.mjs
 # Web flow: build walker.js, then serve dist/web/ with any static server
 walkeros bundle examples/flow-complete.json --flow web -o dist/web/
 
-# Test either flow offline, destinations mocked
+# Test the web flow without sending anything, destinations mocked
+walkeros push examples/flow-complete.json --flow web \
+  --event '{"name":"page view","data":{"title":"Home"}}' \
+  --consent '{"functional":true}' --simulate destination.ga4
+
+# The server flow needs GCP_SA, FINGERPRINT_SALT, EMAIL_SALT and
+# META_ACCESS_TOKEN set (see the setup in flow-complete.md) and a request
+# context for its fingerprint step
 walkeros push examples/flow-complete.json --flow server \
   --event '{"name":"page view","data":{"title":"Home"}}' \
+  --ingest '{"ip":"203.0.113.7","userAgent":"Mozilla/5.0"}' \
   --simulate destination.pubsub
 ```
+
+Without one of these four secrets a server simulation stops, for example with
+`required secret "META_ACCESS_TOKEN" is not set`, whichever step you simulate;
+without `--ingest` the fingerprint step drops the event and Pub/Sub records
+`no calls`.
 
 ---
 

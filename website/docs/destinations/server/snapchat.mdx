@@ -7,6 +7,7 @@ package: '@walkeros/server-destination-snapchat'
 ---
 import data from '@walkeros/server-destination-snapchat/walkerOS.json';
 import Configuration from '@site/src/components/snippets/_configuration.mdx';
+import Quickstart from '@site/src/components/snippets/_quickstart.mdx';
 
 import WhereThisFits from '@site/src/components/snippets/_where-this-fits.mdx';
 
@@ -21,74 +22,32 @@ Server-side event delivery to Snapchat's Conversions API v3 for enhanced convers
   flowMap={{
     destinations: { default: { label: 'Destination', text: 'Snapchat CAPI', highlight: true } },
   }}
-  post={<>Sends events server-side to Snapchat's Conversions API using raw HTTP (no SDK). Identity fields (`em`, `ph`, `fn`, `ln`, `db`, `ge`, `ct`, `st`, `zp`, `country`, `external_id`) are SHA-256 hashed before sending. Events include a stable `event_id` for deduplication with the Snap Pixel.</>}
+  post={<>Sends events server-side to Snapchat's Conversions API using raw HTTP (no SDK). Identity fields (`em`, `ph`, `fn`, `ln`, `db`, `ge`, `ct`, `st`, `zp`, `country`, `external_id`) are SHA-256 hashed, as mapped, before sending. Events include a stable `event_id` for deduplication with the Snap Pixel.</>}
 />
 
 ## Installation
 
-<CodeSnippet
-  code={`npm install @walkeros/server-destination-snapchat`}
-  language="bash"
-/>
-
-<Tabs groupId="mode">
-  <TabItem value="integrated" label="Integrated" default>
-
-<CodeSnippet
-  code={`import { startFlow } from '@walkeros/collector';
-import { destinationSnapchat } from '@walkeros/server-destination-snapchat';
-
-await startFlow({
-  destinations: {
-    snapchat: {
-      code: destinationSnapchat,
-      config: {
-        settings: {
-          accessToken: 'YOUR_ACCESS_TOKEN',
-          pixelId: 'YOUR_PIXEL_ID',
-        },
-      },
-    },
-  },
-});`}
-  language="typescript"
-/>
-
-  </TabItem>
-  <TabItem value="bundled" label="Bundled">
-
-Add to your `flow.json` destinations:
-
-<CodeSnippet
-  code={`"destinations": {
-  "snapchat": {
-    "package": "@walkeros/server-destination-snapchat",
-    "import": "destinationSnapchat",
-    "config": {
-      "settings": {
-        "accessToken": "YOUR_ACCESS_TOKEN",
-        "pixelId": "YOUR_PIXEL_ID"
-      }
-    }
-  }
-}`}
-  language="json"
-/>
-
-[See bundled mode setup](/docs/getting-started/modes/bundled) | [CLI reference](/docs/apps/cli)
-
-  </TabItem>
-</Tabs>
+<Quickstart data={data} />
 
 <Configuration type="destination" data={data} />
+
+## Failures
+
+A response outside the 2xx range, a network error, or no answer within 5 seconds fails the event: the push answers `failed` with the code `transport` (with the HTTP status) or `timeout`, the event goes to the dead-letter queue, and the collector logs one ERROR line. Any 2xx answer counts as delivered: the destination does not read the response body. Without `accessToken` or `pixelId` the destination does not start: every push answers `failed` with the code `config`, and the collector logs `destination init failed`. A rule with `silent: true` sends nothing.
+
+The access token travels as a query parameter of the request URL, and at the DEBUG log level the destination logs that URL with the token in it. Keep DEBUG off wherever logs are stored or shared.
 
 ## Client IP and user agent
 
 The destination sends the client IP as `user_data.client_ip_address` and the user agent as `user_data.client_user_agent` by default. The `ip` and `userAgent` settings resolve against `{ ingest, event }` and default to `["ingest.ip", "event.user.ip"]` and `["ingest.userAgent", "event.user.userAgent"]`, so they fill in whenever the source provides them (see the `config.ingest` recipe on the [Express source](/docs/sources/server/express#ingest-metadata)). A value your mapping sets for `user_data.client_ip_address` or `user_data.client_user_agent` wins. A value that resolves to nothing is not sent. Set either setting to `false` to turn it off, or to another mapping value to read it elsewhere.
 
+## Consent
+
+The quickstart sets no `config.consent`, so Snapchat receives every event, whatever consent the event carries. To send only events with consent, add `consent: { marketing: true }` to `config`, next to `settings` (with several keys listed, one granted key is enough). An event without that consent is skipped or queued, depending on the collector's `consentDenied`. Server flows built by the CLI skip it and count it in `skipped`. With `startFlow` it waits in the destination's queue by default: a later event that carries consent does not release it, and only a `walker consent` command does, which then sends the waiting events of every user at once. Pass `consentDenied: 'skip'` to `startFlow` to skip such events instead (see [Gate a destination with consent](/docs/guides/consent#gate-a-destination-with-consent) and [consent-denied events on a server](/docs/collector#consent-denied-events-on-a-server)).
+
 ## Event mapping
 
-Map walkerOS events to Snapchat standard event names via each rule's `name` field. Snapchat uses **UPPERCASE** standard event names (e.g. `PURCHASE`, not `Purchase`).
+Map walkerOS events to Snapchat standard event names via each rule's `name` field. Snapchat uses **UPPERCASE** standard event names (e.g. `PURCHASE`, not `Purchase`). An event without a rule `name` is sent with its walkerOS name, such as `page view`, which is not a Snapchat event name. Give every event you send a rule with a `name`.
 
 <CodeSnippet
   code={`"mapping": {
@@ -114,19 +73,21 @@ Map walkerOS events to Snapchat standard event names via each rule's `name` fiel
 
 ### custom_data structure
 
-Unlike Meta's CAPI (which places properties flat on the event root), Snapchat requires event properties to be nested under `custom_data`. Always map into `custom_data.map`.
+The destination sends every mapped key except `user_data` inside `custom_data`: keys under `custom_data` and keys at the top level of the mapped data both land there, and a top-level key wins over the same key under `custom_data`. Map business data under `custom_data.map`, as above, to keep it in one place.
 
 ## Hashing
 
-The destination automatically SHA-256 hashes the 11 standard identity fields before sending: `em`, `ph`, `fn`, `ln`, `db`, `ge`, `ct`, `st`, `zp`, `country`, `external_id`. Pass raw values and hashing is handled for you.
+The destination SHA-256 hashes these `user_data` keys before sending: `em`, `ph`, `fn`, `ln`, `db`, `ge`, `ct`, `st`, `zp`, `country`, `external_id`. Map personal data only to these keys, in `settings.user_data`, or under `user_data` in a rule's `data` or the destination's `config.data`.
 
-Non-hashable fields pass through as-is: `sc_cookie1`, `client_ip_address`, `client_user_agent`, `sc_click_id`, `idfv`, `madid`.
+- **Every other key is sent in clear text.** `sc_cookie1`, `client_ip_address`, `client_user_agent`, `sc_click_id`, `idfv` and `madid` are sent as mapped, and so is any other key: nothing checks the names under `user_data`, so `email` or `phone` instead of `em` and `ph` reaches Snapchat unhashed. A key mapped outside `user_data` lands in `custom_data`, unhashed.
+- **Values are hashed exactly as mapped**, without normalization. Map them in the form Snapchat expects, for example the email trimmed and lowercased and the phone number as digits with the country code (see [CAPI parameters](https://developers.snap.com/api/marketing-api/Conversions-API/Parameters)).
+- **Map one value per key.** A list is joined with commas and hashed as one string.
 
 If a value is already hashed or you want to skip hashing for a specific field, use `doNotHash`:
 
 <CodeSnippet
   code={`"settings": {
-  "accessToken": "YOUR_ACCESS_TOKEN",
+  "accessToken": "$secret.SNAPCHAT_ACCESS_TOKEN",
   "pixelId": "YOUR_PIXEL_ID",
   "doNotHash": ["em"]
 }`}
@@ -135,15 +96,15 @@ If a value is already hashed or you want to skip hashing for a specific field, u
 
 ## Deduplication
 
-Each event is sent with `event_id` set to the walkerOS event `id`. If you also run the Snap Pixel in the browser, Snapchat deduplicates server and browser events that share the same `event_id` and `event_name` within a 48h window, so conversions are not double-counted.
+Each event is sent with `event_id` set to the walkerOS event `id`. If you also run the Snap Pixel in the browser, Snapchat deduplicates server and browser events that share the same `event_id` and `event_name`, so conversions are not double-counted.
 
 ## Test mode
 
-Set `testMode: true` to send events to Snapchat's `/events/validate` endpoint for validation instead of the live `/events` endpoint. Useful during development. Events validated via this endpoint do **not** count toward ads delivery or optimization.
+Set `testMode: true` to send events to Snapchat's `/events/validate` endpoint for validation instead of the live `/events` endpoint. Useful during development.
 
 <CodeSnippet
   code={`"settings": {
-  "accessToken": "YOUR_ACCESS_TOKEN",
+  "accessToken": "$secret.SNAPCHAT_ACCESS_TOKEN",
   "pixelId": "YOUR_PIXEL_ID",
   "testMode": true
 }`}
@@ -153,4 +114,4 @@ Set `testMode: true` to send events to Snapchat's `/events/validate` endpoint fo
 ## Links
 
 - [Snapchat Conversions API documentation](https://businesshelp.snapchat.com/s/article/conversions-api)
-- [CAPI parameters reference](https://businesshelp.snapchat.com/s/article/capi-parameters)
+- [CAPI parameters reference](https://developers.snap.com/api/marketing-api/Conversions-API/Parameters)

@@ -34,10 +34,14 @@ export const destinationOptimizely: Destination = {
 
   async init({ config, env }) {
     const settings = config.settings;
-    if (!settings?.sdkKey)
-      throw new StepError('Optimizely needs settings.sdkKey', {
-        code: 'config',
-      });
+    if (!settings?.sdkKey || settings.userId === undefined)
+      throw new StepError(
+        `Optimizely needs settings ${[
+          ...(settings?.sdkKey ? [] : ['sdkKey']),
+          ...(settings?.userId === undefined ? ['userId'] : []),
+        ].join(' and ')}`,
+        { code: 'config' },
+      );
 
     const sdk = getOptimizely(env as Env | undefined);
 

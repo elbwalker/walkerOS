@@ -14,11 +14,13 @@ import type {
 } from '@walkeros/core';
 import {
   createIngest,
+  getErrorMessage,
   getEvent,
   isObject,
   isStoreValue,
   StepError,
 } from '@walkeros/core';
+import { toSerializable } from '@walkeros/core/dev';
 import { startFlow } from '../flow';
 import { wrapEnv } from '../wrapEnv';
 import type { Boundary, EnvAnswer, EnvBoundary } from './boundary';
@@ -595,40 +597,6 @@ export interface RunOptions {
   settings?: Record<string, unknown>;
   /** The package's examples env (`examples.env`: `push` and `simulation`). */
   env?: Record<string, unknown>;
-  /**
-   * Run each example as `walkerOS.json` publishes it: every mapping function
-   * as its source text, evaluated without the module it was written in, so a
-   * function that needs an import fails here instead of in a user's flow.
-   */
-  published?: boolean;
-}
-
-/**
- * A value as published: functions as source text, evaluated again in no
- * module scope. Every `$code` object is evaluated, not only the ones made
- * here, so pass only a package's own examples, never untrusted input.
- */
-function asPublished(value: unknown): unknown {
-  if (value === undefined) return undefined;
-  return JSON.parse(
-    JSON.stringify(value, (_, inner: unknown) =>
-      typeof inner === 'function' ? { $code: inner.toString() } : inner,
-    ),
-    (_, inner: unknown) =>
-      isObject(inner) && typeof inner.$code === 'string'
-        ? new Function(`return (${inner.$code});`)()
-        : inner,
-  );
-}
-
-/** The examples with their mappings as published. */
-function publishedExamples(examples: Flow.StepExamples): Flow.StepExamples {
-  return Object.fromEntries(
-    Object.entries(examples).map(([name, example]) => [
-      name,
-      { ...example, mapping: asPublished(example.mapping) },
-    ]),
-  );
 }
 
 export interface DestinationRunOptions extends RunOptions {
@@ -895,7 +863,7 @@ export function checkClaims(
   return problems;
 }
 
-type RunArgs =
+export type RunArgs =
   | [
       'destination',
       Destination.Instance<Destination.TypesGeneric>,
@@ -978,9 +946,175 @@ async function checkExample(
 }
 
 /**
- * Run every example of a step through a real collector and compare its `out`
- * (R4, as a literal) and `outcome`. Resolves when every example holds;
- * otherwise rejects with one error naming each failing example.
+ * Every function in a value replaced by `map`; arrays and plain objects are
+ * copied on the way, every other value stays as it is.
+ */
+function mapCode(value: unknown, map: (fn: unknown) => unknown): unknown {
+  if (typeof value === 'function') return map(value);
+  if (Array.isArray(value)) return value.map((item) => mapCode(item, map));
+  if (isObject(value))
+    return Object.fromEntries(
+      Object.entries(value).map(([key, inner]) => [key, mapCode(inner, map)]),
+    );
+  return value;
+}
+
+/**
+ * An example with every function in it replaced by `map`: in `in`,
+ * `mapping`, `trigger.options` and `respond.body`, the fields whose type
+ * holds one. `out` is compared as a literal, where a function never holds.
+ */
+function mapExampleCode(
+  example: Flow.StepExample,
+  map: (fn: unknown) => unknown,
+): Flow.StepExample {
+  const mapped: Flow.StepExample = { ...example };
+  if ('in' in example) mapped.in = mapCode(example.in, map);
+  if ('mapping' in example) mapped.mapping = mapCode(example.mapping, map);
+  if (example.trigger)
+    mapped.trigger = {
+      ...example.trigger,
+      options: mapCode(example.trigger.options, map),
+    };
+  if (example.respond)
+    mapped.respond = {
+      ...example.respond,
+      body: mapCode(example.respond.body, map),
+    };
+  return mapped;
+}
+
+/** A function that records what it throws or rejects with, then rethrows. */
+function recording(fn: unknown, thrown: unknown[]): unknown {
+  if (typeof fn !== 'function') return fn;
+  return function (this: unknown, ...args: unknown[]): unknown {
+    try {
+      const result: unknown = Reflect.apply(fn, this, args);
+      return result instanceof Promise
+        ? result.catch((error: unknown) => {
+            thrown.push(error);
+            throw error;
+          })
+        : result;
+    } catch (error) {
+      thrown.push(error);
+      throw error;
+    }
+  };
+}
+
+/**
+ * A function as `walkerOS.json` publishes it (the build's `toSerializable`),
+ * evaluated again by `new Function`: in the global scope, with no module
+ * scope and no closure, so code that needs an import or an outer variable
+ * fails here instead of in a user's flow.
+ */
+function revive(fn: unknown): { fn: unknown } | { error: string } {
+  const published: unknown = JSON.parse(JSON.stringify(toSerializable(fn)));
+  if (!isObject(published) || typeof published.$code !== 'string')
+    return { error: 'it does not serialize to $code' };
+  try {
+    const revived: unknown = new Function(`return (${published.$code});`)();
+    return typeof revived === 'function'
+      ? { fn: revived }
+      : { error: `its $code is not a function: ${published.$code}` };
+  } catch (error) {
+    return { error: `its $code does not evaluate: ${getErrorMessage(error)}` };
+  }
+}
+
+/** An example's run as published: what fails, or its problems. */
+type AsPublished = { fails: string[] } | { problems: string[] };
+
+/** What published code threw; a name it cannot resolve gets the reason. */
+function thrownBy(error: unknown): string {
+  const message = getErrorMessage(error);
+  return error instanceof Error && error.name === 'ReferenceError'
+    ? `${message} (a function in a published example can use only its parameters and standard globals)`
+    : message;
+}
+
+/**
+ * Run an example as `walkerOS.json` publishes it, every function in it
+ * revived (`revive`). When it fails or one of its functions throws, it runs
+ * from source too: a throw the source run does not make, or a failure where
+ * the source run holds, is a published failure. Every `$code` is evaluated,
+ * so pass only a package's own examples, never untrusted input.
+ */
+async function runAsPublished(
+  args: RunArgs,
+  example: Flow.StepExample,
+): Promise<AsPublished> {
+  const unrevived: string[] = [];
+  const thrown: unknown[] = [];
+  let code = 0;
+  const published = mapExampleCode(example, (fn) => {
+    code++;
+    const revived = revive(fn);
+    if ('fn' in revived) return recording(revived.fn, thrown);
+    unrevived.push(revived.error);
+    return fn;
+  });
+  if (unrevived.length) return { fails: unrevived };
+  if (!code) return { problems: await checkExample(args, example) };
+
+  let problems: string[] | undefined;
+  let error: unknown;
+  try {
+    problems = await checkExample(args, published);
+  } catch (caught) {
+    error = caught;
+  }
+  if (problems && !problems.length && !thrown.length) return { problems };
+
+  const thrownFromSource: unknown[] = [];
+  const fromSource = await checkExample(
+    args,
+    mapExampleCode(example, (fn) => recording(fn, thrownFromSource)),
+  );
+  if (!problems) return { fails: [thrownBy(error)] };
+  const known = thrownFromSource.map(getErrorMessage);
+  const unseen = thrown.find(
+    (thrownError) => !known.includes(getErrorMessage(thrownError)),
+  );
+  if (unseen !== undefined) return { fails: [thrownBy(unseen)] };
+  if (!fromSource.length && problems.length) return { fails: problems };
+  // Not a published failure: the example's own problems, from source.
+  return { problems: fromSource };
+}
+
+/** An example's problems as published, each naming the example. */
+function namedProblems(name: string, run: AsPublished): string[] {
+  return 'fails' in run
+    ? run.fails.map((fail) => `example ${name}: published code fails: ${fail}`)
+    : run.problems.map((problem) => `example ${name}: ${problem}`);
+}
+
+/**
+ * Every published failure of a step's examples (`runAsPublished`), for the
+ * conformance kit, and every example whose run throws in the kit's setup.
+ * Other problems of an example are its own runExamples test's to report.
+ */
+export async function publishedProblems(args: RunArgs): Promise<string[]> {
+  const problems: string[] = [];
+  for (const [name, example] of Object.entries(args[2])) {
+    try {
+      const run = await runAsPublished(args, example);
+      if ('fails' in run) problems.push(...namedProblems(name, run));
+    } catch (error) {
+      problems.push(
+        `example ${name}: its run throws: ${getErrorMessage(error)}`,
+      );
+    }
+  }
+  return problems;
+}
+
+/**
+ * Run every example of a step through a real collector, as `walkerOS.json`
+ * publishes it (`runAsPublished`), and compare its `out` (as a literal) and
+ * `outcome`. Resolves when every example holds; otherwise rejects with
+ * one error naming each failing example.
  */
 export function runExamples<T extends Destination.TypesGeneric>(
   kind: 'destination',
@@ -1008,19 +1142,17 @@ export function runExamples<T extends Source.TypesGeneric>(
 ): Promise<void>;
 export async function runExamples(...given: RunArgsGiven): Promise<void> {
   const args = complete(given);
-  const examples = args[3].published ? publishedExamples(args[2]) : args[2];
   const problems: string[] = [];
 
   if (args[0] === 'destination' && args[3].claims)
-    problems.push(...checkClaims(examples, args[3].claims));
+    problems.push(...checkClaims(args[2], args[3].claims));
 
-  for (const [name, example] of Object.entries(examples)) {
+  for (const [name, example] of Object.entries(args[2])) {
     if (example.respond?.error === 'timeout' && timersAreFake())
       throw new Error(
         `example ${name} waits for a timeout: call jest.useRealTimers() first`,
       );
-    for (const problem of await checkExample(args, example))
-      problems.push(`example ${name}: ${problem}`);
+    problems.push(...namedProblems(name, await runAsPublished(args, example)));
   }
 
   if (problems.length) throw new Error(problems.join('\n'));

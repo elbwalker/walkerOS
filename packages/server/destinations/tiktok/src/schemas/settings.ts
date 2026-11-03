@@ -34,7 +34,7 @@ export const SettingsSchema = z
       .optional(),
     partner_name: z
       .string()
-      .describe('Partner name for TikTok attribution')
+      .describe('Partner name for TikTok attribution (default walkerOS)')
       .optional(),
     ip: InputSchema.describe(
       'Client IP, sent as context.ip. Resolves against { ingest, event }. Default: ["ingest.ip", "event.user.ip"]. false switches it off.',

@@ -55,10 +55,8 @@ layers on top.
 
 ### Cost
 
-**Segment:** The free tier is limited to 1,000 MTUs, and the Team plan starts
-around $120/month. Pricing scales with monthly tracked users (MTUs). Enterprise
-customers often negotiate 70-80% discounts on list prices, but costs can grow
-quickly at scale.
+**Segment:** The free plan is limited to 1,000 MTUs, and the Team plan starts at
+$120/month. Pricing scales with monthly tracked users (MTUs).
 
 **walkerOS:** The software is free and open-source, and you pay for your own
 infrastructure. Optional paid services include implementation support (setup
@@ -95,8 +93,9 @@ PRs, and test it before production.
 
 ## Can they work together?
 
-Yes. You can use walkerOS for event collection and send the data to Segment as a
-destination. walkerOS then handles composable tagging and consent on the
+Yes. You can use walkerOS for event collection and send the data to Segment with
+the Segment destination, [in the browser](/docs/destinations/web/segment) or
+[on a server](/docs/destinations/server/segment). walkerOS then handles composable tagging and consent on the
 frontend, and Segment's CDP still receives the data for identity resolution and
 downstream integrations.
 

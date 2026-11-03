@@ -10,13 +10,15 @@ export const SettingsSchema = z.object({
     .optional(),
 
   prefix: EventPrefix.default('dataLayer')
-    .describe('Event prefix for filtering which events to process')
+    .describe(
+      'Entity of every event name: an entry becomes "<prefix> <event>" (default: dataLayer)',
+    )
     .optional(),
 
   filter: z
     .any()
     .describe(
-      'Custom filter function: (event: unknown) => boolean | Promise<boolean>',
+      'Function (entry: unknown) => boolean called with each dataLayer entry; return true to skip the event',
     )
     .optional(),
 });

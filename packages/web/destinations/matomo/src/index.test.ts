@@ -195,7 +195,7 @@ describe('Destination Matomo', () => {
       expect(paq).toEqual([
         ['setCustomDimension', 1, 'docs'],
         ['setCustomDimension', 2, '0rd3r1d'],
-        ['trackGoal', '1', 555],
+        ['trackGoal', '1', 462],
         ['deleteCustomDimension', 2],
         ['setCustomDimension', 1, 'docs'],
       ]);
@@ -419,7 +419,7 @@ describe('Destination Matomo', () => {
                 siteSearch: true,
                 customDimensions: { '3': 'data.category' },
               },
-              data: { set: ['data.query', 'data.category'] },
+              data: { set: ['data.term', 'data.category'] },
             },
           },
         },
@@ -428,7 +428,7 @@ describe('Destination Matomo', () => {
       await elb(
         createEvent({
           name: 'search submit',
-          data: { query: 'shoes', category: 'products' },
+          data: { term: 'shoes', category: 'products' },
         }),
       );
 
@@ -461,7 +461,7 @@ describe('Destination Matomo', () => {
       expect(paq).toEqual([
         ['setCustomDimension', 2, '0rd3r1d'],
         ['trackEvent', 'order', 'complete'],
-        ['trackGoal', '1', 555],
+        ['trackGoal', '1', 462],
         ['deleteCustomDimension', 2],
       ]);
     });

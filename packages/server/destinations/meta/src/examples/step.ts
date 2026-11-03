@@ -261,7 +261,7 @@ export const purchase: Flow.StepExample = {
             action_source: 'website',
             custom_data: {
               currency: 'EUR',
-              value: 555,
+              value: 462,
               order_id: '0rd3r1d',
               content_type: 'product',
               contents: [

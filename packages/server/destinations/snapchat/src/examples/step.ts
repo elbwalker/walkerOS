@@ -1,5 +1,5 @@
 import type { Flow } from '@walkeros/core';
-import { createEvent, getEvent, isObject } from '@walkeros/core';
+import { createEvent, getEvent } from '@walkeros/core';
 
 /**
  * Snapchat Conversions API step examples.
@@ -61,7 +61,10 @@ export const purchase: Flow.StepExample = {
                 'nested',
                 {
                   condition: (entity: unknown) =>
-                    isObject(entity) && entity.entity === 'product',
+                    typeof entity === 'object' &&
+                    entity !== null &&
+                    'entity' in entity &&
+                    entity.entity === 'product',
                   map: {
                     id: 'data.id',
                     item_price: 'data.price',
@@ -152,7 +155,10 @@ export const addToCart: Flow.StepExample = {
                 'nested',
                 {
                   condition: (entity: unknown) =>
-                    isObject(entity) && entity.entity === 'product',
+                    typeof entity === 'object' &&
+                    entity !== null &&
+                    'entity' in entity &&
+                    entity.entity === 'product',
                   map: {
                     id: 'data.id',
                     item_price: 'data.price',
@@ -194,7 +200,7 @@ export const addToCart: Flow.StepExample = {
 export const pageView: Flow.StepExample = {
   title: 'Page view',
   description:
-    'A page view is forwarded to Snapchat with the event source URL and no extra custom data.',
+    'A page view is sent to Snapchat as PAGE_VIEW with the event source URL and no extra custom data.',
   in: getEvent('page view', {
     id: 'e1f2a3b4c5d60003',
     timestamp: 1700000902000,
@@ -204,7 +210,7 @@ export const pageView: Flow.StepExample = {
       url: 'https://example.com/docs/',
     },
   }),
-  mapping: undefined,
+  mapping: { name: 'PAGE_VIEW' },
   out: [
     [
       'sendServer',
@@ -212,7 +218,7 @@ export const pageView: Flow.StepExample = {
       JSON.stringify({
         data: [
           {
-            event_name: 'page view',
+            event_name: 'PAGE_VIEW',
             event_time: 1700000902,
             action_source: 'WEB',
             event_id: 'e1f2a3b4c5d60003',

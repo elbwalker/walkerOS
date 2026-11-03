@@ -33,7 +33,7 @@ npm install @walkeros/server-destination-bing
           "package": "@walkeros/server-destination-bing",
           "config": {
             "settings": {
-              "accessToken": "YOUR_ACCESS_TOKEN",
+              "accessToken": "$secret.BING_ACCESS_TOKEN",
               "tagId": "YOUR_UET_TAG_ID"
             }
           }

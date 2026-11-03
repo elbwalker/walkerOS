@@ -22,7 +22,7 @@ const noopLogger: Logger.Instance = {
 };
 
 const createMockElbFn = (): Elb.Fn => {
-  const fn = (() => Promise.resolve({ ok: true })) as Elb.Fn;
+  const fn: Elb.Fn = () => Promise.resolve({ ok: true });
   return fn;
 };
 

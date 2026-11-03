@@ -4,7 +4,7 @@ import { getEvent } from '@walkeros/core';
 /** A step example whose input is a full walkerOS event. */
 type EventStepExample = Flow.StepExample & { in: WalkerOS.Event };
 
-const pageViewEvent = getEvent('page view', { timestamp: 1700000900 });
+const pageViewEvent = getEvent('page view', { timestamp: 1700000900000 });
 
 export const pageView: EventStepExample = {
   title: 'Page view',
@@ -16,7 +16,7 @@ export const pageView: EventStepExample = {
 };
 
 const orderCompleteEvent = getEvent('order complete', {
-  timestamp: 1700000901,
+  timestamp: 1700000901000,
 });
 
 export const orderComplete: EventStepExample = {

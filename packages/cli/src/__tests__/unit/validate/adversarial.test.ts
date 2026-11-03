@@ -1011,6 +1011,73 @@ describe('C1 default scope and C5 skips', () => {
     expect(result.details.scope).toMatchObject({ flows: ['a'] });
   });
 
+  it('N1: steps naming one package at two inline versions are skips, as the bundle refuses them', async () => {
+    const result = await validate('flow', {
+      version: 4,
+      flows: {
+        a: {
+          config: { platform: 'web' },
+          destinations: {
+            d1: { package: 'pkg-x@1.0.0', config: { settings: {} } },
+            d2: { package: 'pkg-x@2.0.0', config: { settings: { id: 42 } } },
+          },
+        },
+      },
+    });
+    expect(
+      [...result.errors, ...result.warnings].filter(
+        (finding) => finding.code === 'ENTRY_SCHEMA',
+      ),
+    ).toEqual([]);
+    expect(skippedOf(result)).toEqual(
+      expect.arrayContaining(
+        ['d1', 'd2'].map((key) =>
+          expect.objectContaining({
+            path: `flows.a.destinations.${key}`,
+            check: 'flow:package-settings',
+            code: 'SCHEMA_UNAVAILABLE',
+            reason: expect.stringContaining(
+              'Conflicting inline versions for pkg-x',
+            ),
+          }),
+        ),
+      ),
+    );
+  });
+
+  it('N1: a step without a version is checked at the inline version another step names, as the bundle installs it', async () => {
+    const result = await validate('flow', {
+      version: 4,
+      flows: {
+        a: {
+          config: { platform: 'web' },
+          destinations: {
+            bare: { package: 'pkg-x', config: { settings: {} } },
+            pinned: {
+              package: 'pkg-x@1.0.0',
+              config: { settings: { id: 'G-ABC123' } },
+            },
+          },
+        },
+      },
+    });
+    expect(result.details.packages).toEqual([
+      { path: 'flows.a.destinations.bare', package: 'pkg-x', version: '1.0.0' },
+      {
+        path: 'flows.a.destinations.pinned',
+        package: 'pkg-x',
+        version: '1.0.0',
+      },
+    ]);
+    expect(result.warnings).toContainEqual(
+      expect.objectContaining({
+        path: 'flows.a.destinations.bare.config.settings',
+        code: 'ENTRY_SCHEMA',
+        keyword: 'required',
+      }),
+    );
+  });
+
   it('F13 (N1): --strict exits 2 on the settings warning', async () => {
     const { exit } = await runCli({
       type: 'flow',

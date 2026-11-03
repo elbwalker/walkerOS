@@ -1,6 +1,12 @@
 import { readFileSync } from 'fs';
 import { join } from 'path';
-import { examples, exportExamples, exportSchemas, schemas } from '../dev';
+import {
+  examples,
+  exportExamples,
+  exportSchemas,
+  hints,
+  schemas,
+} from '../dev';
 
 interface PackageJson {
   walkerOS: { exports: Record<string, string> };
@@ -52,5 +58,29 @@ describe('exportSchemas', () => {
       setup: schemas.snsSetup,
     });
     expect(exportSchemas.destinationSNS.settings).toBe(schemas.snsSettings);
+  });
+});
+
+describe('published examples', () => {
+  it.each(Object.entries(exportExamples))(
+    '%s step examples carry millisecond timestamps',
+    (_name, examples) => {
+      for (const example of Object.values(examples.step)) {
+        const input: unknown = example.in;
+        const timestamp =
+          typeof input === 'object' && input !== null
+            ? Reflect.get(input, 'timestamp')
+            : undefined;
+        if (typeof timestamp === 'number')
+          expect(timestamp).toBeGreaterThan(1e12);
+      }
+    },
+  );
+});
+
+describe('hints', () => {
+  it('describe today without promising later behaviour', () => {
+    for (const hint of Object.values(hints))
+      expect(hint.text).not.toMatch(/\byet\b/);
   });
 });

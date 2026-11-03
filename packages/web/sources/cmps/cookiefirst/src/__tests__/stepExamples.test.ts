@@ -73,7 +73,7 @@ describe('Step Examples', () => {
     // happens there (no need to dispatch cf_init again).
     await source.init?.();
 
-    // Source pushes via detached elb chain — yield for it
+    // Source pushes via detached elb chain: yield for it
     for (let i = 0; i < 10 && mockElb.mock.calls.length === 0; i++) {
       await Promise.resolve();
     }
@@ -181,6 +181,15 @@ describe('createTrigger', () => {
       ...(examples.step.fullConsent.out ?? []),
       ...(examples.step.partialConsent.out ?? []),
     ]);
+  });
+});
+
+describe('example text', () => {
+  // Every example runs through the read at init; none dispatches cf_init.
+  it('describes the path the stored-choice example takes', () => {
+    const { title, description } = examples.step.cfInitDetection;
+    expect(`${title} ${description}`).not.toContain('cf_init');
+    expect(description).toContain('the read at init emits it');
   });
 });
 

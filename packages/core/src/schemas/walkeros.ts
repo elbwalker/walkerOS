@@ -28,7 +28,7 @@ import {
 
 /**
  * PropertyType - Base property value types
- * Can be primitive (boolean, string, number) or nested object with Property values
+ * Can be primitive (boolean, string, number, null) or nested object with Property values
  */
 export const PropertyTypeSchema: z.ZodTypeAny = z
   .lazy(() =>
@@ -36,6 +36,7 @@ export const PropertyTypeSchema: z.ZodTypeAny = z
       z.boolean(),
       z.string(),
       z.number(),
+      z.null(),
       z.record(z.string(), PropertySchema),
     ]),
   )
@@ -43,7 +44,7 @@ export const PropertyTypeSchema: z.ZodTypeAny = z
     id: 'WalkerOSPropertyType',
     title: 'WalkerOS.PropertyType',
     description:
-      'Base property value types (boolean, string, number, or nested Property record).',
+      'Base property value types (boolean, string, number, null for a value that is present but cleared, or nested Property record).',
   });
 
 /**

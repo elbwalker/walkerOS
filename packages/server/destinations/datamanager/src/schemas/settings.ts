@@ -24,7 +24,7 @@ const CredentialsSchema = z.object({
 export const SettingsSchema = z
   .object({
     credentials: CredentialsSchema.optional().describe(
-      'Service account credentials (client_email + private_key). Recommended for serverless environments. (deprecated: use config.credentials)',
+      'Service account credentials (client_email + private_key). Prefer config.credentials; set here, they are used and the destination logs a WARN line.',
     ),
     keyFilename: z
       .string()
@@ -43,7 +43,7 @@ export const SettingsSchema = z
       .min(1)
       .max(10)
       .describe(
-        'Array of destination accounts and conversion actions/user lists (max 10)',
+        'Array of destination accounts and conversion actions (max 10)',
       ),
     eventSource: EventSourceSchema.optional()
       .default('WEB')
@@ -56,7 +56,7 @@ export const SettingsSchema = z
       .min(1)
       .max(2000)
       .describe(
-        'Maximum number of events to batch before sending (max 2000, like 100)',
+        'Has no effect: every event is sent in its own request (accepts 1 to 2000)',
       )
       .optional(),
     batchInterval: z
@@ -64,7 +64,7 @@ export const SettingsSchema = z
       .int()
       .min(0)
       .describe(
-        'Time in milliseconds to wait before auto-flushing batch (like 5000)',
+        'Has no effect: every event is sent in its own request (accepts milliseconds, like 5000)',
       )
       .optional(),
     validateOnly: z
@@ -79,7 +79,7 @@ export const SettingsSchema = z
       )
       .optional(),
     consent: ConsentSchema.describe(
-      'Request-level consent for all events',
+      'Request-level consent, sent with every request and applied to each event that carries no consent of its own',
     ).optional(),
     testEventCode: z
       .string()
@@ -88,7 +88,7 @@ export const SettingsSchema = z
     userData: z
       .record(z.string(), z.unknown())
       .describe(
-        "Guided helper: User data mapping for all events (like { email: 'user.id', phone: 'data.phone' })",
+        "Guided helper: User data mapping for all events (like { email: 'user.email', phone: 'data.phone' })",
       )
       .optional(),
     userId: z

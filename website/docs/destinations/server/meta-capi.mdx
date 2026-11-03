@@ -7,6 +7,7 @@ package: '@walkeros/server-destination-meta'
 ---
 import data from '@walkeros/server-destination-meta/walkerOS.json';
 import Configuration from '@site/src/components/snippets/_configuration.mdx';
+import Quickstart from '@site/src/components/snippets/_quickstart.mdx';
 
 import WhereThisFits from '@site/src/components/snippets/_where-this-fits.mdx';
 
@@ -26,59 +27,7 @@ Sends walkerOS events from your server to the Meta Conversions API. Customer inf
 
 ## Installation
 
-<CodeSnippet
-  code={`npm install @walkeros/server-destination-meta`}
-  language="bash"
-/>
-
-<Tabs groupId="mode">
-  <TabItem value="integrated" label="Integrated" default>
-
-<CodeSnippet
-  code={`import { startFlow } from '@walkeros/collector';
-import { destinationMeta } from '@walkeros/server-destination-meta';
-
-await startFlow({
-  destinations: {
-    meta: {
-      code: destinationMeta,
-      config: {
-        settings: {
-          accessToken: 'YOUR_ACCESS_TOKEN',
-          pixelId: '1234567890',
-        },
-      },
-    },
-  },
-});`}
-  language="typescript"
-/>
-
-  </TabItem>
-  <TabItem value="bundled" label="Bundled">
-
-Add to your `flow.json` destinations:
-
-<CodeSnippet
-  code={`"destinations": {
-  "meta": {
-    "package": "@walkeros/server-destination-meta",
-    "import": "destinationMeta",
-    "config": {
-      "settings": {
-        "accessToken": "YOUR_ACCESS_TOKEN",
-        "pixelId": "1234567890"
-      }
-    }
-  }
-}`}
-  language="json"
-/>
-
-[See bundled mode setup](/docs/getting-started/modes/bundled) | [CLI reference](/docs/apps/cli)
-
-  </TabItem>
-</Tabs>
+<Quickstart data={data} />
 
 <Configuration type="destination" data={data} />
 
@@ -91,12 +40,12 @@ The server event is built from the walkerOS event:
 | Field | Value |
 | --- | --- |
 | `event_name` | The walkerOS event name, such as `order complete`. Set `name` in a mapping rule to send a Meta event name such as `Purchase`. |
-| `event_id` | The walkerOS `event.id`. If the Meta Pixel tracks the same event in the browser, give it the same ID so Meta can deduplicate the two. |
+| `event_id` | The walkerOS `event.id`. If the Meta Pixel tracks the same event in the browser, send the same ID and the same event name (set `name` in the rule, such as `Purchase`). Meta then deduplicates the two when it receives them within 48 hours. |
 | `event_time` | The event timestamp converted from milliseconds to seconds. |
 | `action_source` | `settings.action_source`, or `website` if it is not set. |
 | `event_source_url` | `event.source.url`, added only when `action_source` is `website`. |
 
-Keys returned by `data` mappings are added to the top level of the server event. Meta reads the business data of an event (`value`, `currency`, `contents`, `order_id`, `content_type`, `num_items`) only from the `custom_data` object, so map those keys under `custom_data`; Meta does not document them at the top level of the server event. `user_data` combines `settings.user_data` with the `user_data` mapped in the destination `config.data` and in the rule's `data`. When the same key is mapped in more than one place, the rule's value wins.
+Keys returned by `data` mappings are added to the top level of the server event exactly as mapped. Only the customer information keys of `user_data` listed below are normalized and hashed, so an email or phone number mapped anywhere else leaves your server in clear text. Map personal data only under `user_data`. Meta documents the business data of an event (`value`, `currency`, `contents`, `order_id`, `content_type`, `num_items`) as custom data in the `custom_data` object and does not list them among the top-level parameters of a server event, so map those keys under `custom_data`. The destination does not check or move them. `user_data` combines `settings.user_data` with the `user_data` mapped in the destination `config.data` and in the rule's `data`. When the same key is mapped in more than one place, the rule's value wins.
 
 If `user_data` contains `fbclid`, the destination replaces it with `fbc` in the format `fb.1.{creationTime}.{fbclid}`. The creation time is the session start in milliseconds when the collector has a session, and the event timestamp otherwise.
 
@@ -106,11 +55,11 @@ A `Purchase` rule that puts the order into `custom_data`:
 
 If `test_event_code` is set, it is added to the request body.
 
-A response outside the 2xx range, a network error, or a timeout makes the push throw with the response details. The destination does not retry.
+A response outside the 2xx range, a network error, or no answer within 5 seconds fails the event: the push answers `failed` with the code `transport` (with the HTTP status) or `timeout`, the event goes to the dead-letter queue, and the collector logs one ERROR line without the response body. The destination does not retry. Without `accessToken` or `pixelId` the destination does not start: every push answers `failed` with the code `config`, and the collector logs `destination init failed`.
 
 ### Customer information hashing
 
-`user_data` keys must be Meta's parameter names from [Meta's customer information parameters](https://developers.facebook.com/docs/marketing-api/conversions-api/parameters/customer-information-parameters), such as `em` for email and `ph` for phone. `fbclid` is also accepted and becomes `fbc`. The settings schema and the TypeScript types list only these parameter names, so a key like `email` is rejected by this package's schema and by type checking. Any other key that reaches `user_data`, for example through a `data` mapping, is dropped before the request is sent, with a warning that lists the key names but never their values.
+`user_data` keys must be Meta's parameter names from [Meta's customer information parameters](https://developers.facebook.com/docs/marketing-api/conversions-api/parameters/customer-information-parameters), such as `em` for email and `ph` for phone. `fbclid` is also accepted and becomes `fbc`. The settings schema and the TypeScript types list only these parameter names, so a key like `email` is rejected by this package's schema and by type checking. Any other key that reaches `user_data`, for example through a `data` mapping, is dropped before the request is sent, and the push still answers `done`. The only report is a WARN line (`Unknown Meta user_data keys dropped`) that names no key and does not show at the default log level, so map only Meta's parameter names.
 
 The destination normalizes and SHA-256 hashes these keys. Arrays are handled item by item.
 
@@ -119,7 +68,7 @@ The destination normalizes and SHA-256 hashes these keys. Arrays are handled ite
 | `em` | Trim and lowercase. |
 | `ph` | Keep only digits and drop leading zeros. The destination cannot add a country code, so the mapped value must include one. |
 | `fn`, `ln` | Lowercase, remove punctuation, and trim. Accented and non-Latin letters are kept. |
-| `db` | Only year-first dates are normalized: `1997-02-16` becomes `19970216`. Other formats such as `02/16/1997` are only trimmed and cannot match, so map dates as `YYYYMMDD`. The destination logs a warning when a date is not 8 digits after normalization. |
+| `db` | Only year-first dates are normalized: `1997-02-16` becomes `19970216`. Other formats such as `02/16/1997` are only trimmed and cannot match, so map dates as `YYYYMMDD`. The destination writes a WARN line (not shown at the default log level) when a date is not 8 digits after normalization. |
 | `ge` | First letter, lowercased (`Female` becomes `f`). |
 | `ct`, `st` | Lowercase and remove everything except letters and digits. Full state names are not converted to codes. |
 | `zp` | Lowercase and remove spaces and dashes. U.S. ZIP+4 codes such as `94035-1234` or `940351234` keep the first 5 digits. |
@@ -131,3 +80,7 @@ The other parameters, such as `client_ip_address`, `client_user_agent`, `fbc`, o
 ## Client IP and user agent
 
 The destination sends the client IP as `user_data.client_ip_address` and the user agent as `user_data.client_user_agent` by default. The `ip` and `userAgent` settings resolve against `{ ingest, event }` and default to `["ingest.ip", "event.user.ip"]` and `["ingest.userAgent", "event.user.userAgent"]`, so they fill in whenever the source provides them (see the `config.ingest` recipe on the [Express source](/docs/sources/server/express#ingest-metadata)). A value your mapping sets for `user_data.client_ip_address` or `user_data.client_user_agent` wins. A value that resolves to nothing is not sent. Set either setting to `false` to turn it off, or to another mapping value to read it elsewhere.
+
+## Consent
+
+The quickstart sets no `config.consent`, so Meta receives every event, whatever consent the event carries. To send only events with consent, add `consent: { marketing: true }` to `config`, next to `settings` (with several keys listed, one granted key is enough). An event without that consent is skipped or queued, depending on the collector's `consentDenied`. Server flows built by the CLI skip it and count it in `skipped`. With `startFlow` it waits in the destination's queue by default: a later event that carries consent does not release it, and only a `walker consent` command does, which then sends the waiting events of every user at once. Pass `consentDenied: 'skip'` to `startFlow` to skip such events instead (see [Gate a destination with consent](/docs/guides/consent#gate-a-destination-with-consent) and [consent-denied events on a server](/docs/collector#consent-denied-events-on-a-server)).

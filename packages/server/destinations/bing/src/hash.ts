@@ -6,7 +6,7 @@ import { getHashServer } from '@walkeros/server-core';
  * Only `em` and `ph` are hashable; all other identity fields pass through
  * unhashed (anonymousId, externalId, msclkid, clientIpAddress,
  * clientUserAgent, idfa, gaid).
- * https://learn.microsoft.com/en-us/advertising/guides/universal-event-tracking-capi
+ * https://learn.microsoft.com/en-us/advertising/guides/uet-conversion-api-integration
  */
 const keysToHash = ['em', 'ph'];
 

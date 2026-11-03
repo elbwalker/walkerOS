@@ -23,7 +23,7 @@ export const defaultEventForwarding: MixpanelStepExample = {
   title: 'Default track',
   description:
     'A walker event becomes a Mixpanel track call with the event name and empty properties.',
-  in: getEvent('product view', { timestamp: 1700000100 }),
+  in: getEvent('product view', { timestamp: 1700000100000 }),
   out: [['mixpanel.track', 'product view', {}]],
 };
 
@@ -33,7 +33,7 @@ export const defaultEventForwarding: MixpanelStepExample = {
  */
 export const wildcardIgnored: MixpanelStepExample = {
   public: false,
-  in: createEvent({ name: 'debug noise', timestamp: 1700000101 }),
+  in: createEvent({ name: 'debug noise', timestamp: 1700000101000 }),
   mapping: { ignore: true },
   out: [],
 };
@@ -46,7 +46,7 @@ export const destinationLevelInclude: MixpanelStepExample = {
   title: 'Include data',
   description:
     "With include: ['data'] in the destination config, the event data section is flattened into prefixed Mixpanel track properties.",
-  in: getEvent('product view', { timestamp: 1700000102 }),
+  in: getEvent('product view', { timestamp: 1700000102000 }),
   configInclude: ['data'],
   out: [
     [
@@ -58,6 +58,7 @@ export const destinationLevelInclude: MixpanelStepExample = {
         data_color: 'black',
         data_size: 'l',
         data_price: 420,
+        data_currency: 'EUR',
       },
     ],
   ],
@@ -72,7 +73,7 @@ export const ruleIncludeReplaces: MixpanelStepExample = {
   title: 'Rule include overrides',
   description:
     "With include: ['data'] in the destination config, the rule's include: ['globals'] replaces it, so this event forwards only globals.",
-  in: getEvent('order complete', { timestamp: 1700000103 }),
+  in: getEvent('order complete', { timestamp: 1700000103000 }),
   configInclude: ['data'],
   mapping: {
     include: ['globals'],
@@ -98,7 +99,7 @@ export const destinationLevelIdentify: MixpanelStepExample = {
   title: 'Destination identify',
   description:
     "With settings.identify mapping distinctId to 'user.id', the destination calls mixpanel.identify before the default track.",
-  in: getEvent('page view', { timestamp: 1700000104 }),
+  in: getEvent('page view', { timestamp: 1700000104000 }),
   settings: {
     identify: {
       map: {
@@ -198,7 +199,7 @@ export const profileUpdateAllPeopleOperations: MixpanelStepExample = {
     'A profile update exercises the full Mixpanel people vocabulary including set, increment, append, union, and remove.',
   in: createEvent({
     name: 'profile update',
-    timestamp: 1700000106,
+    timestamp: 1700000106000,
     data: {
       name: 'Jane Doe',
       email: 'jane@acme.com',
@@ -267,7 +268,7 @@ export const accountDeleteUser: MixpanelStepExample = {
   title: 'Delete user',
   description:
     'An account delete fires Mixpanel people.delete_user to remove the user profile from the project.',
-  in: createEvent({ name: 'account delete', timestamp: 1700000107 }),
+  in: createEvent({ name: 'account delete', timestamp: 1700000107000 }),
   mapping: {
     silent: true,
     settings: {
@@ -289,7 +290,7 @@ export const userLogoutReset: MixpanelStepExample = {
   title: 'User logout reset',
   description:
     'A user logout calls mixpanel.reset to clear persistence and generate a new anonymous distinct id.',
-  in: createEvent({ name: 'user logout', timestamp: 1700000108 }),
+  in: createEvent({ name: 'user logout', timestamp: 1700000108000 }),
   mapping: {
     silent: true,
     settings: {
@@ -309,7 +310,7 @@ export const userGroupAssociation: MixpanelStepExample = {
     'A user login associates the user to a company group via mixpanel.set_group and fires the default track.',
   in: createEvent({
     name: 'user login',
-    timestamp: 1700000109,
+    timestamp: 1700000109000,
     data: {
       user_id: 'user-456',
       company_id: 'acme-inc',
@@ -363,7 +364,7 @@ export const companyUpdateGroupProfile: MixpanelStepExample = {
     'A company update sets Mixpanel group profile properties via get_group.set and get_group.set_once.',
   in: createEvent({
     name: 'company update',
-    timestamp: 1700000110,
+    timestamp: 1700000110000,
     data: {
       company_id: 'acme-inc',
       company_name: 'Acme, Inc.',
@@ -446,7 +447,7 @@ export const consentGrantOptIn: MixpanelStepExample = {
 export const pageViewSilent: MixpanelStepExample = {
   public: false,
   description: 'A rule with silent: true sends no Mixpanel track call.',
-  in: getEvent('page view', { timestamp: 1700000108 }),
+  in: getEvent('page view', { timestamp: 1700000108000 }),
   mapping: { silent: true },
   out: [],
 };

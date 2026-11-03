@@ -1,5 +1,5 @@
 import type { WalkerOS } from '../types';
-import { clone } from '..';
+import { clone, isObject } from '..';
 
 describe('clone', () => {
   test('mutation prevention', () => {
@@ -68,5 +68,14 @@ describe('clone', () => {
     expect(cloned).not.toBe(obj); // Cloned object is a new collector
     expect(cloned.key).toBe('value'); // Key is correctly cloned
     expect(cloned.self).toBe(cloned); // Circular reference is preserved in the clone
+  });
+
+  test('ignores a __proto__ key', () => {
+    const input: unknown = JSON.parse('{"__proto__":{"polluted":true},"a":1}');
+    const result = clone(input);
+    if (!isObject(result)) throw new Error('clone returned no object');
+    expect(result).toEqual({ a: 1 });
+    expect(Object.getPrototypeOf(result)).toBe(Object.prototype);
+    expect(Reflect.get(result, 'polluted')).toBeUndefined();
   });
 });

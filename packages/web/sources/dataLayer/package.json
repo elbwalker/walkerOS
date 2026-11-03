@@ -59,7 +59,7 @@
       "web"
     ],
     "renderer": "codebox",
-    "docs": "https://www.walkeros.io/docs/sources/web/datalayer"
+    "docs": "https://www.walkeros.io/docs/sources/web/dataLayer"
   },
   "keywords": [
     "walkerOS",

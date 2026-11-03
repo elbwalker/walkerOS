@@ -9,7 +9,7 @@ import { flushChain } from './test-utils';
 const tagged = (step: number): HTMLDivElement => {
   const el = document.createElement('div');
   el.setAttribute('data-elb', 'checkout');
-  el.setAttribute('data-elbaction', 'load:view');
+  el.setAttribute('data-elbaction', 'load:start');
   el.setAttribute('data-elb-checkout', `step:${step}`);
   return el;
 };
@@ -73,14 +73,14 @@ describe('walker init subtree reclaim', () => {
 
     const { elb } = await start();
     // Document run scan fired the initial view.
-    expect(captured.filter((e) => e.name === 'checkout view')).toHaveLength(1);
+    expect(captured.filter((e) => e.name === 'checkout start')).toHaveLength(1);
 
     // The SPA re-tags the SAME element and asks for a re-init.
     container.setAttribute('data-elb-checkout', 'step:3');
     await elb('walker init', container);
     await flushChain();
 
-    const views = captured.filter((e) => e.name === 'checkout view');
+    const views = captured.filter((e) => e.name === 'checkout start');
     expect(views).toHaveLength(2);
     expect(views[1].data).toEqual(expect.objectContaining({ step: 3 }));
   });
@@ -96,6 +96,6 @@ describe('walker init subtree reclaim', () => {
     await flushChain();
 
     // 1 (run scan) + 1 + 1
-    expect(captured.filter((e) => e.name === 'checkout view')).toHaveLength(3);
+    expect(captured.filter((e) => e.name === 'checkout start')).toHaveLength(3);
   });
 });

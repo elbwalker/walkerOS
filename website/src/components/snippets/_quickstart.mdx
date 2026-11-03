@@ -1,0 +1,45 @@
+import { composeQuickstart } from '@walkeros/core/dev';
+
+{/*
+  Quickstart snippet: the install line, the integrated code and a complete
+  flow.json, composed by composeQuickstart from the package's minimal example,
+  the settings its conformance test runs. Render it under the page's own
+  `## Installation` heading. A package without a minimal example fails the
+  build, naming the package.
+
+  Props:
+    data:   the package's walkerOS.json (required).
+    export: the export of a package with several exports; its minimal
+            example is read from data.exportExamples.
+*/}
+
+export const quickstartOf = (data, exportName) =>
+  composeQuickstart(
+    data?.$meta,
+    exportName
+      ? data?.exportExamples?.[exportName]?.minimal
+      : data?.examples?.minimal,
+    exportName,
+  );
+
+<CodeSnippet code={quickstartOf(props.data, props.export).install} language="bash" />
+
+<Tabs groupId="mode">
+  <TabItem value="integrated" label="Integrated" default>
+
+<CodeSnippet code={quickstartOf(props.data, props.export).integrated} language="typescript" />
+
+  </TabItem>
+  <TabItem value="bundled" label="Bundled">
+
+A complete `flow.json` with this destination:
+
+<CodeSnippet
+  code={JSON.stringify(quickstartOf(props.data, props.export).flow, null, 2)}
+  language="json"
+/>
+
+[See bundled mode setup](/docs/getting-started/modes/bundled) | [CLI reference](/docs/apps/cli)
+
+  </TabItem>
+</Tabs>

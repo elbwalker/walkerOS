@@ -26,18 +26,9 @@ describe('datamanager conformance', () => {
       profile: 'sdk-env',
       examples: examples.step,
       schema: schemas.settings,
-      settings: {
-        destinations: [
-          {
-            operatingAccount: {
-              accountId: '123-456-7890',
-              accountType: 'GOOGLE_ADS',
-            },
-            productDestinationId: 'AW-CONVERSION-123',
-          },
-        ],
-      },
+      settings: examples.minimal.settings,
       env: { push: examples.env.push, simulation: examples.env.simulation },
+      minimal: examples.minimal,
       root: path.join(__dirname, '..', '..'),
     });
   });

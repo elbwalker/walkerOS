@@ -111,8 +111,10 @@ export function capMessage(message: string): string {
 
 /**
  * The reason of any thrown value: a `StepError` keeps its code, status and
- * `retryable`; anything else is a `transport` failure. The message is capped
- * at 300 characters; the body never leaves the error.
+ * `retryable`; anything else is a `runtime` failure for a TypeError,
+ * RangeError or ReferenceError without a cause code, a `transport` failure
+ * otherwise. The message is capped at 300 characters; the body never leaves
+ * the error.
  */
 export function toFailureReason(err: unknown): FailureReason {
   if (err instanceof StepError) {
@@ -124,11 +126,35 @@ export function toFailureReason(err: unknown): FailureReason {
     if (err.status !== undefined) reason.status = err.status;
     return reason;
   }
-  return {
-    code: 'transport',
-    message: capMessage(err instanceof Error ? err.message : String(err)),
-    retryable: true,
-  };
+  const message = capMessage(err instanceof Error ? err.message : String(err));
+  // The same input fails the same way again: a retry cannot help.
+  if (isRuntimeError(err) && causeCode(err) === undefined)
+    return { code: 'runtime', message, retryable: false };
+  return { code: 'transport', message, retryable: true };
+}
+
+/** An error JavaScript itself throws on the code or the data it runs. */
+function isRuntimeError(error: unknown): boolean {
+  return (
+    error instanceof TypeError ||
+    error instanceof RangeError ||
+    error instanceof ReferenceError
+  );
+}
+
+/**
+ * The code a runtime keeps on an error's `cause` (`ECONNREFUSED`,
+ * `ENOTFOUND`); Node's fetch says only `fetch failed` in the message.
+ */
+function causeCode(error: unknown): string | undefined {
+  const cause =
+    error instanceof Error && 'cause' in error ? error.cause : undefined;
+  return typeof cause === 'object' &&
+    cause !== null &&
+    'code' in cause &&
+    typeof cause.code === 'string'
+    ? cause.code
+    : undefined;
 }
 
 /**
@@ -138,14 +164,6 @@ export function toFailureReason(err: unknown): FailureReason {
  */
 export function networkErrorMessage(error: unknown): string {
   const message = error instanceof Error ? error.message : 'Network error';
-  const cause =
-    error instanceof Error && 'cause' in error ? error.cause : undefined;
-  const code =
-    typeof cause === 'object' &&
-    cause !== null &&
-    'code' in cause &&
-    typeof cause.code === 'string'
-      ? cause.code
-      : undefined;
+  const code = causeCode(error);
   return code ? `${message} (${code})` : message;
 }

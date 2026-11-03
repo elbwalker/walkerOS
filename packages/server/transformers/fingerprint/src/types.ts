@@ -9,7 +9,7 @@ import type { Mapping } from '@walkeros/core';
  */
 export interface FingerprintSettings {
   /**
-   * Secret key for the hash (HMAC), e.g. "$env.FINGERPRINT_SALT".
+   * Secret key for the hash (HMAC), e.g. "$secret.FINGERPRINT_SALT" in a flow file.
    * Required: without it the hash could be reversed to the IP by brute force.
    */
   salt: string;

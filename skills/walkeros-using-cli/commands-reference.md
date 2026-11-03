@@ -1,6 +1,7 @@
 # CLI Commands Reference
 
-Detailed reference for all walkerOS CLI commands.
+Detailed reference for the walkerOS CLI commands. `setup`, `diagnostics` and
+`telemetry` are covered in [SKILL.md](SKILL.md).
 
 ---
 
@@ -16,19 +17,23 @@ walkeros bundle <config> [options]
 
 ### Options
 
-| Option          | Description                               |
-| --------------- | ----------------------------------------- |
-| `--flow <name>` | Bundle specific flow (default: "default") |
-| `--all`         | Bundle all flows in config                |
-| `--stats`       | Show bundle size statistics               |
-| `--json`        | Output results as JSON                    |
-| `--no-cache`    | Skip build cache                          |
-| `-v, --verbose` | Verbose logging                           |
-| `-s, --silent`  | Silent mode (errors only)                 |
+| Option                | Description                                                              |
+| --------------------- | ------------------------------------------------------------------------ |
+| `-o, --output <path>` | Write the bundle to a file or directory                                  |
+| `-f, --flow <name>`   | Bundle one flow of a multi-flow config                                   |
+| `--all`               | Bundle all flows in config (needs `-o`)                                  |
+| `--stats`             | Show bundle size statistics                                              |
+| `--json`              | Statistics as JSON (implies `--stats`); with `-o` it replaces the bundle |
+| `--no-cache`          | Disable the package and build caches                                     |
+| `--release <id>`      | Stamp a config release id on `event.source.release`                      |
+| `--manifest [source]` | Build from a manifest (see SKILL.md, "Manifest builds")                  |
+| `-v, --verbose`       | Verbose logging                                                          |
+| `-s, --silent`        | Silent mode (errors only)                                                |
 
 ### Output
 
-By default, web bundles are written to stdout. Use `-o`:
+Without `-o` the bundle goes to stdout; for a server flow that is `flow.mjs`
+alone, without the `node_modules/` it imports. Use `-o`:
 
 - **Web flows**: `-o ./dist/walker.js` (single self-contained IIFE)
 - **Server flows**: `-o ./dist/` (a directory: `flow.mjs`, `package.json`,
@@ -37,7 +42,7 @@ By default, web bundles are written to stdout. Use `-o`:
 ### Examples
 
 ```bash
-# Bundle default flow (web → stdout, server → write -o)
+# Bundle a web flow to stdout
 walkeros bundle flow.json
 
 # Bundle a server flow into dist/
@@ -59,29 +64,40 @@ Execute flow with real API calls, or simulate specific steps with `--simulate`.
 ### Usage
 
 ```bash
-walkeros push <config|bundle> [options]
+walkeros push <config> [options]
 ```
+
+Push takes a flow config and bundles it first; a file `walkeros bundle` wrote
+fails as push input.
 
 ### Options
 
 | Option                  | Description                                                                                                                                                |
 | ----------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `-e, --event <source>`  | Event (required) - JSON string, file, or URL                                                                                                               |
-| `--flow <name>`         | Flow to use                                                                                                                                                |
+| `-e, --event <source>`  | Event (required) - JSON string, file, or URL. A value that is none of them, such as a mistyped path, is read as the event name                             |
+| `-f, --flow <name>`     | Flow to use                                                                                                                                                |
 | `-p, --platform <type>` | Platform override                                                                                                                                          |
 | `--simulate <step>`     | Simulate a step (repeatable for `destination.*`). Format: `source.NAME` \| `destination.NAME` \| `transformer.NAME` \| `collector.NAME`. Bare names error. |
 | `--mock <step=value>`   | Mock a step with a specific return value (repeatable). Also `destination.NAME.before.ID=VALUE` and `collector.next.ID=VALUE` for chain members             |
+| `--ingest <source>`     | Request context for a simulated transformer, collector or destination (JSON object, file, or URL)                                                          |
+| `--consent <source>`    | Starting collector consent for a simulation, any step (JSON object of booleans, file, or URL)                                                              |
+| `--command <name>`      | A simulated destination runs this collector command (`config`, `consent`, `user`, `run`) with the event as its data                                        |
+| `--page-url <url>`      | Page URL of a simulated web source (absolute `http`/`https`)                                                                                               |
 | `--snapshot <source>`   | JS file to eval before execution (sets global state)                                                                                                       |
+| `-o, --output <path>`   | Write the result to a file                                                                                                                                 |
 | `--json`                | JSON output                                                                                                                                                |
 | `-v, --verbose`         | Verbose logging                                                                                                                                            |
+| `-s, --silent`          | Silent mode                                                                                                                                                |
 
-**Without `--simulate`:** Makes real API calls. Test with `--simulate` first.
+**Without `--simulate`:** A server flow makes real API calls. A web flow runs in
+a simulated page that records its fetch, beacon and XHR requests instead of
+sending them. Test with `--simulate` first.
 
 ### Examples
 
 ```bash
 # Push event to production destinations
-walkeros push flow.json -e '{"entity":"order","action":"complete"}'
+walkeros push flow.json -e '{"name":"order complete","data":{"id":"ORD-1"}}'
 
 # Push from file
 walkeros push flow.json -e ./events/purchase.json
@@ -89,8 +105,9 @@ walkeros push flow.json -e ./events/purchase.json
 # Simulate a destination (mock its push, capture API calls)
 walkeros push flow.json -e event.json --simulate destination.ga4
 
-# Simulate a source (capture events, disable all destinations)
-walkeros push flow.json --simulate source.browser
+# Simulate a source (capture events, disable all destinations); -e is the
+# source input: content plus an optional trigger
+walkeros push flow.json --simulate source.browser -e '{"content":"<button data-elb=\"cta\" data-elbaction=\"click\">Sign up</button>","trigger":{"type":"click","options":"button"}}'
 
 # Mock a destination with a specific return value
 walkeros push flow.json -e event.json --mock destination.ga4='{"status":"ok"}'
@@ -141,9 +158,9 @@ runneros start [artifact] [options]
 
 Options:
   --flow-id <id>        App flow ID (enables heartbeat and secrets)
-  --project <id>        Project ID (required with --flow-id)
+  --project <id>        Project ID (default WALKEROS_PROJECT_ID; required with --flow-id)
   -p, --port <number>   Port (default: 8080)
-  --env-file <path>     Load a dotenv file first (existing env wins)
+  --env-file <path>     Load a dotenv file first (existing env wins; a group- or other-readable file is refused)
   --json                JSON output
   -v, --verbose         Verbose output
   -s, --silent          Silent mode
@@ -233,8 +250,9 @@ Automation tokens in the app (`wos_pat_...`). Read it without echoing it
 from the secret store; set it only for the commands that call the app. Without
 it, `walkeros api` exits 3 with
 `no token: set WALKEROS_TOKEN to a token from Account > Automation tokens in the walkerOS app`.
-Sign-in fields an older CLI left in `~/.config/walkeros/config.json` are no
-longer read and can be deleted.
+The CLI reads no credential from its config file,
+`~/.config/walkeros/config.json`. If that file holds `token`, `accessToken`,
+`accessTokenExpiresAt`, `refreshToken` or `email` fields, delete them.
 
 | Subcommand | Purpose                       |
 | ---------- | ----------------------------- |
@@ -259,16 +277,17 @@ are always listed.
 
 ### Options
 
-| Option          | Description                                                          |
-| --------------- | -------------------------------------------------------------------- |
-| `--type <type>` | Validation type (default: `flow`). See types below.                  |
-| `--path <path>` | Check one entry in every flow that has it (e.g. `stores.cache`)      |
-| `--flow <name>` | Narrow per-flow checks to one flow; file-level checks still run      |
-| `--strict`      | Contract violations exit 1; other warnings and skipped checks exit 2 |
-| `--offline`     | Do not fetch package schemas; settings are not checked               |
-| `--json`        | JSON output                                                          |
-| `-v, --verbose` | Verbose output                                                       |
-| `-s, --silent`  | Suppress output                                                      |
+| Option                | Description                                                          |
+| --------------------- | -------------------------------------------------------------------- |
+| `-t, --type <type>`   | Validation type (default: `flow`). See types below.                  |
+| `--path <path>`       | Check one entry in every flow that has it (e.g. `stores.cache`)      |
+| `-f, --flow <name>`   | Narrow per-flow checks to one flow; file-level checks still run      |
+| `--strict`            | Contract violations exit 1; other warnings and skipped checks exit 2 |
+| `--offline`           | Do not fetch package schemas; settings are not checked               |
+| `--json`              | JSON output                                                          |
+| `-o, --output <path>` | Write the result to a file                                           |
+| `-v, --verbose`       | Verbose output                                                       |
+| `-s, --silent`        | Suppress output                                                      |
 
 ### Validation types
 
@@ -281,11 +300,13 @@ are always listed.
 
 Flow validation checks each step's resolved `config.settings` against its
 package schema at the pinned version (from the CDN, or from disk for a local
-`path`), as warnings for one minor. A step that imports a named export has no
-settings schema yet and is skipped (`NO_SETTINGS_SCHEMA`). `$env.NAME:default`
-is checked as its default; runtime-only values go to `details.deferred`. Use
-`--path` for one entry (findings are errors there); it checks every flow that
-has the entry:
+`path`). An unknown key is an error where the package closes its schema; other
+findings are warnings. A step that imports a named export is checked against
+that export's schema (`exportSchemas`); a package version without one is a skip
+(`NO_SETTINGS_SCHEMA`). `$env.NAME:default` is checked as its default;
+runtime-only values go to `details.deferred`. A mapping rule's `settings` are
+not checked. Use `--path` for one entry (findings are errors there); it checks
+every flow that has the entry:
 
 ```bash
 walkeros validate flow.json --path destinations.snowplow
@@ -298,12 +319,12 @@ Every chain field (`source.before`, `source.next`, `transformer.before`,
 `transformer.next`, `collector.next`, `destination.before`, `destination.next`)
 is read with the runtime's route grammar:
 
-| Check                                                     | Level                          |
-| --------------------------------------------------------- | ------------------------------ |
-| Route names a transformer that does not exist             | Error `UNKNOWN_ROUTE_TARGET`   |
-| Entries after an unconditional `stop` (sequence or `one`) | Warning `dead code after stop` |
-| Array made only of route configs (implicit `one`)         | Warning `first-match array`    |
-| `many` with no entry or a single entry                    | Warning                        |
+| Check                                                     | Level                                            |
+| --------------------------------------------------------- | ------------------------------------------------ |
+| Route names a transformer that does not exist             | Error `UNKNOWN_ROUTE_TARGET`                     |
+| Entries after an unconditional `stop` (sequence or `one`) | Warning `ROUTE_DEAD_CODE`                        |
+| Array made only of route configs (implicit `one`)         | Warning `ROUTE_FIRST_MATCH`                      |
+| `many` with no entry or a single entry                    | Warning `ROUTE_EMPTY_MANY` / `ROUTE_SINGLE_MANY` |
 
 A `stop` inside `many` ends only its own copy, so its siblings are not dead
 code. Repeated steps and member `next`s inside arrays are valid and not
@@ -350,7 +371,9 @@ Manage CLI caching for packages and builds.
 
 #### cache clear
 
-Clear all cached packages and builds.
+Clear all cached packages and builds. `--packages` clears only the package
+cache, `--builds` only the build caches; `--tmp-dir <dir>` points at a custom
+temp directory, `--silent` suppresses output.
 
 ```bash
 walkeros cache clear
@@ -358,7 +381,7 @@ walkeros cache clear
 
 #### cache info
 
-Show cache statistics.
+Show cache statistics (`--tmp-dir <dir>` and `--silent` as above).
 
 ```bash
 walkeros cache info
@@ -367,10 +390,10 @@ walkeros cache info
 ### Caching Behavior
 
 - **Packages**: Daily cache for mutable versions, indefinite for exact versions
-- **Builds**: Keyed by content hash + date
+- **Builds**: Keyed by content hash + date; a local `path` package's built
+  contents are part of the key, so rebuilding it needs no clear
 
 ### When to Clear Cache
 
-- After updating local packages
 - When experiencing stale bundle issues
 - After npm package updates

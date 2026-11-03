@@ -3,7 +3,7 @@
  *
  * One code path from "a step's package + pinned version" to "a loaded
  * module": normalize the pin with the exact bundle precedence
- * (applyStepPackages), download the package and its transitive deps with
+ * (resolveStepPackage), download the package and its transitive deps with
  * the same pacote pipeline and caches the bundler uses, resolve the
  * package's entry file, and import it. `walkeros setup` consumes the
  * loaded module; keeping acquisition identical to bundle guarantees setup
@@ -16,71 +16,13 @@ import { promisify } from 'util';
 import fs from 'fs-extra';
 import type { Flow, Logger } from '@walkeros/core';
 import { tmpRunDir } from './tmp-names.js';
-import { applyStepPackages, getFlowSection } from './step-packages.js';
+import { resolveStepPackage } from './step-packages.js';
 import {
   downloadPackagesWithResolution,
   loadNpmConfigForPacote,
 } from './package-manager.js';
 
 export type StepKind = 'source' | 'destination' | 'store';
-
-export interface ResolvedStepPackage {
-  /** Bare package name after normalization (inline version stripped, local path replaced by synthetic key). */
-  packageName: string;
-  /** Effective bundle entry: version pin and/or local path per bundle precedence. */
-  spec: Flow.BundlePackage;
-  /** flow.config.bundle.overrides, for transitive pins. */
-  overrides: Record<string, string>;
-  /** Deep clone of the flow with step.package rewritten to bare names; the input flow is never mutated. */
-  normalizedFlow: Flow;
-}
-
-const KIND_TO_SECTION = {
-  source: 'sources',
-  destination: 'destinations',
-  store: 'stores',
-} as const;
-
-/**
- * Resolve the effective package spec for one step by running the SAME
- * normalization the bundler runs over the whole flow (applyStepPackages),
- * on a clone so the caller's flow stays untouched. The clone comes back as
- * `normalizedFlow` with `step.package` rewritten to the bare name, which is
- * also what resolveExportName needs to match `bundle.packages[pkg].imports`.
- */
-export function resolveStepPackage(
-  flow: Flow,
-  kind: StepKind,
-  id: string,
-  logger: Logger.Instance,
-): ResolvedStepPackage {
-  const normalizedFlow = structuredClone(flow);
-  const packages: Record<string, Flow.BundlePackage> = structuredClone(
-    normalizedFlow.config?.bundle?.packages ?? {},
-  );
-  applyStepPackages(normalizedFlow, packages, logger);
-
-  const bucket = getFlowSection(normalizedFlow, KIND_TO_SECTION[kind]);
-  const step = bucket?.[id];
-  if (!step) {
-    const available = Object.keys(bucket ?? {}).join(', ') || '(none)';
-    throw new Error(
-      `${kind} "${id}" not found in flow. Available: ${available}`,
-    );
-  }
-  if (typeof step.package !== 'string') {
-    throw new Error(
-      `${kind}.${id} has no "package" (inline code cannot be set up).`,
-    );
-  }
-
-  return {
-    packageName: step.package,
-    spec: packages[step.package] ?? {},
-    overrides: normalizedFlow.config?.bundle?.overrides ?? {},
-    normalizedFlow,
-  };
-}
 
 const execFileAsync = promisify(execFile);
 

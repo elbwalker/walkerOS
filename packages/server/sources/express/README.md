@@ -6,17 +6,18 @@
 
 # @walkeros/server-source-express
 
-Turn-key HTTP event collection server with Express.js. Runs standalone or embeds
-inside an existing Express app, handles JSON POST events (including
+HTTP event collection server built on Express.js. It runs standalone or inside
+an existing Express app and handles JSON POST events (including
 `navigator.sendBeacon` payloads sent as `text/plain`), raw `text/plain` bodies
 for request decoders such as `@walkeros/transformer-ga4`, pixel tracking via
 GET, and configurable CORS.
 
 A `text/plain` POST body is parsed as JSON when it is JSON
 (`navigator.sendBeacon` sends JSON as `text/plain`) and otherwise kept as the
-raw string on `ingest.body`, so a `before` transformer can decode it, for
-example batched gtag.js hits with `@walkeros/transformer-ga4`. An
-`application/json` body must parse, or the request is answered with 400.
+raw string, which a `before` transformer reads from `ingest.body` once
+`config.ingest` maps it (`body: { key: 'body' }`), for example batched gtag.js
+hits with `@walkeros/transformer-ga4`. An `application/json` body must parse, or
+the request is answered with 400.
 
 [Documentation](https://www.walkeros.io/docs/sources/server/express) &bull;
 [NPM Package](https://www.npmjs.com/package/@walkeros/server-source-express)

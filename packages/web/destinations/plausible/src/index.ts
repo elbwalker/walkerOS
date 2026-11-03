@@ -16,6 +16,12 @@ export const destinationPlausible: Destination = {
     const { window } = getEnv<Env>(env);
     const settings = config.settings || {};
 
+    // The script attributes every event to its data-domain
+    if (config.loadScript && !settings.domain)
+      throw new StepError('Plausible with loadScript needs settings domain', {
+        code: 'config',
+      });
+
     vendor(config, settings.domain, env);
 
     window.plausible =

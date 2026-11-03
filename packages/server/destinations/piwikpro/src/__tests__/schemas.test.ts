@@ -36,6 +36,19 @@ describe('schemas', () => {
     }
   });
 
+  it('pageUrl and batch texts say an unsendable event fails', () => {
+    const properties = settings.properties;
+    const pageUrl =
+      isObject(properties) && isObject(properties.pageUrl)
+        ? properties.pageUrl.description
+        : undefined;
+
+    for (const text of [pageUrl, hints['batch-size'].text]) {
+      expect(text).toMatch(/missing-input/);
+      expect(text).not.toMatch(/skipped/i);
+    }
+  });
+
   it('rejects a dimension key that is not a bare id', () => {
     expect(
       SettingsSchema.safeParse({

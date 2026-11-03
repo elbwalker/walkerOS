@@ -147,13 +147,7 @@ export async function validateFlowWithPackages(
         if (!isObject(entry) || entry.package === undefined) continue;
         const target = { flow: name, section, key, entry };
         pending.push(
-          checkStepSettings(
-            target,
-            flow,
-            rawFlow,
-            'flow:package-settings',
-            context,
-          ),
+          checkStepSettings(target, flow, 'flow:package-settings', context),
         );
       }
     }

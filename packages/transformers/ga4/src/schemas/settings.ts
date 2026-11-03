@@ -6,7 +6,7 @@ export const SettingsSchema = z
       .record(z.string(), schemas.MappingSchemas.RuleSchema)
       .optional()
       .describe(
-        "Mapping rules keyed by GA4 event name (`en`), `'*'` for unknown events. A rule replaces the matching default unless it sets `extend` or `remove`; `ignore: true` drops the event.",
+        "Mapping rules keyed by GA4 event name (`en`), `'*'` for unknown events. A rule replaces the matching default unless it sets `extend` or `remove`; `ignore: true` drops the event. A value is a path, `key`, `value`, `map` or a fallback array; `fn`, `loop`, `set` and a rule's `condition` have no effect here.",
       ),
     tidPattern: z
       .string()

@@ -16,16 +16,11 @@ properly formatted and escaped data attributes for your HTML elements.
 
 ## Why use the tagger?
 
-The tagger solves several challenges when working with walkerOS data attributes:
-
-* **Consistent formatting** - Ensures data attributes follow walkerOS
-  conventions
-* **Automatic escaping** - Escapes semicolons, single quotes and backslashes in
-  values, plus colons in keys, so the browser source reads them back as passed
-* **Type safety** - Provides TypeScript support for better development
-  experience
-* **Fluent API** - Chainable methods for building complex attribute sets
-* **Maintainability** - Centralized logic for attribute generation
+The tagger writes data attributes that follow walkerOS conventions. It escapes
+semicolons, single quotes and backslashes in values, plus colons in keys, so
+the browser source reads them back as passed. It has TypeScript types, its
+methods chain to build complex attribute sets, and it keeps the attribute
+generation logic in one place.
 
 ## When to use the tagger
 
@@ -46,7 +41,7 @@ Use the tagger when you need to:
 
 ## Initialization
 
-The tagger is initialized using the `createTagger` factory function:
+Create a tagger with the `createTagger` factory function:
 
 <CodeSnippet
   code={`import { createTagger } from '@walkeros/web-source-browser';
@@ -391,7 +386,8 @@ returns the final attributes object.
 function ProductCard({ product }) {
   return (
     <div
-      {...tagger('product')
+      {...tagger()
+        .entity('product')
         .data({
           id: product.id,
           name: product.name,
@@ -415,7 +411,8 @@ function ProductCardWithContext({ product }) {
       data-elb-page="section:products"
     >
       <div
-        {...tagger('product')
+        {...tagger()
+          .entity('product')
           .data({
             id: product.id,
             name: product.name,
@@ -462,7 +459,7 @@ function CartItem({ item }) {
 <CodeSnippet
   code={`// Reusable tracking function
 function trackComponent(type, data, actions = {}) {
-  return tagger(type).data(data).action(actions).get();
+  return tagger().entity(type).data(data).action(actions).get();
 }
 
 // Usage

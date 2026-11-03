@@ -351,7 +351,7 @@ export const RuleSchema = z
         'Condition function as string: the rule matches only when it returns true; otherwise the next rule is tried. A condition that throws fails the event.',
       ),
     consent: ConsentSchema.optional().describe(
-      'Not enforced yet. To require consent for a destination, set consent in its config.',
+      "Not enforced: a rule's consent has no effect. To require consent for a destination, set consent in its config.",
     ),
     policy: PolicySchema.optional().describe(
       'Event-level policy overrides (applied after config-level policy)',

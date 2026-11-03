@@ -35,6 +35,10 @@ await startFlow({
 });
 ```
 
+This quick start sets no consent, so d8a receives every event without consent,
+and a denial only updates d8a's consent mode: add `consent: { analytics: true }`
+to `config` before you go live, see the docs.
+
 ## Configuration
 
 | Name                   | Type                | Required | Description                                 |
@@ -79,7 +83,7 @@ This produces:
 ```typescript
 d8a('event', 'purchase', {
   transaction_id: '0rd3r1d',
-  value: 555,
+  value: 462,
   currency: 'EUR',
   send_to: '80e1d6d0-560d-419f-ac2a-fe9281e93386',
 });

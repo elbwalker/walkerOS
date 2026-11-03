@@ -8,6 +8,7 @@ package: '@walkeros/web-destination-d8a'
 
 import data from '@walkeros/web-destination-d8a/walkerOS.json';
 import Configuration from '@site/src/components/snippets/_configuration.mdx';
+import Quickstart from '@site/src/components/snippets/_quickstart.mdx';
 
 import WhereThisFits from '@site/src/components/snippets/_where-this-fits.mdx';
 
@@ -32,59 +33,13 @@ GA4 gtag-style `d8a()` API, so existing GA4 mappings translate directly.
 
 ## Installation
 
-<CodeSnippet
-  code={`npm install @walkeros/web-destination-d8a`}
-  language="bash"
-/>
+<Quickstart data={data} />
 
-<Tabs groupId="mode">
-  <TabItem value="integrated" label="Integrated" default>
-
-<CodeSnippet
-  code={`import { startFlow } from '@walkeros/collector';
-import { destinationD8a } from '@walkeros/web-destination-d8a';
-
-await startFlow({
-  destinations: {
-    d8a: {
-      code: destinationD8a,
-      config: {
-        settings: {
-          property_id: '80e1d6d0-560d-419f-ac2a-fe9281e93386',
-          server_container_url:
-            'https://global.t.d8a.tech/80e1d6d0-560d-419f-ac2a-fe9281e93386/d/c',
-        },
-      },
-    },
-  },
-});`}
-  language="typescript"
-/>
-
-  </TabItem>
-  <TabItem value="bundled" label="Bundled">
-
-Add to your `flow.json` destinations:
-
-<CodeSnippet
-  code={`"destinations": {
-  "d8a": {
-    "package": "@walkeros/web-destination-d8a",
-    "config": {
-      "settings": {
-        "property_id": "80e1d6d0-560d-419f-ac2a-fe9281e93386",
-        "server_container_url": "https://global.t.d8a.tech/80e1d6d0-560d-419f-ac2a-fe9281e93386/d/c"
-      }
-    }
-  }
-}`}
-  language="json"
-/>
-
-[See bundled mode setup](/docs/getting-started/modes/bundled) | [CLI reference](/docs/apps/cli)
-
-  </TabItem>
-</Tabs>
+The quickstart above sets no consent, so d8a starts and receives every event
+without `analytics` consent, and a denial only updates d8a's consent mode while
+the events keep going out. Add `consent: { analytics: true }` to `config`, next
+to `settings`, before you go live (see [Consent Mode](#consent-mode) and
+[gate a destination](/docs/guides/consent#gate-a-destination-with-consent)).
 
 ## Event Mapping
 
@@ -115,7 +70,7 @@ This produces:
 <CodeSnippet
   code={`d8a('event', 'purchase', {
   transaction_id: '0rd3r1d',
-  value: 555,
+  value: 462,
   currency: 'EUR',
   send_to: '80e1d6d0-560d-419f-ac2a-fe9281e93386',
 });`}

@@ -194,7 +194,7 @@ export const purchase: Flow.StepExample = {
       map: {
         transaction_id: 'data.id',
         value: 'data.value',
-        tax: 'data.taxes',
+        tax: 'data.tax',
         shipping: 'data.shipping',
         currency: { key: 'data.currency', value: 'EUR' },
         items: {
@@ -226,7 +226,7 @@ export const purchase: Flow.StepExample = {
       'purchase',
       {
         transaction_id: '0rd3r1d',
-        value: 555,
+        value: 462,
         tax: 73.76,
         shipping: 5.22,
         currency: 'EUR',
@@ -258,7 +258,7 @@ export const purchase: Flow.StepExample = {
 export const consentModeV2: Flow.StepExample = {
   title: 'Consent Mode v2',
   description:
-    'A walker consent command with marketing and analytics granted updates gtag Consent Mode v2 parameters.',
+    'A walker consent command with marketing and analytics granted updates gtag Consent Mode v2 parameters. Without config.consent, as here, the first consent command sends the denied default before the update; with config.consent, the denied default goes out before config, as the destination starts.',
   command: 'consent',
   in: { marketing: true, analytics: true },
   out: [
@@ -318,7 +318,7 @@ export const googleAdsConversion: Flow.StepExample = {
       {
         send_to: 'AW-123456789/PURCHASE_CONV',
         currency: 'EUR',
-        value: 555,
+        value: 462,
       },
     ],
   ],
@@ -340,9 +340,10 @@ export const adsEnhancedConversions: Flow.StepExample = {
     data: {
       id: '0rd3r1d',
       currency: 'EUR',
+      value: 462,
+      tax: 73.76,
       shipping: 5.22,
-      taxes: 73.76,
-      value: 555,
+      total: 467.22,
       customerEmail: 'buyer@example.com',
       customerPhone: '+1234567890',
     },
@@ -375,7 +376,7 @@ export const adsEnhancedConversions: Flow.StepExample = {
       {
         send_to: 'AW-123456789/PURCHASE_EC2',
         currency: 'EUR',
-        value: 555,
+        value: 462,
       },
     ],
   ],
@@ -430,7 +431,7 @@ export const ga4WithIncludeAll: Flow.StepExample = {
     'Include flattens every event section into prefixed GA4 params, exposing data, context, user, source, and event fields.',
   in: getEvent('page view', {
     id: 'ev-1700000106',
-    timestamp: 1700000106,
+    timestamp: 1700000106000,
     source: {
       type: 'collector',
       schema: '4',
@@ -475,7 +476,7 @@ export const ga4WithIncludeAll: Flow.StepExample = {
         event_trigger: 'load',
         event_id: 'ev-1700000106',
         event_name: 'page view',
-        event_timestamp: 1700000106,
+        event_timestamp: 1700000106000,
         event_timing: 3.14,
         // send_to is always set for GA4
         send_to: 'G-XXXXXXXXXX',
@@ -520,14 +521,15 @@ export const multipleToolsSimultaneous: Flow.StepExample = {
       'event',
       'purchase',
       {
-        value: 555,
+        value: 462,
         currency: 'EUR',
         // include: ['data'] flattens data as prefixed params.
         data_id: '0rd3r1d',
         data_currency: 'EUR',
+        data_value: 462,
+        data_tax: 73.76,
         data_shipping: 5.22,
-        data_taxes: 73.76,
-        data_value: 555,
+        data_total: 467.22,
         send_to: 'G-XXXXXXXXXX',
       },
     ],
@@ -538,25 +540,27 @@ export const multipleToolsSimultaneous: Flow.StepExample = {
       {
         send_to: 'AW-123456789/PURCHASE_CONV',
         currency: 'EUR',
-        value: 555,
+        value: 462,
         data_id: '0rd3r1d',
         data_currency: 'EUR',
+        data_value: 462,
+        data_tax: 73.76,
         data_shipping: 5.22,
-        data_taxes: 73.76,
-        data_value: 555,
+        data_total: 467.22,
       },
     ],
     [
       'window.dataLayer.push',
       {
         event: 'purchase',
-        value: 555,
+        value: 462,
         currency: 'EUR',
         data_id: '0rd3r1d',
         data_currency: 'EUR',
+        data_value: 462,
+        data_tax: 73.76,
         data_shipping: 5.22,
-        data_taxes: 73.76,
-        data_value: 555,
+        data_total: 467.22,
       },
     ],
   ],

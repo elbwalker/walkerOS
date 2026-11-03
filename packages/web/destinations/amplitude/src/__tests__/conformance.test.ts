@@ -36,6 +36,7 @@ describe('amplitude conformance', () => {
         useBatch: false,
         appVersion: '1.0.0',
       },
+      minimal: examples.minimal,
       env: { push: examples.env.push, simulation: examples.env.simulation },
       root: path.join(__dirname, '..', '..'),
       passThrough,

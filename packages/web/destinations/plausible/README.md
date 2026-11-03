@@ -35,7 +35,7 @@ npm install @walkeros/web-destination-plausible
           "config": {
             "loadScript": true,
             "settings": {
-              "domain": "walkeros.io"
+              "domain": "example.com"
             },
             "mapping": {
               "page": { "view": { "name": "pageview" } }
@@ -47,6 +47,10 @@ npm install @walkeros/web-destination-plausible
   }
 }
 ```
+
+This quick start sets no consent, so the Plausible script loads and receives
+every event without consent, and a revocation changes nothing: add
+`consent: { analytics: true }` to `config` before you go live, see the docs.
 
 ## Documentation
 

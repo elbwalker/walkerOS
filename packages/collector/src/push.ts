@@ -330,7 +330,7 @@ export function createPush<T extends Collector.Instance>(
         (err: unknown) => {
           if (err instanceof FatalError) throw err;
           if (err instanceof InvalidEventError) {
-            // Client input fault, not a pipeline failure: warn without a
+            // Client input fault, not a pipeline failure: log without a
             // stack, count it as a source rejection, and hand the caller a
             // discriminated result it can map to a 4xx response.
             // `id` is destructured inside the try body, which this sibling
@@ -343,7 +343,7 @@ export function createPush<T extends Collector.Instance>(
               const sourceStatus = collector.status.sources[sourceId];
               sourceStatus.rejected = (sourceStatus.rejected ?? 0) + 1;
             }
-            // WARN (the producer should act, the pipeline is fine), one line
+            // ERROR (the event is lost unless the producer acts), one line
             // per source per window: a client sending garbage cannot flood
             // the log.
             reportCause(
@@ -355,7 +355,6 @@ export function createPush<T extends Collector.Instance>(
               },
               'invalid event rejected',
               { error: err.message },
-              'warn',
             );
             return createPushResult({
               ok: false,

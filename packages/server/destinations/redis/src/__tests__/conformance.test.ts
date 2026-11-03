@@ -13,8 +13,9 @@ describe('redis conformance', () => {
       profile: 'socket',
       examples: examples.step,
       schema: schemas.settings,
-      settings: { redis: { streamKey: 'walkeros:events' } },
+      settings: examples.minimal.settings,
       env: { push: examples.env.push, simulation: examples.env.simulation },
+      minimal: examples.minimal,
       root: path.join(__dirname, '..', '..'),
     });
   });

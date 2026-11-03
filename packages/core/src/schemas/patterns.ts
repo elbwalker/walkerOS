@@ -78,7 +78,12 @@ export const IdConfig = z.object({}).partial();
  */
 export const InitConfig = z
   .object({
-    init: z.boolean().describe('Whether to initialize immediately').optional(),
+    init: z
+      .boolean()
+      .describe(
+        'Whether the step is already initialized; true skips its init(). The collector sets it after init runs.',
+      )
+      .optional(),
     loadScript: z
       .boolean()
       .describe('Whether to load external script (for web destinations)')

@@ -11,13 +11,13 @@ export const SettingsSchema = z.object({
   projectId: z
     .string()
     .describe(
-      'Google Cloud Project ID (informational, surfaced in error messages).',
+      'Google Cloud Project ID. Optional; the push handler does not read it.',
     )
     .optional(),
   decoder: z
     .enum(['json', 'text', 'raw'])
     .describe(
-      'Decoder for the message data field. json (default) parses JSON, text decodes UTF-8, raw forwards the Buffer.',
+      'Decoder for the message data field. json (default) parses JSON, text forwards the UTF-8 string, raw forwards the Buffer. text and raw values carry no event name: without a before transformer that builds the event the collector rejects them and the push answers 400.',
     )
     .optional(),
   verifyOidc: z

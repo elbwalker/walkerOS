@@ -24,9 +24,29 @@ npm install @walkeros/server-transformer-file
 
 ```ts
 import { startFlow } from '@walkeros/collector';
+import { sourceExpress } from '@walkeros/server-source-express';
 import { transformerFile } from '@walkeros/server-transformer-file';
+import { storeFsInit } from '@walkeros/server-store-fs';
+
+// Reference this same object in stores and in env: the collector swaps it
+// for the initialized store instance at startup.
+const files = {
+  code: storeFsInit,
+  config: { settings: { basePath: './public' }, file: true },
+};
 
 await startFlow({
+  stores: { files },
+  sources: {
+    http: {
+      code: sourceExpress,
+      config: {
+        settings: { port: 8080, paths: ['/collect', '/static/*path'] },
+        ingest: { map: { path: { key: 'path' } } },
+      },
+      next: 'file',
+    },
+  },
   transformers: {
     file: {
       code: transformerFile,
@@ -36,15 +56,19 @@ await startFlow({
           headers: { 'Cache-Control': 'public, max-age=3600' },
         },
       },
-      env: { store: fileStore },
+      env: { store: files },
     },
   },
 });
 ```
 
+`file: true` makes the store hand back each file's raw bytes. A request for
+`/static/walker.js` is answered with `public/walker.js` and never becomes an
+event.
+
 ## Documentation
 
-Full configuration, mapping, and examples live in the docs:
+Full configuration and examples live in the docs:
 **https://www.walkeros.io/docs/transformers/file**
 
 ## Contribute

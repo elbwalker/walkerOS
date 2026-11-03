@@ -1,12 +1,13 @@
 ---
 title: Segment
-description: "Server-side event delivery to Segment CDP for routing to 400+ downstream destinations"
+description: "Server-side event delivery to Segment CDP for routing to downstream destinations"
 path: /docs/destinations/server/segment
 sidebar_position: 5
 package: '@walkeros/server-destination-segment'
 ---
 import data from '@walkeros/server-destination-segment/walkerOS.json';
 import Configuration from '@site/src/components/snippets/_configuration.mdx';
+import Quickstart from '@site/src/components/snippets/_quickstart.mdx';
 
 import WhereThisFits from '@site/src/components/snippets/_where-this-fits.mdx';
 
@@ -14,75 +15,32 @@ import WhereThisFits from '@site/src/components/snippets/_where-this-fits.mdx';
 
 <PackageLink env="server" github="packages/server/destinations/segment" npm="@walkeros/server-destination-segment" />
 
-Server-side event delivery to [Segment](https://segment.com/) via the official [`@segment/analytics-node`](https://www.npmjs.com/package/@segment/analytics-node) SDK. Implements the full Segment Spec surface (`track`, `identify`, `group`, `page`, and `screen`) with automatic identity deduplication and graceful shutdown via `closeAndFlush()`.
+Server-side event delivery to [Segment](https://segment.com/) via the official [`@segment/analytics-node`](https://www.npmjs.com/package/@segment/analytics-node) SDK. Sends the Segment Spec calls `track`, `identify`, `group`, `page`, and `screen` (not `alias`), skips an `identify` or `group` call that repeats the previous one, and flushes on shutdown with `closeAndFlush()`.
 
 <WhereThisFits
   pre={<>Segment is a <strong>server destination</strong> in the walkerOS flow:</>}
   flowMap={{
     destinations: { default: { label: 'Destination', text: 'Segment', highlight: true } },
   }}
-  post={<>Receives events server-side from the collector, resolves identity and consent context, and forwards them to Segment for routing to 400+ downstream destinations.</>}
+  post={<>Receives events server-side from the collector, resolves identity and consent context, and forwards them to Segment for routing to downstream destinations.</>}
 />
 
 ## Installation
 
-<CodeSnippet
-  code={`npm install @walkeros/server-destination-segment`}
-  language="bash"
-/>
-
-<Tabs groupId="mode">
-  <TabItem value="integrated" label="Integrated" default>
-
-<CodeSnippet
-  code={`import { startFlow } from '@walkeros/collector';
-import { destinationSegment } from '@walkeros/server-destination-segment';
-
-await startFlow({
-  destinations: {
-    segment: {
-      code: destinationSegment,
-      config: {
-        settings: {
-          writeKey: 'YOUR_SEGMENT_WRITE_KEY',
-        },
-      },
-    },
-  },
-});`}
-  language="typescript"
-/>
-
-  </TabItem>
-  <TabItem value="bundled" label="Bundled">
-
-Add to your `flow.json` destinations:
-
-<CodeSnippet
-  code={`"destinations": {
-  "segment": {
-    "package": "@walkeros/server-destination-segment",
-    "config": {
-      "settings": {
-        "writeKey": "YOUR_SEGMENT_WRITE_KEY"
-      }
-    }
-  }
-}`}
-  language="json"
-/>
-
-[See bundled mode setup](/docs/getting-started/modes/bundled) | [CLI reference](/docs/apps/cli)
-
-  </TabItem>
-</Tabs>
+<Quickstart data={data} />
 
 <Configuration type="destination" data={data} />
 
-Identity is resolved automatically from each event: `userId` defaults to `user.id` and `anonymousId` defaults to `user.session`. At least one must be present for a call to be sent. Override these paths in settings to match your event structure.
+## Identity
+
+Identity is resolved from each event: `userId` defaults to `user.id` and `anonymousId` defaults to `user.session`. Override these paths in settings to match your event structure. An event where neither resolves is not sent and fails with `missing-input`.
+
+An `identify` or `group` call is sent only when its `userId` (for a group, its `groupId`) or its traits differ from the previous call of that kind this destination sent. The `anonymousId` and, for a group, the user are not compared. When a second visitor without a `userId` has the same traits, or a second user joins the same group with the same traits, no `identify` or `group` call is sent for them and nothing reports it. Their `track` calls still go out.
 
 ## Batching and delivery
 
-This destination batches by default: `config.batch` sends after 15 events or 10 seconds, and each event keeps its own outcome. Set `config.batch: { size: 1 }` to send each event at once. How batching, retries, deduplication and acknowledgement work for the server SDK destinations is described in [Server SDK destinations](/docs/destinations#server-sdk-destinations).
+This destination batches by default: `config.batch` sends a batch at 15 events, 10 seconds after the last event, or 30 seconds after the first, whichever comes first, and each event keeps its own outcome. Set `config.batch: { size: 1 }` to send each event at once. How batching, retries, deduplication and acknowledgement work for the server SDK destinations is described in [Server SDK destinations](/docs/destinations#server-sdk-destinations).
 
-An event without `userId` or `anonymousId` fails with `missing-input`.
+## Consent
+
+The quickstart sets no `config.consent`, so Segment receives every event. `settings.consent` only labels each call with `context.consent.categoryPreferences` for Segment's downstream filtering (see Consent forwarding above) and holds no event back. Add `config.consent` to send only with consent ([consent management](/docs/guides/consent)).

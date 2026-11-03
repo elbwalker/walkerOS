@@ -1,6 +1,6 @@
 {
   "name": "@walkeros/server-destination-segment",
-  "description": "Segment CDP server destination for walkerOS (@segment/analytics-node, full Segment Spec)",
+  "description": "Segment CDP server destination for walkerOS (@segment/analytics-node: track, identify, group, page, screen)",
   "version": "4.8.2",
   "license": "MIT",
   "exports": {

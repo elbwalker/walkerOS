@@ -12,7 +12,7 @@ export const serveStaticFile: Flow.StepExample = {
     trigger: 'load',
     entity: 'page',
     action: 'view',
-    timestamp: 1700000600,
+    timestamp: 1700000600000,
     source: { type: 'express', platform: 'server' },
   },
   out: [

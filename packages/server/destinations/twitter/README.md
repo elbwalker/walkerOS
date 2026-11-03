@@ -6,8 +6,8 @@
 
 # @walkeros/server-destination-twitter
 
-Server-side event delivery to X's (Twitter's) Conversions API for enhanced ad
-attribution and privacy-compliant conversion tracking.
+Server-side event delivery to X's (Twitter's) Conversions API for ad
+attribution.
 
 [Documentation](https://www.walkeros.io/docs/destinations/server/twitter) &bull;
 [NPM Package](https://www.npmjs.com/package/@walkeros/server-destination-twitter)
@@ -35,10 +35,10 @@ npm install @walkeros/server-destination-twitter
             "settings": {
               "pixelId": "YOUR_PIXEL_ID",
               "eventId": "tw-xxxxx-xxxxx",
-              "consumerKey": "YOUR_CONSUMER_KEY",
-              "consumerSecret": "YOUR_CONSUMER_SECRET",
-              "accessToken": "YOUR_ACCESS_TOKEN",
-              "accessTokenSecret": "YOUR_ACCESS_TOKEN_SECRET"
+              "consumerKey": "$secret.TWITTER_CONSUMER_KEY",
+              "consumerSecret": "$secret.TWITTER_CONSUMER_SECRET",
+              "accessToken": "$secret.TWITTER_ACCESS_TOKEN",
+              "accessTokenSecret": "$secret.TWITTER_ACCESS_TOKEN_SECRET"
             }
           }
         }
