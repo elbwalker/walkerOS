@@ -17,5 +17,5 @@ needs the variables the setup in `flow-complete.md` exports (`GCP_SA`,
 `FINGERPRINT_SALT`, `EMAIL_SALT`, `META_ACCESS_TOKEN`).
 
 In production the store is swapped for a real one, e.g.
-`@walkeros/server-store-sheets` or a GCS store; the `loadUser` step does not
-change.
+`@walkeros/server-store-sheets`, a GCS store, or `@walkeros/server-store-api`
+for your CRM's API; the `loadUser` step does not change.

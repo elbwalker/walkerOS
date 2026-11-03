@@ -322,7 +322,11 @@ export async function initSource(
             const missTtl = cacheResult.rule.ttl;
 
             const missRespond: RespondFn = (respondOptions) => {
-              storeCache(cacheStore, missKey, respondOptions, missTtl);
+              // A 5xx answers one failed request (a store that briefly
+              // failed): caching it would serve the failure for the ttl.
+              const status = respondOptions?.status;
+              if (status === undefined || status < 500)
+                storeCache(cacheStore, missKey, respondOptions, missTtl);
 
               if (!missUpdate) {
                 unwrappedRespond(respondOptions);

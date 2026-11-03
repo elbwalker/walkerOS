@@ -11,7 +11,7 @@ export const SettingsSchema = z
       .string()
       .optional()
       .describe(
-        'URL prefix to strip before store lookup. E.g., "/static" → /static/walker.js looks up "walker.js"',
+        'URL prefix the step owns, stripped before store lookup. E.g., "/static" → /static/walker.js looks up "walker.js". A missing file inside the prefix answers 404, a path outside it passes on, "/" owns every routed path. Without a prefix a missing file passes on.',
       ),
     headers: z
       .record(z.string(), z.string())

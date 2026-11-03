@@ -1,0 +1,160 @@
+---
+title: API
+description: Read-only HTTP API store for walkerOS server flows
+sidebar_position: 5
+package: '@walkeros/server-store-api'
+---
+
+import data from '@walkeros/server-store-api/walkerOS.json';
+import Configuration from '@site/src/components/snippets/_configuration.mdx';
+
+# API
+
+<PackageLink env="server" github="packages/server/stores/api" npm="@walkeros/server-store-api" />
+
+Read-only store that reads one JSON record per key from a third-party HTTP API, such as your CRM, a product catalog or a pricing service. It uses raw `fetch` with zero runtime dependencies: `get` sends one `GET` request to `settings.url` with the URL-encoded key in place of `{key}`, an `Accept: application/json` header and an optional bearer token, and hands back the parsed JSON body. Pair it with a [`state`](/docs/collector/state) get on a transformer to enrich events with what the API knows about a user or a product.
+
+## Installation
+
+<CodeSnippet
+  code={`npm install @walkeros/server-store-api`}
+  language="bash"
+/>
+
+<Tabs groupId="mode">
+  <TabItem value="integrated" label="Integrated" default>
+
+<CodeSnippet
+  code={`import { startFlow } from '@walkeros/collector';
+import { storeApiInit } from '@walkeros/server-store-api';
+
+await startFlow({
+  stores: {
+    crm: {
+      code: storeApiInit,
+      config: {
+        settings: { url: 'https://crm.example.com/customers/{key}' },
+        // Omit credentials for an API without a token; an empty token
+        // stops the flow at startup.
+        credentials: { token: process.env.CRM_API_TOKEN ?? '' },
+      },
+    },
+  },
+});`}
+  language="typescript"
+/>
+
+  </TabItem>
+  <TabItem value="bundled" label="Bundled">
+
+Add to your `flow.json`:
+
+<CodeSnippet
+  code={`"stores": {
+  "crm": {
+    "package": "@walkeros/server-store-api",
+    "config": {
+      "settings": { "url": "https://crm.example.com/customers/{key}" },
+      "credentials": { "token": "$secret.CRM_API_TOKEN" }
+    }
+  }
+}`}
+  language="json"
+/>
+
+  </TabItem>
+</Tabs>
+
+<Configuration type="store" data={data} />
+
+## Enrich events with a lookup
+
+A `state` get reads the record of the event's user id and merges the fields its `mapping` picks into `event.user`. On a miss, the mapping's fallbacks apply:
+
+<CodeSnippet
+  code={`{
+  "stores": {
+    "crm": {
+      "package": "@walkeros/server-store-api",
+      "config": {
+        "settings": { "url": "https://crm.example.com/customers/{key}" },
+        "credentials": { "token": "$secret.CRM_API_TOKEN" }
+      },
+      "cache": { "rules": [{ "ttl": 300 }] }
+    }
+  },
+  "transformers": {
+    "loadUser": {
+      "state": {
+        "mode": "get",
+        "store": "crm",
+        "key": "event.user.id",
+        "value": "event.user",
+        "mapping": {
+          "map": {
+            "ltv": "ltv",
+            "segment": { "key": "segment", "value": "unknown" }
+          }
+        }
+      }
+    }
+  }
+}`}
+  language="json"
+/>
+
+Wire `loadUser` into a chain (`collector.next`, a destination's `before`) like any transformer. An order from `cust-42`, whose record is `{ "ltv": 420, "segment": "loyal" }`, reaches the destinations with `user: { id: 'cust-42', ltv: 420, segment: 'loyal' }`; an id the API answers 404 for gets `segment: 'unknown'` and no `ltv`.
+
+## The URL and the key
+
+`settings.url` is an absolute `http:` or `https:` URL with exactly one `{key}` placeholder, after the host: in the path (`https://crm.example.com/customers/{key}`) or in the query (`https://crm.example.com/customers?id={key}`), never after a `#`, since the fragment is never sent. The key is URL-encoded as one segment, so a `/`, `?`, `#` or `%` in it never changes which resource is asked, and it is the only variable part of the request. A URL that breaks one of these rules, such as `https://{key}.crm.example.com/`, stops the flow at startup with a config error.
+
+Use an `https:` URL whenever you send a token.
+
+A key that is empty or has a `.` or `..` segment (split on `/` and `\`) is a miss without a request. The store never logs the key, a URL carrying it or the token, and its error messages name none of them.
+
+## Authentication
+
+Put the token in `config.credentials.token` and back it with a managed secret, `$secret.NAME` as the whole value. Never use `$env` for it, and never put it in `settings` or in the URL. The store sends it as `Authorization: Bearer <token>`; without credentials it sends no `Authorization` header.
+
+- An unset secret stops the flow at startup with `required secret "CRM_API_TOKEN" is not set`.
+- Credentials that are not `{ "token": "<a non-empty string>" }`, a bare string included, stop the flow at startup with a config error.
+- Requests refuse redirects: a redirect fails the read instead of carrying the token to another origin.
+
+## What a read answers
+
+| The API answers                                        | `get`                                         | Reported                                                |
+| ------------------------------------------------------ | --------------------------------------------- | ------------------------------------------------------- |
+| 2xx with a JSON body                                   | the parsed body                               | no                                                      |
+| 404, 204, or a 200 with the JSON body `null`           | a miss                                        | no; a `state` get applies its fallbacks                 |
+| any other status (401, 403, 429, 5xx)                  | throws a `transport` `StepError` with status  | once per cause at ERROR under `store.<id>`              |
+| a network error, a timeout after 5 seconds, a redirect | throws a `transport` `StepError`              | once per cause at ERROR under `store.<id>`              |
+| a 2xx body that is not JSON, the empty body included   | throws a `decode` `StepError`                 | once per cause at ERROR under `store.<id>`              |
+
+A read that throws never fails the event: a `state` get treats it as a miss for that event, applies its fallbacks and the event goes on.
+
+## Caching and rate limits
+
+The store has no cache of its own; add the store `cache` block (see [Cache](../cache.mdx)) to keep hits in memory for the rule's `ttl`. Misses are never cached, so when the keys come from the client, such as a user id in the request, every unknown id costs one API request. Put a gateway with a rate limit in front of the API when that matters.
+
+## Check the URL before you go live
+
+A wrong path on the right host answers 404 for every key. The store reads each one as a miss, so nothing is reported at ERROR and every lookup quietly falls back. Check the URL with a known id and the token before you deploy:
+
+<CodeSnippet
+  code={`curl -i -H "Authorization: Bearer $CRM_API_TOKEN" \\
+  https://crm.example.com/customers/cust-42`}
+  language="bash"
+/>
+
+Expect `200` with the record. A simulation (`walkeros push --simulate`) runs the store on the package's mock API and cannot show this.
+
+## Read only
+
+`set` and `delete` throw a config `StepError` (`API store is read-only`), so a `state` set against this store logs at ERROR for every event. The store holds structured JSON only: `file: true` stops the flow at startup.
+
+## Next steps
+
+- [State](/docs/collector/state): read and write stores from a step
+- [Cache](../cache.mdx): cache rules for a store
+- [Stores](../index.mdx): every store package

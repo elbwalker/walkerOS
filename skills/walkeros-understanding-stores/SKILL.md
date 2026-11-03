@@ -137,6 +137,7 @@ Use `$store.storeId` in a component's `env` to inject a store instance:
   "transformers": {
     "file": {
       "package": "@walkeros/server-transformer-file",
+      "config": { "settings": { "prefix": "/static" } },
       "env": { "store": "$store.assets" }
     }
   }
@@ -297,6 +298,19 @@ requests per minute per user per project. Enable the built-in cache via
 burns in seconds. **Not a production CRM substitute.** See
 [Website: Sheets Store](../../website/docs/stores/server/sheets.mdx) for the
 cache-wiring example.
+
+### `@walkeros/server-store-api` (third-party HTTP API)
+
+Read-only store for a third-party API, such as a CRM. `settings.url` is an
+absolute URL with one `{key}` placeholder after the host; each `get` is one GET
+with the encoded key. A 404, 204 or JSON `null` is a miss; any other failure
+throws a `StepError`. Pass an optional bearer token as `config.credentials`
+(`{ "token": "$secret.NAME" }`). `set`, `delete` and `file: true` are refused.
+Misses are not cached by the `cache` block.
+
+```typescript
+import { storeApiInit } from '@walkeros/server-store-api';
+```
 
 ## Stores in flow config
 

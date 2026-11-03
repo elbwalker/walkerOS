@@ -59,6 +59,7 @@
     "@walkeros/server-source-express": "^4.8.2",
     "@walkeros/server-source-fetch": "^4.8.2",
     "@walkeros/server-source-gcp": "^4.8.2",
+    "@walkeros/server-store-api": "^4.8.2",
     "@walkeros/server-store-fs": "^4.8.2",
     "@walkeros/server-store-gcs": "^4.8.2",
     "@walkeros/server-store-s3": "^4.8.2",

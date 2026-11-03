@@ -6,6 +6,9 @@ Files the server flow of `flow-complete.json` serves first party.
 - The `assets` store (`@walkeros/server-store-fs`,
   `basePath: "$env.ASSETS_DIR:./shared"`) reads from it, and the `file`
   transformer answers `GET /walker.js` with it.
+- `products/SKU-1` and `products/SKU-2` are the demo products of the order
+  example as JSON (name and price, no personal data); the `productApi`
+  transformer answers `GET /demo/products/SKU-1` with them.
 - `walker.js` is generated, not committed. Build the web flow straight into this
   folder (web builds ignore root `include`):
 

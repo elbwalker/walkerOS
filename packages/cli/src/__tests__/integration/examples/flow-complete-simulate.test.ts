@@ -299,6 +299,9 @@ function toEvent(value: unknown): Record<string, unknown> {
   return value;
 }
 
+/** The stand-in web bundle the assets store serves as walker.js. */
+const WALKER_JS = 'console.log("walker.js");';
+
 /** Every variable the suite sets; each is restored afterwards. */
 const TEST_ENV = [
   'GCP_SA',
@@ -318,9 +321,12 @@ describe('flow-complete.json', () => {
 
   beforeAll(async () => {
     tmpDir = path.join(os.tmpdir(), `flow-complete-${Date.now()}`);
-    await fs.outputFile(
-      path.join(tmpDir, 'assets', 'walker.js'),
-      'console.log("walker.js");',
+    await fs.outputFile(path.join(tmpDir, 'assets', 'walker.js'), WALKER_JS);
+    // The committed product records, so the lookup route serves the bytes
+    // the artifact ships.
+    await fs.copy(
+      path.join(examplesDir, 'shared', 'products'),
+      path.join(tmpDir, 'assets', 'products'),
     );
 
     // Dummy, syntactically valid service account: the flows only read it.
@@ -626,7 +632,7 @@ describe('flow-complete.json', () => {
             expect(script.headers.get('cross-origin-resource-policy')).toBe(
               'same-site',
             );
-            expect(await script.text()).toBe('console.log("walker.js");');
+            expect(await script.text()).toBe(WALKER_JS);
 
             expect(seen).toHaveLength(4);
             expect(seen.slice(0, 3).map((event) => event.id)).toEqual([
@@ -664,6 +670,99 @@ describe('flow-complete.json', () => {
             expect(first.user).toMatchObject({ ltv: 420, segment: 'loyal' });
             expect(first.source).toMatchObject({ valid: true });
             expect(metaBodies).toHaveLength(1);
+          } finally {
+            await close();
+            await flow.collector.command('shutdown');
+          }
+          return { success: true, duration: 0 };
+        },
+      );
+      expect(result.error).toBeUndefined();
+      expect(result.success).toBe(true);
+    }, 60000);
+
+    it('answers a product lookup with JSON, a missing id or script with 404, and no destination sees either request', async () => {
+      const reached: [string, unknown][] = [];
+      const walkerJs = path.join(tmpDir, 'assets', 'walker.js');
+
+      const result = await withFlowContext(
+        { esmPath: bundles.server, platform: 'server', logger },
+        async (module) => {
+          const flowConfig = module.wireConfig(module.__configData);
+          delete flowConfig.sources.express.config.settings.port;
+          // Every destination records what reaches it; before routes stay.
+          const destinations: Record<string, { code: unknown }> =
+            flowConfig.destinations;
+          for (const [id, destination] of Object.entries(destinations)) {
+            destination.code = {
+              type: 'spy',
+              config: {},
+              push: (event: Record<string, unknown>) => {
+                reached.push([id, event.id]);
+              },
+            };
+          }
+
+          const flow = await module.startFlow(flowConfig);
+          const { url, close } = await serve(flow.collector.sources);
+          const get = (route: string) => fetch(`${url}${route}`, { headers });
+
+          try {
+            // GET waits for the pipeline, so each answer comes after the
+            // request's push has finished.
+            const product = await get('/demo/products/SKU-1');
+            expect(product.status).toBe(200);
+            expect(product.headers.get('content-type')).toMatch(
+              /^application\/json/,
+            );
+            expect(await product.json()).toEqual({
+              name: 'Trail Runner',
+              price: 129.9,
+            });
+
+            const missing = await get('/demo/products/SKU-9');
+            expect(missing.status).toBe(404);
+            expect(missing.headers.get('cache-control')).toBe('no-store');
+            expect(await missing.json()).toEqual({
+              success: false,
+              error: 'Not found',
+            });
+
+            const script = await get('/walker.js');
+            expect(script.status).toBe(200);
+            expect(await script.text()).toBe(WALKER_JS);
+
+            // The script is gone: 404 instead of the tracking pixel.
+            await fs.remove(walkerJs);
+            try {
+              const gone = await get('/walker.js');
+              expect(gone.status).toBe(404);
+              expect(gone.headers.get('cache-control')).toBe('no-store');
+              expect(await gone.json()).toEqual({
+                success: false,
+                error: 'Not found',
+              });
+            } finally {
+              await fs.outputFile(walkerJs, WALKER_JS);
+            }
+
+            // The control: an order after the route requests reaches every
+            // destination, and nothing else did.
+            await fetch(`${url}/collect`, {
+              method: 'POST',
+              headers,
+              body: JSON.stringify(
+                order('ev-after-routes', 'ORD-7', 'jane@example.com'),
+              ),
+            });
+            await until(() => reached.length >= 4);
+            // Meta's rule policy sets the event id to the order id.
+            expect([...reached].sort()).toEqual([
+              ['datamanager', 'ev-after-routes'],
+              ['meta', 'ORD-7'],
+              ['piwikpro', 'ev-after-routes'],
+              ['pubsub', 'ev-after-routes'],
+            ]);
           } finally {
             await close();
             await flow.collector.command('shutdown');

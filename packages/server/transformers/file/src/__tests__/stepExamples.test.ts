@@ -1,105 +1,56 @@
-import type { Store, Transformer, WalkerOS } from '@walkeros/core';
-import type { RespondFn, RespondOptions } from '@walkeros/core';
-import {
-  createIngest,
-  createMockContext,
-  createMockLogger,
-} from '@walkeros/core';
-import { transformerFile } from '../transformer';
-import type { Types } from '../types';
-import { examples } from '../dev';
+import type { Flow, WalkerOS } from '@walkeros/core';
+import { isObject, StepError } from '@walkeros/core';
 import { expectSimulationResolves } from '@walkeros/core/dev';
+import { examples } from '../dev';
+import { createFailingStore, createMockStore, serve } from './serve';
 
-function createMockStore(): Store.Instance {
-  const data = new Map<string, Store.StoreValue>();
-  return {
-    type: 'mock',
-    config: {},
-    get(key) {
-      return data.get(key);
-    },
-    set(key, value) {
-      data.set(key, value);
-    },
-    delete(key) {
-      data.delete(key);
-    },
-  };
+function isEvent(value: unknown): value is WalkerOS.DeepPartialEvent {
+  return isObject(value) && typeof value.name === 'string';
 }
 
+/** The request an example describes: its event and, in its data, the path. */
+function requestOf(example: Flow.StepExample) {
+  const event = example.in;
+  if (!isEvent(event) || !isObject(event.data))
+    throw new Error('example in is not an event with data');
+  const path = event.data.path;
+  if (typeof path !== 'string') throw new Error('example has no data.path');
+  return { event, path };
+}
+
+/**
+ * Each example on a real collector, with the config its description names:
+ * the store holds walker.js, or fails every read when the example's boundary
+ * answers with an error.
+ */
 describe('Step Examples', () => {
-  const mockLogger = createMockLogger();
-
-  const createInitContext = (
-    config: Transformer.Config<Types>,
-    env: Partial<Transformer.Env<Types>> = {},
-  ) =>
-    createMockContext<Types>({
-      config,
-      env: env as Transformer.Env<Types>,
-      logger: mockLogger,
-      id: 'test-file',
-    });
-
-  const createPushContext = (
-    ingestData: Record<string, unknown> = {},
-    respond?: RespondFn,
-  ) =>
-    createMockContext<Types>({
-      config: {},
-      env: respond ? { respond } : {},
-      logger: mockLogger,
-      id: 'test-file',
-      ingest: {
-        ...createIngest('test'),
-        ...ingestData,
-        _meta: createIngest('test')._meta,
-      },
-    });
-
-  beforeEach(() => {
-    jest.clearAllMocks();
-  });
-
-  it.each(Object.entries(examples.step))('%s', async (name, example) => {
-    const event = example.in as WalkerOS.DeepPartialEvent;
-
-    // Create store with a file matching the example path
-    const store = createMockStore();
+  it.each(Object.entries(examples.step))('%s', async (_, example) => {
+    const { event, path } = requestOf(example);
+    const store = example.respond?.error
+      ? createFailingStore(
+          new StepError('Store read failed', { code: 'transport' }),
+        )
+      : createMockStore();
     store.set('walker.js', Buffer.from('console.log("walkerOS")'));
 
-    const transformer = await transformerFile(
-      createInitContext(
-        {
-          settings: {
-            prefix: '/static',
-            headers: { 'Cache-Control': 'public, max-age=3600' },
-          },
-        },
-        { store },
-      ),
+    const flow = await serve(
+      {
+        prefix: '/static',
+        headers: { 'Cache-Control': 'public, max-age=3600' },
+      },
+      store,
     );
+    const { result, answers } = await flow.request(path, event);
 
-    let capturedOptions: RespondOptions | undefined;
-    const respond: RespondFn = (options) => {
-      capturedOptions = options;
-    };
-
-    const result = await transformer.push(
-      event,
-      createPushContext({ path: '/static/walker.js' }, respond),
+    expect(answers.map((answer) => ['respond', answer])).toMatchObject(
+      example.out ?? [],
     );
-
-    // File transformer returns false when it serves a file (stops the chain)
-    expect(result).toBe(false);
-    expect(capturedOptions).toBeDefined();
-    const [callable, expected] = example.out![0] as readonly [
-      string,
-      { status: number; headers: Record<string, string> },
-    ];
-    expect(callable).toBe('respond');
-    expect(capturedOptions!.status).toBe(expected.status);
-    expect(capturedOptions!.headers).toMatchObject(expected.headers);
+    if (example.outcome) {
+      expect(result.ok).toBe(false);
+      expect(result.reason?.code).toBe(example.outcome.code);
+    } else {
+      expect(result.ok).toBe(true);
+    }
   });
 });
 

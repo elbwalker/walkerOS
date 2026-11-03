@@ -1881,6 +1881,10 @@
                 {
                   "path": "/walker.js",
                   "methods": ["GET"]
+                },
+                {
+                  "path": "/demo/products/:id",
+                  "methods": ["GET"]
                 }
               ],
               "cors": {
@@ -1942,6 +1946,14 @@
                   "value": "/g/collect"
                 },
                 "stop": true
+              },
+              {
+                "match": {
+                  "key": "ingest.path",
+                  "operator": "prefix",
+                  "value": "/demo/products/"
+                },
+                "next": "productApi"
               }
             ]
           },
@@ -2412,9 +2424,27 @@
           },
           "config": {
             "settings": {
+              "prefix": "/",
               "headers": {
                 "Cache-Control": "public, max-age=300",
                 "Cross-Origin-Resource-Policy": "same-site"
+              }
+            }
+          },
+          "next": {
+            "stop": true
+          }
+        },
+        "productApi": {
+          "package": "@walkeros/server-transformer-file",
+          "env": {
+            "store": "$store.assets"
+          },
+          "config": {
+            "settings": {
+              "prefix": "/demo/",
+              "headers": {
+                "Content-Type": "application/json; charset=utf-8"
               }
             }
           },
