@@ -1,5 +1,44 @@
 # @walkeros/web-source-browser
 
+## 4.9.0
+
+### Patch Changes
+
+- 5313635: The browser source's setting descriptions now match what the source
+  does: `scope` takes a DOM node (an Element, Document or ShadowRoot), not a
+  selector; `elbLayer` takes a queue name, `true` or `false`, and an array is
+  not adopted; `name` has no effect. They appear in the docs settings table and
+  in MCP `package_get`.
+- 1306d8a: The Fetch `path` setting is described as a single route path that
+  `paths` overrides, and it is no longer marked deprecated. The Criteo
+  Quickstart uses a numeric `partnerId` placeholder. Type docs now say that an
+  open breaker fails events with `breaker-open` and that server bundles target
+  Node 20. Example env mocks are typed without casts.
+- Updated dependencies [a67546d]
+- Updated dependencies [5313635]
+- Updated dependencies [5313635]
+- Updated dependencies [34fd225]
+- Updated dependencies [1306d8a]
+- Updated dependencies [29d2218]
+- Updated dependencies [1306d8a]
+- Updated dependencies [34fd225]
+- Updated dependencies [5313635]
+- Updated dependencies [1306d8a]
+- Updated dependencies [fa46337]
+- Updated dependencies [5313635]
+- Updated dependencies [5313635]
+- Updated dependencies [5313635]
+- Updated dependencies [5313635]
+- Updated dependencies [34fd225]
+- Updated dependencies [fa46337]
+- Updated dependencies [1306d8a]
+- Updated dependencies [1fb57b0]
+- Updated dependencies [5313635]
+- Updated dependencies [5313635]
+  - @walkeros/core@4.9.0
+  - @walkeros/collector@4.9.0
+  - @walkeros/web-core@4.9.0
+
 ## 4.8.2
 
 ### Patch Changes

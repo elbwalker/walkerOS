@@ -1,5 +1,36 @@
 # @walkeros/server-destination-datamanager
 
+## 4.9.0
+
+### Patch Changes
+
+- 1306d8a: The Data Manager settings `batchSize` and `batchInterval` now say
+  they have no effect: every event is sent in its own request. The `consent`
+  description now says that request-level consent applies to each event without
+  consent of its own, and the `credentials`, `userData`, `destinations` and
+  `productDestinationId` descriptions are corrected. They appear in the docs
+  settings table and in MCP `package_get`.
+- 5313635: The package publishes a minimal example: one destination account with
+  its conversion action, with authentication taken from the Google environment.
+  The docs page renders the install line, the integrated code and the flow from
+  it, and the package test runs the same settings.
+- Updated dependencies [a67546d]
+- Updated dependencies [1306d8a]
+- Updated dependencies [34fd225]
+- Updated dependencies [5313635]
+- Updated dependencies [1306d8a]
+- Updated dependencies [fa46337]
+- Updated dependencies [5313635]
+- Updated dependencies [5313635]
+- Updated dependencies [5313635]
+- Updated dependencies [5313635]
+- Updated dependencies [34fd225]
+- Updated dependencies [fa46337]
+- Updated dependencies [1306d8a]
+- Updated dependencies [5313635]
+  - @walkeros/core@4.9.0
+  - @walkeros/server-core@4.9.0
+
 ## 4.8.2
 
 ### Patch Changes

@@ -1,5 +1,35 @@
 # @walkeros/server-destination-kafka
 
+## 4.9.0
+
+### Patch Changes
+
+- 5313635: The package publishes a minimal example: the broker addresses and the
+  topic. The docs page renders the install line, the integrated code and the
+  flow from it, and the package test runs the same settings.
+- 5313635: The Kafka settings descriptions match what the destination does:
+  `sasl` no longer names AWS MSK IAM, the `aws` fields belong to kafkajs's own
+  AWS mechanism and `authorizationIdentity` is required for it, `oauthbearer`
+  cannot authenticate without a token provider, and snappy, lz4 and zstd need a
+  codec registered in kafkajs. The step examples carry event timestamps in
+  milliseconds.
+- Updated dependencies [a67546d]
+- Updated dependencies [1306d8a]
+- Updated dependencies [34fd225]
+- Updated dependencies [5313635]
+- Updated dependencies [1306d8a]
+- Updated dependencies [fa46337]
+- Updated dependencies [5313635]
+- Updated dependencies [5313635]
+- Updated dependencies [5313635]
+- Updated dependencies [5313635]
+- Updated dependencies [34fd225]
+- Updated dependencies [fa46337]
+- Updated dependencies [1306d8a]
+- Updated dependencies [5313635]
+  - @walkeros/core@4.9.0
+  - @walkeros/server-core@4.9.0
+
 ## 4.8.2
 
 ### Patch Changes

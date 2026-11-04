@@ -1,5 +1,38 @@
 # @walkeros/server-destination-meta
 
+## 4.9.0
+
+### Patch Changes
+
+- 1306d8a: The Bing step examples now send the visitor's anonymous ID in
+  `userData`, as Microsoft requires an identifier in every event, and the
+  purchase example no longer sends the raw user ID as `externalId`. The
+  `user_data` description names Microsoft's keys and says that only `em` and
+  `ph` are hashed; the `url` description says the custom URL must end in `/`.
+- 5313635: The package publishes a minimal example: the UET tag ID and an access
+  token, read as the `BING_ACCESS_TOKEN` secret. The docs page renders the
+  install line, the integrated code and the flow from it, and the package test
+  runs the same settings.
+- 5313635: Step examples no longer depend on a helper imported at the top of the
+  file, so the example conditions published in `walkerOS.json` run on their own
+  with the same result.
+- Updated dependencies [a67546d]
+- Updated dependencies [1306d8a]
+- Updated dependencies [34fd225]
+- Updated dependencies [5313635]
+- Updated dependencies [1306d8a]
+- Updated dependencies [fa46337]
+- Updated dependencies [5313635]
+- Updated dependencies [5313635]
+- Updated dependencies [5313635]
+- Updated dependencies [5313635]
+- Updated dependencies [34fd225]
+- Updated dependencies [fa46337]
+- Updated dependencies [1306d8a]
+- Updated dependencies [5313635]
+  - @walkeros/core@4.9.0
+  - @walkeros/server-core@4.9.0
+
 ## 4.8.2
 
 ### Patch Changes

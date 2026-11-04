@@ -1,5 +1,37 @@
 # @walkeros/server-destination-twitter
 
+## 4.9.0
+
+### Patch Changes
+
+- 1306d8a: The X destination's rule setting `currency` now says it has no
+  effect: X receives no currency from this destination. The purchase step
+  examples no longer set it, and the `url` setting description says the custom
+  URL must end in `/`. Both show in the docs settings table and in MCP
+  `package_get`.
+- 5313635: The package publishes a minimal example: the pixel and event IDs and
+  the four OAuth credentials, read as the `TWITTER_CONSUMER_KEY`,
+  `TWITTER_CONSUMER_SECRET`, `TWITTER_ACCESS_TOKEN` and
+  `TWITTER_ACCESS_TOKEN_SECRET` secrets. The docs page renders the install line,
+  the integrated code and the flow from it, and the package test runs the same
+  settings.
+- Updated dependencies [a67546d]
+- Updated dependencies [1306d8a]
+- Updated dependencies [34fd225]
+- Updated dependencies [5313635]
+- Updated dependencies [1306d8a]
+- Updated dependencies [fa46337]
+- Updated dependencies [5313635]
+- Updated dependencies [5313635]
+- Updated dependencies [5313635]
+- Updated dependencies [5313635]
+- Updated dependencies [34fd225]
+- Updated dependencies [fa46337]
+- Updated dependencies [1306d8a]
+- Updated dependencies [5313635]
+  - @walkeros/core@4.9.0
+  - @walkeros/server-core@4.9.0
+
 ## 4.8.2
 
 ### Patch Changes

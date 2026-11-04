@@ -1,5 +1,25 @@
 # @walkeros/source-demo
 
+## 4.9.0
+
+### Patch Changes
+
+- Updated dependencies [a67546d]
+- Updated dependencies [1306d8a]
+- Updated dependencies [34fd225]
+- Updated dependencies [5313635]
+- Updated dependencies [1306d8a]
+- Updated dependencies [fa46337]
+- Updated dependencies [5313635]
+- Updated dependencies [5313635]
+- Updated dependencies [5313635]
+- Updated dependencies [5313635]
+- Updated dependencies [34fd225]
+- Updated dependencies [fa46337]
+- Updated dependencies [1306d8a]
+- Updated dependencies [5313635]
+  - @walkeros/core@4.9.0
+
 ## 4.8.2
 
 ### Patch Changes

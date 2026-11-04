@@ -1,5 +1,39 @@
 # @walkeros/server-destination-hubspot
 
+## 4.9.0
+
+### Patch Changes
+
+- 5313635: The `identify` descriptions say that the destination updates the
+  contact with the resolved email rather than upserting it, and `email` states
+  its default. Step examples use millisecond timestamps and name the settings
+  they depend on. The minimal example's event name prefix is a placeholder.
+- 5313635: The package publishes a minimal example: the event name prefix and an
+  access token, read as the `HUBSPOT_ACCESS_TOKEN` secret. The docs page renders
+  the install line, the integrated code and the flow from it, and the package
+  test runs the same settings.
+- 1306d8a: Package descriptions and hints now match what the destinations do.
+  The API custom headers example names `settings.headers`. Piwik PRO's ingest
+  hint warns that behind a proxy `ip` is the proxy's address, and its examples
+  use one app ID placeholder. Segment lists the calls it sends, and HubSpot
+  updates contacts rather than upserting them.
+- Updated dependencies [a67546d]
+- Updated dependencies [1306d8a]
+- Updated dependencies [34fd225]
+- Updated dependencies [5313635]
+- Updated dependencies [1306d8a]
+- Updated dependencies [fa46337]
+- Updated dependencies [5313635]
+- Updated dependencies [5313635]
+- Updated dependencies [5313635]
+- Updated dependencies [5313635]
+- Updated dependencies [34fd225]
+- Updated dependencies [fa46337]
+- Updated dependencies [1306d8a]
+- Updated dependencies [5313635]
+  - @walkeros/core@4.9.0
+  - @walkeros/server-core@4.9.0
+
 ## 4.8.2
 
 ### Patch Changes

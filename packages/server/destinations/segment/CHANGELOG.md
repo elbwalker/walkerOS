@@ -1,5 +1,45 @@
 # @walkeros/server-destination-segment
 
+## 4.9.0
+
+### Patch Changes
+
+- a67546d: The `breaker` description in the destination config now says which
+  failures open the breaker: retryable ones such as a network error, a timeout
+  or a 429 or 5xx answer, never any other 4xx, a missing setting or a runtime
+  failure. The Segment and RudderStack failure examples carry their event
+  timestamps in milliseconds.
+- 5313635: The package publishes a minimal example: the write key, read as the
+  `SEGMENT_WRITE_KEY` secret. The docs page renders the install line, the
+  integrated code and the flow from it, and the package test runs the same
+  settings.
+- 5313635: The `identify` and `group` descriptions now say that a call is
+  skipped when its userId (or groupId) and traits match the previous call of
+  that kind; the anonymousId and the user are not compared. The `integrations`
+  description says that the setting has no effect. Example timestamps are in
+  milliseconds.
+- 1306d8a: Package descriptions and hints now match what the destinations do.
+  The API custom headers example names `settings.headers`. Piwik PRO's ingest
+  hint warns that behind a proxy `ip` is the proxy's address, and its examples
+  use one app ID placeholder. Segment lists the calls it sends, and HubSpot
+  updates contacts rather than upserting them.
+- Updated dependencies [a67546d]
+- Updated dependencies [1306d8a]
+- Updated dependencies [34fd225]
+- Updated dependencies [5313635]
+- Updated dependencies [1306d8a]
+- Updated dependencies [fa46337]
+- Updated dependencies [5313635]
+- Updated dependencies [5313635]
+- Updated dependencies [5313635]
+- Updated dependencies [5313635]
+- Updated dependencies [34fd225]
+- Updated dependencies [fa46337]
+- Updated dependencies [1306d8a]
+- Updated dependencies [5313635]
+  - @walkeros/core@4.9.0
+  - @walkeros/server-core@4.9.0
+
 ## 4.8.2
 
 ### Patch Changes

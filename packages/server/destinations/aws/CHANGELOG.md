@@ -1,5 +1,39 @@
 # @walkeros/server-destination-aws
 
+## 4.9.0
+
+### Patch Changes
+
+- 5313635: The Firehose and SNS step examples carry event timestamps in
+  milliseconds, as the walkerOS event model defines them, so the published
+  records and messages show realistic dates. The delivery hint describes the
+  dead letter queue without promising a later replay.
+- 34fd225: The Firehose step examples now state their expected record bytes as
+  literals instead of computing them with the destination's own encoder, so the
+  examples check the delivered record rather than agree with the code by
+  construction. Published behavior is unchanged.
+- 5313635: The package publishes a minimal example: a stream name for Firehose
+  and a topic ARN for SNS, one example per export, with the region and
+  credentials taken from the AWS environment. The docs page renders the install
+  line, the integrated code and the flow from it, and the package test runs the
+  same settings.
+- Updated dependencies [a67546d]
+- Updated dependencies [1306d8a]
+- Updated dependencies [34fd225]
+- Updated dependencies [5313635]
+- Updated dependencies [1306d8a]
+- Updated dependencies [fa46337]
+- Updated dependencies [5313635]
+- Updated dependencies [5313635]
+- Updated dependencies [5313635]
+- Updated dependencies [5313635]
+- Updated dependencies [34fd225]
+- Updated dependencies [fa46337]
+- Updated dependencies [1306d8a]
+- Updated dependencies [5313635]
+  - @walkeros/core@4.9.0
+  - @walkeros/server-core@4.9.0
+
 ## 4.8.2
 
 ### Patch Changes

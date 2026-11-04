@@ -1,5 +1,65 @@
 # @walkeros/web-destination-gtag
 
+## 4.9.0
+
+### Patch Changes
+
+- 29d2218: The gtag and d8a destinations now set `analytics_storage` from
+  `analytics` consent instead of `functional` by default, matching what the
+  Cookiebot, CookieFirst and CookiePro sources report. With the Usercentrics
+  source, map your measurement category to `analytics` in its `categoryMap`. If
+  your consent commands report measurement consent as `functional`, map it
+  yourself, like
+  `como: { functional: 'analytics_storage', marketing: ['ad_storage', 'ad_user_data', 'ad_personalization'] }`.
+  When several consent keys map to one parameter, the parameter is granted only
+  if all of them are granted in the current consent state; before, the key that
+  came last won.
+- 5313635: The sample events from `getEvent` now use the standard event names:
+  `checkout start` replaces `checkout view`, an order carries `tax` and `total`,
+  a promotion names its placement `slot`, and product events carry `currency`.
+  Order `value` is now the merchandise value: the `order complete` sample goes
+  from 555 to 462, and the gross amount charged is `total` (467.22). The
+  destination examples read `data.tax`, `data.slot` and the search keys
+  `data.term` and `data.results`, and gross fields such as Matomo `grandTotal`
+  read `data.total` first, then `data.value`. The CLI ships default event
+  contracts for common site types in `examples/contracts/`.
+- 1306d8a: Step examples carry event timestamps in milliseconds, as the walkerOS
+  event model defines them, instead of seconds that read as a date in
+  January 1970. Where an example's output repeats the timestamp, such as
+  `event_timestamp` in the gtag include example or the event a transformer
+  example returns, the output shows the same value.
+- 1306d8a: The Consent Mode v2 example says which setup it shows: without
+  `config.consent` the first consent command sends the denied default before the
+  update; with `config.consent` the denied default goes out before `config`,
+  when the destination starts.
+- 34fd225: The gtag examples show the GA4 recommended events for page view,
+  product view, product add and order complete, with the calls as `window.gtag`
+  records them. The GA4 init example sets `pageview: false`: without it, gtag
+  sends its own page_view on `config` and every walkerOS page view counts twice.
+- 5313635: The gtag settings say what they do: `gtm.domain` is the URL the
+  container ID is appended to, up to `?id=`; `ga4.pageview: false` stops gtag's
+  own page_view (history-change page views still fire); `ads.currency` defaults
+  to EUR and mapped data replaces it; and an Ads `label` sends a conversion only
+  when its rule also has a name.
+- Updated dependencies [a67546d]
+- Updated dependencies [29d2218]
+- Updated dependencies [1306d8a]
+- Updated dependencies [34fd225]
+- Updated dependencies [5313635]
+- Updated dependencies [1306d8a]
+- Updated dependencies [fa46337]
+- Updated dependencies [5313635]
+- Updated dependencies [5313635]
+- Updated dependencies [5313635]
+- Updated dependencies [5313635]
+- Updated dependencies [34fd225]
+- Updated dependencies [fa46337]
+- Updated dependencies [1306d8a]
+- Updated dependencies [5313635]
+- Updated dependencies [5313635]
+  - @walkeros/core@4.9.0
+  - @walkeros/web-core@4.9.0
+
 ## 4.8.2
 
 ### Patch Changes

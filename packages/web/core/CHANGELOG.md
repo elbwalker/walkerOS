@@ -1,5 +1,39 @@
 # @walkeros/web-core
 
+## 4.9.0
+
+### Patch Changes
+
+- 29d2218: The gtag and d8a destinations now set `analytics_storage` from
+  `analytics` consent instead of `functional` by default, matching what the
+  Cookiebot, CookieFirst and CookiePro sources report. With the Usercentrics
+  source, map your measurement category to `analytics` in its `categoryMap`. If
+  your consent commands report measurement consent as `functional`, map it
+  yourself, like
+  `como: { functional: 'analytics_storage', marketing: ['ad_storage', 'ad_user_data', 'ad_personalization'] }`.
+  When several consent keys map to one parameter, the parameter is granted only
+  if all of them are granted in the current consent state; before, the key that
+  came last won.
+- 5313635: The test page `page` from `@walkeros/web-core/dev` now answers each
+  vendor script a step inserts with `load`, as a browser does, so a destination
+  that waits for its script delivers in the examples runner and the conformance
+  kit instead of timing out. `failScripts` still fails those scripts on demand.
+- Updated dependencies [a67546d]
+- Updated dependencies [1306d8a]
+- Updated dependencies [34fd225]
+- Updated dependencies [5313635]
+- Updated dependencies [1306d8a]
+- Updated dependencies [fa46337]
+- Updated dependencies [5313635]
+- Updated dependencies [5313635]
+- Updated dependencies [5313635]
+- Updated dependencies [5313635]
+- Updated dependencies [34fd225]
+- Updated dependencies [fa46337]
+- Updated dependencies [1306d8a]
+- Updated dependencies [5313635]
+  - @walkeros/core@4.9.0
+
 ## 4.8.2
 
 ### Patch Changes

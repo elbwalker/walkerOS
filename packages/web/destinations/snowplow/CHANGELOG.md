@@ -1,5 +1,55 @@
 # @walkeros/web-destination-snowplow
 
+## 4.9.0
+
+### Patch Changes
+
+- 5313635: The sample events from `getEvent` now use the standard event names:
+  `checkout start` replaces `checkout view`, an order carries `tax` and `total`,
+  a promotion names its placement `slot`, and product events carry `currency`.
+  Order `value` is now the merchandise value: the `order complete` sample goes
+  from 555 to 462, and the gross amount charged is `total` (467.22). The
+  destination examples read `data.tax`, `data.slot` and the search keys
+  `data.term` and `data.results`, and gross fields such as Matomo `grandTotal`
+  read `data.total` first, then `data.value`. The CLI ships default event
+  contracts for common site types in `examples/contracts/`.
+- 1306d8a: Step examples carry event timestamps in milliseconds, as the walkerOS
+  event model defines them, instead of seconds that read as a date in
+  January 1970. Where an example's output repeats the timestamp, such as
+  `event_timestamp` in the gtag include example or the event a transformer
+  example returns, the output shows the same value.
+- 9316f2a: The mapping schema lists the rule settings `data` (the
+  self-describing event data) and `struct` (a structured event), which the
+  destination reads, so they appear in the generated documentation. The
+  `contexts` setting accepts `browser`, the browser context entity the Snowplow
+  tracker supports.
+- 5313635: The `appId` setting states its default: without it, every event is
+  sent with the app_id `walkerOS`. Set `appId` to name your application in
+  Snowplow.
+- 5313635: The package publishes a minimal example: the collector URL, with the
+  tracker script loaded by the destination is all Snowplow needs to deliver. The
+  docs page renders the install line, the integrated code and the flow from it,
+  and the package test runs the same settings, so the setup a reader copies is
+  the one that was tested.
+- Updated dependencies [a67546d]
+- Updated dependencies [29d2218]
+- Updated dependencies [1306d8a]
+- Updated dependencies [34fd225]
+- Updated dependencies [5313635]
+- Updated dependencies [1306d8a]
+- Updated dependencies [fa46337]
+- Updated dependencies [5313635]
+- Updated dependencies [5313635]
+- Updated dependencies [5313635]
+- Updated dependencies [5313635]
+- Updated dependencies [34fd225]
+- Updated dependencies [fa46337]
+- Updated dependencies [1306d8a]
+- Updated dependencies [5313635]
+- Updated dependencies [5313635]
+  - @walkeros/core@4.9.0
+  - @walkeros/web-core@4.9.0
+
 ## 4.8.2
 
 ### Patch Changes

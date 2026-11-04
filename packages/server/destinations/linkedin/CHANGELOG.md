@@ -1,5 +1,34 @@
 # @walkeros/server-destination-linkedin
 
+## 4.9.0
+
+### Patch Changes
+
+- 5313635: The package publishes a minimal example: the conversion rule ID and
+  an access token, read as the `LINKEDIN_ACCESS_TOKEN` secret. The docs page
+  renders the install line, the integrated code and the flow from it, and the
+  package test runs the same settings.
+- 1306d8a: The LinkedIn destination's documentation link in its package metadata
+  now points to the existing docs page, and the `url` setting description says
+  the custom URL must end in `/`. Both show in MCP `package_get` and the docs
+  settings table.
+- Updated dependencies [a67546d]
+- Updated dependencies [1306d8a]
+- Updated dependencies [34fd225]
+- Updated dependencies [5313635]
+- Updated dependencies [1306d8a]
+- Updated dependencies [fa46337]
+- Updated dependencies [5313635]
+- Updated dependencies [5313635]
+- Updated dependencies [5313635]
+- Updated dependencies [5313635]
+- Updated dependencies [34fd225]
+- Updated dependencies [fa46337]
+- Updated dependencies [1306d8a]
+- Updated dependencies [5313635]
+  - @walkeros/core@4.9.0
+  - @walkeros/server-core@4.9.0
+
 ## 4.8.2
 
 ### Patch Changes

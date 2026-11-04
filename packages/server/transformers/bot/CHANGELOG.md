@@ -1,5 +1,35 @@
 # @walkeros/server-transformer-bot
 
+## 4.9.0
+
+### Patch Changes
+
+- 1306d8a: Step examples carry event timestamps in milliseconds, as the walkerOS
+  event model defines them, instead of seconds that read as a date in
+  January 1970. Where an example's output repeats the timestamp, such as
+  `event_timestamp` in the gtag include example or the event a transformer
+  example returns, the output shows the same value.
+- 5313635: The GA4, bot and fingerprint hints now say that a `config.ingest`
+  without the `map` operator is rejected by `walkeros validate` and logged at
+  runtime, and that a missing fingerprint salt stops the flow. The GA4 `mapping`
+  description names the mapping features a GA4 rule does not run. The validate
+  hints say the step must be wired into a chain.
+- Updated dependencies [a67546d]
+- Updated dependencies [1306d8a]
+- Updated dependencies [34fd225]
+- Updated dependencies [5313635]
+- Updated dependencies [1306d8a]
+- Updated dependencies [fa46337]
+- Updated dependencies [5313635]
+- Updated dependencies [5313635]
+- Updated dependencies [5313635]
+- Updated dependencies [5313635]
+- Updated dependencies [34fd225]
+- Updated dependencies [fa46337]
+- Updated dependencies [1306d8a]
+- Updated dependencies [5313635]
+  - @walkeros/core@4.9.0
+
 ## 4.8.2
 
 ### Patch Changes

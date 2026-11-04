@@ -1,5 +1,33 @@
 # @walkeros/server-destination-file
 
+## 4.9.0
+
+### Patch Changes
+
+- 5313635: The package publishes a minimal example: the path of the JSON Lines
+  file. The docs page renders the install line, the integrated code and the flow
+  from it, and the package test runs the same settings.
+- 5313635: The TSV step example is named `tsvLog` and writes to
+  `logs/access.tsv`, a neutral access-log path, in the published examples, the
+  docs and MCP `package_get`. Its selected fields and its output line are
+  unchanged.
+- Updated dependencies [a67546d]
+- Updated dependencies [1306d8a]
+- Updated dependencies [34fd225]
+- Updated dependencies [5313635]
+- Updated dependencies [1306d8a]
+- Updated dependencies [fa46337]
+- Updated dependencies [5313635]
+- Updated dependencies [5313635]
+- Updated dependencies [5313635]
+- Updated dependencies [5313635]
+- Updated dependencies [34fd225]
+- Updated dependencies [fa46337]
+- Updated dependencies [1306d8a]
+- Updated dependencies [5313635]
+  - @walkeros/core@4.9.0
+  - @walkeros/server-core@4.9.0
+
 ## 4.8.2
 
 ### Patch Changes

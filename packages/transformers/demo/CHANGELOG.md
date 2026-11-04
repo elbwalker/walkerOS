@@ -1,5 +1,35 @@
 # @walkeros/transformer-demo
 
+## 4.9.0
+
+### Patch Changes
+
+- 1306d8a: Step examples carry event timestamps in milliseconds, as the walkerOS
+  event model defines them, instead of seconds that read as a date in
+  January 1970. Where an example's output repeats the timestamp, such as
+  `event_timestamp` in the gtag include example or the event a transformer
+  example returns, the output shows the same value.
+- 1306d8a: The Express `path` setting is described as a single route path that
+  `paths` overrides, and it is no longer marked deprecated. The
+  `validate_tagging` tool description lists all its checks, empty entity names
+  first. The demo transformer's docs link points to the transformers page, which
+  also shows in MCP `package_get`.
+- Updated dependencies [a67546d]
+- Updated dependencies [1306d8a]
+- Updated dependencies [34fd225]
+- Updated dependencies [5313635]
+- Updated dependencies [1306d8a]
+- Updated dependencies [fa46337]
+- Updated dependencies [5313635]
+- Updated dependencies [5313635]
+- Updated dependencies [5313635]
+- Updated dependencies [5313635]
+- Updated dependencies [34fd225]
+- Updated dependencies [fa46337]
+- Updated dependencies [1306d8a]
+- Updated dependencies [5313635]
+  - @walkeros/core@4.9.0
+
 ## 4.8.2
 
 ### Patch Changes

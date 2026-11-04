@@ -1,5 +1,38 @@
 # @walkeros/server-destination-meta
 
+## 4.9.0
+
+### Patch Changes
+
+- 5313635: The package publishes a minimal example: the pixel code and an access
+  token, read as the `TIKTOK_ACCESS_TOKEN` secret. The docs page renders the
+  install line, the integrated code and the flow from it, and the package test
+  runs the same settings.
+- 5313635: Step examples no longer depend on a helper imported at the top of the
+  file, so the example conditions published in `walkerOS.json` run on their own
+  with the same result.
+- 5313635: The purchase step example sends TikTok's `Purchase` event instead of
+  `CompletePayment`, and the suggested standard event names follow TikTok's
+  current list (`Purchase` added; `ClickButton`, `CompletePayment` and
+  `PlaceAnOrder` removed). Any other name is still accepted. The `partner_name`
+  description names its default, `walkerOS`.
+- Updated dependencies [a67546d]
+- Updated dependencies [1306d8a]
+- Updated dependencies [34fd225]
+- Updated dependencies [5313635]
+- Updated dependencies [1306d8a]
+- Updated dependencies [fa46337]
+- Updated dependencies [5313635]
+- Updated dependencies [5313635]
+- Updated dependencies [5313635]
+- Updated dependencies [5313635]
+- Updated dependencies [34fd225]
+- Updated dependencies [fa46337]
+- Updated dependencies [1306d8a]
+- Updated dependencies [5313635]
+  - @walkeros/core@4.9.0
+  - @walkeros/server-core@4.9.0
+
 ## 4.8.2
 
 ### Patch Changes

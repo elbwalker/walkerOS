@@ -1,5 +1,54 @@
 # @walkeros/web-destination-optimizely
 
+## 4.9.0
+
+### Patch Changes
+
+- 1306d8a: Step examples carry event timestamps in milliseconds, as the walkerOS
+  event model defines them, instead of seconds that read as a date in
+  January 1970. Where an example's output repeats the timestamp, such as
+  `event_timestamp` in the gtag include example or the event a transformer
+  example returns, the output shows the same value.
+- 34fd225: The `eventKey` rule setting is described as having no effect:
+  Optimizely receives the rule's `name` or the event name. The `attributes`
+  description says the user context, and with it the attributes, is created
+  again whenever the user ID differs from the previous event's.
+- 9316f2a: The `userId` description shows a working fallback,
+  `["user.id", "user.device"]`, instead of a `{ key, value }` form that sent the
+  literal text `user.device` as the user id of every anonymous visitor. The
+  `attributes` description says the attributes apply when the user context is
+  created.
+- 1306d8a: The Consent revoked step example names the consent config it runs
+  with, `config.consent { analytics: true }`. The rendered example shows only
+  the consent command and its output, so without that a reader cannot tell which
+  destination the revoke stops.
+- 5313635: The package publishes a minimal example: the SDK key and the mapping
+  that resolves the user ID. The docs page renders the install line, the
+  integrated code and the flow from it, and the package test runs the same
+  setup, so the setup a reader copies is the one that was tested.
+- 5313635: `settings.userId` is required: the schema and `init` now say so. A
+  flow without it used to pass `walkeros validate` and then fail every event
+  with `missing-input`; it now fails validation and refuses to start with a
+  `config` error naming `userId`.
+- Updated dependencies [a67546d]
+- Updated dependencies [29d2218]
+- Updated dependencies [1306d8a]
+- Updated dependencies [34fd225]
+- Updated dependencies [5313635]
+- Updated dependencies [1306d8a]
+- Updated dependencies [fa46337]
+- Updated dependencies [5313635]
+- Updated dependencies [5313635]
+- Updated dependencies [5313635]
+- Updated dependencies [5313635]
+- Updated dependencies [34fd225]
+- Updated dependencies [fa46337]
+- Updated dependencies [1306d8a]
+- Updated dependencies [5313635]
+- Updated dependencies [5313635]
+  - @walkeros/core@4.9.0
+  - @walkeros/web-core@4.9.0
+
 ## 4.8.2
 
 ### Patch Changes

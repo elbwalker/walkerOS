@@ -1,5 +1,44 @@
 # @walkeros/server-transformer-fingerprint
 
+## 4.9.0
+
+### Patch Changes
+
+- 1306d8a: Step examples carry event timestamps in milliseconds, as the walkerOS
+  event model defines them, instead of seconds that read as a date in
+  January 1970. Where an example's output repeats the timestamp, such as
+  `event_timestamp` in the gtag include example or the event a transformer
+  example returns, the output shows the same value.
+- ebe013e: An `ip` input that is not one address, such as a forwarded chain, is
+  now reported as an error and left out of the hash, instead of a warning that
+  said it was empty. The event is still delivered. The complete example flow
+  reads the visitor IP from a header the proxy sets.
+- 1306d8a: The `salt` description, the hints and the step examples write the
+  salt as `$secret.FINGERPRINT_SALT`, as the docs do. The reference keeps the
+  salt out of the flow file, and a bundled flow whose secret is not set stops at
+  start with `required secret "FINGERPRINT_SALT" is not set`.
+- 5313635: The GA4, bot and fingerprint hints now say that a `config.ingest`
+  without the `map` operator is rejected by `walkeros validate` and logged at
+  runtime, and that a missing fingerprint salt stops the flow. The GA4 `mapping`
+  description names the mapping features a GA4 rule does not run. The validate
+  hints say the step must be wired into a chain.
+- Updated dependencies [a67546d]
+- Updated dependencies [1306d8a]
+- Updated dependencies [34fd225]
+- Updated dependencies [5313635]
+- Updated dependencies [1306d8a]
+- Updated dependencies [fa46337]
+- Updated dependencies [5313635]
+- Updated dependencies [5313635]
+- Updated dependencies [5313635]
+- Updated dependencies [5313635]
+- Updated dependencies [34fd225]
+- Updated dependencies [fa46337]
+- Updated dependencies [1306d8a]
+- Updated dependencies [5313635]
+  - @walkeros/core@4.9.0
+  - @walkeros/server-core@4.9.0
+
 ## 4.8.2
 
 ### Patch Changes
