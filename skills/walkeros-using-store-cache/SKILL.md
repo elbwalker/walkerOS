@@ -38,7 +38,8 @@ serve bytes with `file: true` and no cache, or cache a structured store with no
 - A transformer reads the same key many times across events (sessions, user
   lookups, product catalog enrichment)
 - A store has rate limits or slow HTTP round-trips (Sheets, custom API, S3
-  metadata)
+  metadata); `@walkeros/server-store-api` reads a third-party API, and its
+  misses are not cached
 - You need to deduplicate concurrent reads on a cold key (thundering herd)
 - You want to compose multi-tier caches (memory → GCS → Sheets)
 

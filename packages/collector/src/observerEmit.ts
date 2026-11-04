@@ -162,8 +162,10 @@ export function emitDestinationState(
  * Why a collector-owned position dropped an event.
  * - `dropped`: a chain hop or a route `stop` (`source.before`, `source.next`,
  *   `collector.next`); `by` is the transformer id, `'route'` when omitted.
- * - `consent`: the source's `config.consent` is not granted; `required` is
- *   that requirement and `consent` the state it was checked against.
+ * - `consent`: the source's `config.consent`, or its matched rule's
+ *   `consent`, is not granted; `required` is that requirement, `consent` the
+ *   state it was checked against, `mappingKey` the rule's key for a rule's
+ *   denial.
  * - `ignored`: a source mapping rule with `ignore: true` matched.
  */
 export type CollectorDrop =
@@ -173,6 +175,7 @@ export type CollectorDrop =
       at: string;
       required: WalkerOS.Consent;
       consent: WalkerOS.Consent;
+      mappingKey?: string;
     }
   | { reason: 'ignored'; at: string };
 
@@ -206,6 +209,7 @@ export function emitCollectorDrop(
   if (drop.reason === 'consent') {
     state.consent = { ...drop.consent };
     state.meta = { at: drop.at, required: { ...drop.required } };
+    if (drop.mappingKey) state.mappingKey = drop.mappingKey;
   } else if (drop.reason === 'ignored') {
     state.meta = { at: drop.at };
   } else {

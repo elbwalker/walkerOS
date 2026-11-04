@@ -9,8 +9,7 @@ export type MappingPosition = 'source' | 'transformer' | 'destination';
  * - transformer: the mapping only mutates the event; config `policy` and a
  *   rule's `condition`, `policy`, `name` and `ignore` apply.
  * - source: only the edited event goes on; config `consent`, `policy` and a
- *   rule's `condition`, `policy`, `name` and `ignore` apply. A rule's
- *   `consent` is not listed here.
+ *   rule's `condition`, `consent`, `policy`, `name` and `ignore` apply.
  * - destination: a rule's `extend` is merged only by a package onto its own
  *   shipped rules (`@walkeros/transformer-ga4`'s `settings.mapping`).
  */
@@ -57,7 +56,7 @@ const APPLIES: Record<MappingPosition, string> = {
   transformer:
     "only `policy` and a rule's `condition`, `policy`, `name` and `ignore` apply",
   source:
-    "only `consent`, `policy` and a rule's `condition`, `policy`, `name` and `ignore` apply; edit the event at a source with `policy`",
+    "only `consent`, `policy` and a rule's `condition`, `consent`, `policy`, `name` and `ignore` apply; edit the event at a source with `policy`",
   destination:
     "a rule's `extend` applies only inside a package's own `settings.mapping` (today `@walkeros/transformer-ga4`), merged onto its shipped rules; write the fields on the rule itself",
 };

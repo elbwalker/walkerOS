@@ -1,5 +1,89 @@
 # @walkeros/cli
 
+## 4.9.0
+
+### Patch Changes
+
+- 1306d8a: The bundler's dependency mismatch warning now points to
+  `config.bundle.overrides` in the flow file. `examples/flow-complete.json`
+  reads its two salts and the Meta access token as `$secret.` values, the
+  example flows `server-collect.json`, `web-serve.json` and
+  `flow-selfhost-test.json` pass `validate --strict`, and the telemetry contract
+  says telemetry is opt-in.
+- 34fd225: The package no longer ships `examples/web-serve.js`, a stale prebuilt
+  bundle that still sent the old `order complete` shape, nor
+  `examples/test.html`, the page that loaded it. Build the browser example
+  yourself with `walkeros bundle examples/web-serve.json`, as the examples
+  README shows.
+- 5313635: `walkeros validate` checks each step's settings against the package
+  version `walkeros bundle` installs, inline `@version` specs on other steps
+  included. Steps that name one package at two inline versions are reported as
+  skipped, since the bundle refuses them.
+- 5313635: The sample events from `getEvent` now use the standard event names:
+  `checkout start` replaces `checkout view`, an order carries `tax` and `total`,
+  a promotion names its placement `slot`, and product events carry `currency`.
+  Order `value` is now the merchandise value: the `order complete` sample goes
+  from 555 to 462, and the gross amount charged is `total` (467.22). The
+  destination examples read `data.tax`, `data.slot` and the search keys
+  `data.term` and `data.results`, and gross fields such as Matomo `grandTotal`
+  read `data.total` first, then `data.value`. The CLI ships default event
+  contracts for common site types in `examples/contracts/`.
+- ebe013e: An `ip` input that is not one address, such as a forwarded chain, is
+  now reported as an error and left out of the hash, instead of a warning that
+  said it was empty. The event is still delivered. The complete example flow
+  reads the visitor IP from a header the proxy sets.
+- 1fb57b0: The `flow-complete` example flow gains a `/demo/products/:id` lookup
+  route that serves product data from its file store, and a missing `walker.js`
+  now answers 404 with `Cache-Control: no-store` instead of the tracking pixel.
+- 125bbea: The `walkeros/flow` and `walkeros/cli` images now run Node.js
+  24.22.1, which fixes the vulnerabilities of the Node.js security release of 21
+  October 2026; one of them can be triggered by a request to a flow's HTTP
+  source. Rebuild images based on `walkeros/flow` with this version and
+  redeploy. Flows that run on their own Node.js need 22.23.4, 24.22.1, 26.12.1
+  or later in the same line.
+- 1306d8a: The Fetch `path` setting is described as a single route path that
+  `paths` overrides, and it is no longer marked deprecated. The Criteo
+  Quickstart uses a numeric `partnerId` placeholder. Type docs now say that an
+  open breaker fails events with `breaker-open` and that server bundles target
+  Node 20. Example env mocks are typed without casts.
+- 5313635: `@walkeros/core` exports the `StepType` type, the kind of a step
+  package (`source`, `transformer`, `destination` or `store`), read from
+  `STEP_TYPES` on `@walkeros/core/dev`. `StepKind`, `FlowStepType` and `stepId`
+  use it, as do the step kinds `resolveExportName` in `@walkeros/cli` and the
+  simulate tool of `@walkeros/mcp` take, so the kinds are listed in one place.
+- Updated dependencies [a67546d]
+- Updated dependencies [5313635]
+- Updated dependencies [5313635]
+- Updated dependencies [34fd225]
+- Updated dependencies [1306d8a]
+- Updated dependencies [29d2218]
+- Updated dependencies [1306d8a]
+- Updated dependencies [34fd225]
+- Updated dependencies [5313635]
+- Updated dependencies [1306d8a]
+- Updated dependencies [fa46337]
+- Updated dependencies [5313635]
+- Updated dependencies [5313635]
+- Updated dependencies [5313635]
+- Updated dependencies [5313635]
+- Updated dependencies [1306d8a]
+- Updated dependencies [34fd225]
+- Updated dependencies [fa46337]
+- Updated dependencies [5313635]
+- Updated dependencies [1306d8a]
+- Updated dependencies [1306d8a]
+- Updated dependencies [1fb57b0]
+- Updated dependencies [5313635]
+- Updated dependencies [5313635]
+- Updated dependencies [1306d8a]
+- Updated dependencies [5313635]
+  - @walkeros/core@4.9.0
+  - @walkeros/collector@4.9.0
+  - @walkeros/web-core@4.9.0
+  - @walkeros/server-destination-api@4.9.0
+  - @walkeros/transformer-validate@4.9.0
+  - @walkeros/server-core@4.9.0
+
 ## 4.8.2
 
 ### Patch Changes

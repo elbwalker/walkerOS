@@ -1,5 +1,34 @@
 # @walkeros/server-destination-klaviyo
 
+## 4.9.0
+
+### Patch Changes
+
+- 5313635: Step examples use millisecond timestamps, so each event time is a
+  date Klaviyo accepts. The destination identify example says that the profile
+  is updated on the first push and when its values change, and the revenue
+  example names the `currency` setting it depends on.
+- 5313635: The package publishes a minimal example: the private API key, read as
+  the `KLAVIYO_API_KEY` secret. The docs page renders the install line, the
+  integrated code and the flow from it, and the package test runs the same
+  settings.
+- Updated dependencies [a67546d]
+- Updated dependencies [1306d8a]
+- Updated dependencies [34fd225]
+- Updated dependencies [5313635]
+- Updated dependencies [1306d8a]
+- Updated dependencies [fa46337]
+- Updated dependencies [5313635]
+- Updated dependencies [5313635]
+- Updated dependencies [5313635]
+- Updated dependencies [5313635]
+- Updated dependencies [34fd225]
+- Updated dependencies [fa46337]
+- Updated dependencies [1306d8a]
+- Updated dependencies [5313635]
+  - @walkeros/core@4.9.0
+  - @walkeros/server-core@4.9.0
+
 ## 4.8.2
 
 ### Patch Changes

@@ -30,7 +30,7 @@ export interface Rule<Settings = unknown> {
    */
   batch?: number | Destination.BatchOptions;
   condition?: Condition; // Added condition
-  consent?: WalkerOS.Consent; // Not enforced; config.consent gates a destination
+  consent?: WalkerOS.Consent; // Required in addition to the step's consent for events this rule matches
   settings?: Settings; // Arbitrary but protected configurations for custom event config
   data?: Data; // Mapping of event data
   include?: string[]; // Event sections to flatten into context.data

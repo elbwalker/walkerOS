@@ -1,5 +1,47 @@
 # @walkeros/web-destination-meta
 
+## 4.9.0
+
+### Patch Changes
+
+- 5313635: The sample events from `getEvent` now use the standard event names:
+  `checkout start` replaces `checkout view`, an order carries `tax` and `total`,
+  a promotion names its placement `slot`, and product events carry `currency`.
+  Order `value` is now the merchandise value: the `order complete` sample goes
+  from 555 to 462, and the gross amount charged is `total` (467.22). The
+  destination examples read `data.tax`, `data.slot` and the search keys
+  `data.term` and `data.results`, and gross fields such as Matomo `grandTotal`
+  read `data.total` first, then `data.value`. The CLI ships default event
+  contracts for common site types in `examples/contracts/`.
+- 5313635: The package publishes a minimal example: the Pixel ID, with the Pixel
+  script loaded by the destination is all Meta Pixel needs to deliver. The docs
+  page renders the install line, the integrated code and the flow from it, and
+  the package test runs the same settings, so the setup a reader copies is the
+  one that was tested.
+- 34fd225: The Meta Pixel examples cover page view, product view, product add
+  and order complete as PageView, ViewContent, AddToCart and Purchase with
+  `content_type`, `contents`, currency, value and the event id for
+  deduplication, recorded as `window.fbq` calls. Their mapping functions now
+  also work when copied from the published examples.
+- Updated dependencies [a67546d]
+- Updated dependencies [29d2218]
+- Updated dependencies [1306d8a]
+- Updated dependencies [34fd225]
+- Updated dependencies [5313635]
+- Updated dependencies [1306d8a]
+- Updated dependencies [fa46337]
+- Updated dependencies [5313635]
+- Updated dependencies [5313635]
+- Updated dependencies [5313635]
+- Updated dependencies [5313635]
+- Updated dependencies [34fd225]
+- Updated dependencies [fa46337]
+- Updated dependencies [1306d8a]
+- Updated dependencies [5313635]
+- Updated dependencies [5313635]
+  - @walkeros/core@4.9.0
+  - @walkeros/web-core@4.9.0
+
 ## 4.8.2
 
 ### Patch Changes

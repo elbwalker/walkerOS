@@ -16,7 +16,7 @@ import Configuration from '@site/src/components/snippets/_configuration.mdx';
   npm="@walkeros/server-transformer-file"
 />
 
-Serves static files from a [store](/docs/stores) backend. Reads the file by `ingest.path`, derives the Content-Type from the file extension, and responds directly. Returns `false` to stop the transformer chain so no further transformers or destinations run for the request.
+Serves static files from a [store](/docs/stores) backend. Reads the file by `ingest.path`, derives the Content-Type from the file extension, and responds directly. Returns `false` to stop the transformer chain so no further transformers or destinations run for the request. A step with a `prefix` owns every path inside it: a file that is not there answers 404. A store read that fails answers 503, with or without a prefix.
 
 ## Installation
 
@@ -66,7 +66,7 @@ await startFlow({
   language="typescript"
 />
 
-The `'$store.files'` string only works in a bundled `flow.json`, where the CLI resolves it. In `startFlow` it stays a string and the transformer fails.
+The `'$store.files'` string only works in a bundled `flow.json`, where the CLI resolves it. In `startFlow` it stays a string, and the flow stops at startup with a config error.
 
   </TabItem>
   <TabItem value="bundled" label="Bundled">
@@ -105,7 +105,7 @@ Add to your `flow.json`:
   </TabItem>
 </Tabs>
 
-The source maps the request path into `ingest.path`, which the transformer reads, and runs the transformer in its `next` chain. `file: true` on the store makes it hand back each file's raw bytes. Without it every read fails with the `decode` code (one ERROR line per cause and minute) and the express source answers a GET with its 200 tracking pixel instead of the file; `walkeros validate` warns about the missing flag.
+The source maps the request path into `ingest.path`, which the transformer reads, and runs the transformer in its `next` chain. `file: true` on the store makes it hand back each file's raw bytes. Without it every read fails with the `decode` code (one ERROR line per cause and minute) and the step answers 503 instead of the file; `walkeros validate` warns about the missing flag.
 
 <Configuration type="transformer" data={data} />
 
@@ -116,13 +116,15 @@ The source maps the request path into `ingest.path`, which the transformer reads
 3. Looks up the remaining path in the store via `store.get(key)`
 4. If found, derives the Content-Type from the file extension, sets Content-Length for string and Buffer content, and responds with the content
 5. Returns `false` to stop the chain. No further transformers or destinations run.
-6. If the file is not found or the path doesn't match the prefix, the request goes on unchanged like any other request on the source; for a GET the express source answers with its 200 tracking pixel
+6. The step owns the paths inside `settings.prefix`. `"prefix": "/"` owns every path routed to the step. Route only file requests to a step that owns `/`, as flow-complete does with a `.js` case: any other path routed to it answers 404 and its event stops there. A path outside the prefix goes on unchanged like any other request on the source. Without a `prefix` the step owns no path, and a file that is not found goes on unchanged too.
+7. A file that is not found inside the prefix answers 404 with `{ "success": false, "error": "Not found" }` and `Cache-Control: no-store`. The `headers` setting is not applied to it.
+8. A store read that fails answers 503 with `{ "success": false, "error": "Service unavailable" }` and `Cache-Control: no-store`. The cause is logged at `ERROR` and the push counts as failed.
 
 ## Environment
 
 | Key | Type | Required | Description |
 |-----|------|----------|-------------|
-| `store` | `Store.Instance` | Yes | Store providing file content. Without one, every request passes through with a WARN line, which the default `ERROR` log level does not show, and `walkeros validate` does not report it. |
+| `store` | `Store.Instance` | Yes | Store providing file content. Without a usable store (missing, or without a `get` function) the flow stops at startup with a config error. |
 
 ## Cache and file chain
 
@@ -178,6 +180,8 @@ Put a cache on the source to answer repeated file requests from memory, without 
 }`}
   language="json"
 />
+
+The source cache keeps a 404 for the `ttl`, like any answer. It never keeps a 5xx answer, so a store that fails for a moment is not served as 503 for the whole `ttl`.
 
 ## Custom MIME types
 

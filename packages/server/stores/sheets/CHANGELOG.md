@@ -1,5 +1,29 @@
 # @walkeros/server-store-sheets
 
+## 4.9.0
+
+### Patch Changes
+
+- 5313635: The GCS, Sheets and S3 store examples now reference their credentials
+  with `$secret.` instead of `$env.`. A missing secret stops the flow at startup
+  with `required secret "<NAME>" is not set`; a missing `$env` service account
+  makes the GCS and Sheets stores fall back to the metadata server credentials.
+- Updated dependencies [a67546d]
+- Updated dependencies [1306d8a]
+- Updated dependencies [34fd225]
+- Updated dependencies [5313635]
+- Updated dependencies [1306d8a]
+- Updated dependencies [fa46337]
+- Updated dependencies [5313635]
+- Updated dependencies [5313635]
+- Updated dependencies [5313635]
+- Updated dependencies [5313635]
+- Updated dependencies [34fd225]
+- Updated dependencies [fa46337]
+- Updated dependencies [1306d8a]
+- Updated dependencies [5313635]
+  - @walkeros/core@4.9.0
+
 ## 4.8.2
 
 ### Patch Changes

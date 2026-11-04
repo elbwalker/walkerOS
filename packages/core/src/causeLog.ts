@@ -70,6 +70,9 @@ function counterOf({ step, code }: CauseKey): string | undefined {
   // A failed on(consent) holds the destination; its events are reported
   // when they fail.
   if (code === 'consent-not-applied') return undefined;
+  // A `before` rename onto another rule fails nothing: the event is delivered
+  // under the rule it entered with.
+  if (code === 'rule-not-applied') return undefined;
   // A failed store read or a dropped mapping value degrades an event that is
   // still delivered: nothing counts it.
   if (kind === 'store' || kind === 'mapping') return undefined;

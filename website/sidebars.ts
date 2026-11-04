@@ -217,6 +217,11 @@ const sidebars: SidebarsConfig = {
               id: 'stores/server/sheets',
               className: 'sidebar-badge-server',
             },
+            {
+              type: 'doc',
+              id: 'stores/server/api',
+              className: 'sidebar-badge-server',
+            },
           ],
         },
         {

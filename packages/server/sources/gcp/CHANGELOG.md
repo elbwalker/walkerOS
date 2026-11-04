@@ -1,5 +1,42 @@
 # @walkeros/server-source-gcp
 
+## 4.9.0
+
+### Patch Changes
+
+- 5313635: The Pub/Sub `decoder` descriptions say what `text` and `raw` forward
+  and that those events need a before transformer that sets the event name,
+  otherwise the collector rejects them. The setup `ackDeadlineSeconds`
+  description states that an unset value leaves Pub/Sub's own default of 10
+  seconds. The push `projectId` description no longer claims the value appears
+  in error messages.
+- 1306d8a: The Fetch `path` setting is described as a single route path that
+  `paths` overrides, and it is no longer marked deprecated. The Criteo
+  Quickstart uses a numeric `partnerId` placeholder. Type docs now say that an
+  open breaker fails events with `breaker-open` and that server bundles target
+  Node 20. Example env mocks are typed without casts.
+- Updated dependencies [a67546d]
+- Updated dependencies [5313635]
+- Updated dependencies [5313635]
+- Updated dependencies [34fd225]
+- Updated dependencies [1306d8a]
+- Updated dependencies [1306d8a]
+- Updated dependencies [34fd225]
+- Updated dependencies [5313635]
+- Updated dependencies [1306d8a]
+- Updated dependencies [fa46337]
+- Updated dependencies [5313635]
+- Updated dependencies [5313635]
+- Updated dependencies [5313635]
+- Updated dependencies [5313635]
+- Updated dependencies [34fd225]
+- Updated dependencies [fa46337]
+- Updated dependencies [1306d8a]
+- Updated dependencies [1fb57b0]
+- Updated dependencies [5313635]
+  - @walkeros/core@4.9.0
+  - @walkeros/collector@4.9.0
+
 ## 4.8.2
 
 ### Patch Changes

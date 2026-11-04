@@ -1,5 +1,58 @@
 # @walkeros/web-destination-tiktok
 
+## 4.9.0
+
+### Patch Changes
+
+- 5313635: The sample events from `getEvent` now use the standard event names:
+  `checkout start` replaces `checkout view`, an order carries `tax` and `total`,
+  a promotion names its placement `slot`, and product events carry `currency`.
+  Order `value` is now the merchandise value: the `order complete` sample goes
+  from 555 to 462, and the gross amount charged is `total` (467.22). The
+  destination examples read `data.tax`, `data.slot` and the search keys
+  `data.term` and `data.results`, and gross fields such as Matomo `grandTotal`
+  read `data.total` first, then `data.value`. The CLI ships default event
+  contracts for common site types in `examples/contracts/`.
+- 1306d8a: Step examples carry event timestamps in milliseconds, as the walkerOS
+  event model defines them, instead of seconds that read as a date in
+  January 1970. Where an example's output repeats the timestamp, such as
+  `event_timestamp` in the gtag include example or the event a transformer
+  example returns, the output shows the same value.
+- 5313635: The `identify` setting and the `Settings` type say how Advanced
+  Matching values travel: the destination passes them to `ttq.identify()`
+  unhashed, and TikTok states that its Pixel hashes email and phone number.
+  `auto_config` and `limited_data_use` no longer state a TikTok default. The
+  `StandardEventNames` type suggests `Purchase` instead of `CompletePayment`,
+  `PlaceAnOrder` and `ClickButton`, and links TikTok's list.
+- 5313635: The package publishes a minimal example: the Pixel ID is all TikTok
+  needs to deliver. The docs page renders the install line, the integrated code
+  and the flow from it, and the package test runs the same settings, so the
+  setup a reader copies is the one that was tested.
+- 1306d8a: The order example maps to TikTok's current `Purchase` standard event
+  instead of `CompletePayment`. Every example names its vendor call as a
+  simulation records it (`window.ttq.track`, `window.ttq.identify`,
+  `window.ttq.enableCookie`), and the include, identify and consent examples say
+  which config they run with. The explorer's destination mapping demo shows
+  `Purchase` for TikTok too.
+- Updated dependencies [a67546d]
+- Updated dependencies [29d2218]
+- Updated dependencies [1306d8a]
+- Updated dependencies [34fd225]
+- Updated dependencies [5313635]
+- Updated dependencies [1306d8a]
+- Updated dependencies [fa46337]
+- Updated dependencies [5313635]
+- Updated dependencies [5313635]
+- Updated dependencies [5313635]
+- Updated dependencies [5313635]
+- Updated dependencies [34fd225]
+- Updated dependencies [fa46337]
+- Updated dependencies [1306d8a]
+- Updated dependencies [5313635]
+- Updated dependencies [5313635]
+  - @walkeros/core@4.9.0
+  - @walkeros/web-core@4.9.0
+
 ## 4.8.2
 
 ### Patch Changes

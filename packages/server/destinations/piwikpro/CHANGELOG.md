@@ -1,5 +1,52 @@
 # @walkeros/server-destination-piwikpro
 
+## 4.9.0
+
+### Patch Changes
+
+- 5313635: The sample events from `getEvent` now use the standard event names:
+  `checkout start` replaces `checkout view`, an order carries `tax` and `total`,
+  a promotion names its placement `slot`, and product events carry `currency`.
+  Order `value` is now the merchandise value: the `order complete` sample goes
+  from 555 to 462, and the gross amount charged is `total` (467.22). The
+  destination examples read `data.tax`, `data.slot` and the search keys
+  `data.term` and `data.results`, and gross fields such as Matomo `grandTotal`
+  read `data.total` first, then `data.value`. The CLI ships default event
+  contracts for common site types in `examples/contracts/`.
+- 34fd225: The ecommerce methods send the `currencyCode` of their options
+  argument as the Tracking API `cur` parameter, so a web mapping with a currency
+  works unchanged on the server. Before, the currency was dropped and Piwik PRO
+  booked the order in the app's default currency. The examples now also show the
+  client IP and user agent.
+- 5313635: The package publishes a minimal example: the account URL and the app
+  ID. The docs page renders the install line, the integrated code and the flow
+  from it, and the package test runs the same settings.
+- 5313635: The `pageUrl` setting description and the batch hint now match the
+  behaviour: an event without a page URL, or one the rule cannot turn into a
+  hit, fails the push with `missing-input`. They no longer claim that such
+  events are skipped. In a batch, the other events are still sent.
+- 1306d8a: Package descriptions and hints now match what the destinations do.
+  The API custom headers example names `settings.headers`. Piwik PRO's ingest
+  hint warns that behind a proxy `ip` is the proxy's address, and its examples
+  use one app ID placeholder. Segment lists the calls it sends, and HubSpot
+  updates contacts rather than upserting them.
+- Updated dependencies [a67546d]
+- Updated dependencies [1306d8a]
+- Updated dependencies [34fd225]
+- Updated dependencies [5313635]
+- Updated dependencies [1306d8a]
+- Updated dependencies [fa46337]
+- Updated dependencies [5313635]
+- Updated dependencies [5313635]
+- Updated dependencies [5313635]
+- Updated dependencies [5313635]
+- Updated dependencies [34fd225]
+- Updated dependencies [fa46337]
+- Updated dependencies [1306d8a]
+- Updated dependencies [5313635]
+  - @walkeros/core@4.9.0
+  - @walkeros/server-core@4.9.0
+
 ## 4.8.2
 
 ### Patch Changes

@@ -1,5 +1,50 @@
 # @walkeros/web-source-cmp-usercentrics
 
+## 4.9.0
+
+### Patch Changes
+
+- 29d2218: Strictly necessary cookies no longer grant `functional`.
+  CookieFirst's `necessary` category and CookiePro's `C0001` are now reported as
+  `necessary`, so `functional` follows the visitor's choice for functional
+  cookies. Steps that require `functional`, such as the session source with
+  `consent: 'functional'`, now wait for that choice. When several categories map
+  to the same group, the group is now granted only if all of them are, as in the
+  Usercentrics source. CookiePro maps `C0005` (Social Media) to its own `social`
+  group instead of `marketing`, so a step for social media cookies requires
+  `social`. CookieFirst and Usercentrics match `categoryMap` keys
+  case-insensitively, like the other CMP sources.
+- 1306d8a: The Usercentrics source no longer declares a `ucEvent` window event
+  type it never listens to, and its docs name the events it reads,
+  `UC_UI_INITIALIZED` and `UC_UI_CMP_EVENT`. The CookieFirst example mock of
+  `elb` is typed without a cast.
+- 1306d8a: The Fetch `path` setting is described as a single route path that
+  `paths` overrides, and it is no longer marked deprecated. The Criteo
+  Quickstart uses a numeric `partnerId` placeholder. Type docs now say that an
+  open breaker fails events with `breaker-open` and that server bundles target
+  Node 20. Example env mocks are typed without casts.
+- Updated dependencies [a67546d]
+- Updated dependencies [5313635]
+- Updated dependencies [5313635]
+- Updated dependencies [34fd225]
+- Updated dependencies [1306d8a]
+- Updated dependencies [1306d8a]
+- Updated dependencies [34fd225]
+- Updated dependencies [5313635]
+- Updated dependencies [1306d8a]
+- Updated dependencies [fa46337]
+- Updated dependencies [5313635]
+- Updated dependencies [5313635]
+- Updated dependencies [5313635]
+- Updated dependencies [5313635]
+- Updated dependencies [34fd225]
+- Updated dependencies [fa46337]
+- Updated dependencies [1306d8a]
+- Updated dependencies [1fb57b0]
+- Updated dependencies [5313635]
+  - @walkeros/core@4.9.0
+  - @walkeros/collector@4.9.0
+
 ## 4.8.2
 
 ### Patch Changes

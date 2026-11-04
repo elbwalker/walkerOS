@@ -37,6 +37,17 @@ describe('createCauseLog', () => {
     expect(lines[1].context.suppressed).toBe(2);
   });
 
+  it('names no counter on a rule-not-applied line: a rename fails nothing', () => {
+    const { lines, logger } = recorder();
+    const log = createCauseLog(logger, { windowMs: 60_000, now: () => 0 });
+    log.report(
+      { step: 'destination.ga4', code: 'rule-not-applied' },
+      'renamed',
+      {},
+    );
+    expect(lines[0].message).toBe('renamed');
+  });
+
   it('logs every occurrence of a key beyond the 100-key cap, never drops a line', () => {
     const { lines, logger } = recorder();
     const log = createCauseLog(logger, { windowMs: 60_000, now: () => 0 });

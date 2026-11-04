@@ -1,6 +1,6 @@
 import { startFlow } from '..';
 import { Source } from '@walkeros/core';
-import type { WalkerOS, Destination } from '@walkeros/core';
+import type { WalkerOS, Destination, Transformer } from '@walkeros/core';
 import type { RespondFn, RespondOptions } from '@walkeros/core';
 import { testScope } from './testScope';
 
@@ -471,4 +471,85 @@ describe('Source cache integration', () => {
     expect(respondPayloads).toHaveLength(1);
     expect(respondPayloads[0]?.headers?.['X-Cache']).toBe('HIT');
   });
+
+  // A step in the source chain that answers the request itself, as the file
+  // step does: a store failure answers 503, a missing file 404.
+  interface AnswerEnv extends Transformer.BaseEnv {
+    respond?: RespondFn;
+  }
+
+  it.each([
+    [500, 2],
+    [503, 2],
+    [404, 1],
+    [200, 1],
+  ])(
+    'does not cache a 5xx respond on a cache stop miss (status %i reaches the step %i times)',
+    async (status, stepRuns) => {
+      const runs: string[] = [];
+      const answers: (RespondOptions | undefined)[] = [];
+      const answer: Transformer.Init<Transformer.Types<unknown, AnswerEnv>> = (
+        context,
+      ) => ({
+        type: 'answer',
+        config: context.config,
+        push(_event, pushContext) {
+          runs.push('answer');
+          pushContext.env.respond?.({ status, body: 'answer' });
+          return false;
+        },
+      });
+
+      const { collector } = await startFlow({
+        sources: {
+          testSource: {
+            code: async (
+              context,
+            ): Promise<Source.Instance<TestSourceTypes>> => ({
+              type: 'test',
+              config: context.config,
+              push: async (rawData: RawIngest) => {
+                const respond: RespondFn = (options) => {
+                  answers.push(options);
+                };
+                await context.withScope(
+                  testScope(rawData),
+                  respond,
+                  async (env) => {
+                    await env.push({ name: 'page view', data: {} });
+                  },
+                );
+              },
+            }),
+            next: 'answer',
+            cache: {
+              rules: [
+                {
+                  match: { key: 'ingest.method', operator: 'eq', value: 'GET' },
+                  key: ['ingest.method', 'ingest.path'],
+                  ttl: 300,
+                },
+              ],
+            },
+            config: {
+              ingest: {
+                map: { method: { key: 'method' }, path: { key: 'path' } },
+              },
+            },
+          },
+        },
+        transformers: { answer: { code: answer } },
+      });
+
+      const source = Source.getSource<TestSourceTypes>(collector, 'testSource');
+      await source.push({ method: 'GET', path: '/walker.js' });
+      await source.push({ method: 'GET', path: '/walker.js' });
+
+      expect(runs).toHaveLength(stepRuns);
+      expect(answers).toEqual([
+        { status, body: 'answer' },
+        { status, body: 'answer' },
+      ]);
+    },
+  );
 });

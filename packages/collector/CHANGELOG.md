@@ -1,5 +1,58 @@
 # @walkeros/collector
 
+## 4.9.0
+
+### Minor Changes
+
+- 5313635: The `minimal` check of `conformance` accepts a setting the schema
+  leaves optional when the step needs it under the minimal example's config,
+  such as a site ID that only `loadScript: true` requires. It starts the step
+  without that setting and keeps it only when `init` refuses with a `config`
+  error.
+- fa46337: A mapping rule's `consent` is enforced on top of the destination's:
+  matched events wait (web) or are skipped (server) until both are granted; a
+  source drops them. Destinations select the rule as the event enters, so
+  `before` chains, `state` and `policy` no longer change it; a `before` rename
+  onto another rule logs ERROR `rule-not-applied`. walker.js grows about 1.3 KB.
+
+### Patch Changes
+
+- 5313635: `conformance` from `@walkeros/collector/dev` now checks the minimal
+  example of every destination. Pass `minimal` (the package's
+  `examples.minimal`, published from `src/examples/minimal.ts`), or
+  `withoutMinimal` with the reason the package publishes none. A destination's
+  conformance test that does neither fails until it adds one of the two.
+- 34fd225: `runExamples` and `conformance` from `@walkeros/collector/dev` always
+  run every example the way `walkerOS.json` publishes it: each function in the
+  example runs from its source text, without the module it was written in. A
+  function that needs an import fails the package test and names the example.
+  The `published` option is gone.
+- 1306d8a: An event JSON cannot serialize, such as one with a circular
+  reference, is refused as invalid input. Invalid events are now logged as
+  errors, once per source and minute, and Observe shows the push result's
+  failure code. The conformance kit expects network failures thrown as a
+  `StepError`, as `sendServer` and `sendWeb` do; a raw `fetch` error fails it.
+  The web bundle `walker.js` grows by 157 bytes to 39,643 bytes, measured as
+  gzip -9.
+- 1fb57b0: The source cache no longer keeps a 5xx answer. A short store failure
+  behind a cached route is no longer served for the whole cache time. A 404 or
+  200 answer is still cached for the ttl.
+- Updated dependencies [a67546d]
+- Updated dependencies [1306d8a]
+- Updated dependencies [34fd225]
+- Updated dependencies [5313635]
+- Updated dependencies [1306d8a]
+- Updated dependencies [fa46337]
+- Updated dependencies [5313635]
+- Updated dependencies [5313635]
+- Updated dependencies [5313635]
+- Updated dependencies [5313635]
+- Updated dependencies [34fd225]
+- Updated dependencies [fa46337]
+- Updated dependencies [1306d8a]
+- Updated dependencies [5313635]
+  - @walkeros/core@4.9.0
+
 ## 4.8.2
 
 ### Patch Changes

@@ -370,7 +370,7 @@ const teaching = {
     chapter: 'server-entry',
     level: 'beginner',
     useCases: ['script-serving', 'ga4-migration'],
-    note: 'One route per job, each with its own methods: /collect, /g/collect, /walker.js.',
+    note: 'One route per job, each with its own methods: /collect, /g/collect, /walker.js, /demo/products/:id.',
     docs: [],
     example: { step: 'express', name: 'postCollect' },
   },
@@ -1542,6 +1542,30 @@ const teaching = {
     note: 'Default response headers for served files: caching and resource policy.',
     docs: [{ page: 'transformers/file' }],
   },
+  'file-prefix': {
+    pointer: '/flows/server/transformers/file/config/settings/prefix',
+    chapter: 'state-stores',
+    level: 'intermediate',
+    useCases: ['script-serving'],
+    note: 'prefix / makes the step own every script request: a missing walker.js answers 404 instead of the tracking pixel.',
+    docs: [],
+  },
+  'products-case': {
+    pointer: '/flows/server/sources/express/before/one/3',
+    chapter: 'state-stores',
+    level: 'intermediate',
+    useCases: [],
+    note: 'The last case sends product lookups (/demo/products/<id>) to productApi.',
+    docs: [],
+  },
+  'product-api': {
+    pointer: '/flows/server/transformers/productApi',
+    chapter: 'state-stores',
+    level: 'intermediate',
+    useCases: [],
+    note: 'A lookup route: GET /demo/products/<id> answers the product as JSON from the assets store (prefix /demo/ is stripped to the key products/<id>; headers sets the JSON Content-Type), 404 for an unknown id, and never becomes an event.',
+    docs: [],
+  },
   'gclid-to-ads': {
     pointer:
       '/flows/server/destinations/datamanager/config/mapping/order/complete/data/map/gclid',
@@ -2105,7 +2129,7 @@ export const flowCompleteCoverage = {
     condition: 'rule-condition',
     consent: {
       excluded:
-        'rule consent is not enforced yet; destination consent is the gate in this file',
+        "destination consent is the gate in this file; the consent guide shows a rule's consent",
     },
     settings: 'rule-settings',
     data: 'rule-data',

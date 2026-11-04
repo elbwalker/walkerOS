@@ -25,7 +25,9 @@ export const RouteMethod = z.enum(['GET', 'POST']);
 export const RouteConfigSchema = z.object({
   path: z
     .string()
-    .describe('Express route path (supports wildcards like /api/*)'),
+    .describe(
+      'Express route path: a literal, a named parameter (/api/:id) or a named wildcard (/api/*path); express 5 rejects a bare *',
+    ),
   methods: z
     .array(RouteMethod)
     .min(1)

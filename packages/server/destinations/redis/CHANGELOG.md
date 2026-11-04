@@ -1,5 +1,32 @@
 # @walkeros/server-destination-redis
 
+## 4.9.0
+
+### Patch Changes
+
+- 5313635: The Redis step examples carry event timestamps in milliseconds, as
+  the walkerOS event model defines them, so the examples published in the docs
+  and in MCP `package_get` show realistic dates instead of days in January 1970.
+- 5313635: The package publishes a minimal example: the stream key events are
+  appended to. The docs page renders the install line, the integrated code and
+  the flow from it, and the package test runs the same settings.
+- Updated dependencies [a67546d]
+- Updated dependencies [1306d8a]
+- Updated dependencies [34fd225]
+- Updated dependencies [5313635]
+- Updated dependencies [1306d8a]
+- Updated dependencies [fa46337]
+- Updated dependencies [5313635]
+- Updated dependencies [5313635]
+- Updated dependencies [5313635]
+- Updated dependencies [5313635]
+- Updated dependencies [34fd225]
+- Updated dependencies [fa46337]
+- Updated dependencies [1306d8a]
+- Updated dependencies [5313635]
+  - @walkeros/core@4.9.0
+  - @walkeros/server-core@4.9.0
+
 ## 4.8.2
 
 ### Patch Changes

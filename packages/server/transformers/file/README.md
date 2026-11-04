@@ -66,6 +66,28 @@ await startFlow({
 `/static/walker.js` is answered with `public/walker.js` and never becomes an
 event.
 
+## What it answers
+
+The `prefix` declares which paths the step owns. `"prefix": "/"` owns every path
+routed to it. Route only file requests to a step that owns `/`, as flow-complete
+does with a `.js` case: any other path routed to it answers 404 and its event
+stops there.
+
+| Request                           | Answer                                                                 |
+| --------------------------------- | ---------------------------------------------------------------------- |
+| File found                        | 200 with the extension's Content-Type and `headers`                    |
+| No file, path inside the `prefix` | 404 `{ "success": false, "error": "Not found" }`                       |
+| Store read fails                  | 503 `{ "success": false, "error": "Service unavailable" }`, then fails |
+| Path outside the `prefix`         | Passes on unchanged                                                    |
+| No file, no `prefix` set          | Passes on unchanged                                                    |
+
+The 404 and the 503 carry `Cache-Control: no-store`, not your `headers`. After a
+503 the push fails with the store's error, which the collector logs at ERROR.
+
+The step needs a store in `env.store`. Without one, or with a `$store.files`
+string that did not resolve (as in `startFlow`, where only a bundled `flow.json`
+resolves it), the flow does not start: the step throws a `config` error.
+
 ## Documentation
 
 Full configuration and examples live in the docs:

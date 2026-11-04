@@ -1,5 +1,19 @@
 # @walkeros/config
 
+## 4.9.0
+
+### Patch Changes
+
+- 5313635: `buildDev` fails the build with a message naming the package when it
+  cannot generate `walkerOS.json`: a missing or broken `dist/dev.mjs`, no
+  schemas, or output that is not valid JSON. It used to warn and skip the file.
+  `toSerializable` moved from `@walkeros/config/tsup` to `@walkeros/core/dev`.
+- 5313635: `buildDev` writes the `$meta` of `walkerOS.json` with `packageMetaOf`
+  from `@walkeros/core/dev`, the same reading the conformance kit uses, so the
+  two cannot disagree. The output is unchanged; a `package.json` without a name
+  or a version now fails the build with a message instead of publishing a
+  `$meta` without them.
+
 ## 4.8.2
 
 ### Patch Changes

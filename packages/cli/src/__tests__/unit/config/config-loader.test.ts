@@ -410,7 +410,7 @@ describe('Config Loader', () => {
       ).toThrow(
         [
           'Invalid configuration:',
-          "  - flows.web.sources.s: `config.mapping.page.view.data` does nothing at the source position; only `consent`, `policy` and a rule's `condition`, `policy`, `name` and `ignore` apply; edit the event at a source with `policy`.",
+          "  - flows.web.sources.s: `config.mapping.page.view.data` does nothing at the source position; only `consent`, `policy` and a rule's `condition`, `consent`, `policy`, `name` and `ignore` apply; edit the event at a source with `policy`.",
           '  - flows.web.destinations.api.config.settings.url: "$flow. tracking-server.url" does not match the $flow.NAME grammar',
         ].join('\n'),
       );

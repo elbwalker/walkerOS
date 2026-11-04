@@ -1,5 +1,49 @@
 # @walkeros/mcp
 
+## 4.9.0
+
+### Minor Changes
+
+- fa46337: A mapping rule's `consent` is enforced on top of the destination's:
+  matched events wait (web) or are skipped (server) until both are granted; a
+  source drops them. Destinations select the rule as the event enters, so
+  `before` chains, `state` and `policy` no longer change it; a `before` rename
+  onto another rule logs ERROR `rule-not-applied`. walker.js grows about 1.3 KB.
+
+### Patch Changes
+
+- 5313635: `flow_examples` reads a step's package examples at the version or
+  local path the flow pins, the package `flow_bundle` installs, and names that
+  version on each package example. A step whose package cannot be read is listed
+  in the warnings instead of being left out unseen.
+- 5313635: `@walkeros/core` exports the `StepType` type, the kind of a step
+  package (`source`, `transformer`, `destination` or `store`), read from
+  `STEP_TYPES` on `@walkeros/core/dev`. `StepKind`, `FlowStepType` and `stepId`
+  use it, as do the step kinds `resolveExportName` in `@walkeros/cli` and the
+  simulate tool of `@walkeros/mcp` take, so the kinds are listed in one place.
+- Updated dependencies [a67546d]
+- Updated dependencies [1306d8a]
+- Updated dependencies [34fd225]
+- Updated dependencies [5313635]
+- Updated dependencies [1306d8a]
+- Updated dependencies [34fd225]
+- Updated dependencies [5313635]
+- Updated dependencies [1306d8a]
+- Updated dependencies [fa46337]
+- Updated dependencies [5313635]
+- Updated dependencies [5313635]
+- Updated dependencies [5313635]
+- Updated dependencies [5313635]
+- Updated dependencies [ebe013e]
+- Updated dependencies [1fb57b0]
+- Updated dependencies [125bbea]
+- Updated dependencies [34fd225]
+- Updated dependencies [fa46337]
+- Updated dependencies [1306d8a]
+- Updated dependencies [5313635]
+  - @walkeros/core@4.9.0
+  - @walkeros/cli@4.9.0
+
 ## 4.8.2
 
 ### Patch Changes

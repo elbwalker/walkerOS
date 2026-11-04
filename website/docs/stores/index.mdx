@@ -42,6 +42,7 @@ On shutdown, sources stop first, then destinations and transformers. Stores are 
 | [**S3**](./server/s3) | Server only | Cloud (always available) | Network I/O | Managed deployments, shared assets, hot-swap |
 | [**GCS**](./server/gcs) | Server only | Cloud (always available) | Network I/O | Cloud Run / GKE deployments, GCP-native |
 | [**Sheets**](./server/sheets) | Server only | Cloud (Google Sheets) | Slow (HTTP, rate-limited) | Demos, prototypes with a spreadsheet UI |
+| [**API**](./server/api) | Server only | Remote (third-party HTTP API) | Network I/O, read-only | Reading records from a CRM or other third-party API |
 
 For ephemeral, in-process caching, use the built-in [cache tier](./cache.mdx) on any of the stores above; it needs no separate package.
 
@@ -159,6 +160,12 @@ Google Cloud Storage with zero runtime dependencies. Built-in auth supports Appl
 Google Sheets store with zero runtime dependencies. Row-per-key storage using the Sheets v4 REST API. Designed for demos and small prototypes where the spreadsheet is the operator-facing UI. Rate-limited; pair with the [cache tier](./cache.mdx) for any non-trivial throughput.
 
 [Learn more &rarr;](./server/sheets)
+
+### API
+
+Read-only store for a third-party HTTP API. Each key is one GET request to a URL template, and the JSON answer is the value. A 404, a 204 or a `null` body is a miss; every other failure is reported at `ERROR`. Pair it with the [cache tier](./cache.mdx), which does not cache misses.
+
+[Learn more &rarr;](./server/api)
 
 ## Caching on stores
 

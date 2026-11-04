@@ -1,5 +1,37 @@
 # @walkeros/server-destination-gcp
 
+## 4.9.0
+
+### Patch Changes
+
+- 5313635: The BigQuery `location` setting is described as not read:
+  `walkeros setup` creates the dataset in `config.setup.location`. The `client`
+  description says it serves setup only. The hints cover BigQuery authentication
+  with `config.credentials`, the default dataset `walkerOS`, the setup command
+  and how repeated failures are counted. The Pub/Sub default storage regions
+  carry their full names, and example timestamps are in milliseconds.
+- 5313635: The package publishes a minimal example: a project ID for BigQuery
+  and a project ID and topic for Pub/Sub, one example per export, with
+  credentials taken from the Google environment. The docs page renders the
+  install line, the integrated code and the flow from it, and the package test
+  runs the same settings.
+- Updated dependencies [a67546d]
+- Updated dependencies [1306d8a]
+- Updated dependencies [34fd225]
+- Updated dependencies [5313635]
+- Updated dependencies [1306d8a]
+- Updated dependencies [fa46337]
+- Updated dependencies [5313635]
+- Updated dependencies [5313635]
+- Updated dependencies [5313635]
+- Updated dependencies [5313635]
+- Updated dependencies [34fd225]
+- Updated dependencies [fa46337]
+- Updated dependencies [1306d8a]
+- Updated dependencies [5313635]
+  - @walkeros/core@4.9.0
+  - @walkeros/server-core@4.9.0
+
 ## 4.8.2
 
 ### Patch Changes

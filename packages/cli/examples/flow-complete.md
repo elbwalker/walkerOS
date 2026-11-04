@@ -39,8 +39,8 @@ web      usercentrics, session, dataLayer, browser
            -> collector.next: opt-out stop, pageGroup
            -> ga4 (to Google, main property)  gtm (dataLayer)  collect (to server)
 
-server   express /collect  /g/collect  /walker.js
-           before: one [ G-SUBSITE hit -> ga4Decode -> ga4Consent | *.js -> file (stop) | other /g/collect (stop) ]
+server   express /collect  /g/collect  /walker.js  /demo/products/:id
+           before: one [ G-SUBSITE hit -> ga4Decode -> ga4Consent | *.js -> file (stop) | other /g/collect (stop) | /demo/products/ -> productApi (stop) ]
            next: opt-out stop, dedup
            -> collector.next: fingerprint, bot, not impression -> enrich [ loadUser, sessionSave, sessionLoad, validate ]
            -> pubsub (every event, email pseudonymized)
@@ -140,13 +140,14 @@ walkeros push packages/cli/examples/flow-complete.json -f web -e '{"name":"page 
 ## server-entry: A first-party endpoint, and a GA4 migration path
 
 - **Purpose:** one express source answers the browser (`/collect`), GA4 hits of
-  a sub-site (`/g/collect`) and script requests (`/walker.js`).
+  a sub-site (`/g/collect`), script requests (`/walker.js`) and product lookups
+  (`/demo/products/:id`).
 - **Features:**
   - `server-url` at `/flows/server/config/url`: The full collect endpoint, local
     by default, SERVER_URL in production.
   - `express-paths` at `/flows/server/sources/express/config/settings/paths`:
     One route per job, each with its own methods: /collect, /g/collect,
-    /walker.js.
+    /walker.js, /demo/products/:id.
   - `express-cors` at `/flows/server/sources/express/config/settings/cors`: CORS
     response headers for the shop origin; express adds X-Content-Type-Options
     itself.
@@ -740,6 +741,15 @@ walkeros push packages/cli/examples/flow-complete.json -f server -e '{"name":"pa
     first party from the server flow.
   - `file-headers` at `/flows/server/transformers/file/config/settings/headers`:
     Default response headers for served files: caching and resource policy.
+  - `file-prefix` at `/flows/server/transformers/file/config/settings/prefix`:
+    prefix / makes the step own every script request: a missing walker.js
+    answers 404 instead of the tracking pixel.
+  - `products-case` at `/flows/server/sources/express/before/one/3`: The last
+    case sends product lookups (/demo/products/<id>) to productApi.
+  - `product-api` at `/flows/server/transformers/productApi`: A lookup route:
+    GET /demo/products/<id> answers the product as JSON from the assets store
+    (prefix /demo/ is stripped to the key products/<id>; headers sets the JSON
+    Content-Type), 404 for an unknown id, and never becomes an event.
   - `gclid-to-ads` at
     `/flows/server/destinations/datamanager/config/mapping/order/complete/data/map/gclid`:
     The gclid saved at session start reaches Google Ads with the purchase.
@@ -752,12 +762,27 @@ walkeros push packages/cli/examples/flow-complete.json -f server -e '{"name":"pa
   (`packages/cli/examples/customers`, one JSON record per customer id), outside
   root `include`, so no customer data ships in a bundle. `basePath` is relative
   to the working directory, so `CUSTOMERS_DIR` holds it as an absolute path (the
-  setup block at the top exports it). In production a Sheets or GCS store takes
-  its place; `loadUser` does not change.
+  setup block at the top exports it). In production a Sheets or GCS store, or
+  `@walkeros/server-store-api` for your CRM's API, takes its place; `loadUser`
+  does not change.
 - **walker.js first party:** the `file` transformer answers `GET /walker.js`
   from the `assets` store with `settings.headers` (`Cache-Control`,
   `Cross-Origin-Resource-Policy`) and ends with `next: { stop: true }`. Express
-  `settings.cors` adds the CORS headers.
+  `settings.cors` adds the CORS headers. With `prefix: "/"` the step owns every
+  script request: a missing `walker.js` answers 404 with
+  `Cache-Control: no-store` instead of the tracking pixel.
+- **A lookup route:** `productApi` is a second `file` step on the same `assets`
+  store. `GET /demo/products/SKU-1` answers 200 with the product as JSON
+  (`shared/products/SKU-1`; `settings.headers` sets the JSON `Content-Type`,
+  since the step serves bytes as stored), an unknown id answers 404 with
+  `Cache-Control: no-store`, and `next: { stop: true }` keeps every lookup from
+  becoming an event. A failing store read answers 503 and is logged at ERROR.
+
+```bash
+curl -i http://localhost:8080/demo/products/SKU-1
+curl -i http://localhost:8080/demo/products/SKU-9
+```
+
 - **Why `X-Content-Type-Options: nosniff` is not in the file:** express sets it
   on every response itself.
 - The `file` example is proven over HTTP in the integration test; its simulation

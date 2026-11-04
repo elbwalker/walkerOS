@@ -1,5 +1,87 @@
 # @walkeros/core
 
+## 4.9.0
+
+### Minor Changes
+
+- fa46337: New core helpers `matchMappingRule`, `getMappingCandidates`,
+  `getRequiredConsent` and `checkConsent` (with its `ConsentCheck` type).
+  `processEventMapping` takes an optional selected rule, and queued destination
+  entries carry the rule they were selected with (`match`). The unused
+  `Destination.Push` type is removed.
+- fa46337: A mapping rule's `consent` is enforced on top of the destination's:
+  matched events wait (web) or are skipped (server) until both are granted; a
+  source drops them. Destinations select the rule as the event enters, so
+  `before` chains, `state` and `policy` no longer change it; a `before` rename
+  onto another rule logs ERROR `rule-not-applied`. walker.js grows about 1.3 KB.
+
+### Patch Changes
+
+- a67546d: The `breaker` description in the destination config now says which
+  failures open the breaker: retryable ones such as a network error, a timeout
+  or a 429 or 5xx answer, never any other 4xx, a missing setting or a runtime
+  failure. The Segment and RudderStack failure examples carry their event
+  timestamps in milliseconds.
+- 1306d8a: Corrected schema descriptions and type docs: `init: true` marks a
+  step as already initialized and skips its `init()`, an open breaker fails
+  events with `breaker-open`, a timed-out `on()` handler blocks the destination
+  after one more window, a server flow's `observe` block has no effect, and the
+  source `ingest` example wraps its fields in `map`.
+- 34fd225: The mapping rule descriptions shown in property tables and
+  `package_get` now match the behaviour: a `condition` that returns false moves
+  on to the next rule, `batch` works only on a destination with `pushBatch`,
+  `extend` applies only in `@walkeros/transformer-ga4`'s `settings.mapping`, and
+  the `mappingKey` and batch `key` examples are `"product view"`.
+- 5313635: A destination package can publish `examples.minimal` from
+  `src/examples/minimal.ts` (`MINIMAL_EXAMPLE_FILE`): the settings it needs to
+  deliver, credentials named as secrets. `composeQuickstart` from
+  `@walkeros/core/dev` turns it into the install line, the integrated code and a
+  complete flow reading each credential as `$secret`, and throws when they
+  cannot be built. `packageMetaOf` writes a package's `$meta`, a single platform
+  as a list.
+- 1306d8a: `null` is a valid event value; mapping is unchanged and still skips a
+  value that is or contains `null`. `filterValues` keeps `null` and turns a date
+  into its timestamp, so MCP `flow_simulate` keeps `null` inputs. A `TypeError`,
+  `RangeError` or `ReferenceError` is now a non-retryable `runtime` failure
+  instead of `transport`; Node's `fetch failed` stays `transport`. `deepMerge`
+  and `clone` ignore `__proto__` keys.
+- 5313635: Schema descriptions now match the behaviour: `setup` on destinations,
+  stores and flow steps runs only through `walkeros setup`; an event cache's
+  `stop` defaults to true on sources, and `update` changes only a source's
+  response, on HIT and MISS. They appear in the flow JSON Schema and in MCP.
+- 5313635: The source config descriptions of `require`, `setup` and `ingest` now
+  match the behaviour: `require` delays only `on()` calls, not init or event
+  capture; `setup` runs only through `walkeros setup`; `ingest` resolves against
+  the normalized request scope of server sources.
+- 5313635: `@walkeros/core/dev` exports `toSerializable`, which turns a value
+  into what `walkerOS.json` publishes: functions become `{ $code }` objects with
+  their source text, Zod schemas are left out, and everything else is copied.
+  The package build and the step example runner both use it, so tests run what
+  is published.
+- 5313635: The sample events from `getEvent` now use the standard event names:
+  `checkout start` replaces `checkout view`, an order carries `tax` and `total`,
+  a promotion names its placement `slot`, and product events carry `currency`.
+  Order `value` is now the merchandise value: the `order complete` sample goes
+  from 555 to 462, and the gross amount charged is `total` (467.22). The
+  destination examples read `data.tax`, `data.slot` and the search keys
+  `data.term` and `data.results`, and gross fields such as Matomo `grandTotal`
+  read `data.total` first, then `data.value`. The CLI ships default event
+  contracts for common site types in `examples/contracts/`.
+- 34fd225: The `PushResult.error` description now says when it is set: for a
+  rejected event or a failure before the destinations. A destination's failure
+  is reported in `failed`, under its id with a `reason`, and leaves `error`
+  unset.
+- 1306d8a: The Fetch `path` setting is described as a single route path that
+  `paths` overrides, and it is no longer marked deprecated. The Criteo
+  Quickstart uses a numeric `partnerId` placeholder. Type docs now say that an
+  open breaker fails events with `breaker-open` and that server bundles target
+  Node 20. Example env mocks are typed without casts.
+- 5313635: `@walkeros/core` exports the `StepType` type, the kind of a step
+  package (`source`, `transformer`, `destination` or `store`), read from
+  `STEP_TYPES` on `@walkeros/core/dev`. `StepKind`, `FlowStepType` and `stepId`
+  use it, as do the step kinds `resolveExportName` in `@walkeros/cli` and the
+  simulate tool of `@walkeros/mcp` take, so the kinds are listed in one place.
+
 ## 4.8.2
 
 ### Patch Changes

@@ -1,7 +1,7 @@
 {
   "name": "@walkeros/web-destination-gtag",
   "description": "Unified Google destination for walkerOS (GA4, Ads, GTM)",
-  "version": "4.8.2",
+  "version": "4.9.0",
   "license": "MIT",
   "main": "./dist/index.js",
   "module": "./dist/index.mjs",
@@ -38,16 +38,16 @@
     "update": "npx npm-check-updates -u && npm update"
   },
   "dependencies": {
-    "@walkeros/core": "4.8.2",
-    "@walkeros/web-core": "4.8.2"
+    "@walkeros/core": "4.9.0",
+    "@walkeros/web-core": "4.9.0"
   },
   "devDependencies": {
     "@types/gtag.js": "^0.0.20",
-    "@walkeros/collector": "4.8.2",
-    "@walkeros/web-source-cmp-cookiebot": "4.8.2",
-    "@walkeros/web-source-cmp-cookiefirst": "4.8.2",
-    "@walkeros/web-source-cmp-cookiepro": "4.8.2",
-    "@walkeros/web-source-cmp-usercentrics": "4.8.2"
+    "@walkeros/collector": "4.9.0",
+    "@walkeros/web-source-cmp-cookiebot": "4.9.0",
+    "@walkeros/web-source-cmp-cookiefirst": "4.9.0",
+    "@walkeros/web-source-cmp-cookiepro": "4.9.0",
+    "@walkeros/web-source-cmp-usercentrics": "4.9.0"
   },
   "repository": {
     "url": "git+https://github.com/elbwalker/walkerOS.git",

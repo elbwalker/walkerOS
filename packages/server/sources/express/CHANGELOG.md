@@ -1,5 +1,44 @@
 # @walkeros/server-source-express
 
+## 4.9.0
+
+### Patch Changes
+
+- 1fb57b0: The route `path` description now names the patterns Express 5
+  accepts, `/api/:id` and `/api/*path`. A bare `/api/*`, which the old text
+  suggested, is rejected at startup because the wildcard has no parameter name.
+  Only the description text changed, not the route handling.
+- 1306d8a: The Express `path` setting is described as a single route path that
+  `paths` overrides, and it is no longer marked deprecated. The
+  `validate_tagging` tool description lists all its checks, empty entity names
+  first. The demo transformer's docs link points to the transformers page, which
+  also shows in MCP `package_get`.
+- 5313635: The pixel GET example now sends `name` and `data[...]` query
+  parameters, the form the source turns into an event. The previous example used
+  `e` and `d` parameters, which the collector rejects as an event without a
+  name, so the request answered with the GIF and nothing was delivered.
+- Updated dependencies [a67546d]
+- Updated dependencies [5313635]
+- Updated dependencies [5313635]
+- Updated dependencies [34fd225]
+- Updated dependencies [1306d8a]
+- Updated dependencies [1306d8a]
+- Updated dependencies [34fd225]
+- Updated dependencies [5313635]
+- Updated dependencies [1306d8a]
+- Updated dependencies [fa46337]
+- Updated dependencies [5313635]
+- Updated dependencies [5313635]
+- Updated dependencies [5313635]
+- Updated dependencies [5313635]
+- Updated dependencies [34fd225]
+- Updated dependencies [fa46337]
+- Updated dependencies [1306d8a]
+- Updated dependencies [1fb57b0]
+- Updated dependencies [5313635]
+  - @walkeros/core@4.9.0
+  - @walkeros/collector@4.9.0
+
 ## 4.8.2
 
 ### Patch Changes

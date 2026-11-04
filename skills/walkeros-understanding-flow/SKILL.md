@@ -145,9 +145,10 @@ no `next`, no `before`; they sit alongside the pipeline rather than inside it.
   access them through their `env`.
 - Implementations: `@walkeros/server-store-fs` (async, filesystem),
   `@walkeros/server-store-s3` (async, S3-compatible),
-  `@walkeros/server-store-gcs`, `@walkeros/server-store-sheets`. The collector
-  ships a built-in in-memory cache tier; enable it on any store via
-  `Flow.Store.cache` instead of declaring a separate memory store.
+  `@walkeros/server-store-gcs`, `@walkeros/server-store-sheets`,
+  `@walkeros/server-store-api`. The collector ships a built-in in-memory cache
+  tier; enable it on any store via `Flow.Store.cache` instead of declaring a
+  separate memory store.
 
 ```json
 {
@@ -160,6 +161,7 @@ no `next`, no `before`; they sit alongside the pipeline rather than inside it.
   "transformers": {
     "file": {
       "package": "@walkeros/server-transformer-file",
+      "config": { "settings": { "prefix": "/static" } },
       "env": { "store": "$store.assets" }
     }
   }

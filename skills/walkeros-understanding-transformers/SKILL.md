@@ -35,6 +35,15 @@ or deliver (destinations); they modify events in-flight.
 | `@walkeros/server-transformer-fingerprint` | server | Hash request fields into a rotating visitor id     |
 | `@walkeros/server-transformer-file`        | server | Serve static files from a store                    |
 
+### File step answers
+
+`@walkeros/server-transformer-file` owns the paths inside `settings.prefix`
+(`"/"` owns every routed path; without a prefix it owns none). A hit answers
+with the file, a miss inside the prefix answers 404, and a failing store read
+answers 503. A missing store stops the flow at startup. Route only file requests
+to a step that owns `/`, as flow-complete does with a `.js` case: any other path
+routed to it answers 404 and its event stops there.
+
 ### Contract validation
 
 `@walkeros/transformer-validate` is the runtime arm of a

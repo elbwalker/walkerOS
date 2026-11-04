@@ -207,7 +207,7 @@ see each line.
 | ---- | ----- | --------- | --- |
 | `transport` | A destination's request failed or threw an unknown error | yes, except a `4xx` other than `429` | Check the endpoint and credentials; the status is on the line |
 | `runtime` | A destination or a store threw a `TypeError`, `RangeError` or `ReferenceError` with no code on its `cause`; a transformer's throw is `transformer`, a rule condition's `mapping` | no | Fix the code the message names; a retry fails the same way. A browser `fetch` rejection that a destination throws unwrapped lands here too: throw it as `transport` (see [Reporting failures](/docs/destinations/create-your-own#reporting-failures)) |
-| `timeout` | A destination or transformer push or `init` did not settle within its `config.timeout` (10 s by default) | yes | Raise `config.timeout` or check the vendor |
+| `timeout` | A destination or transformer push or `init`, or a destination's rule `condition`, did not settle within its `config.timeout` (10 s by default) | yes | Raise `config.timeout` or check the vendor |
 | `not-ready` | The destination or transformer could not start | no | Fix the cause its message names |
 | `breaker-open` | `config.breaker` is set and `threshold` retryable failures in a row opened it; events fail at once | yes | Fix the outage. After `breaker.cooldown` (30 s) the next event probes the destination and a success closes the breaker; events failed while it was open stay in the dead-letter queue |
 | `blocked` | A state delivery to the destination (its `on` handler, for example consent) failed and did not recover within `config.timeout` | yes | Fix the destination's `on` handler (see its `consent-not-applied` line). A handler that failed is retried by a push after the window, one that timed out gets a new delivery once it settles, and one that never settles keeps the destination blocked; events fail until a delivery succeeds |
@@ -221,6 +221,7 @@ see each line.
 | `vendor-timeout` | The vendor script did not become ready in time | yes | Check the network and the script URL |
 | `beacon-rejected` | The browser refused a `sendBeacon` | only up to 64 KiB | Send smaller batches |
 | `consent-not-applied` | A destination's `on('consent')` handler failed | n/a | Fix the handler; the destination's events wait for one window of `config.timeout`, then fail with `blocked` |
+| `rule-not-applied` | A destination's `before` chain renamed an event onto another rule; that rule and its `consent` do not apply | n/a | Rename the event in a source chain or `collector.next` |
 | `dlq-overflow` | A destination's dead-letter queue was full and evicted its oldest entry | n/a | Raise `dlqMax` or fix the failing destination; counted in `status.dropped` |
 | `on-overflow` | A destination's queue of waiting `on()` deliveries was full and dropped the oldest | n/a | Raise the destination's own `config.queueMax`; counted in `status.dropped` |
 | `decode` | A store holds a value that cannot be decoded | no | Repair or delete the stored value; the read counts as a miss for that event |

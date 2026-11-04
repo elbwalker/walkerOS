@@ -1,5 +1,47 @@
 # @walkeros/explorer
 
+## 4.9.0
+
+### Patch Changes
+
+- 1306d8a: The order example maps to TikTok's current `Purchase` standard event
+  instead of `CompletePayment`. Every example names its vendor call as a
+  simulation records it (`window.ttq.track`, `window.ttq.identify`,
+  `window.ttq.enableCookie`), and the include, identify and consent examples say
+  which config they run with. The explorer's destination mapping demo shows
+  `Purchase` for TikTok too.
+- Updated dependencies [a67546d]
+- Updated dependencies [5313635]
+- Updated dependencies [5313635]
+- Updated dependencies [5313635]
+- Updated dependencies [34fd225]
+- Updated dependencies [1306d8a]
+- Updated dependencies [29d2218]
+- Updated dependencies [1306d8a]
+- Updated dependencies [34fd225]
+- Updated dependencies [5313635]
+- Updated dependencies [1306d8a]
+- Updated dependencies [fa46337]
+- Updated dependencies [5313635]
+- Updated dependencies [5313635]
+- Updated dependencies [5313635]
+- Updated dependencies [5313635]
+- Updated dependencies [1306d8a]
+- Updated dependencies [34fd225]
+- Updated dependencies [fa46337]
+- Updated dependencies [1306d8a]
+- Updated dependencies [1fb57b0]
+- Updated dependencies [5313635]
+- Updated dependencies [5313635]
+- Updated dependencies [1306d8a]
+- Updated dependencies [34fd225]
+- Updated dependencies [5313635]
+  - @walkeros/core@4.9.0
+  - @walkeros/web-source-browser@4.9.0
+  - @walkeros/collector@4.9.0
+  - @walkeros/web-core@4.9.0
+  - @walkeros/web-destination-gtag@4.9.0
+
 ## 4.8.2
 
 ### Patch Changes

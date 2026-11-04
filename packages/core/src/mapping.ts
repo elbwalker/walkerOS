@@ -10,6 +10,7 @@ import { StepError } from './stepError';
 import { getErrorMessage } from './getErrorMessage';
 
 /**
+ * Async form of `matchMappingRule`.
  * Gets the mapping for an event.
  *
  * @param event The event to get the mapping for (can be partial or full).
@@ -22,6 +23,49 @@ export async function getMappingEvent(
   mapping?: Mapping.Rules,
   collector?: Collector.Instance,
 ): Promise<Mapping.Result> {
+  return matchMappingRule(event, mapping, collector);
+}
+
+/**
+ * The rule lists an event name can match, in lookup order: `entity action`,
+ * `entity *`, `* action`, `* *`, each once and only where rules exist. The
+ * one key lookup for matching and for the rename check.
+ */
+export function getMappingCandidates(
+  name: string | undefined,
+  mapping?: Mapping.Rules,
+): Array<{ key: string; rules: Mapping.Rule | Mapping.Rule[] }> {
+  const [entity, action] = (name || '').split(' ');
+  if (!mapping || !entity || !action) return [];
+  const candidates: Array<{
+    key: string;
+    rules: Mapping.Rule | Mapping.Rule[];
+  }> = [];
+  for (const [e, a] of [
+    [entity, action],
+    [entity, '*'],
+    ['*', action],
+    ['*', '*'],
+  ]) {
+    const key = `${e} ${a}`;
+    const rules = mapping[e]?.[a];
+    if (rules && !candidates.some((c) => c.key === key))
+      candidates.push({ key, rules });
+  }
+  return candidates;
+}
+
+/**
+ * Selects the mapping rule for an event: the candidates in lookup order, in
+ * each the first rule whose condition passes; a candidate whose conditions
+ * all fail falls through to the next. Synchronous unless a condition returns
+ * a promise; from there the rest is awaited in order.
+ */
+export function matchMappingRule(
+  event: WalkerOS.DeepPartialEvent | WalkerOS.PartialEvent | WalkerOS.Event,
+  mapping?: Mapping.Rules,
+  collector?: Collector.Instance,
+): WalkerOS.PromiseOrValue<Mapping.Result> {
   const [entity, action] = (event.name || '').split(' ');
   if (!mapping || !entity || !action) return {};
 
@@ -70,73 +114,31 @@ export async function getMappingEvent(
       : Boolean(result);
   };
 
-  // Rules are tried in order and the first match wins. Resolution stays
-  // synchronous until a condition returns a promise; from there the rest of
-  // the list is awaited in order.
-  const resolveEventMapping = (
-    key: string,
-    rules?: Mapping.Rule | Mapping.Rule[],
-    start = 0,
-  ): Mapping.Rule | undefined | Promise<Mapping.Rule | undefined> => {
-    if (!rules) return;
-    const list = isArray(rules) ? rules : [rules];
-    for (let index = start; index < list.length; index++) {
-      const rule = list[index];
-      const matched = matchesRule(rule, key);
-      if (typeof matched !== 'boolean')
-        return resolvePending(matched, rule, key, list, index);
-      if (matched) return rule;
-    }
-    return;
-  };
-
-  const resolvePending = async (
-    pending: Promise<boolean>,
-    rule: Mapping.Rule,
-    key: string,
-    list: Mapping.Rule[],
-    index: number,
-  ): Promise<Mapping.Rule | undefined> =>
-    (await pending) ? rule : resolveEventMapping(key, list, index + 1);
-
-  // The tiers in the order the mapping schema states: exact, entity
-  // wildcard, action wildcard, global wildcard. A tier whose rules all fail
-  // their conditions falls through to the next; a tier met twice (an event
-  // named with a literal `*`) is tried once, so each condition runs once.
-  const tiers: Array<[string, string]> = [];
-  for (const tier of [
-    [entity, action],
-    [entity, '*'],
-    ['*', action],
-    ['*', '*'],
-  ] as const) {
-    if (!tiers.some(([e, a]) => e === tier[0] && a === tier[1]))
-      tiers.push([tier[0], tier[1]]);
-  }
-
-  const resolveTier = (
-    index: number,
-  ): Mapping.Result | Promise<Mapping.Result> => {
-    for (let tier = index; tier < tiers.length; tier++) {
-      const [entityKey, actionKey] = tiers[tier];
-      const rules = mapping[entityKey]?.[actionKey];
-      if (!rules) continue;
-      const mappingKey = `${entityKey} ${actionKey}`;
-      const found = resolveEventMapping(mappingKey, rules);
-      // Only an async condition costs an await. A thenable check, not
-      // `instanceof Promise`: pages may replace the global Promise.
-      if (isThenable(found))
-        return Promise.resolve(found).then(
-          (eventMapping): Mapping.Result | Promise<Mapping.Result> =>
-            eventMapping ? { eventMapping, mappingKey } : resolveTier(tier + 1),
-        );
-      if (found) return { eventMapping: found, mappingKey };
+  const candidates = getMappingCandidates(event.name, mapping);
+  const tryFrom = (
+    from: number,
+    start: number,
+  ): WalkerOS.PromiseOrValue<Mapping.Result> => {
+    for (let c = from; c < candidates.length; c++) {
+      const { key, rules } = candidates[c];
+      const list = isArray(rules) ? rules : [rules];
+      for (let index = c === from ? start : 0; index < list.length; index++) {
+        const rule = list[index];
+        const matched = matchesRule(rule, key);
+        // Only an async condition costs an await.
+        if (typeof matched !== 'boolean')
+          return matched.then(
+            (ok): WalkerOS.PromiseOrValue<Mapping.Result> =>
+              ok
+                ? { eventMapping: rule, mappingKey: key }
+                : tryFrom(c, index + 1),
+          );
+        if (matched) return { eventMapping: rule, mappingKey: key };
+      }
     }
     return { eventMapping: undefined, mappingKey: '' };
   };
-
-  const result = resolveTier(0);
-  return isThenable(result) ? await result : result;
+  return tryFrom(0, 0);
 }
 
 /**
@@ -192,8 +194,8 @@ async function valueAt(
  *
  * This is the unified mapping logic used by both sources and destinations.
  * It applies transformations in this order:
- * 1. Config-level policy - modifies the event itself (global rules)
- * 2. Mapping rules - finds matching rule based on entity-action
+ * 1. Config-level policy (shapes the event)
+ * 2. The rule: the given one, or matched here (sources, transformers)
  * 3. Event-level policy - modifies the event based on specific mapping rule
  * 4. Data transformation - creates context data
  * 5. Ignore check and name override
@@ -204,6 +206,7 @@ async function valueAt(
  * @param event - The event to process (can be partial or full, will be mutated by policies)
  * @param config - Mapping configuration (mapping, data, policy, consent)
  * @param collector - Collector instance for context
+ * @param resolved - The rule a destination selected as the event entered it; `{}` means no rule. Without it the rule is matched here.
  * @returns Object with transformed event, data, mapping rule, and ignore flag
  */
 export async function processEventMapping<
@@ -212,6 +215,7 @@ export async function processEventMapping<
   event: T,
   config: Mapping.Config,
   collector: Collector.Instance,
+  resolved?: Mapping.Result,
 ): Promise<{
   event: T;
   data?: WalkerOS.Property;
@@ -233,12 +237,12 @@ export async function processEventMapping<
     );
   }
 
-  // Step 2: Get event mapping rule
-  const { eventMapping, mappingKey } = await getMappingEvent(
-    event,
-    config.mapping,
-    collector,
-  );
+  // Step 2: the rule. A destination passes the rule it selected as the event
+  // entered it (`{}`: no rule); every other caller selects here, once.
+  const { eventMapping, mappingKey } =
+    resolved !== undefined
+      ? resolved
+      : await getMappingEvent(event, config.mapping, collector);
 
   // A value that fails is reported with the rule it belongs to.
   const trace: ValueTrace | undefined = mappingKey ? { mappingKey } : undefined;

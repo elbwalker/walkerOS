@@ -1,5 +1,32 @@
 # @walkeros/web-source-session
 
+## 4.9.0
+
+### Patch Changes
+
+- 5313635: The settings schema now accepts `parameters`, the map of additional
+  URL parameters to capture, so `walkeros validate` no longer rejects a setting
+  the source reads. The `pulse` description says what it refreshes, and the
+  package metadata links the documentation page directly.
+- Updated dependencies [a67546d]
+- Updated dependencies [29d2218]
+- Updated dependencies [1306d8a]
+- Updated dependencies [34fd225]
+- Updated dependencies [5313635]
+- Updated dependencies [1306d8a]
+- Updated dependencies [fa46337]
+- Updated dependencies [5313635]
+- Updated dependencies [5313635]
+- Updated dependencies [5313635]
+- Updated dependencies [5313635]
+- Updated dependencies [34fd225]
+- Updated dependencies [fa46337]
+- Updated dependencies [1306d8a]
+- Updated dependencies [5313635]
+- Updated dependencies [5313635]
+  - @walkeros/core@4.9.0
+  - @walkeros/web-core@4.9.0
+
 ## 4.8.2
 
 ### Patch Changes
