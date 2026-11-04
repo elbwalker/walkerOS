@@ -102,20 +102,57 @@ condition falls through to it and is ignored too.
 Mapping wildcards are **first-match**: the lookup above picks one rule and no other rule is consulted. [Contract wildcards](/docs/getting-started/flow/contract#wildcard-inheritance) are **additive**: every matching level merges in. The two systems intentionally pick different defaults: mapping selects a single transformation target, contract accumulates requirements.
 :::
 
+A destination picks its rule once, as the event arrives: after the source chain
+and `collector.next`, before its own `before` chain, `state` and config
+`policy`. Those shape the payload; they do not change which rule applies. To
+steer a destination's rule, rename the event in a source chain or
+`collector.next`. If its `before` chain renames the event onto another rule,
+that rule and its `consent` do not apply, and the collector logs one ERROR line
+(`rule-not-applied`).
+
 A rule's `condition` is checked while matching: the first rule whose
 `condition` passes is used; if none passes, the lookup continues with the next
 tier. A condition may be async: conditions are awaited one by one, in rule
-order. A condition that throws fails the event: it is not treated as no match,
+order. One that does not settle within the destination's `config.timeout` fails
+the event with the reason `timeout`. A condition that throws fails the event: it is not treated as no match,
 because falling through could send an event the rule meant to stop. The push
 answers `ok: false` with the reason `mapping`, and the collector logs one ERROR
 line. Once a rule matches, the collector runs `policy` (event-level), resolves
 `data`, then hands the result to the destination's `push` (or buffers it when
-`batch` is set and the destination batches). A rule-level `consent` is not
-checked: gate a destination with `config.consent`, or a single value with a
-`consent` entry.
+`batch` is set and the destination batches). Because a condition runs before the
+`before` chain, it also runs for events that chain drops, and it must not push
+events to its own destination: while the destination waits for that condition,
+the event can fail with `timeout`.
 
 A `policy` entry that resolves to nothing removes the field. That is how a
 consent-gated entry redacts a value when consent is denied.
+
+### Rule consent
+
+A rule's `consent` adds a requirement for the events it matches, on top of the
+destination's `config.consent`: both must hold. Within one object any granted
+key is enough. On the web a denied event waits in the destination's queue and
+is sent once consent is granted; server flows built by the CLI skip it instead
+(`consentDenied: 'skip'`). The rule is a gate, not a selector: if the selected
+rule's consent is denied, the event waits instead of falling through to the
+next rule. To choose a rule by consent, read `context.consent` in a
+`condition`. An `ignore` rule's `consent` has no effect. At a source, a denied
+rule drops the event. At a transformer, `consent` has no effect; `walkeros
+validate` and the bundle reject it (`MAPPING_NO_OP`).
+
+A destination's `config` that sends every analytics event and `order complete`
+only with marketing consent:
+
+```json
+{
+  "consent": { "analytics": true },
+  "mapping": {
+    "order": {
+      "complete": { "name": "purchase", "consent": { "marketing": true } }
+    }
+  }
+}
+```
 
 ### Batch scheduling
 
@@ -304,7 +341,7 @@ await getMappingValue(event, 'data.id', { collector });
 ### Source mapping
 
 Normalize events before they reach the collector. At a source a rule renames
-the event (`name`), edits it (`policy`) or drops it (`ignore`); `data`,
+the event (`name`), edits it (`policy`) or drops it (`ignore`, or a `consent` that is not granted); `data`,
 `include`, `remove`, `batch`, `settings`, `extend` and `silent` have no effect
 there, because only the edited event moves on. `walkeros validate` and the
 bundle reject those keys (`MAPPING_NO_OP`), naming the path and what applies at

@@ -747,10 +747,10 @@ success: true
   Duration: 44779ms
 ```
 
-Each destination step prints `mapping: <entity action key>` when a rule matched, `mapping: none` when it pushed the event without a matching rule, or `mapping: none (skipped before mapping)` when nothing was sent, then one `call <fn>(<args>)` line per recorded call (arguments as compact JSON, cut at 300 characters) or `no calls`. When nothing was sent, a line before the calls says why:
+Each destination step prints `mapping: <entity action key>` when a rule matched, `mapping: none` when it pushed the event without a matching rule, or `mapping: none (skipped before mapping)` when nothing was sent. When a rule's own consent holds the event, the line names that rule's key instead, followed by a `skipped: consent` line. Then one `call <fn>(<args>)` line per recorded call (arguments as compact JSON, cut at 300 characters) or `no calls`. When nothing was sent, a line before the calls says why:
 
 - `pending: waits for consent (require)`: the destination has `require` and never started (it names the unmet `require` entries).
-- `skipped: consent (requires marketing; granted functional)`: the destination started, but its consent check skipped the event. It names the consent the destination requires and what was granted (collector consent plus the event's own consent).
+- `skipped: consent (requires marketing; granted functional)`: the destination started, but its consent check skipped the event. It names the consent the destination or its rule requires and what was granted (collector consent plus the event's own consent).
 
 A transformer that stops or fails the event before the destination (in `collector.next` or the destination's `before`) adds no such line: the step shows `mapping: none (skipped before mapping)` and `no calls`, `success` stays `true`, and the transformer's own log line on stderr says why (for example the fingerprint transformer's `Fingerprint inputs resolved empty ...` when no `--ingest` is passed).
 
@@ -830,7 +830,7 @@ Three settings decide whether a destination receives an event. They are easy to 
 | Setting | Where | What it does | In a simulation |
 |---|---|---|---|
 | `require: ["consent"]` | Destination `config` | The destination stays pending (not initialized, events queued) until the collector has any consent state | Starts once `--consent` is passed. Without it: `pending: waits for consent (require)` |
-| `consent: { marketing: true }` | Destination `config` | Each event is checked against the collector's consent plus the event's own consent; a denied event is skipped and held in the destination's queue until the consent is granted | Grant it with `--consent` or in the event's `consent`. Otherwise: `skipped: consent (...)` |
+| `consent: { marketing: true }` | Destination `config`, or one of its mapping rules (on top of the destination's) | Each event is checked against the collector's consent plus the event's own consent; a denied event is skipped and held in the destination's queue until the consent is granted | Grant it with `--consent` or in the event's `consent`. Otherwise: `skipped: consent (...)` |
 | `consent` on the event | The event (`-e`) | Consent of this one event, counted on top of the collector's consent | Part of the event you pass |
 | `consent` in a source's settings | Source `config.settings` (for example the session source) | The source waits for that consent before it emits | A consent-gated source starts from `--consent`. Without it, it emits nothing |
 

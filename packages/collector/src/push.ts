@@ -3,7 +3,8 @@ import {
   createIngest,
   emitStep,
   FatalError,
-  getGrantedConsent,
+  checkConsent,
+  getRequiredConsent,
   getSpanId,
   InvalidEventError,
   processEventMapping,
@@ -160,33 +161,38 @@ export function createPush<T extends Collector.Instance>(
               return createPushResult({ ok: true, dropped: true });
             }
 
-            // Check consent requirements
-            if (mapping.consent) {
-              const eventConsent = processed.event.consent as
-                | WalkerOS.Consent
-                | undefined;
-              const grantedConsent = getGrantedConsent(
-                mapping.consent,
-                collector.consent,
-                eventConsent,
-              );
+            const eventConsent = processed.event.consent as
+              | WalkerOS.Consent
+              | undefined;
+            // One gate for the source's and the matched rule's consent.
+            const check = checkConsent(
+              getRequiredConsent(mapping, processed.mapping),
+              collector.consent,
+              eventConsent,
+            );
 
-              // Denied: the event never reaches the collector. Recorded
-              // like a chain drop, with the consent gate as its reason.
-              if (!grantedConsent) {
-                const at = id ? `source.${id}` : 'collector.push';
-                collector.logger.debug('Event dropped by source consent', {
-                  at,
-                  required: mapping.consent,
-                });
-                emitCollectorDrop(collector, processed.event, pipelineIngest, {
-                  reason: 'consent',
-                  at,
-                  required: mapping.consent,
-                  consent: { ...collector.consent, ...eventConsent },
-                });
-                return createPushResult({ ok: true, dropped: true });
-              }
+            // Denied: the event never reaches the collector. Recorded like a
+            // chain drop, with the consent gate as its reason; a rule's
+            // denial names its rule.
+            if ('unmet' in check) {
+              const at = id ? `source.${id}` : 'collector.push';
+              const mappingKey =
+                check.unmet !== mapping.consent
+                  ? processed.mappingKey
+                  : undefined;
+              collector.logger.debug('Event dropped by source consent', {
+                at,
+                required: check.unmet,
+                mappingKey,
+              });
+              emitCollectorDrop(collector, processed.event, pipelineIngest, {
+                reason: 'consent',
+                at,
+                required: check.unmet,
+                consent: { ...collector.consent, ...eventConsent },
+                ...(mappingKey ? { mappingKey } : {}),
+              });
+              return createPushResult({ ok: true, dropped: true });
             }
 
             partialEvent = processed.event;

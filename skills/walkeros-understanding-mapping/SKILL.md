@@ -100,7 +100,7 @@ interface Rule {
   silent?: boolean; // Process settings side effects, skip destination default push
   policy?: Policy; // Event-specific pre-processing
   condition?: Function; // Match condition (for arrays)
-  consent?: Consent; // Not checked; config.consent gates a destination
+  consent?: Consent; // Required in addition to config.consent for events this rule matches
   settings?: unknown; // Custom event configuration
   batch?: number | BatchOptions; // Own batch buffer (a number is the wait in ms)
   extend?: RulePatch; // Config-layer merge onto a package-shipped default rule
@@ -290,7 +290,9 @@ Common patterns shown below. For detailed examples of all 12 strategies, see
 
 ## Policy (Pre-Processing)
 
-Policy modifies the event before mapping rules are applied. Use for:
+Policy shapes the event before its data is mapped. At a destination the rule was
+already selected when the event entered it; at a source or transformer, policy
+runs before matching. Use for:
 
 - Adding computed fields
 - Normalizing data structure
@@ -469,7 +471,7 @@ TypeScript ignores the unused second arg.
 | `silent`    | Run settings side effects, skip default forwarding                      |
 | `policy`    | Pre-process event                                                       |
 | `condition` | Match condition (arrays)                                                |
-| `consent`   | Not checked; `config.consent` gates a destination                       |
+| `consent`   | Required in addition to `config.consent` for the events it matches      |
 | `settings`  | Custom configuration                                                    |
 | `batch`     | Own batch buffer for this event (destination needs `pushBatch`)         |
 | `extend`    | Config-layer merge onto a package-shipped default (null clears a field) |
@@ -521,15 +523,15 @@ Only **event-mutating** fields run; every other field is a no-op that
 `walkeros validate` and the bundle reject (`MAPPING_NO_OP`) and the collector
 names in one ERROR line at registration (rules in array form included):
 
-| Field                                                                                     | Transformer position                                                              |
-| ----------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------- |
-| `policy`                                                                                  | Applies, pre-processes the event before rule matching                             |
-| `mapping[].condition`                                                                     | Applies, picks the rule (awaited in order, first match wins)                      |
-| `mapping[].policy`                                                                        | Applies, per-event policy                                                         |
-| `mapping[].name`                                                                          | Applies, **renames** the event (mutation is observable downstream)                |
-| `mapping[].ignore`                                                                        | Applies, drops the event **from the chain entirely** (no downstream step sees it) |
-| `consent`, `include`, `data`                                                              | No-op (no vendor payload, no destination to gate)                                 |
-| `mapping[].consent`, `include`, `remove`, `batch`, `settings`, `extend`, `data`, `silent` | No-op (destination-only concepts)                                                 |
+| Field                                                                                     | Transformer position                                                                                                                                                                                          |
+| ----------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `policy`                                                                                  | Applies, pre-processes the event before rule matching                                                                                                                                                         |
+| `mapping[].condition`                                                                     | Applies, picks the rule (awaited in order, first match wins)                                                                                                                                                  |
+| `mapping[].policy`                                                                        | Applies, per-event policy                                                                                                                                                                                     |
+| `mapping[].name`                                                                          | Applies, **renames** the event (mutation is observable downstream); in a destination's own `before` chain it does not change that destination's rule (ERROR `rule-not-applied` when it lands on another rule) |
+| `mapping[].ignore`                                                                        | Applies, drops the event **from the chain entirely** (no downstream step sees it)                                                                                                                             |
+| `consent`, `include`, `data`                                                              | No-op (no vendor payload, no destination to gate)                                                                                                                                                             |
+| `mapping[].consent`, `include`, `remove`, `batch`, `settings`, `extend`, `data`, `silent` | No-op (destination concepts; a rule's `consent` also applies at a source)                                                                                                                                     |
 
 Note the `ignore: true` semantic shift: at a **destination** it skips delivery
 to that destination only; at a **transformer step** it drops the event from the

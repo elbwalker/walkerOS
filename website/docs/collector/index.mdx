@@ -340,7 +340,7 @@ setting value. A vendor response body stays on the error object.
 
 ### Consent-denied events on a server
 
-A collector holds an event that a destination's `consent` does not allow, and
+A collector holds an event that a destination's `consent`, or its rule's, does not allow, and
 sends it when consent is granted later (`consentDenied: 'queue'`, the
 default). A server has no later grant for an event's own consent, so server
 flows built by the CLI default to `consentDenied: 'skip'`: the event is not

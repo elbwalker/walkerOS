@@ -527,7 +527,7 @@ describe('closed schemas (validate and the bundle preflight)', () => {
       {
         path: 'flows.default.sources.s',
         message:
-          "`config.mapping.page.view.data` does nothing at the source position; only `consent`, `policy` and a rule's `condition`, `policy`, `name` and `ignore` apply; edit the event at a source with `policy`.",
+          "`config.mapping.page.view.data` does nothing at the source position; only `consent`, `policy` and a rule's `condition`, `consent`, `policy`, `name` and `ignore` apply; edit the event at a source with `policy`.",
         code: 'MAPPING_NO_OP',
       },
       {

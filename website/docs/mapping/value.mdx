@@ -351,8 +351,9 @@ destination:
   language="typescript"
 />
 
-Processing order: config policy → event matching → event policy → data
-transformation.
+Processing order at a destination: event matching (as the event arrives), its
+`before` chain and `state`, config policy, event policy, data transformation. At
+a source: config policy, event matching, event policy.
 
 ## See also
 

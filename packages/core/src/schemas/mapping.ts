@@ -351,7 +351,7 @@ export const RuleSchema = z
         'Condition function as string: the rule matches only when it returns true; otherwise the next rule is tried. A condition that throws fails the event.',
       ),
     consent: ConsentSchema.optional().describe(
-      "Not enforced: a rule's consent has no effect. To require consent for a destination, set consent in its config.",
+      'Consent required for events this rule matches, in addition to the step consent. A destination holds (web) or skips (server) the event until granted; a source drops it.',
     ),
     policy: PolicySchema.optional().describe(
       'Event-level policy overrides (applied after config-level policy)',
@@ -467,7 +467,7 @@ export const ConfigSchema = z
       'Entity-action specific mapping rules',
     ),
     policy: PolicySchema.optional().describe(
-      'Pre-processing policy rules applied before mapping',
+      'Pre-processing policy rules applied to the event before its data is mapped',
     ),
   })
   .meta({

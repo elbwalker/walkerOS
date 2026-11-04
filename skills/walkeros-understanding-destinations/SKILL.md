@@ -375,8 +375,9 @@ skipped with the reason `pending` by `flow_simulate` and
 
 ## Policy
 
-Policy modifies the event BEFORE mapping rules run. Defined at config level
-(applies to all events) or rule level (applies to specific events):
+Policy shapes the event before its data is mapped; the rule was selected
+earlier, as the event entered the destination. Defined at config level (applies
+to all events) or rule level (applies to specific events):
 
 ```json
 {

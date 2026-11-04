@@ -14,18 +14,19 @@ for core concepts.
 
 ## Quick Reference
 
-| I want to...                   | Use this pattern                                      |
-| ------------------------------ | ----------------------------------------------------- |
-| Rename event                   | `{ name: 'new_name' }`                                |
-| Extract nested value           | `'data.nested.value'`                                 |
-| Set static value               | `{ value: 'USD' }`                                    |
-| Transform value                | `{ fn: (value, { event }) => transform(event) }`      |
-| Build object                   | `{ map: { key: 'source' } }`                          |
-| Process array                  | `{ loop: ['source', { map: {...} }] }`                |
-| Gate by consent                | `{ key: 'data.email', consent: { marketing: true } }` |
-| First defined value (fallback) | `[{ key: 'data.sku' }, { key: 'data.id' }]`           |
-| Add a field to a default rule  | `{ extend: { data: { map: { x: 'path' } } } }`        |
-| Drop a field from output       | `{ remove: ['field.path'] }`                          |
+| I want to...                   | Use this pattern                                                 |
+| ------------------------------ | ---------------------------------------------------------------- |
+| Rename event                   | `{ name: 'new_name' }`                                           |
+| Extract nested value           | `'data.nested.value'`                                            |
+| Set static value               | `{ value: 'USD' }`                                               |
+| Transform value                | `{ fn: (value, { event }) => transform(event) }`                 |
+| Build object                   | `{ map: { key: 'source' } }`                                     |
+| Process array                  | `{ loop: ['source', { map: {...} }] }`                           |
+| Gate by consent                | `{ key: 'data.email', consent: { marketing: true } }`            |
+| Gate one event type by consent | rule `consent: { marketing: true }` (on top of `config.consent`) |
+| First defined value (fallback) | `[{ key: 'data.sku' }, { key: 'data.id' }]`                      |
+| Add a field to a default rule  | `{ extend: { data: { map: { x: 'path' } } } }`                   |
+| Drop a field from output       | `{ remove: ['field.path'] }`                                     |
 
 ## Common Recipes
 

@@ -69,7 +69,7 @@ Stores declared with `file: true` hold raw bytes and are not supported by `state
 
 - **Source:** `before` chain → state → `next` chain → `collector.push`. All entries run before the collector receives the event, in array order. The source's `next` route is resolved after state ran, so it can route on a value a `get` loaded (for example `ingest.tier`). State is skipped when the source declares a `terminus`, which receives the raw event with no pipeline.
 - **Transformer:** `before` chain → `get` → step mapping → `set` → `next` dispatch. `get` entries enrich the event before the mapping runs; `set` entries run after it settles, on every emitting path (straight-through, `next` routing, and per fork of a fan-out).
-- **Destination:** `get` → mapping-to-payload push → `set` (after a successful send). A failed push skips the `set`. A batched destination never runs `set`: neither enqueuing an event nor flushing the batch writes it, and nothing reports it.
+- **Destination:** `get` → mapping-to-payload push → `set` (after a successful send). The destination selected the event's rule when the event entered it, so a value `get` writes shapes the payload but does not change which rule applies. A failed push skips the `set`. A batched destination never runs `set`: neither enqueuing an event nor flushing the batch writes it, and nothing reports it.
 
 State is **fail-open**: if a store call or value resolution throws, the error is logged and the event passes through unchanged. The chain always continues. A key that does not resolve is reported at `ERROR` (one line per store and minute, code `mapping`) and the event still passes through; a `get` that finds nothing in the store is silent.
 
@@ -176,7 +176,7 @@ and merges them into `user`, so the `id` and `hash` already there stay:
 
 ### Fetch a product margin before sending
 
-A destination reads a per-product margin from a store and writes it onto the event before mapping it to the vendor payload:
+A destination reads a per-product margin from a store and writes it onto the event before mapping it to the vendor payload (rule conditions do not see it: the rule was selected when the event entered the destination):
 
 ```json
 "stores": {

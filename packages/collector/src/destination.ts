@@ -8,6 +8,7 @@ import type {
   QueuedReason,
   Transformer,
   Ingest,
+  Mapping,
   RespondFn,
   Simulation,
 } from '@walkeros/core';
@@ -22,10 +23,11 @@ import {
   debounce,
   emitStep,
   getId,
-  getGrantedConsent,
+  checkConsent,
   getMappingKeyPaths,
   getMappingNoOpMessage,
   getMappingNoOpPaths,
+  getRequiredConsent,
   isDefined,
   isFunction,
   isObject,
@@ -95,6 +97,14 @@ import {
 import { reconcilePending } from './pending';
 import { runCollectorNext } from './collector-next';
 import { recordBreaker, releaseBreakerProbe } from './breaker';
+import {
+  currentMatch,
+  failSelection,
+  reportRuleNotApplied,
+  selectRound,
+  selectRules,
+  type SelectPass,
+} from './selection';
 
 /** Default upper-bound on entries per batch. Caps unbounded growth under sustained load. */
 const DEFAULT_BATCH_SIZE = 1_000;
@@ -610,6 +620,11 @@ async function deliverToDestinations(
 
   const passes = Object.entries(destinations || {});
   let results: DestinationOutcome[];
+  // Per destination: the failed selection of this push's own event.
+  const arrivalFailures = new Map<
+    string,
+    { reason: FailureReason; error: unknown }
+  >();
   try {
     results = await Promise.all(
       // Process all destinations in parallel
@@ -758,6 +773,32 @@ async function deliverToDestinations(
           return entry;
         };
 
+        // This push's own event, wrapped once: selected before it enters any
+        // queue, then held, admitted or drained with its match.
+        const arriving: Destination.Queued | undefined = event
+          ? { event: clone(event) }
+          : undefined;
+        const pass: SelectPass = {
+          collector,
+          destination,
+          id,
+          failed: new Set(),
+          // The push waiting for a failed entry answers with the failure;
+          // this push's own event answers through the fold after the passes.
+          onFailed: (entry, reason, error) => {
+            settle([entry], { kind: 'failed', reason, error });
+            if (entry === arriving) arrivalFailures.set(id, { reason, error });
+          },
+        };
+        // The arriving entry until its selection fails (at entry, or in a
+        // later round that admits it).
+        const live = (): Destination.Queued | undefined =>
+          arriving && !pass.failed.has(arriving) ? arriving : undefined;
+        // The queue as a selection round reads it: refreshed, so each entry
+        // is admitted with the consent it is drained with.
+        const queuedNow = (): Destination.Queued[] =>
+          (destination.queuePush || []).map(refresh);
+
         // Per-event consent gate: granted events keep only their granted
         // states and are delivered; denied events emit a skip state so
         // observers see the gate decision, and wait (or, under
@@ -774,23 +815,45 @@ async function deliverToDestinations(
               },
             }
           : createIngest('unknown');
+        // The rule each allowed entry was admitted with: the rule whose
+        // consent the gate checked is the rule delivered.
+        const admitted = new Map<Destination.Queued, Mapping.Result>();
         const admit = (queue: Destination.Queued[]) => {
           const consent = collector.consent;
           const allowed: Destination.Queued[] = [];
           const denied: Destination.Queued[] = [];
           for (const entry of queue) {
+            if (pass.failed.has(entry)) continue;
             const queuedEvent = entry.event;
-            const grantedConsent = getGrantedConsent(
-              destination.config.consent, // Required
+            const result = currentMatch(entry, destination.config);
+            // Every entry must hold: the destination's consent, then its rule's.
+            const check = checkConsent(
+              getRequiredConsent(destination.config, result?.eventMapping),
               consent, // Current collector state
               queuedEvent.consent, // Individual event state
             );
 
-            if (grantedConsent) {
-              queuedEvent.consent = grantedConsent; // Save granted consent states only
+            if ('granted' in check) {
+              // Unreachable: a selection round ran in this turn for every
+              // entry the destination admits. Never delivered unselected,
+              // never silent.
+              if (result === undefined) {
+                failSelection(
+                  pass,
+                  entry,
+                  false,
+                  new StepError('rule not selected before admission', {
+                    code: 'mapping',
+                  }),
+                );
+                continue;
+              }
+              queuedEvent.consent = check.granted; // Save granted consent states only
+              admitted.set(entry, result);
               allowed.push(entry);
               continue;
             }
+            const { unmet } = check;
 
             emitDestinationState(
               collector,
@@ -801,8 +864,10 @@ async function deliverToDestinations(
               (state) => {
                 state.skipReason = 'consent';
                 if (consent) state.consent = { ...consent };
-                if (destination.config.consent)
-                  state.meta = { required: { ...destination.config.consent } };
+                state.meta = { required: { ...unmet } };
+                // A rule's own consent names its rule; a destination's own denial carries no mappingKey.
+                if (result?.mappingKey && unmet !== destination.config.consent)
+                  state.mappingKey = result.mappingKey;
               },
             );
 
@@ -843,6 +908,32 @@ async function deliverToDestinations(
         )
           await catchUpDestinationState(collector, destination, id);
 
+        // The arriving entry as a round or the gate reads it: a consent
+        // command that ran while a selection awaited applies to it, as to the
+        // events in hand after init. Only to an event whose consent is the
+        // collector's own state (the floor `createEvent` gives an event
+        // pushed without consent): consent a producer put on the event is
+        // the event's own and is kept.
+        const selectingWith = collector.consent;
+        const floored = event?.consent === selectingWith;
+        const arrivalNow = (): Destination.Queued | undefined => {
+          const arrival = live();
+          return arrival && floored && collector.consent !== selectingWith
+            ? refresh(arrival)
+            : arrival;
+        };
+
+        // The arriving event is selected before it enters any queue, without
+        // the guard, so pushes stay concurrent. Right before the hold check:
+        // an event this selection skipped (its consent denied) is admitted in
+        // the same turn, with the same consent.
+        for (
+          let w = arriving && selectRules(pass, [], false, arrivalNow());
+          w;
+          w = selectRules(pass, [], false, arrivalNow())
+        )
+          await w;
+
         // State hold: a state delivery to this destination is running or did
         // not settle. Consent first: a denied event waits for consent as
         // anywhere else. A granted one is held in the destination's own queue
@@ -850,10 +941,12 @@ async function deliverToDestinations(
         // Observe record until its `out` or `error`); once the hold outlasts
         // that window the destination is blocked: the event and the held ones
         // before it fail (`blocked`) until a retry succeeds.
-        const held = heldState(destination, timeout);
-        if (held.state !== 'ready') {
-          if (!event) return { id, destination, skipped: true };
-          const { allowed, denied } = admit([{ event: clone(event) }]);
+        const holdOutcome = (): DestinationOutcome | undefined => {
+          const held = heldState(destination, timeout);
+          if (held.state === 'ready') return undefined;
+          const arrival = arrivalNow();
+          if (!arrival) return { id, destination, skipped: true };
+          const { allowed, denied } = admit([arrival]);
           requeue(denied);
           if (!allowed.length)
             return denied.length
@@ -880,18 +973,36 @@ async function deliverToDestinations(
           }
 
           return holdOrRefuse(allowed);
-        }
+        };
+        const onHold = holdOutcome();
+        if (onHold) return onHold;
 
-        // Queued events: refresh consent (full replace — stale consent must
-        // not persist). Each entry keeps its identity; the event inside is
-        // copied. User merge happens for all events below.
+        // Queued entries are selected in place, behind the destination's
+        // selection guard; the drain follows in the same turn as the last
+        // round. A round that awaited may have let a state hold start.
+        let waited = false;
+        for (
+          let w = selectRound(pass, queuedNow, true, arrivalNow());
+          w;
+          w = selectRound(pass, queuedNow, true, arrivalNow())
+        ) {
+          waited = true;
+          await w;
+        }
+        const heldAfter = waited ? holdOutcome() : undefined;
+        if (heldAfter) return heldAfter;
+
+        // Queued events, refreshed (full replace: stale consent must not
+        // persist). Each entry keeps its identity; the event inside is copied.
+        // User merge happens for all events below.
         let currentQueue: Destination.Queued[] = (
           destination.queuePush || []
         ).map(refresh);
         destination.queuePush = [];
 
-        // Current event: added as-is (consent is already fresh from createEvent).
-        if (event) currentQueue.push({ event: clone(event) });
+        // The current event: its entry from the selection above, with its match.
+        const arrival = arrivalNow();
+        if (arrival) currentQueue.push(arrival);
 
         // If no events and no queued on events, skip this destination
         if (!currentQueue.length && !destination.queueOn?.length) {
@@ -911,7 +1022,11 @@ async function deliverToDestinations(
           // the grant command re-enters here with consent satisfied and inits
           // then.
           if (
-            !getGrantedConsent(destination.config.consent, collector.consent)
+            'unmet' in
+            checkConsent(
+              getRequiredConsent(destination.config),
+              collector.consent,
+            )
           ) {
             return { id, destination, skipped: true };
           }
@@ -938,7 +1053,11 @@ async function deliverToDestinations(
             );
             settle(behind, { kind: 'failed', reason, error: err });
           } finally {
-            // From here to the take below runs without a turn.
+            // From here to the take below runs without a turn, except while a
+            // selection round awaits: a pass holds the selection guard then,
+            // and every other pass of this destination waits at its own drain
+            // round until the holder drained, so only the hold and disabled
+            // returns answer queued entries in between.
             endInitCall(destination);
           }
           // The flush held the destination: there are no events of this call
@@ -946,17 +1065,28 @@ async function deliverToDestinations(
           if (getStateHold(destination)) {
             return { id, destination, skipped: true };
           }
-          // Events parked by a concurrent push while the flush was running go
-          // out with this call, through the consent gate below.
-          if (isInitialized && destination.queuePush?.length) {
-            currentQueue = destination.queuePush.map(refresh);
-            destination.queuePush = [];
-          } else {
+          if (!isInitialized || !destination.queuePush?.length)
             return { id, destination, skipped: true };
+          // Events parked by a concurrent push while the flush was running
+          // are selected in place, then go out with this call, through the
+          // consent gate below.
+          let waitedAfterInit = false;
+          for (
+            let w = selectRound(pass, queuedNow, true);
+            w;
+            w = selectRound(pass, queuedNow, true)
+          ) {
+            waitedAfterInit = true;
+            await w;
           }
+          if (waitedAfterInit && getStateHold(destination))
+            return { id, destination, skipped: true };
+          currentQueue = (destination.queuePush || []).map(refresh);
+          destination.queuePush = [];
         }
 
         const admittedWith = collector.consent;
+        const rulesAtAdmission = destination.config.mapping;
         const { allowed: allowedEvents, denied: deniedEvents } =
           admit(currentQueue);
 
@@ -1046,7 +1176,11 @@ async function deliverToDestinations(
           return { id, destination, failed, error: err };
         } finally {
           // From here to the take of the arrived entries below runs without
-          // a turn.
+          // a turn, except while a selection round awaits: a pass holds the
+          // selection guard then, and every other pass of this destination
+          // waits at its own drain round until the holder drained, so only
+          // the hold and disabled returns answer queued entries in between;
+          // the hold is checked again after the rounds.
           endInitCall(destination);
         }
 
@@ -1058,11 +1192,48 @@ async function deliverToDestinations(
           return holdOrRefuse(allowedEvents);
         }
 
-        // A consent command ran while init was awaited: the events admitted
-        // before it pass the gate again with the consent that holds now.
+        // A consent command ran while init was awaited, or init installed
+        // another `config.mapping`: the events in hand, and those a concurrent
+        // push parked while the init flush was running, are selected again
+        // where their match is stale. Every round runs first; the hold check,
+        // the re-gate and the late admission follow in the same turn as the
+        // last one. In-hand consent is refreshed only when consent changed: a
+        // rules-only change keeps the consent each entry was admitted with.
+        const inHand = () =>
+          collector.consent !== admittedWith
+            ? allowedEvents.map(refresh)
+            : allowedEvents;
+        const arrivedNow = () =>
+          (destination.queuePush || [])
+            .filter((queued) => !parked.has(queued))
+            .map(refresh);
+        let reselected = false;
+        for (
+          let w =
+            selectRound(pass, inHand, false) ??
+            selectRound(pass, arrivedNow, true);
+          w;
+          w =
+            selectRound(pass, inHand, false) ??
+            selectRound(pass, arrivedNow, true)
+        ) {
+          reselected = true;
+          await w;
+        }
+        // A round that awaited may have let a state hold start: as after init.
+        if (reselected && getStateHold(destination)) {
+          releaseProbeSlot();
+          return holdOrRefuse(
+            allowedEvents.filter((entry) => !pass.failed.has(entry)),
+          );
+        }
+
         const deniedAfter: Destination.Queued[] = [];
-        if (collector.consent !== admittedWith) {
-          const regated = admit(allowedEvents.map(refresh));
+        if (
+          collector.consent !== admittedWith ||
+          destination.config.mapping !== rulesAtAdmission
+        ) {
+          const regated = admit(inHand());
           allowedEvents.splice(0, allowedEvents.length, ...regated.allowed);
           deniedAfter.push(...regated.denied);
         }
@@ -1134,6 +1305,26 @@ async function deliverToDestinations(
         const outcomes = await Promise.all(
           allowedEvents.map(async (entry): Promise<EntryOutcome> => {
             const event = entry.event;
+            // The rule this entry was admitted with; never selected again.
+            const selected = admitted.get(entry);
+            if (!selected) {
+              // Unreachable: admit records the rule of every entry it allows.
+              // Never delivered unselected, never silent.
+              const error = new StepError('rule not recorded at admission', {
+                code: 'mapping',
+              });
+              const reason = recordFailure(
+                collector,
+                destination,
+                id,
+                [event],
+                error,
+                { breaker: false },
+              );
+              return { kind: 'failed', reason, error };
+            }
+            // The entry's name before its `before` chain, for the rename check.
+            const entryName = event.name;
             // What became of this event (its before chain may fan it out).
             const tally: {
               delivered: number;
@@ -1245,6 +1436,7 @@ async function deliverToDestinations(
               processedEvent: WalkerOS.Event | null,
               childIngest: Ingest,
               sharedMiss: { key: string; ttl: number } | undefined,
+              selected: Mapping.Result,
             ): Promise<boolean> => {
               // The pre-chain key is derived from the one event that entered,
               // so a fan-out shares it and one write covers every child. A
@@ -1290,9 +1482,9 @@ async function deliverToDestinations(
 
               const pushStart = Date.now();
               let pushFailed = false;
-              const result = await tryCatchAsync(destinationPush, (err) => {
+              const result = await tryCatchAsync(pushMapped, (err) => {
                 // The one outcome sink: counters, DLQ, breaker, one cause
-                // line. destinationPush emitted the Observe error already.
+                // line. pushMapped emitted the Observe error already.
                 const reason = recordFailure(
                   collector,
                   destination,
@@ -1310,6 +1502,7 @@ async function deliverToDestinations(
                 destination,
                 id,
                 processedEvent!,
+                selected,
                 childIngest,
                 destRespond,
               );
@@ -1395,11 +1588,20 @@ async function deliverToDestinations(
             };
 
             for (const child of children) {
+              // A `before` rename onto another rule: that rule and its consent do not apply.
+              if (child.event.name !== entryName)
+                reportRuleNotApplied(
+                  pass,
+                  selected.mappingKey ?? '',
+                  child.event.name,
+                );
               // Each child gets its own step-level cache decision; the
               // full-check miss recorded before the chain is shared, since it
               // was computed from the one event that entered. Only a child
               // that actually reached the destination counts as delivered.
-              if (await deliverOne(child.event, child.ingest, cacheMiss)) {
+              if (
+                await deliverOne(child.event, child.ingest, cacheMiss, selected)
+              ) {
                 tally.delivered++;
                 pushedCount++;
               }
@@ -1444,6 +1646,21 @@ async function deliverToDestinations(
   } finally {
     for (const [, destination] of passes) settleWaiting(destination);
   }
+
+  // A push whose own event failed its rule selection answers with that
+  // failure, worst first: never as skipped (the loop below drops skipped
+  // outcomes). The outcome sink counted it already.
+  results = results.map((result) => {
+    const failure = arrivalFailures.get(result.id);
+    return failure && !result.failed
+      ? {
+          ...result,
+          skipped: undefined,
+          failed: failure.reason,
+          error: failure.error,
+        }
+      : result;
+  });
 
   // Build result objects
   const done: Record<string, Destination.Ref> = {};
@@ -1517,16 +1734,6 @@ async function deliverToDestinations(
  * @param destId - The destination ID.
  * @returns Whether the destination was initialized successfully.
  */
-/**
- * A destination declares a consent requirement when its config.consent has at
- * least one key. Such a destination must never be initialized without a cleared
- * consent gate (see destinationInit's `allowed` parameter).
- */
-function hasConsentRequirement(destination: Destination.Instance): boolean {
-  const required = destination.config.consent;
-  return !!required && Object.keys(required).length > 0;
-}
-
 /**
  * Run a destination's own `init()` and return the config to install, marked
  * initialized. An `init()` that throws, returns false (`StepError` code
@@ -1698,7 +1905,7 @@ export async function destinationInit<Destination extends Destination.Instance>(
     // collector state here, because the push path's decision may rest on an
     // event's individual consent this function cannot see; re-deriving would
     // wrongly block a legitimate event-level override.
-    if (!allowed && hasConsentRequirement(destination)) {
+    if (!allowed && getRequiredConsent(destination.config).length > 0) {
       collector.logger
         .scope(destination.type || 'unknown')
         .debug('init blocked: consent gate not cleared');
@@ -1734,8 +1941,9 @@ export async function destinationInit<Destination extends Destination.Instance>(
 }
 
 /**
- * Pushes an event to a single destination.
- * Handles mapping, batching, and consent checks.
+ * Pushes an event to a single destination: selects its rule and pushes it.
+ * Handles mapping and batching; it gates no consent, neither
+ * `config.consent` nor a rule's `consent`.
  *
  * @template Destination
  * @param collector - The walkerOS collector instance.
@@ -1751,7 +1959,31 @@ export async function destinationPush<Destination extends Destination.Instance>(
   destId: string,
   event: WalkerOS.Event,
   ingest?: Ingest,
-  respond?: import('@walkeros/core').RespondFn,
+  respond?: RespondFn,
+): Promise<unknown> {
+  return pushMapped(
+    collector,
+    destination,
+    destId,
+    event,
+    undefined,
+    ingest,
+    respond,
+  );
+}
+
+/**
+ * The push body. `selected` is the rule the destination selected as the
+ * event entered it (`{}`: no rule); `undefined` selects it here.
+ */
+async function pushMapped<Destination extends Destination.Instance>(
+  collector: Collector.Instance,
+  destination: Destination,
+  destId: string,
+  event: WalkerOS.Event,
+  selected: Mapping.Result | undefined,
+  ingest?: Ingest,
+  respond?: RespondFn,
 ): Promise<unknown> {
   const { config } = destination;
 
@@ -1761,7 +1993,7 @@ export async function destinationPush<Destination extends Destination.Instance>(
     ReturnType<typeof processEventMapping<WalkerOS.Event>>
   >;
   try {
-    processed = await processEventMapping(event, config, collector);
+    processed = await processEventMapping(event, config, collector, selected);
   } catch (err) {
     emitDestinationState(collector, destId, 'error', event, ingest, (state) => {
       state.error = observerStepError(err);

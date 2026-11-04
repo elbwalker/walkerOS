@@ -18,7 +18,8 @@ export interface Call {
  * Why a simulated destination sent nothing, read from the collector's own
  * records:
  * - `consent`: the event was skipped at the consent gate (or queued, with
- *   `queue: true`). `required` is the destination's `config.consent`,
+ *   `queue: true`). `required` is the requirement that was not met: the
+ *   destination's `config.consent` or the matched rule's `consent`,
  *   `granted` the collector consent plus the event's own consent.
  * - `pending`: the destination is still waiting for its `require` entries
  *   (listed in `require`), so it never started.

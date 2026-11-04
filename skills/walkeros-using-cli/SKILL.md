@@ -233,8 +233,9 @@ success: true
   `pending: waits for consent (require)` (never started; names the unmet
   `require` entries) or
   `skipped: consent (requires marketing; granted functional)` (started, event
-  denied by its `consent` check). Source, transformer and collector steps print
-  their recorded calls, then `event <json>` or `no events`; a failed step prints
+  denied by its `consent` check; after `mapping: <key>` it is that rule's own
+  `consent`). Source, transformer and collector steps print their recorded
+  calls, then `event <json>` or `no events`; a failed step prints
   `error: <message>`. A source step records the walker commands the source
   issues itself as `elb` calls in its own call shape, e.g.
   `call elb("walker consent",{"functional":true,"marketing":true})` for a CMP,
@@ -841,8 +842,8 @@ Read the line under `mapping:`:
    event's `consent`.
 3. **Check mapping**: The event name must match a mapping rule (entity/action
    keys). Unmapped events pass through unmodified.
-4. **Check policy**: Policy runs BEFORE mapping; verify policy isn't redacting
-   fields needed by mapping rules.
+4. **Check policy**: Policy shapes the payload, not the rule choice at a
+   destination; verify policy isn't redacting fields the payload needs.
 
 ### Web Simulation Transport
 

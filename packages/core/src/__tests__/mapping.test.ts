@@ -1531,3 +1531,116 @@ describe('loop items never supply their own consent', () => {
     ).toEqual(expected);
   });
 });
+
+describe('matchMappingRule', () => {
+  const collector = createMockCollector();
+  it('stays synchronous for sync conditions and equals getMappingEvent', async () => {
+    const mapping: Mapping.Rules = {
+      order: {
+        complete: [{ condition: () => false, name: 'a' }, { name: 'b' }],
+      },
+    };
+    const result = core.matchMappingRule(
+      { name: 'order complete' },
+      mapping,
+      collector,
+    );
+    expect(core.isThenable(result)).toBe(false);
+    expect(result).toStrictEqual(
+      await getMappingEvent({ name: 'order complete' }, mapping, collector),
+    );
+  });
+  it('returns a promise only for an async condition', async () => {
+    const mapping: Mapping.Rules = {
+      order: { complete: { condition: async () => true, name: 'a' } },
+    };
+    const result = core.matchMappingRule(
+      { name: 'order complete' },
+      mapping,
+      collector,
+    );
+    expect(core.isThenable(result)).toBe(true);
+    expect(await result).toStrictEqual({
+      eventMapping: mapping.order?.complete,
+      mappingKey: 'order complete',
+    });
+  });
+  it('keeps both empty shapes', () => {
+    expect(
+      core.matchMappingRule({ name: 'page view' }, undefined, collector),
+    ).toStrictEqual({});
+    expect(
+      core.matchMappingRule(
+        { name: 'page view' },
+        { order: { complete: {} } },
+        collector,
+      ),
+    ).toStrictEqual({ eventMapping: undefined, mappingKey: '' });
+  });
+});
+
+describe('getMappingCandidates', () => {
+  it.each<[string, Mapping.Rules, string[]]>([
+    [
+      'exact, then * *',
+      { page: { view: {} }, '*': { '*': {} } },
+      ['page view', '* *'],
+    ],
+    ['wildcard entity with the action', { '*': { view: {} } }, ['* view']],
+    ['the entity with a wildcard action', { page: { '*': {} } }, ['page *']],
+    ['* * once', { '*': { '*': {} } }, ['* *']],
+    ['nothing', { order: { complete: {} } }, []],
+    [
+      'all four tiers in order',
+      { page: { view: {}, '*': {} }, '*': { view: {}, '*': {} } },
+      ['page view', 'page *', '* view', '* *'],
+    ],
+    [
+      'entity without the action falls to * action',
+      { page: { click: {} }, '*': { view: {} } },
+      ['* view'],
+    ],
+  ])('%s', (_label, mapping, keys) => {
+    expect(
+      core.getMappingCandidates('page view', mapping).map((c) => c.key),
+    ).toEqual(keys);
+  });
+  it('lists a tier met twice once (a name with a literal *)', () => {
+    expect(
+      core
+        .getMappingCandidates('* view', { '*': { view: {}, '*': {} } })
+        .map((c) => c.key),
+    ).toEqual(['* view', '* *']);
+  });
+});
+
+describe('processEventMapping with a selected rule', () => {
+  it('uses the given rule and runs no condition', async () => {
+    const condition = jest.fn(() => true);
+    const config: Mapping.Config = {
+      mapping: { order: { complete: { condition, name: 'x' } } },
+    };
+    const given: Mapping.Rule = { name: 'given' };
+    const out = await core.processEventMapping(
+      createEvent({ name: 'order complete' }),
+      config,
+      createMockCollector(),
+      { eventMapping: given, mappingKey: 'order complete' },
+    );
+    expect(condition).not.toHaveBeenCalled();
+    expect(out.event.name).toBe('given');
+  });
+  it('treats {} as no rule and never matches again', async () => {
+    const config: Mapping.Config = {
+      mapping: { order: { complete: { name: 'x' } } },
+    };
+    const out = await core.processEventMapping(
+      createEvent({ name: 'order complete' }),
+      config,
+      createMockCollector(),
+      {},
+    );
+    expect(out.mapping).toBeUndefined();
+    expect(out.event.name).toBe('order complete');
+  });
+});

@@ -140,6 +140,33 @@ finishes, so one that never finishes keeps its destination blocked. A
 `walker run` discards events that are still held, with no counter and no log
 line. See the [failure codes](/docs/collector/logger#failure-codes).
 
+### Gate one event type with a rule's `consent`
+
+A mapping rule's `consent` adds a requirement for the events that rule
+matches, on top of the destination's `config.consent`:
+
+<CodeSnippet
+  code={`"gtag": {
+  "package": "@walkeros/web-destination-gtag",
+  "config": {
+    "consent": { "analytics": true },
+    "settings": { "ga4": { "measurementId": "G-XXXXXXXXXX" } },
+    "mapping": {
+      "order": {
+        "complete": { "name": "purchase", "consent": { "marketing": true } }
+      }
+    }
+  }
+}`}
+  language="json"
+/>
+
+Both must hold. Events the rule matches wait in the same queue and are
+delivered in queue order once both are granted (with an async `condition`, an
+event joins the queue when its condition settles); server flows built by the CLI
+skip them instead. Observe and `walkeros push --simulate` show the
+rule's key and the missing consent.
+
 ### Gate a source with `consent`
 
 The collector drops events from a source when they lack the consent in the
@@ -156,6 +183,8 @@ later does not bring these events back:
 }`}
   language="json"
 />
+
+A source mapping rule's `consent` drops the events that rule matches the same way.
 
 Use source gating when events must not enter the flow at all without consent.
 Use destination gating when events should wait for a decision (in a server
@@ -227,7 +256,10 @@ delivered. Events that were already sent are not affected. An event that is
 held for the destination when consent is revoked (while a consent delivery to
 it runs, or within the window after one failed, see
 [Gate a destination](#gate-a-destination-with-consent)) is still sent when the
-hold ends, after the revocation, with the consent it was pushed with.
+hold ends, after the revocation, with the consent it was pushed with. So is an
+event that a `collector.next` chain split into several (a `many` route, or a
+transformer returning more than one event) when the revocation lands while a
+destination waits for that event's async rule `condition`.
 
 ## Opt-out
 

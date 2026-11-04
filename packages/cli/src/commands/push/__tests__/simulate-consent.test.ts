@@ -64,6 +64,20 @@ function webFlow(): Flow.Json {
               settings: { ga4: { measurementId: 'G-TEST01' }, como: true },
             },
           },
+          gtmRule: {
+            package: '@walkeros/web-destination-gtag',
+            config: {
+              settings: { gtm: { containerId: 'GTM-TEST03' } },
+              mapping: {
+                product: {
+                  add: {
+                    name: 'elb product add',
+                    consent: { marketing: true },
+                  },
+                },
+              },
+            },
+          },
         },
       },
     },
@@ -159,6 +173,28 @@ describe('destination simulate with consent', () => {
     expect(result.mappingKey).toBe('product add');
     expect(result.calls.map((call) => call.fn)).toContain(
       'window.dataLayer.push',
+    );
+  });
+
+  it('names the rule whose consent holds the event', async () => {
+    const result = await run('gtmRule', productAdd, {
+      consent: { functional: true },
+    });
+    expect(result.error).toBeUndefined();
+    expect(result.mappingKey).toBe('product add');
+    expect(result.skipped).toEqual({
+      reason: 'consent',
+      required: { marketing: true },
+      granted: { functional: true },
+    });
+    const text = formatPushResult({
+      success: true,
+      duration: 1,
+      simulations: [result],
+    });
+    expect(text).toContain('mapping: product add');
+    expect(text).toContain(
+      'skipped: consent (requires marketing; granted functional)',
     );
   });
 

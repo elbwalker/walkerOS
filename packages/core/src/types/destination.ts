@@ -108,6 +108,12 @@ export type TypesOf<I> = I extends Instance<infer T> ? T : never;
 export interface Queued {
   event: WalkerOS.Event;
   reason?: 'consent' | 'held';
+  /**
+   * Collector-owned. The rule selected when the destination admitted the
+   * event, with the rules object it was selected from: a match is current
+   * only while `rules` is the destination's `config.mapping`.
+   */
+  match?: { rules: Config['mapping']; result: WalkerOSMapping.Result };
 }
 
 export interface Instance<T extends TypesGeneric = Types> {
@@ -163,7 +169,7 @@ export interface Config<T extends TypesGeneric = Types> {
   logger?: Logger.Config;
   /** Entity-action rules to filter, rename, transform, and batch events for this destination. */
   mapping?: WalkerOSMapping.Rules<WalkerOSMapping.Rule<Mapping<T>>>;
-  /** Pre-processing rules applied to all events before mapping; modifies events in-place. */
+  /** Pre-processing rules applied to all events before their data is mapped; the rule is selected earlier, as the event enters the destination. */
   policy?: Policy;
   /** Whether a destination added after events were pushed receives the current run's earlier events (from `collector.queue`); defaults to true. Consent-denied events are queued regardless. */
   queue?: boolean;
@@ -461,11 +467,6 @@ export interface Ref {
    */
   reason?: FailureReason | QueuedReason;
 }
-
-export type Push = {
-  queuePush?: Queued[];
-  error?: unknown;
-};
 
 export type DLQ = Array<[WalkerOS.Event, unknown]>;
 

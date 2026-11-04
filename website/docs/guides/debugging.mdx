@@ -40,6 +40,9 @@ reached the destination's mapping, because of consent or a transformer in its
 - `skipped: consent (requires marketing; granted functional)`: the destination
   started, but the event lacks the consent its `consent` setting requires. Grant
   it with `--consent` or in the event's `consent`.
+- `mapping: <key>` with `skipped: consent (...)` and `no calls`: that rule's own
+  `consent` holds the event; grant it with `--consent` or in the event's
+  `consent`.
 
 See [consent in simulate](/docs/apps/cli#consent-in-simulate). Add `--json`
 to get the same result as machine-readable output, with the recorded calls under
