@@ -43,7 +43,7 @@ export const destinationDataManager: DestinationInterface = {
 
   async push(event, { config, data, env, logger }) {
     // logger parameter is scoped: [datamanager]
-    logger.debug('API response', { status: 200 });
+    logger.debug('API response', { requestId });
   },
 };
 ```

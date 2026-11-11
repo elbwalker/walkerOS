@@ -10,10 +10,10 @@ export const minimal: Flow.MinimalExample = {
     destinations: [
       {
         operatingAccount: {
-          accountId: '123-456-7890',
+          accountId: '1234567890',
           accountType: 'GOOGLE_ADS',
         },
-        productDestinationId: 'AW-CONVERSION-123',
+        productDestinationId: '987654321',
       },
     ],
   },

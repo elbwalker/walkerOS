@@ -1,4 +1,4 @@
-import type { WalkerOS, Collector } from '@walkeros/core';
+import type { WalkerOS } from '@walkeros/core';
 import type {
   AuthClient,
   Config,
@@ -15,49 +15,47 @@ import {
 import { startFlow } from '@walkeros/collector';
 import { examples } from '../dev';
 
-jest.mock('../auth', () => ({
-  createAuthClient: jest.fn(),
-  getAccessToken: jest.fn(),
-  AuthError: class AuthError extends Error {
-    constructor(
-      message: string,
-      public cause?: Error,
-    ) {
-      super(message);
-      this.name = 'DataManagerAuthError';
+// Init builds its client through the library: record what it is built from.
+const mockGoogleAuthOptions = jest.fn();
+const mockGetClient = jest.fn();
+jest.mock('google-auth-library', () => ({
+  __esModule: true,
+  GoogleAuth: class {
+    constructor(options: unknown) {
+      mockGoogleAuthOptions(options);
+    }
+    getClient() {
+      return mockGetClient();
     }
   },
 }));
 
-import { createAuthClient, getAccessToken } from '../auth';
-
 describe('Server Destination Data Manager', () => {
   let destination: DestinationInterface;
   let elb: WalkerOS.Elb;
-  const mockAuthClient: AuthClient = {
-    getAccessToken: jest.fn(),
-  };
-  const mockFetch = jest.fn();
   const mockAccessToken = 'ya29.c.test_token';
+  const mockGetRequestHeaders = jest.fn();
+  const mockAuthClient: AuthClient = {
+    getRequestHeaders: mockGetRequestHeaders,
+  };
+  const mockSendServer = jest.fn();
   const mockLogger = createMockLogger();
+  const realFetch = globalThis.fetch;
 
   beforeEach(async () => {
     jest.clearAllMocks();
 
-    (createAuthClient as jest.Mock).mockResolvedValue(mockAuthClient);
-    (getAccessToken as jest.Mock).mockResolvedValue(mockAccessToken);
-
-    // Reset mockFetch to default successful response
-    mockFetch.mockResolvedValue({
-      ok: true,
-      json: async () => ({
-        requestId: 'test-request-id-123',
-        validationErrors: [],
-      }),
+    mockGetClient.mockResolvedValue(mockAuthClient);
+    mockGetRequestHeaders.mockResolvedValue(
+      new Headers({ authorization: `Bearer ${mockAccessToken}` }),
+    );
+    mockSendServer.mockResolvedValue({
+      data: { requestId: 'test-request-id-123' },
     });
 
-    // Set global fetch mock
-    global.fetch = mockFetch;
+    globalThis.fetch = jest.fn(() => {
+      throw new Error('a test reached the network');
+    });
 
     destination = jest.requireActual('../').default;
 
@@ -65,27 +63,25 @@ describe('Server Destination Data Manager', () => {
   });
 
   afterEach(() => {
-    delete (global as { fetch?: unknown }).fetch;
+    globalThis.fetch = realFetch;
   });
 
-  async function getConfig(settings: Partial<Settings> = {}) {
-    const mockCollector = {} as Collector.Instance;
-    return (await destination.init({
-      config: { settings: settings as Settings },
-      collector: mockCollector,
+  async function getConfig(settings: Settings) {
+    return await destination.init({
+      config: { settings },
+      collector: createMockContext().collector,
       env: {},
       logger: mockLogger,
       id: 'test-dm',
-    })) as Config;
+    });
   }
 
   describe('init', () => {
     test('throws error when destinations is missing', async () => {
-      const mockCollector = {} as Collector.Instance;
       await expect(
         destination.init({
           config: {},
-          collector: mockCollector,
+          collector: createMockContext().collector,
           env: {},
           logger: mockLogger,
           id: 'test-dm',
@@ -94,13 +90,12 @@ describe('Server Destination Data Manager', () => {
     });
 
     test('throws error when destinations is empty', async () => {
-      const mockCollector = {} as Collector.Instance;
       await expect(
         destination.init({
           config: {
-            settings: { destinations: [] } as Settings,
+            settings: { destinations: [] },
           },
-          collector: mockCollector,
+          collector: createMockContext().collector,
           env: {},
           logger: mockLogger,
           id: 'test-dm',
@@ -149,7 +144,7 @@ describe('Server Destination Data Manager', () => {
         logger: mockLogger,
         id: 'test-dm',
       });
-      expect(createAuthClient).not.toHaveBeenCalled();
+      expect(mockGoogleAuthOptions).not.toHaveBeenCalled();
       expect(
         result && 'env' in result ? result.env?.authClient : undefined,
       ).toBe(injected);
@@ -173,15 +168,12 @@ describe('Server Destination Data Manager', () => {
         ],
       });
 
-      expect(createAuthClient).toHaveBeenCalledWith(
+      expect(mockGoogleAuthOptions).toHaveBeenCalledWith(
         expect.objectContaining({
-          settings: expect.objectContaining({
-            credentials: expect.objectContaining({
-              client_email: 'test@example.com',
-            }),
+          credentials: expect.objectContaining({
+            client_email: 'test@example.com',
           }),
         }),
-        expect.anything(), // logger
       );
     });
   });
@@ -213,9 +205,9 @@ describe('Server Destination Data Manager', () => {
       ip: '203.0.113.7',
       userAgent: 'Mozilla/5.0 test',
     };
-    const env = { authClient: mockAuthClient, fetch: mockFetch };
+    const env = { authClient: mockAuthClient, sendServer: mockSendServer };
     const sentDeviceInfo = () =>
-      JSON.parse(mockFetch.mock.calls[0][1].body).events[0].eventDeviceInfo;
+      JSON.parse(mockSendServer.mock.calls[0][1]).events[0].eventDeviceInfo;
 
     test('fills client IP and user agent from ingest by default', async () => {
       await destination.push(
@@ -275,13 +267,13 @@ describe('Server Destination Data Manager', () => {
   describe('push', () => {
     test('sends event to Data Manager API', async () => {
       const event = getEvent('order complete');
-      (event.data as Record<string, unknown>).id = 'ORDER-123';
+      event.data.id = 'ORDER-123';
       event.data.value = 99.99;
-      (event.data as Record<string, unknown>).currency = 'USD';
+      event.data.currency = 'USD';
 
       const config: Config = {
         ...defaultConfig,
-        env: { authClient: mockAuthClient, fetch: mockFetch },
+        env: { authClient: mockAuthClient, sendServer: mockSendServer },
       };
 
       await destination.push(
@@ -294,19 +286,16 @@ describe('Server Destination Data Manager', () => {
         }),
       );
 
-      expect(getAccessToken).toHaveBeenCalledWith(mockAuthClient);
-      expect(mockFetch).toHaveBeenCalledWith(
+      expect(mockGetRequestHeaders).toHaveBeenCalled();
+      expect(mockSendServer).toHaveBeenCalledWith(
         'https://datamanager.googleapis.com/v1/events:ingest',
+        expect.any(String),
         expect.objectContaining({
-          method: 'POST',
-          headers: expect.objectContaining({
-            Authorization: `Bearer ${mockAccessToken}`,
-            'Content-Type': 'application/json',
-          }),
+          headers: { authorization: `Bearer ${mockAccessToken}` },
         }),
       );
 
-      const requestBody = JSON.parse(mockFetch.mock.calls[0][1].body);
+      const requestBody = JSON.parse(mockSendServer.mock.calls[0][1]);
       expect(requestBody.events).toHaveLength(1);
       expect(requestBody.destinations).toEqual(defaultSettings.destinations);
     });
@@ -318,13 +307,13 @@ describe('Server Destination Data Manager', () => {
         event,
         createMockContext({
           config: defaultConfig,
-          env: { authClient: mockAuthClient, fetch: mockFetch },
+          env: { authClient: mockAuthClient, sendServer: mockSendServer },
           logger: mockLogger,
           id: 'test-dm',
         }),
       );
 
-      const requestBody = JSON.parse(mockFetch.mock.calls[0][1].body);
+      const requestBody = JSON.parse(mockSendServer.mock.calls[0][1]);
       const eventTimestamp = requestBody.events[0].eventTimestamp;
 
       // Verify RFC 3339 format (ISO 8601)
@@ -340,13 +329,13 @@ describe('Server Destination Data Manager', () => {
         event,
         createMockContext({
           config: defaultConfig,
-          env: { authClient: mockAuthClient, fetch: mockFetch },
+          env: { authClient: mockAuthClient, sendServer: mockSendServer },
           logger: mockLogger,
           id: 'test-dm',
         }),
       );
 
-      const requestBody = JSON.parse(mockFetch.mock.calls[0][1].body);
+      const requestBody = JSON.parse(mockSendServer.mock.calls[0][1]);
       expect(requestBody.events[0].eventSource).toBe('WEB');
     });
 
@@ -365,13 +354,13 @@ describe('Server Destination Data Manager', () => {
         event,
         createMockContext({
           config,
-          env: { authClient: mockAuthClient, fetch: mockFetch },
+          env: { authClient: mockAuthClient, sendServer: mockSendServer },
           logger: mockLogger,
           id: 'test-dm',
         }),
       );
 
-      const requestBody = JSON.parse(mockFetch.mock.calls[0][1].body);
+      const requestBody = JSON.parse(mockSendServer.mock.calls[0][1]);
       expect(requestBody.events[0].eventSource).toBe('APP');
     });
 
@@ -383,13 +372,13 @@ describe('Server Destination Data Manager', () => {
         event,
         createMockContext({
           config: defaultConfig,
-          env: { authClient: mockAuthClient, fetch: mockFetch },
+          env: { authClient: mockAuthClient, sendServer: mockSendServer },
           logger: mockLogger,
           id: 'test-dm',
         }),
       );
 
-      const requestBody = JSON.parse(mockFetch.mock.calls[0][1].body);
+      const requestBody = JSON.parse(mockSendServer.mock.calls[0][1]);
       expect(requestBody.events[0].consent).toEqual({
         adUserData: 'CONSENT_GRANTED',
         adPersonalization: 'CONSENT_DENIED',
@@ -414,13 +403,13 @@ describe('Server Destination Data Manager', () => {
         event,
         createMockContext({
           config,
-          env: { authClient: mockAuthClient, fetch: mockFetch },
+          env: { authClient: mockAuthClient, sendServer: mockSendServer },
           logger: mockLogger,
           id: 'test-dm',
         }),
       );
 
-      const requestBody = JSON.parse(mockFetch.mock.calls[0][1].body);
+      const requestBody = JSON.parse(mockSendServer.mock.calls[0][1]);
       expect(requestBody.consent).toEqual({
         adUserData: 'CONSENT_GRANTED',
         adPersonalization: 'CONSENT_GRANTED',
@@ -442,138 +431,31 @@ describe('Server Destination Data Manager', () => {
         event,
         createMockContext({
           config,
-          env: { authClient: mockAuthClient, fetch: mockFetch },
+          env: { authClient: mockAuthClient, sendServer: mockSendServer },
           logger: mockLogger,
           id: 'test-dm',
         }),
       );
 
-      const requestBody = JSON.parse(mockFetch.mock.calls[0][1].body);
+      const requestBody = JSON.parse(mockSendServer.mock.calls[0][1]);
       expect(requestBody.validateOnly).toBe(true);
     });
 
-    test('includes testEventCode when provided', async () => {
-      const event = getEvent('page view');
-
-      const config: Config = {
-        ...defaultConfig,
-        settings: {
-          ...defaultSettings,
-          testEventCode: 'TEST12345',
-        },
-      };
-
-      await destination.push(
-        event,
-        createMockContext({
-          config,
-          env: { authClient: mockAuthClient, fetch: mockFetch },
-          logger: mockLogger,
-          id: 'test-dm',
-        }),
-      );
-
-      const requestBody = JSON.parse(mockFetch.mock.calls[0][1].body);
-      expect(requestBody.testEventCode).toBe('TEST12345');
-    });
-
-    test.each([
-      [400, false],
-      [503, true],
-    ])('API failure %i has retryable %s', async (status, retryable) => {
-      mockFetch.mockResolvedValue({
-        ok: false,
-        status,
-        text: async () => 'Invalid request',
-      });
-
-      const event = getEvent('page view');
-
-      await expect(
-        destination.push(
-          event,
-          createMockContext({
-            config: defaultConfig,
-            env: { authClient: mockAuthClient, fetch: mockFetch },
-            logger: mockLogger,
-            id: 'test-dm',
-          }),
-        ),
-      ).rejects.toMatchObject({
-        message: `Data Manager API error (${status})`,
-        status,
-        retryable,
-      });
-    });
-
-    test('throws error on validation errors', async () => {
-      mockFetch.mockResolvedValue({
-        ok: true,
-        json: async () => ({
-          requestId: 'test-123',
-          validationErrors: [
-            {
-              code: 'INVALID_FIELD',
-              message: 'Field is invalid',
-              fieldPath: 'events[0].transactionId',
-            },
-          ],
-        }),
-      });
-
-      const event = getEvent('page view');
-
-      await expect(
-        destination.push(
-          event,
-          createMockContext({
-            config: defaultConfig,
-            env: { authClient: mockAuthClient, fetch: mockFetch },
-            logger: mockLogger,
-            id: 'test-dm',
-          }),
-        ),
-      ).rejects.toThrow('Data Manager rejected the event');
-    });
-
     test('delivers a 2xx answer without a request id', async () => {
-      mockFetch.mockResolvedValue({ ok: true, json: async () => ({}) });
+      mockSendServer.mockResolvedValue({ data: {} });
 
       await expect(
         destination.push(
           getEvent('page view'),
           createMockContext({
             config: defaultConfig,
-            env: { authClient: mockAuthClient, fetch: mockFetch },
+            env: { authClient: mockAuthClient, sendServer: mockSendServer },
             logger: mockLogger,
             id: 'test-dm',
           }),
         ),
       ).resolves.toBeUndefined();
     });
-
-    test.each([null, 'accepted'])(
-      'throws on an unreadable answer (%p)',
-      async (answer) => {
-        mockFetch.mockResolvedValue({ ok: true, json: async () => answer });
-
-        await expect(
-          destination.push(
-            getEvent('page view'),
-            createMockContext({
-              config: defaultConfig,
-              env: { authClient: mockAuthClient, fetch: mockFetch },
-              logger: mockLogger,
-              id: 'test-dm',
-            }),
-          ),
-        ).rejects.toMatchObject({
-          message: 'Data Manager answered with an unreadable body',
-          code: 'transport',
-          retryable: false,
-        });
-      },
-    );
 
     test('uses custom URL when provided', async () => {
       const event = getEvent('page view');
@@ -590,14 +472,15 @@ describe('Server Destination Data Manager', () => {
         event,
         createMockContext({
           config,
-          env: { authClient: mockAuthClient, fetch: mockFetch },
+          env: { authClient: mockAuthClient, sendServer: mockSendServer },
           logger: mockLogger,
           id: 'test-dm',
         }),
       );
 
-      expect(mockFetch).toHaveBeenCalledWith(
+      expect(mockSendServer).toHaveBeenCalledWith(
         'https://custom-endpoint.com/v1/events:ingest',
+        expect.any(String),
         expect.any(Object),
       );
     });
@@ -637,24 +520,21 @@ describe('Server Destination Data Manager', () => {
         event,
         createMockContext({
           config,
-          env: { authClient: mockAuthClient, fetch: mockFetch },
+          env: { authClient: mockAuthClient, sendServer: mockSendServer },
           logger: mockLogger,
           id: 'test-dm',
         }),
       );
 
-      const requestBody = JSON.parse(mockFetch.mock.calls[0][1].body);
+      const requestBody = JSON.parse(mockSendServer.mock.calls[0][1]);
       expect(requestBody.destinations).toHaveLength(2);
     });
   });
 
   describe('environment customization', () => {
-    test('uses custom fetch function', async () => {
-      const customFetch = jest.fn();
-      customFetch.mockResolvedValue({
-        ok: true,
-        json: async () => ({ requestId: 'custom-123' }),
-      });
+    test('uses the sendServer of its env', async () => {
+      const customSendServer = jest.fn();
+      customSendServer.mockResolvedValue({ data: { requestId: 'custom-123' } });
 
       const event = getEvent('page view');
 
@@ -675,20 +555,20 @@ describe('Server Destination Data Manager', () => {
               ],
             },
           },
-          env: { authClient: mockAuthClient, fetch: customFetch },
+          env: { authClient: mockAuthClient, sendServer: customSendServer },
           logger: mockLogger,
           id: 'test-dm',
         }),
       );
 
-      expect(customFetch).toHaveBeenCalled();
-      expect(mockFetch).not.toHaveBeenCalled();
+      expect(customSendServer).toHaveBeenCalled();
+      expect(mockSendServer).not.toHaveBeenCalled();
     });
 
     test('applies Settings guided helpers (userData)', async () => {
       const event = getEvent('order complete');
       event.user = { id: 'user@example.com' };
-      (event.data as Record<string, unknown>).phone = '+1234567890';
+      event.data.phone = '+1234567890';
 
       const config: Config = {
         ...defaultConfig,
@@ -713,13 +593,13 @@ describe('Server Destination Data Manager', () => {
         event,
         createMockContext({
           config,
-          env: { authClient: mockAuthClient, fetch: mockFetch },
+          env: { authClient: mockAuthClient, sendServer: mockSendServer },
           logger: mockLogger,
           id: 'test-dm',
         }),
       );
 
-      const requestBody = JSON.parse(mockFetch.mock.calls[0][1].body);
+      const requestBody = JSON.parse(mockSendServer.mock.calls[0][1]);
       expect(requestBody.events[0].userData).toBeDefined();
       expect(requestBody.events[0].userData.userIdentifiers.length).toBe(2);
     });
@@ -749,13 +629,13 @@ describe('Server Destination Data Manager', () => {
         event,
         createMockContext({
           config,
-          env: { authClient: mockAuthClient, fetch: mockFetch },
+          env: { authClient: mockAuthClient, sendServer: mockSendServer },
           logger: mockLogger,
           id: 'test-dm',
         }),
       );
 
-      const requestBody = JSON.parse(mockFetch.mock.calls[0][1].body);
+      const requestBody = JSON.parse(mockSendServer.mock.calls[0][1]);
       expect(requestBody.events[0].userId).toBe('user-123');
       expect(requestBody.events[0].clientId).toBe('device-456');
     });
@@ -786,13 +666,13 @@ describe('Server Destination Data Manager', () => {
         event,
         createMockContext({
           config,
-          env: { authClient: mockAuthClient, fetch: mockFetch },
+          env: { authClient: mockAuthClient, sendServer: mockSendServer },
           logger: mockLogger,
           id: 'test-dm',
         }),
       );
 
-      const requestBody = JSON.parse(mockFetch.mock.calls[0][1].body);
+      const requestBody = JSON.parse(mockSendServer.mock.calls[0][1]);
       expect(requestBody.events[0].adIdentifiers).toBeDefined();
       expect(requestBody.events[0].adIdentifiers.sessionAttributes).toBe(
         'gad_source=1&gad_campaignid=123',
@@ -829,13 +709,13 @@ describe('Server Destination Data Manager', () => {
         event,
         createMockContext({
           config,
-          env: { authClient: mockAuthClient, fetch: mockFetch },
+          env: { authClient: mockAuthClient, sendServer: mockSendServer },
           logger: mockLogger,
           id: 'test-dm',
         }),
       );
 
-      const requestBody = JSON.parse(mockFetch.mock.calls[0][1].body);
+      const requestBody = JSON.parse(mockSendServer.mock.calls[0][1]);
       expect(requestBody.events[0].userId).toBe('override-user');
     });
   });
@@ -869,13 +749,13 @@ describe('Server Destination Data Manager', () => {
         event,
         createMockContext({
           config,
-          env: { authClient: mockAuthClient, fetch: mockFetch },
+          env: { authClient: mockAuthClient, sendServer: mockSendServer },
           logger: mockLogger,
           id: 'test-dm',
         }),
       );
 
-      const requestBody = JSON.parse(mockFetch.mock.calls[0][1].body);
+      const requestBody = JSON.parse(mockSendServer.mock.calls[0][1]);
       expect(requestBody.events[0].consent).toEqual({
         adUserData: 'CONSENT_GRANTED',
         adPersonalization: 'CONSENT_DENIED',
@@ -906,13 +786,13 @@ describe('Server Destination Data Manager', () => {
         event,
         createMockContext({
           config,
-          env: { authClient: mockAuthClient, fetch: mockFetch },
+          env: { authClient: mockAuthClient, sendServer: mockSendServer },
           logger: mockLogger,
           id: 'test-dm',
         }),
       );
 
-      const requestBody = JSON.parse(mockFetch.mock.calls[0][1].body);
+      const requestBody = JSON.parse(mockSendServer.mock.calls[0][1]);
       expect(requestBody.events[0].consent).toEqual({
         adUserData: 'CONSENT_GRANTED',
         adPersonalization: 'CONSENT_DENIED',
@@ -945,13 +825,13 @@ describe('Server Destination Data Manager', () => {
         event,
         createMockContext({
           config,
-          env: { authClient: mockAuthClient, fetch: mockFetch },
+          env: { authClient: mockAuthClient, sendServer: mockSendServer },
           logger: mockLogger,
           id: 'test-dm',
         }),
       );
 
-      const requestBody = JSON.parse(mockFetch.mock.calls[0][1].body);
+      const requestBody = JSON.parse(mockSendServer.mock.calls[0][1]);
       expect(requestBody.events[0].consent).toEqual({
         adUserData: 'CONSENT_GRANTED',
         adPersonalization: 'CONSENT_DENIED',
@@ -985,13 +865,13 @@ describe('Server Destination Data Manager', () => {
         event,
         createMockContext({
           config,
-          env: { authClient: mockAuthClient, fetch: mockFetch },
+          env: { authClient: mockAuthClient, sendServer: mockSendServer },
           logger: mockLogger,
           id: 'test-dm',
         }),
       );
 
-      const requestBody = JSON.parse(mockFetch.mock.calls[0][1].body);
+      const requestBody = JSON.parse(mockSendServer.mock.calls[0][1]);
       expect(requestBody.events[0].consent).toEqual({
         adUserData: 'CONSENT_GRANTED',
       });

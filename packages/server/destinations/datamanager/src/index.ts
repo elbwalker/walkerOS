@@ -2,7 +2,7 @@ import type { DestinationInterface } from './types';
 import { StepError } from '@walkeros/core';
 import { getConfig } from './config';
 import { push } from './push';
-import { createAuthClient } from './auth';
+import { AuthError, createAuthClient } from './auth';
 
 export * as DestinationDataManager from './types';
 
@@ -24,10 +24,13 @@ export const destinationDataManager: DestinationInterface = {
 
       return { ...config, env: { ...env, authClient } };
     } catch (error) {
-      throw new StepError('Data Manager authentication failed', {
-        code: 'config',
-        cause: error,
-      });
+      // An AuthError names the credential path; its cause stays on `cause`.
+      throw new StepError(
+        error instanceof AuthError
+          ? error.message
+          : 'Data Manager authentication failed',
+        { code: 'config', cause: error },
+      );
     }
   },
 

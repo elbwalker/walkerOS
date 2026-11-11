@@ -1,25 +1,35 @@
 import type { PushFn } from './types';
 import type { IngestEventsRequest } from './types';
-import type { Collector, Mapping as WalkerOSMapping } from '@walkeros/core';
+import type {
+  Collector,
+  SendResponse,
+  WalkerOS,
+  Mapping as WalkerOSMapping,
+} from '@walkeros/core';
 import {
   createMappingRoot,
   getMappingValue,
   isObject,
+  reportCause,
+  resolveDestinationTimeout,
   StepError,
+  stepId,
 } from '@walkeros/core';
-import { formatEvent, formatConsent } from './format';
-import { getAccessToken } from './auth';
+import { sendServer } from '@walkeros/server-core';
+import { formatEvent } from './format';
+import { getAuthHeaders } from './auth';
 import { getConfig } from './config';
+import { fieldWarningsOf, refusalMessage, rpcStatusOf } from './answer';
 
 // A silent rule has no Data Manager call of its own: nothing to send.
 export const push: PushFn = async function (event, context) {
-  if (!context.rule?.silent) await send(event, context);
+  return context.rule?.silent ? undefined : send(event, context);
 };
 
-const send: PushFn = async function (
-  event,
-  { config, data, ingest, collector, env, logger },
-) {
+async function send(
+  event: WalkerOS.Event,
+  { config, data, ingest, collector, env, logger, id }: Parameters<PushFn>[1],
+): Promise<{ requestId: string } | undefined> {
   // Validate config and get typed settings
   const validatedConfig = getConfig(config);
   const {
@@ -28,7 +38,6 @@ const send: PushFn = async function (
     validateOnly = false,
     url = 'https://datamanager.googleapis.com/v1',
     consent: requestConsent,
-    testEventCode,
     userData,
     userId,
     clientId,
@@ -72,12 +81,23 @@ const send: PushFn = async function (
         ? event.consent[consentAdPersonalization]
         : undefined;
 
-  // Client IP and user agent auto-fill, overridden by any mapped value
+  const googleAds = destinations.some(
+    (d) => d.operatingAccount?.accountType === 'GOOGLE_ADS',
+  );
+
+  // Client IP and user agent: filled by default only for Google Ads, where
+  // they count as an identifier. For Google Analytics they stay home unless
+  // set or mapped, privacy first. A mapped value wins.
   const root = createMappingRoot(ingest, event);
-  const clientIp = await resolveClient(ip, DEFAULT_IP, root, collector);
+  const clientIp = await resolveClient(
+    ip,
+    googleAds ? DEFAULT_IP : undefined,
+    root,
+    collector,
+  );
   const clientUserAgent = await resolveClient(
     userAgent,
-    DEFAULT_USER_AGENT,
+    googleAds ? DEFAULT_USER_AGENT : undefined,
     root,
     collector,
   );
@@ -115,7 +135,20 @@ const send: PushFn = async function (
   };
 
   // Format event for Data Manager API
-  const dataManagerEvent = await formatEvent(event, finalData);
+  const dropped: string[] = [];
+  const dataManagerEvent = await formatEvent(event, finalData, dropped);
+
+  // One line per push names each value not sent and why, never the value.
+  // Its own code keeps the collector's `mapping` failure lines for this
+  // step out of its rate limit: a delivered event never hides a lost one.
+  if (dropped.length)
+    reportCause(
+      collector,
+      logger,
+      { step: stepId('destination', id), code: 'not-sent' },
+      'Data Manager did not send some mapped values',
+      { event: event.name, error: dropped.join(', ') },
+    );
 
   // Apply event source from settings (required)
   if (!dataManagerEvent.eventSource) {
@@ -127,11 +160,13 @@ const send: PushFn = async function (
     dataManagerEvent.consent = requestConsent;
   }
 
-  // Validate required fields before API call
-  if (!dataManagerEvent.transactionId) {
-    throw new StepError('transactionId is required', {
-      code: 'missing-input',
-    });
+  // Google Ads deduplicates on the transaction ID, so a Google Ads entry
+  // never goes without one; an invented ID would count the event twice.
+  if (googleAds && !dataManagerEvent.transactionId) {
+    throw new StepError(
+      'transactionId is required for a Google Ads destination: map the order ID your Google tag sends, or the event id for a conversion only the server reports',
+      { code: 'missing-input' },
+    );
   }
 
   // Check if any destination is GA4 (requires eventName)
@@ -163,10 +198,6 @@ const send: PushFn = async function (
     requestBody.validateOnly = true;
   }
 
-  if (testEventCode) {
-    requestBody.testEventCode = testEventCode;
-  }
-
   const authClient = env?.authClient;
   if (!authClient) {
     throw new StepError(
@@ -176,9 +207,9 @@ const send: PushFn = async function (
   }
 
   // The auth error stays on `cause`; the message names only the step.
-  let accessToken: string;
+  let headers: Record<string, string>;
   try {
-    accessToken = await getAccessToken(authClient);
+    headers = await getAuthHeaders(authClient);
   } catch (error) {
     throw new StepError('Data Manager authentication failed', {
       code: 'transport',
@@ -186,7 +217,7 @@ const send: PushFn = async function (
     });
   }
 
-  const fetchFn = env?.fetch || fetch;
+  const sendServerFn = env?.sendServer || sendServer;
   const endpoint = `${url}/events:ingest`;
 
   logger.debug('Sending to Data Manager API', {
@@ -196,58 +227,61 @@ const send: PushFn = async function (
     validateOnly,
   });
 
-  // A transport failure keeps the fetch error as `cause`, never in the message.
-  let response: Response;
+  let response: SendResponse;
   try {
-    response = await fetchFn(endpoint, {
-      method: 'POST',
-      headers: {
-        Authorization: `Bearer ${accessToken}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify(requestBody),
+    response = await sendServerFn(endpoint, JSON.stringify(requestBody), {
+      headers,
+      timeout: resolveDestinationTimeout(config.timeout),
     });
   } catch (error) {
-    throw new StepError('Data Manager request failed', {
+    // An injected sendServer can throw anything: its message, which may echo
+    // what was sent, stays on `cause`.
+    if (!(error instanceof StepError))
+      throw new StepError('Data Manager request failed', {
+        code: 'transport',
+        cause: error,
+      });
+    // sendServer's network error or timeout passes unchanged. A refusal
+    // names Google's status, reason and field; its body stays on the error.
+    if (error.status === undefined) throw error;
+    const { status, body } = error;
+    throw new StepError(refusalMessage(status, body), {
       code: 'transport',
-      cause: error,
+      status,
+      body,
+      // ABORTED is a conflict a redelivery resolves, though its status is 409.
+      ...(rpcStatusOf(body) === 'ABORTED' ? { retryable: true } : {}),
     });
   }
 
-  if (!response.ok) {
-    // The API's answer stays on the error body, never in the message.
-    throw new StepError(`Data Manager API error (${response.status})`, {
-      code: 'transport',
-      status: response.status,
-      body: await response.text(),
-    });
-  }
-
-  const result: unknown = await response.json();
-  if (!isIngestAnswer(result)) {
+  // An empty 2xx body is an accepted request without an answer.
+  const answer = response.data === '' ? {} : response.data;
+  if (!isObject(answer)) {
     // Google answered 2xx: a retry would send events it already accepted.
     throw new StepError('Data Manager answered with an unreadable body', {
       code: 'transport',
       retryable: false,
-      body: result,
+      body: answer,
     });
   }
 
-  logger.debug('API response', {
-    status: response.status,
-    requestId:
-      typeof result.requestId === 'string' ? result.requestId : undefined,
-  });
+  const requestId =
+    typeof answer.requestId === 'string' ? answer.requestId : undefined;
+  logger.debug('API response', { requestId });
 
-  // If validation errors exist, throw them
-  if (result.validationErrors && result.validationErrors.length > 0) {
-    throw new StepError('Data Manager rejected the event', {
-      code: 'transport',
-      retryable: false,
-      body: result.validationErrors,
-    });
-  }
-};
+  // The event counts as delivered; the line names what Google dropped.
+  const warnings = fieldWarningsOf(answer);
+  if (warnings.length)
+    reportCause(
+      collector,
+      logger,
+      { step: stepId('destination', id), code: 'field-warning' },
+      'Google accepted the event and dropped fields',
+      { event: event.name, error: warnings.join(', ') },
+    );
+
+  return requestId !== undefined ? { requestId } : undefined;
+}
 
 const DEFAULT_IP: WalkerOSMapping.Value = ['ingest.ip', 'event.user.ip'];
 const DEFAULT_USER_AGENT: WalkerOSMapping.Value = [
@@ -255,31 +289,19 @@ const DEFAULT_USER_AGENT: WalkerOSMapping.Value = [
   'event.user.userAgent',
 ];
 
-/** A client IP or user agent setting resolved to a non-empty string. */
+/**
+ * A client IP or user agent setting resolved to a non-empty string. Without
+ * a setting the fallback applies; without a fallback nothing is filled.
+ */
 async function resolveClient(
   setting: WalkerOSMapping.Value | false | undefined,
-  fallback: WalkerOSMapping.Value,
+  fallback: WalkerOSMapping.Value | undefined,
   root: WalkerOSMapping.Root,
   collector: Collector.Instance,
 ): Promise<string | undefined> {
   if (setting === false) return undefined;
-  const value = await getMappingValue(root, setting ?? fallback, { collector });
-  return typeof value === 'string' && value !== '' ? value : undefined;
-}
-
-/**
- * What push reads from an events.ingest answer: an object, with validation
- * errors only under validateOnly. The request id is only logged.
- */
-interface IngestAnswer {
-  requestId?: unknown;
-  validationErrors?: unknown[];
-}
-
-function isIngestAnswer(value: unknown): value is IngestAnswer {
-  return (
-    isObject(value) &&
-    (value.validationErrors === undefined ||
-      Array.isArray(value.validationErrors))
-  );
+  const value = setting ?? fallback;
+  if (value === undefined) return undefined;
+  const resolved = await getMappingValue(root, value, { collector });
+  return typeof resolved === 'string' && resolved !== '' ? resolved : undefined;
 }

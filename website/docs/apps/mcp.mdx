@@ -451,6 +451,75 @@ consent screen; press Allow, and the browser hands back to Claude Code on a
 local port. `/mcp` then lists the walkerOS tools. The Claude Code plugin adds this
 server for you.
 
+### Claude Code in a container
+
+After Allow, the browser hands back to a port on `127.0.0.1` inside the
+container, which a browser on your computer cannot reach by itself. What works
+depends on where Claude Code runs.
+
+**A VS Code dev container: a set-up to try.** Give the server a fixed callback
+port in `.mcp.json`:
+
+<CodeSnippet
+  code={`{
+  "mcpServers": {
+    "walkeros": {
+      "type": "http",
+      "url": "https://app.walkeros.io/api/mcp",
+      "oauth": { "callbackPort": 9021 }
+    }
+  }
+}`}
+  language="json"
+/>
+
+and let VS Code forward that port to your computer, in
+`.devcontainer/devcontainer.json`:
+
+<CodeSnippet
+  code={`{
+  "forwardPorts": [9021],
+  "portsAttributes": {
+    "9021": { "label": "walkerOS sign-in", "requireLocalPort": true }
+  }
+}`}
+  language="json"
+/>
+
+Leave VS Code's `remote.autoForwardPorts` setting on. With `requireLocalPort`, a
+port that is already taken on your computer shows up as a prompt instead of a
+sign-in that never comes back. In the integrated terminal VS Code sets `BROWSER`
+to a helper that opens your computer's browser, so `/mcp` can then sign in as on
+a laptop. This set-up has not been confirmed end to end yet: if Allow still ends
+on a connection error, connect with a token for AI apps only, as below.
+
+The [walkerOS CLI](/docs/apps/cli#sign-in-with-walkeros-login) signs in the same
+way: forward one more port and set `WALKEROS_LOGIN_PORT` to it in
+`containerEnv`, and `walkeros login` returns to it. If that port is taken on your
+computer, pick another for both, or pass `walkeros login --port <n>`.
+
+**Another editor, or SSH.** Some dev containers forward only `appPort`, which
+cannot reach a port on the container's `127.0.0.1` (Zed's, for one). Connect
+with a token for AI apps only instead: under Account, then Automation tokens,
+choose New token for AI apps, keep read unless the agent has to change flows, and
+pick 7 or 30 days. Type it once in a terminal inside the container, at local
+scope, and never into `.mcp.json`, which is shared with the repository:
+
+<CodeSnippet
+  code={`read -rs T; claude mcp add --scope local --transport http walkeros https://app.walkeros.io/api/mcp --header "Authorization: Bearer $T"; unset T`}
+  language="bash"
+/>
+
+Use one token per container, named after it, and revoke it under Account,
+Automation tokens, when the container goes.
+
+**Remote Control from a phone.** Connect walkerOS at the machine before you
+leave: the connection then stays signed in while you use it. Only as a last
+resort, when it lapses while you are away, mint a 7-day read token for AI apps
+only, pass it through the chat, and revoke it when you are back: whatever goes
+through the chat stays in its transcript. Never paste a sign-in address into a
+chat, and never a 30-day token.
+
 ### Cursor and other MCP clients
 
 Any client that speaks Streamable HTTP MCP takes the same URL,
@@ -482,7 +551,7 @@ request, and it can be connected again at any time.
 
 A script or a CI job has nobody to press Allow. Mint an automation token
 instead, under Account, then Automation tokens: pick read or read and write,
-pick a lifetime, and copy the `wos_pat_...` value once. Send it as
+pick 30 or 90 days, and copy the `wos_pat_...` value once. Send it as
 `Authorization: Bearer` to the hosted server, or use it with
 [`walkeros api`](/docs/apps/cli#api-command) from a terminal or a CI job.
 
@@ -500,6 +569,7 @@ that needs a feature the project does not include answers
 | The client says it cannot authenticate | The URL is wrong, or points at an environment that is down | Check it is exactly `https://app.walkeros.io/api/mcp` |
 | The browser opens on the login page instead of the consent screen | Not signed in to walkerOS in that browser | Sign in; the consent screen follows on its own |
 | The app suddenly asks to reconnect | It was disconnected under Account, Connected apps | Reconnect it, or leave it disconnected |
+| After Allow, the browser shows a connection error on `127.0.0.1` | The client runs in a container or on another machine, and its callback port is not forwarded | In a VS Code dev container, fix and forward the callback port; elsewhere, connect with a token for AI apps only typed in a terminal, see [Claude Code in a container](#claude-code-in-a-container) |
 
 Against stage, substitute `https://stage.app.walkeros.io/api/mcp`; against a
 local app, `http://localhost:3000/api/mcp`.

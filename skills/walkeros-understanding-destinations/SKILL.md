@@ -108,7 +108,10 @@ Rules that keep the seam intact:
   `['ingest.userAgent', 'event.user.userAgent']`, resolved with
   `getMappingValue(createMappingRoot(ingest, event), setting, { collector })`.
   `false` disables, an explicit mapped vendor field wins, each package carries
-  its own few lines (no shared helper).
+  its own few lines (no shared helper). Data Manager fills them by default only
+  when an entry of `settings.destinations` is `GOOGLE_ADS`; a Google
+  Analytics-only step sends neither unless `ip` or `userAgent` is set or the
+  field is mapped.
 
 ## Destination Config
 

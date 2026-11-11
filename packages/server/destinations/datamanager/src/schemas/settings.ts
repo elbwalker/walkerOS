@@ -29,9 +29,7 @@ export const SettingsSchema = z
     keyFilename: z
       .string()
       .optional()
-      .describe(
-        'Path to service account JSON file. For local development or environments with filesystem access.',
-      ),
+      .describe('Absolute path to a service account JSON file'),
     scopes: z
       .array(z.string())
       .optional()
@@ -43,30 +41,13 @@ export const SettingsSchema = z
       .min(1)
       .max(10)
       .describe(
-        'Array of destination accounts and conversion actions (max 10)',
+        'Destination accounts and conversion actions (max 10); every event goes to every entry',
       ),
     eventSource: EventSourceSchema.optional()
       .default('WEB')
       .describe(
-        'Event source for all events. Defaults to WEB. Values: WEB, APP, IN_STORE, PHONE, OTHER',
+        'Event source for all events. Defaults to WEB. Values: WEB, APP, IN_STORE, PHONE, MESSAGE, OTHER',
       ),
-    batchSize: z
-      .number()
-      .int()
-      .min(1)
-      .max(2000)
-      .describe(
-        'Has no effect: every event is sent in its own request (accepts 1 to 2000)',
-      )
-      .optional(),
-    batchInterval: z
-      .number()
-      .int()
-      .min(0)
-      .describe(
-        'Has no effect: every event is sent in its own request (accepts milliseconds, like 5000)',
-      )
-      .optional(),
     validateOnly: z
       .boolean()
       .describe('If true, validate request without ingestion (testing mode)')
@@ -81,10 +62,6 @@ export const SettingsSchema = z
     consent: ConsentSchema.describe(
       'Request-level consent, sent with every request and applied to each event that carries no consent of its own',
     ).optional(),
-    testEventCode: z
-      .string()
-      .describe('Test event code for debugging (like TEST12345)')
-      .optional(),
     userData: z
       .record(z.string(), z.unknown())
       .describe(
@@ -100,7 +77,7 @@ export const SettingsSchema = z
     clientId: z
       .any()
       .describe(
-        "Guided helper: GA4 client ID for all events (like 'user.device')",
+        'Guided helper: Google Analytics client ID of the web stream, the one your Google tag sets, for all events',
       )
       .optional(),
     appInstanceId: z
@@ -128,10 +105,10 @@ export const SettingsSchema = z
       )
       .optional(),
     ip: InputSchema.describe(
-      'Client IP, sent as eventDeviceInfo.ipAddress. Resolves against { ingest, event }. Default: ["ingest.ip", "event.user.ip"]. false switches it off. A mapped ipAddress wins.',
+      'Client IP, sent as eventDeviceInfo.ipAddress. Resolves against { ingest, event }. Filled by default only when an entry is GOOGLE_ADS, from ["ingest.ip", "event.user.ip"]; a Google Analytics-only step sends none unless this is set or ipAddress is mapped. false switches it off. A mapped ipAddress wins.',
     ).optional(),
     userAgent: InputSchema.describe(
-      'Client user agent, sent as eventDeviceInfo.userAgent. Resolves against { ingest, event }. Default: ["ingest.userAgent", "event.user.userAgent"]. false switches it off. A mapped userAgent wins.',
+      'Client user agent, sent as eventDeviceInfo.userAgent. Resolves against { ingest, event }. Filled by default only when an entry is GOOGLE_ADS, from ["ingest.userAgent", "event.user.userAgent"]; a Google Analytics-only step sends none unless this is set or userAgent is mapped. false switches it off. A mapped userAgent wins.',
     ).optional(),
   })
   .strict();

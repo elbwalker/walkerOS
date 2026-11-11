@@ -4,7 +4,12 @@ import type {
   Credential,
   ServiceAccount,
 } from '@walkeros/core';
-import type { DestinationServer } from '@walkeros/server-core';
+import type { DestinationServer, sendServer } from '@walkeros/server-core';
+import type {
+  CART_DATA_KEYS,
+  CART_ITEM_KEYS,
+  EVENT_SOURCES,
+} from '../constants';
 
 export interface Settings {
   /**
@@ -14,15 +19,9 @@ export interface Settings {
    * @deprecated Use `config.credentials` instead. This field still works but
    * will be removed in a future major version.
    */
-  credentials?: {
-    client_email: string;
-    private_key: string;
-  };
+  credentials?: Credential<ServiceAccount>;
 
-  /**
-   * Path to service account JSON file
-   * For local development or environments with filesystem access
-   */
+  /** Absolute path to a service account JSON file */
   keyFilename?: string;
 
   /**
@@ -31,17 +30,11 @@ export interface Settings {
    */
   scopes?: string[];
 
-  /** Array of destination accounts and conversion actions/user lists */
+  /** Destination accounts and conversion actions (max 10); every event goes to every entry */
   destinations: Destination[];
 
   /** Event source for all events. Defaults to WEB if not specified */
   eventSource?: EventSource;
-
-  /** Maximum number of events to batch before sending (max 2000) */
-  batchSize?: number;
-
-  /** Time in milliseconds to wait before auto-flushing batch */
-  batchInterval?: number;
 
   /** If true, validate request without ingestion (testing mode) */
   validateOnly?: boolean;
@@ -51,9 +44,6 @@ export interface Settings {
 
   /** Request-level consent for all events */
   consent?: Consent;
-
-  /** Test event code for debugging (optional) */
-  testEventCode?: string;
 
   /** Guided helpers: User data mapping (applies to all events) */
   userData?: WalkerOSMapping.Map;
@@ -78,38 +68,37 @@ export interface Settings {
 
   /**
    * Client IP, sent as eventDeviceInfo.ipAddress. Resolves against
-   * { ingest, event }. `false` switches it off. A mapped `ipAddress` wins.
-   * @default ['ingest.ip', 'event.user.ip']
+   * { ingest, event }. Filled by default only when an entry is `GOOGLE_ADS`;
+   * a Google Analytics-only step sends none unless this is set or
+   * `ipAddress` is mapped. `false` switches it off. A mapped `ipAddress` wins.
+   * @default ['ingest.ip', 'event.user.ip'] with a `GOOGLE_ADS` entry
    */
   ip?: WalkerOSMapping.Value | false;
 
   /**
    * Client user agent, sent as eventDeviceInfo.userAgent. Resolves against
-   * { ingest, event }. `false` switches it off. A mapped `userAgent` wins.
-   * @default ['ingest.userAgent', 'event.user.userAgent']
+   * { ingest, event }. Filled by default only when an entry is `GOOGLE_ADS`;
+   * a Google Analytics-only step sends none unless this is set or
+   * `userAgent` is mapped. `false` switches it off. A mapped `userAgent` wins.
+   * @default ['ingest.userAgent', 'event.user.userAgent'] with a `GOOGLE_ADS` entry
    */
   userAgent?: WalkerOSMapping.Value | false;
 }
 
-export interface Mapping {
-  // Attribution identifiers (optional, for explicit mapping)
-  gclid?: WalkerOSMapping.Value;
-  gbraid?: WalkerOSMapping.Value;
-  wbraid?: WalkerOSMapping.Value;
-  sessionAttributes?: WalkerOSMapping.Value;
-}
+// A rule's mapped data goes in `data`; the destination has no rule settings.
+export interface Mapping {}
 
 /**
  * The part of a Google auth client this destination calls. Structural so an
- * injected client (tests, simulate) needs no cast; `OAuth2Client` and the
- * client `GoogleAuth.getClient()` returns both satisfy it.
+ * injected client (tests, simulate) needs no cast; every client
+ * `GoogleAuth.getClient()` returns satisfies it.
  */
 export interface AuthClient {
-  getAccessToken(): Promise<{ token?: string | null }>;
+  getRequestHeaders(): Promise<Headers>;
 }
 
 export interface Env extends DestinationServer.Env {
-  fetch?: typeof fetch;
+  sendServer?: typeof sendServer;
   authClient?: AuthClient | null;
 }
 
@@ -159,19 +148,13 @@ export type Rules = WalkerOSMapping.Rules<Rule>;
  * https://developers.google.com/data-manager/api/reference/rest/v1/Destination
  */
 export interface Destination {
-  /** Reference identifier for this destination */
-  reference?: string;
-
   /** Login account (account initiating the request) */
   loginAccount?: ProductAccount;
-
-  /** Linked account (child account linked to login account) */
-  linkedAccount?: ProductAccount;
 
   /** Operating account (account where data is sent) */
   operatingAccount?: ProductAccount;
 
-  /** Product-specific destination ID (conversion action or user list) */
+  /** Product-specific destination ID: a Google Ads conversion action ID, or a Google Analytics measurement ID or Firebase App ID */
   productDestinationId?: string;
 }
 
@@ -179,22 +162,16 @@ export interface Destination {
  * Product account information
  */
 export interface ProductAccount {
-  /** Account ID (e.g., "123-456-7890" for Google Ads) */
+  /** Numeric account ID: a Google Ads customer ID without hyphens, or a Google Analytics property ID */
   accountId: string;
 
   /** Type of account */
   accountType: AccountType;
 }
 
-export type AccountType =
-  | 'ACCOUNT_TYPE_UNSPECIFIED'
-  | 'GOOGLE_ADS'
-  | 'DISPLAY_VIDEO_ADVERTISER'
-  | 'DISPLAY_VIDEO_PARTNER'
-  | 'GOOGLE_ANALYTICS_PROPERTY'
-  | 'DATA_PARTNER';
+export type AccountType = 'GOOGLE_ADS' | 'GOOGLE_ANALYTICS_PROPERTY';
 
-export type EventSource = 'WEB' | 'APP' | 'IN_STORE' | 'PHONE' | 'OTHER';
+export type EventSource = (typeof EVENT_SOURCES)[number];
 
 /**
  * Hash encoding for user identifiers (required for UserData uploads)
@@ -233,9 +210,6 @@ export interface IngestEventsRequest {
   /** If true, validate without ingestion */
   validateOnly?: boolean;
 
-  /** Test event code for debugging */
-  testEventCode?: string;
-
   /** Hash encoding for user identifiers. Required for UserData uploads. */
   encoding?: Encoding;
 }
@@ -245,17 +219,11 @@ export interface IngestEventsRequest {
  * https://developers.google.com/data-manager/api/reference/rest/v1/Event
  */
 export interface Event {
-  /** Destination references for routing */
-  destinationReferences?: string[];
-
   /** Transaction ID for deduplication (max 512 chars) */
   transactionId?: string;
 
   /** Event timestamp in RFC 3339 format */
   eventTimestamp?: string;
-
-  /** Last updated timestamp in RFC 3339 format */
-  lastUpdatedTimestamp?: string;
 
   /** User data with identifiers (max 10 identifiers) */
   userData?: UserData;
@@ -281,15 +249,6 @@ export interface Event {
   /** Shopping cart data */
   cartData?: CartData;
 
-  /** Custom variables for the event */
-  customVariables?: CustomVariable[];
-
-  /** Experimental fields (subject to change) */
-  experimentalFields?: ExperimentalField[];
-
-  /** User properties */
-  userProperties?: UserProperties;
-
   /** Event name for GA4 (max 40 chars, required for GA4) */
   eventName?: string;
 
@@ -299,14 +258,8 @@ export interface Event {
   /** First-party user ID (max 256 chars) */
   userId?: string;
 
-  /** Additional event parameters */
-  additionalEventParameters?: EventParameter[];
-
   /** GA4 app instance ID (Firebase) */
   appInstanceId?: string;
-
-  /** Third-party user data (e.g. data partner identifiers) */
-  thirdPartyUserData?: UserData;
 
   /** Event location (required for Store Sales / IN_STORE events) */
   eventLocation?: EventLocation;
@@ -330,47 +283,6 @@ export interface DeviceInfo {
 
   /** IP address of the device */
   ipAddress?: string;
-}
-
-/**
- * Custom variable
- */
-export interface CustomVariable {
-  /** Variable name */
-  name?: string;
-
-  /** Variable value */
-  value?: string;
-}
-
-/**
- * Experimental field
- */
-export interface ExperimentalField {
-  /** Field name */
-  name?: string;
-
-  /** Field value */
-  value?: string;
-}
-
-/**
- * User properties
- */
-export interface UserProperties {
-  /** Property values */
-  [key: string]: string | number | boolean | undefined;
-}
-
-/**
- * Event parameter
- */
-export interface EventParameter {
-  /** Parameter name */
-  name?: string;
-
-  /** Parameter value */
-  value?: string | number;
 }
 
 /**
@@ -424,34 +336,21 @@ export interface AdIdentifiers {
 
   /** Web-to-app attribution identifier */
   wbraid?: string;
-
-  /** Device information for landing page */
-  landingPageDeviceInfo?: DeviceInfo;
 }
 
 /**
  * Shopping cart data
  * https://developers.google.com/data-manager/api/reference/rest/v1/CartData
  */
-export interface CartData {
-  /** Array of cart items (max 200) */
-  items: CartItem[];
-}
+export type CartData = { items: CartItem[] } & {
+  [K in Exclude<(typeof CART_DATA_KEYS)[number], 'items'>]?: unknown;
+};
 
 /**
- * Single cart item
- * https://developers.google.com/data-manager/api/reference/rest/v1/CartItem
+ * Single cart item, its values as mapped
+ * https://developers.google.com/data-manager/api/reference/rest/v1/Event#Item
  */
-export interface CartItem {
-  /** Merchant product ID (max 127 chars) */
-  merchantProductId?: string;
-
-  /** Item price */
-  price?: number;
-
-  /** Item quantity */
-  quantity?: number;
-}
+export type CartItem = { [K in (typeof CART_ITEM_KEYS)[number]]?: unknown };
 
 /**
  * Response from events.ingest API
@@ -459,65 +358,22 @@ export interface CartItem {
  */
 export interface IngestEventsResponse {
   /** Unique request ID for status checking */
-  requestId: string;
+  requestId?: string;
 
-  /** Validation errors (only if validateOnly=true) */
-  validationErrors?: ValidationError[];
+  /** Fields Google dropped from events it accepted */
+  fieldWarnings?: FieldWarning[];
 }
 
 /**
- * Validation error
+ * A field Google dropped from an accepted event
  */
-export interface ValidationError {
-  /** Error code */
-  code: string;
+export interface FieldWarning {
+  /** Warning reason enum, like WARNING_REASON_INVALID_CLIENT_ID */
+  reason?: string;
 
-  /** Human-readable error message */
-  message: string;
+  /** Google's text about the value: never logged */
+  description?: string;
 
-  /** Field path that caused the error */
-  fieldPath?: string;
-}
-
-/**
- * Request status response
- * https://developers.google.com/data-manager/api/reference/rest/v1/requestStatus/retrieve
- */
-export interface RequestStatusResponse {
-  /** Unique request ID */
-  requestId: string;
-
-  /** Processing state */
-  state: RequestState;
-
-  /** Number of events successfully ingested */
-  eventsIngested?: number;
-
-  /** Number of events that failed */
-  eventsFailed?: number;
-
-  /** Array of errors (if any) */
-  errors?: RequestError[];
-}
-
-export type RequestState =
-  | 'STATE_UNSPECIFIED'
-  | 'PENDING'
-  | 'PROCESSING'
-  | 'SUCCEEDED'
-  | 'FAILED'
-  | 'PARTIALLY_SUCCEEDED';
-
-/**
- * Request error
- */
-export interface RequestError {
-  /** Error code */
-  code: string;
-
-  /** Human-readable error message */
-  message: string;
-
-  /** Number of events affected by this error */
-  eventCount?: number;
+  /** Path of the dropped field, like events.events[0].client_id */
+  field?: string;
 }

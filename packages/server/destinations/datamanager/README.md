@@ -6,8 +6,8 @@
 
 # @walkeros/server-destination-datamanager
 
-Server-side event ingestion via the Google Data Manager API to Google Ads,
-Display & Video 360, and Google Analytics 4.
+Server-side event ingestion via the Google Data Manager API to Google Ads and
+Google Analytics 4.
 
 [Documentation](https://www.walkeros.io/docs/destinations/server/datamanager)
 &bull;
@@ -33,12 +33,19 @@ npm install @walkeros/server-destination-datamanager
         "datamanager": {
           "package": "@walkeros/server-destination-datamanager",
           "config": {
-            "data": { "map": { "transactionId": "id" } },
+            "mapping": {
+              "*": { "*": { "ignore": true } },
+              "order": {
+                "complete": {
+                  "data": { "map": { "transactionId": "data.id" } }
+                }
+              }
+            },
             "settings": {
               "destinations": [
                 {
                   "operatingAccount": {
-                    "accountId": "123-456-7890",
+                    "accountId": "1234567890",
                     "accountType": "GOOGLE_ADS"
                   },
                   "productDestinationId": "YOUR_CONVERSION_ACTION_ID"
@@ -53,10 +60,10 @@ npm install @walkeros/server-destination-datamanager
 }
 ```
 
-The destination sends an event only when it carries a `transactionId`; this
-quick start maps the walkerOS event `id` to it. For an order that the Google tag
-also reports, map the order ID the tag sends instead, so Google can deduplicate
-the two.
+A Google Ads destination needs a `transactionId`: this quick start maps the
+order ID (`data.id`) and ignores every other event. For an order that the Google
+tag also reports, map the order ID the tag sends, so Google can deduplicate the
+two.
 
 ## Documentation
 

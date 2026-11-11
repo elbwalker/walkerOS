@@ -1,6 +1,6 @@
 ---
 title: Google Data Manager API
-description: "Server-side event ingestion via the Google Data Manager API to Google Ads, Display & Video 360, and Google Analytics 4"
+description: "Server-side event ingestion via the Google Data Manager API to Google Ads and Google Analytics 4"
 path: /docs/destinations/server/datamanager
 sidebar_position: 4
 package: '@walkeros/server-destination-datamanager'
@@ -15,33 +15,104 @@ import WhereThisFits from '@site/src/components/snippets/_where-this-fits.mdx';
 
 <PackageLink env="server" github="packages/server/destinations/datamanager" npm="@walkeros/server-destination-datamanager" />
 
-The Google Data Manager API destination sends conversion events from your
-server to Google Ads, Display & Video 360 and Google Analytics 4 through one
-API endpoint.
+The Google Data Manager API destination sends conversions from your server to
+Google Ads, online as an additional data source next to the Google tag and as
+offline imports, and events to Google Analytics 4. This page gets your first
+conversion or event accepted by Google, checked with `validateOnly` before
+anything is ingested.
 
 <WhereThisFits
   pre={<>Google Data Manager API is a <strong>server destination</strong> in the walkerOS flow:</>}
   flowMap={{
     destinations: { default: { label: 'Destination', text: 'Data Manager', highlight: true } },
   }}
-  post={<>Sends conversion events server-side to Google Ads, Display & Video 360, and GA4 through a single unified API.</>}
+  post={<>Sends conversions to Google Ads and events to GA4 server-side through one API.</>}
 />
+
+## Before you start
+
+On the Google side you need:
+
+- A Google Cloud project with the Data Manager API enabled ([set up access](https://developers.google.com/data-manager/api/devguides/quickstart/set-up-access)).
+- A service account in that project with the Service Usage Consumer role.
+- Access for that service account:
+  - in Google Ads, as a user under Admin, Access and security, with any access level except Email only ([service accounts](https://developers.google.com/google-ads/api/docs/oauth/service-accounts)), or on a manager account above it, and then set `loginAccount` to that manager account;
+  - or the Editor or Administrator role on the Google Analytics property ([destinations](https://developers.google.com/data-manager/api/devguides/concepts/destinations)).
+- The IDs:
+  - the 10-digit Google Ads customer ID, without hyphens;
+  - the numeric conversion action ID, from a Website action for online conversions or an "Import from clicks" action for offline imports ([online](https://developers.google.com/data-manager/api/devguides/events/google-ads/online/send-events), [offline](https://developers.google.com/data-manager/api/devguides/events/google-ads/offline/send-events));
+  - for Google Analytics, the property ID, and the stream's measurement ID (web) or Firebase App ID (app).
+
+No developer token is needed. A new Google Ads data source starts with a 14-day trial ([online conversions](https://developers.google.com/data-manager/api/devguides/events/google-ads/online)).
+
+## Authentication
+
+Without credentials in the config, the destination uses Google's Application
+Default Credentials:
+
+- On Google Cloud, attach the service account to the runtime, on GKE through Workload Identity Federation for GKE. A Compute Engine VM also needs the Data Manager scope.
+- Elsewhere, set `GOOGLE_APPLICATION_CREDENTIALS` to a Workload Identity Federation configuration or to a service account key file ([deploy](https://developers.google.com/data-manager/api/devguides/concepts/deploy)).
+- With a key, put its JSON in `config.credentials` as a secret (`"credentials": "$secret.GOOGLE_SERVICE_ACCOUNT"`), or set `settings.keyFilename` to the absolute path of the key file.
+- For local development, user credentials need the Data Manager scope and your own OAuth client, or use service account impersonation ([set up access](https://developers.google.com/data-manager/api/devguides/quickstart/set-up-access)).
+
+If no credentials are found, the destination does not start: every push answers
+`failed` with the code `config`, and the ERROR line names the credentials it
+tried, such as `config.credentials` or Application Default Credentials.
 
 ## Installation
 
 <Quickstart data={data} />
 
-The destination authenticates with Application Default Credentials: the `GOOGLE_APPLICATION_CREDENTIALS` environment variable, or the metadata server on Google Cloud. To use a service account instead, set `config.credentials` to its `client_email` and `private_key`, or `settings.keyFilename` to the path of its key file. If no credentials are found, the destination does not start: every push answers `failed` with the code `config`, and the collector logs `destination init failed`.
+As shown, the quickstart has no mapping, so for a Google Ads destination every
+event fails with `missing-input` until you add the `transactionId` rule of the
+next section. For the first run, add `validateOnly: true` to `settings`: Google checks the
+request and answers as it would for a real one, but ingests nothing. Remove it
+to go live.
 
-The destination sends an event only when its mapped data carries a `transactionId`; any other event fails with the code `missing-input` and one ERROR line (`transactionId is required`). The quickstart maps none, so add one, for example `data: { map: { transactionId: 'id' } }` in `config` to use the walkerOS event ID. For an order that the Google tag also reports, map the order ID the tag sends instead, like `data.id` in the order's rule: Google deduplicates the two by `transactionId` within one conversion action, so the values must match ([additional data sources](https://support.google.com/google-ads/answer/16542291)). With a Google Analytics destination (`accountType: 'GOOGLE_ANALYTICS_PROPERTY'`), an event without an `eventName` fails the same way.
+## Map your conversions
 
-<Configuration type="destination" data={data} />
+Every event that reaches the step goes to every entry of
+`settings.destinations`, so a Google Ads step maps only its conversions: a
+catch-all rule ignores every other event
+([mapping rules](/docs/mapping/rule#how-destinations-consume-a-rule)), and the
+`order complete` rule maps the transaction ID.
 
-## Failures
+<CodeSnippet
+  code={`mapping: {
+  '*': { '*': { ignore: true } },
+  order: {
+    complete: {
+      data: {
+        map: {
+          transactionId: 'data.id',
+          conversionValue: 'data.value',
+          currency: 'data.currency',
+        },
+      },
+    },
+  },
+}`}
+  language="typescript"
+/>
 
-A response outside the 2xx range, a 2xx answer that reports validation errors or cannot be read, a network error, a failed token request, or no answer within the collector's 10-second timeout fails the event with the code `transport` or `timeout`: the event goes to the dead-letter queue and the collector logs one ERROR line without the response body. A rule with `silent: true` sends nothing.
+Google requires `transactionId` for online conversions and store sales. The
+destination also requires it for offline imports, where Google uses it to
+deduplicate, so a re-sent event updates the conversion instead of counting
+twice: map the order ID your Google tag sends, or the event id for a conversion
+only the server reports. A Google Ads event without one fails with the code
+`missing-input`.
 
-## Guided mapping helpers
+Google Analytics needs no `transactionId` unless its event reference asks for
+one ([Google Analytics events](https://developers.google.com/data-manager/api/devguides/events/analytics/recommended-custom-events/send-events)).
+
+Use one destination step per conversion action or Google Analytics property.
+
+For Google Analytics, map `eventName`, and `clientId` to the client ID your
+Google tag sets. For an app stream, map `appInstanceId` instead and set
+`eventSource: 'APP'`. A Google Analytics event without an `eventName` fails
+with the code `missing-input`.
+
+### Guided mapping helpers
 
 Define common fields once in Settings instead of repeating them in every event
 mapping. Event mappings always override Settings helpers.
@@ -62,7 +133,7 @@ mapping. Event mappings always override Settings helpers.
             phone: 'data.phone',
           },
           userId: 'user.id',
-          clientId: 'user.device',                  // GA4 web stream
+          clientId: 'data.clientId',                // the Google tag's client ID
           appInstanceId: 'user.appInstanceId',      // GA4 app stream (Firebase)
           sessionAttributes: 'context.sessionAttributes',
 
@@ -77,7 +148,34 @@ mapping. Event mappings always override Settings helpers.
   language="typescript"
 />
 
-**Consent mapping**: a string names a key of the event's consent, a boolean is a static value. The collector hands a destination only the consent states an event grants, so a string sends `CONSENT_GRANTED` when the event grants that key and nothing for it when the event denies it: Google never receives `CONSENT_DENIED` from an event's consent. A static `false` sends `CONSENT_DENIED`. The request-level `settings.consent` fills in for every event that carries no consent of its own, so with `settings.consent` set to `CONSENT_GRANTED`, an event whose consent denies the mapped key is sent as granted.
+<Configuration type="destination" data={data} />
+
+## What a 2xx answer means {#failures}
+
+A 2xx answer means Google accepted the request, not that it processed each
+event: per-event errors appear in Google's diagnostics 30 minutes to 24 hours
+later ([diagnostics](https://developers.google.com/data-manager/api/devguides/diagnostics)).
+The push returns Google's `requestId` to look them up.
+
+A request Google refuses fails with Google's reason and field on the ERROR line,
+like `Data Manager API error (400 INVALID_ARGUMENT): INVALID_NUMBER_FORMAT at destinations[0].login_account.account_id`
+([errors](https://developers.google.com/data-manager/api/devguides/concepts/understand-errors)).
+A quota refusal (429), a server error (5xx), `ABORTED`, a network error, a
+failed token request and no answer within the collector's 10-second timeout
+may be redelivered. Any other refusal is not redelivered, and neither is a 2xx
+answer that cannot be read, since Google may already have its events. Each
+failed event goes to the dead-letter queue, and its ERROR line never carries the
+response body.
+
+Values the destination does not send and fields Google drops are reported,
+while the event still counts as delivered:
+
+- `Data Manager did not send some mapped values` (code `not-sent`) names each mapped key it did not send and why, like `conversionValue (not a number)`.
+- `Google accepted the event and dropped fields` (code `field-warning`) names Google's reason and field for each dropped field; a warning it cannot show safely is counted.
+
+Both lines carry key names and Google's codes only, never a value, and a repeat
+within a minute is counted instead of logged again. A rule with `silent: true`
+sends nothing.
 
 ## User data
 
@@ -88,20 +186,38 @@ The destination reads these keys from the mapped data (Settings helpers, then `c
 - `userId`, `clientId`, `appInstanceId`, `gclid`, `gbraid`, `wbraid` and `sessionAttributes`: sent as mapped.
 - `transactionId`, `conversionValue`, `currency`, `eventName`, `cartData`, `storeId`, `eventSource`, `adUserData`, `adPersonalization`, `ipAddress` and `userAgent`: the event's conversion, consent and device fields, not hashed.
 
-Any other key, a list, and a `user_data` or `userData` object in a rule's `data` are dropped without a log line. There is no `doNotHash`: a value that is already a hash is hashed again.
+Normalization follows Google's [formatting rules](https://developers.google.com/data-manager/api/devguides/concepts/formatting).
+A phone number is sent only in E.164 (`+491701234567`) or with `00` before its
+country code (`0049 170 1234567`); a number without a country code is not sent,
+since its country would be a guess. A value that already is a SHA-256 hex digest
+is sent lowercased, not hashed again. An address goes only with all four of
+`firstName`, `lastName`, `regionCode` and `postalCode`; an incomplete address is
+not sent.
 
-Normalization follows Google's [formatting rules](https://developers.google.com/data-manager/api/devguides/concepts/formatting) with these gaps today: for `gmail.com` and `googlemail.com` addresses dots are removed but a `+alias` is kept; spaces inside an email are kept; a family name ending in `v`, `iv`, `ii` or `iii` without a space before it loses those letters (`Ivanov` is hashed as `ivano`); and a phone number without a leading `+` gets `+1` when it has 10 digits or fewer, or only a `+` otherwise. Map phone numbers in E.164 format (`+491701234567`).
+Any other key, a value of the wrong type and a value Google's rules refuse are
+not sent, and the `not-sent` line names each with its reason.
+
+## Quota
+
+Each event is its own request, and Google's quota is 300 requests per minute and
+100,000 per day per Google Cloud project, shared by every flow on it, so send
+conversions and selected events, not a page-view stream; the daily quota resets
+at midnight Pacific Time ([limits](https://developers.google.com/data-manager/api/devguides/limits)).
+A request over the quota fails with the code `transport` and may be
+redelivered; its ERROR line names the quota.
 
 ## Client IP and user agent
 
-The destination sends the client IP and user agent as `eventDeviceInfo.ipAddress`
-and `eventDeviceInfo.userAgent` by default. The `ip` and `userAgent` settings
-resolve against `{ ingest, event }` and default to `["ingest.ip", "event.user.ip"]`
-and `["ingest.userAgent", "event.user.userAgent"]`, so they fill in whenever the
+When an entry of `settings.destinations` is a Google Ads account, the
+destination sends the client IP and user agent as `eventDeviceInfo.ipAddress`
+and `eventDeviceInfo.userAgent` by default: Google Ads counts the IP as an
+identifier. The `ip` and `userAgent` settings resolve against
+`{ ingest, event }` and default to `["ingest.ip", "event.user.ip"]` and
+`["ingest.userAgent", "event.user.userAgent"]`, so they fill in whenever the
 source provides them (see the `config.ingest` recipe on the
-[Express source](/docs/sources/server/express#ingest-metadata)). A value your event mapping sets
-for `ipAddress` or `userAgent` wins; a value that resolves to nothing is not
-sent. Set either to `false` to turn it off:
+[Express source](/docs/sources/server/express#ingest-metadata)). A value your
+event mapping sets for `ipAddress` or `userAgent` wins; a value that resolves to
+nothing is not sent. Set either to `false` to turn it off:
 
 <CodeSnippet
   code={`settings: {
@@ -112,35 +228,40 @@ sent. Set either to `false` to turn it off:
   language="typescript"
 />
 
+A Google Analytics-only step sends neither unless `ip` or `userAgent` is set,
+or `ipAddress` or `userAgent` is mapped. A Google Analytics property in a step
+that also has a Google Ads entry receives the IP, so give the property its own
+step to keep the IP off.
+
 ## Consent
+
+**Consent mapping**: a string names a key of the event's consent, a boolean is a static value. The collector hands a destination only the consent states an event grants, so a string sends `CONSENT_GRANTED` when the event grants that key and nothing for it when the event denies it: Google never receives `CONSENT_DENIED` from an event's consent. A static `false` sends `CONSENT_DENIED`. The request-level `settings.consent` fills in for every event that carries no consent of its own, so with `settings.consent` set to `CONSENT_GRANTED`, an event whose consent denies the mapped key is sent as granted.
 
 The quickstart sets no `config.consent`, so Google receives every event with its user data, whatever consent the event carries, and a denial is not passed on (see **Consent mapping** above). To send only events with consent, add `consent: { marketing: true }` to `config`, next to `settings` (with several keys listed, one granted key is enough). An event without that consent is skipped or queued, depending on the collector's `consentDenied`. Server flows built by the CLI skip it and count it in `skipped`. With `startFlow` it waits in the destination's queue by default: a later event that carries consent does not release it, and only a `walker consent` command does, which then sends the waiting events of every user at once. Pass `consentDenied: 'skip'` to `startFlow` to skip such events instead (see [Gate a destination with consent](/docs/guides/consent#gate-a-destination-with-consent) and [consent-denied events on a server](/docs/collector#consent-denied-events-on-a-server)).
 
 ## Simulate
 
 `walkeros push --simulate destination.<id>` uses the package's mock env for the
-auth client and `fetch`, so no token is requested and nothing reaches Google.
-The output shows the `fetch` call with the request body the destination would
-send.
+auth client and `sendServer`, so no token is requested and nothing reaches
+Google. The output shows the `sendServer` call with the endpoint, the request
+body the destination would send, and its headers and timeout.
 
 ## Store sales (IN_STORE)
 
 For physical store conversions, set `eventSource: 'IN_STORE'` on the destination
 and map a `storeId` in the event mapping. The destination wraps it into the
-API's required `eventLocation.storeId` shape.
+API's `eventLocation.storeId` shape. Google's
+[store sales page](https://developers.google.com/data-manager/api/devguides/events/google-ads/store-sales/send-events)
+lists the other fields store sales require.
 
 <CodeSnippet
   code={`mapping: {
   order: {
     complete: {
-      name: 'purchase',
       data: {
         map: {
           transactionId: 'data.id',
-          conversionValue: 'data.value',
-          currency: 'data.currency',
           storeId: 'data.storeId',
-          email: 'user.email', // hashed PII still applies
         },
       },
     },
