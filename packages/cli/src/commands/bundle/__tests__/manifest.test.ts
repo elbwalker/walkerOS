@@ -1,4 +1,5 @@
 import http from 'http';
+import path from 'path';
 import fs from 'fs-extra';
 import {
   runBuildManifest,
@@ -10,6 +11,14 @@ import { BuildResultSchema } from '../../../schemas/build-manifest';
 import { VERSION } from '../../../version';
 import { bundle } from '../index';
 import { wrapSkeleton } from '../wrap';
+import {
+  PackageTreeError,
+  PackageTreeSchema,
+  packageTreeDigest,
+  type PackageInstall,
+  type PackageTree,
+} from '../../../core/package-tree';
+import { PackageUnavailableError } from '../../../core/package-manager';
 
 jest.mock('../index', () => ({ bundle: jest.fn() }));
 jest.mock('../wrap', () => ({ wrapSkeleton: jest.fn() }));
@@ -651,5 +660,172 @@ describe('BuildManifestSchema wrap options', () => {
       BuildManifestSchema.safeParse(manifest({ moin: { ...STAGE, file: 'x' } }))
         .success,
     ).toBe(false);
+  });
+});
+
+describe('runBuildManifest packages', () => {
+  let stub: Stub | undefined;
+  const fixtureTree: PackageTree = PackageTreeSchema.parse(
+    JSON.parse(
+      fs.readFileSync(
+        path.join(
+          __dirname,
+          '../../../core/__tests__/fixtures/package-trees.json',
+        ),
+        'utf8',
+      ),
+    ).cases[0].tree,
+  );
+  const installs: Array<PackageInstall | undefined> = [];
+
+  beforeEach(() => {
+    installs.length = 0;
+    mockedBundle.mockImplementation(async (_config, options) => {
+      const output = options?.buildOverrides?.output;
+      if (!output) throw new Error('no output');
+      const install = options?.buildOverrides?.packageInstall;
+      installs.push(install);
+      if (install && 'resolve' in install) install.onTree(fixtureTree);
+      await fs.outputFile(output, `bundle:${options?.target}`);
+    });
+  });
+
+  afterEach(async () => {
+    await stub?.close();
+    stub = undefined;
+  });
+
+  const serverManifest =
+    (packages: unknown) =>
+    (base: string): Record<string, unknown> => ({
+      version: 1,
+      toolchain: VERSION,
+      flowConfig: webFlow('x'),
+      artifacts: ['a.mjs', 'b.tar.gz', 'c.tar.gz'].map((outputName) => ({
+        target: outputName === 'b.tar.gz' ? 'cdn' : 'cdn-skeleton',
+        outputName,
+        putUrl: `${base}/out/${outputName}`,
+      })),
+      resultPutUrl: `${base}/result.json`,
+      ...(packages === undefined ? {} : { packages }),
+    });
+
+  it('resolves once under the cutoff and installs that tree for every later artifact', async () => {
+    const before = '2026-11-03T12:00:00.000Z';
+    stub = await startStub(
+      serverManifest({ resolve: { before, exempt: ['@walkeros/'] } }),
+    );
+    const { result } = await runBuildManifest(`${stub.base}/manifest.json`);
+
+    expect(result.ok).toBe(true);
+    const [first, ...later] = installs;
+    expect(first && 'resolve' in first && first.resolve).toEqual({
+      before: new Date(before),
+      exempt: ['@walkeros/'],
+    });
+    expect(later).toEqual([{ tree: fixtureTree }, { tree: fixtureTree }]);
+    expect(result.packages).toEqual({
+      digest: packageTreeDigest(fixtureTree),
+      tree: fixtureTree,
+    });
+    expect(readResult(stub)).toEqual(result);
+  });
+
+  it('installs a recorded tree for every artifact and echoes its digest', async () => {
+    stub = await startStub(serverManifest({ tree: fixtureTree }));
+    const { result } = await runBuildManifest(`${stub.base}/manifest.json`);
+
+    expect(result.ok).toBe(true);
+    expect(installs).toEqual([
+      { tree: fixtureTree },
+      { tree: fixtureTree },
+      { tree: fixtureTree },
+    ]);
+    expect(result.packages?.digest).toBe(packageTreeDigest(fixtureTree));
+  });
+
+  it('leaves installs and the result as they were without packages', async () => {
+    stub = await startStub(serverManifest(undefined));
+    const { result } = await runBuildManifest(`${stub.base}/manifest.json`);
+
+    expect(result.ok).toBe(true);
+    expect(installs).toEqual([undefined, undefined, undefined]);
+    expect(result).not.toHaveProperty('packages');
+  });
+
+  it.each([
+    [
+      'PACKAGE_TREE_INVALID',
+      () =>
+        new PackageTreeError([
+          'registry https://registry.evil.test/ is not https://registry.npmjs.org/',
+        ]),
+    ],
+    [
+      'PACKAGE_UNAVAILABLE',
+      () =>
+        new PackageUnavailableError(
+          'node_modules/arrify',
+          { name: 'arrify', version: '3.0.0', integrity: 'sha512-A' },
+          'E404',
+        ),
+    ],
+  ])('reports %s and uploads nothing', async (code, error) => {
+    mockedBundle.mockImplementation(async () => {
+      throw error();
+    });
+    stub = await startStub(serverManifest({ tree: fixtureTree }));
+    const { result } = await runBuildManifest(`${stub.base}/manifest.json`);
+
+    expect(result.ok).toBe(false);
+    expect(result.error?.code).toBe(code);
+    expect([...stub.puts.keys()]).toEqual(['/result.json']);
+  });
+});
+
+describe('BuildManifestSchema packages', () => {
+  const manifest = (packages: unknown) => ({
+    version: 1,
+    toolchain: VERSION,
+    flowConfig: {},
+    artifacts: [{ target: 'cdn', outputName: 'w.js', putUrl: 'https://x/w' }],
+    resultPutUrl: 'https://x/r',
+    packages,
+  });
+
+  it.each([
+    [
+      'a resolve request',
+      {
+        resolve: { before: '2026-11-03T12:00:00.000Z', exempt: ['@walkeros/'] },
+      },
+      true,
+    ],
+    [
+      'a resolve request without a date',
+      { resolve: { before: 'last week', exempt: [] } },
+      false,
+    ],
+    [
+      'both at once',
+      { resolve: { before: '2026-11-03T12:00:00.000Z', exempt: [] }, tree: {} },
+      false,
+    ],
+    [
+      'a tree with an unknown key',
+      {
+        tree: {
+          version: 1,
+          registry: 'https://registry.npmjs.org/',
+          before: null,
+          packages: {},
+          extra: 1,
+        },
+      },
+      false,
+    ],
+    ['an unknown mode', { latest: true }, false],
+  ])('%s', (_name, packages, ok) => {
+    expect(BuildManifestSchema.safeParse(manifest(packages)).success).toBe(ok);
   });
 });

@@ -1,19 +1,22 @@
 import {
   readFileSync,
-  writeFileSync,
   mkdirSync,
   unlinkSync,
-  chmodSync,
   renameSync,
+  openSync,
+  writeSync,
+  fsyncSync,
+  closeSync,
+  statSync,
 } from 'fs';
 import { randomBytes } from 'crypto';
 import { join } from 'path';
 import { homedir } from 'os';
 
 /**
- * The CLI's own settings. It holds no credential: the CLI authenticates with
- * WALKEROS_TOKEN only, and sign-in fields an older CLI left in the file are
- * never read.
+ * The CLI's own settings. It holds no credential: a `walkeros login` lives in
+ * `credentials.json` beside it (`lib/credentials.ts`), and sign-in fields an
+ * older CLI left in this file are never read.
  */
 export interface WalkerOSConfig {
   appUrl?: string;
@@ -63,30 +66,57 @@ export function readConfig(): WalkerOSConfig | null {
 }
 
 /**
- * Replace the config file wholesale, atomically and with 0600 permissions.
- *
- * A reader that catches the file mid-write would see truncated JSON and treat
- * the file as missing, so the content is written to a temp file and renamed,
- * which is atomic within a directory.
- *
- * The temp path is unique per write. Nothing locks the file, so two writers
- * (two `telemetry` commands, say) can be in here at once: on one shared name
- * they would write over each other's temp file and rename it twice, and the
- * slower one would fail outright when the faster renamed the file out from
- * under its `chmod`.
+ * Create the config directory, traversable only by its owner. `mode` applies
+ * only when the directory is created here, so a directory that already exists
+ * keeps its mode (`configDirWarning` names one others can write to).
  */
-function replaceConfigFile(config: WalkerOSConfig): void {
+export function ensureConfigDir(): string {
   const dir = getConfigDir();
   mkdirSync(dir, { recursive: true, mode: 0o700 });
+  return dir;
+}
 
-  const configPath = getConfigPath();
-  const tempPath = `${configPath}.${process.pid}.${randomBytes(6).toString('hex')}.tmp`;
+/**
+ * The warning for a config directory that someone else can write to, or null.
+ * Whoever can write there can rename a file of their own over
+ * `credentials.json`, so `walkeros login` says so before it stores anything.
+ */
+export function configDirWarning(): string | null {
+  const dir = getConfigDir();
+  let mode: number;
   try {
-    writeFileSync(tempPath, JSON.stringify(config, null, 2), { mode: 0o600 });
-    // `writeFileSync`'s mode is masked by the process umask, so it alone does
-    // not guarantee 0600 on the file the rename puts in place.
-    chmodSync(tempPath, 0o600);
-    renameSync(tempPath, configPath);
+    mode = statSync(dir).mode;
+  } catch {
+    return null;
+  }
+  if ((mode & 0o022) === 0) return null;
+  return `${dir} can be written by other users, who could replace your sign-in there: run chmod 700 ${dir}`;
+}
+
+/**
+ * Write `content` to `path` atomically, readable only by its owner.
+ *
+ * A reader that catches the file mid-write would see truncated JSON and treat
+ * it as missing, so the content goes to a temp file that is flushed to disk
+ * and then renamed, which is atomic within a directory.
+ *
+ * The temp file is created exclusively (`wx`) with mode 0600 on a fresh name,
+ * so the mode is set at creation (the umask can only narrow it) and a path
+ * someone placed in advance is never followed. The name is unique per write:
+ * two writers on one shared name would write over each other's temp file and
+ * rename it twice.
+ */
+export function writePrivateFile(path: string, content: string): void {
+  const tempPath = `${path}.${process.pid}.${randomBytes(6).toString('hex')}.tmp`;
+  try {
+    const fd = openSync(tempPath, 'wx', 0o600);
+    try {
+      writeSync(fd, content);
+      fsyncSync(fd);
+    } finally {
+      closeSync(fd);
+    }
+    renameSync(tempPath, path);
   } catch (error) {
     // A unique name is never reused, so a temp left behind by a failure would
     // sit in the config directory forever.
@@ -97,6 +127,12 @@ function replaceConfigFile(config: WalkerOSConfig): void {
     }
     throw error;
   }
+}
+
+/** Replace the config file wholesale. Nothing locks it: a login does not live here. */
+function replaceConfigFile(config: WalkerOSConfig): void {
+  ensureConfigDir();
+  writePrivateFile(getConfigPath(), JSON.stringify(config, null, 2));
 }
 
 /**

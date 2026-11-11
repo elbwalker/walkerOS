@@ -2,7 +2,11 @@ import { z } from 'zod';
 import { handleCliError } from '../../core/api-error.js';
 import { appErrorMessage, appFetch } from '../../core/app-fetch.js';
 import { APP_PATHS } from '../../core/app-paths.js';
-import { resolveAccessToken } from '../../core/auth.js';
+import {
+  resolveCredential,
+  sendWithCredential,
+  type Credential,
+} from '../../core/auth.js';
 import { createCLILogger } from '../../core/cli-logger.js';
 import { writeResult } from '../../core/output.js';
 import type { GlobalOptions } from '../../types/global.js';
@@ -19,15 +23,29 @@ async function readJson(response: Response): Promise<unknown> {
   }
 }
 
-/** Who the current credential belongs to, as the app answers it. */
-export async function whoami(): Promise<unknown> {
-  const token = resolveAccessToken();
-  if (!token) throw new Error(NOT_SIGNED_IN);
-  const response = await appFetch(APP_PATHS.whoami, { token });
+/** The app's answer, and the credential it answered for. */
+async function identify(): Promise<{ body: unknown; credential: Credential }> {
+  const credential = await resolveCredential();
+  if (!credential) throw new Error(NOT_SIGNED_IN);
+  const response = await sendWithCredential(credential, (token) =>
+    appFetch(APP_PATHS.whoami, { token }),
+  );
   const body = await readJson(response);
   if (!response.ok)
     throw new Error(appErrorMessage(body) ?? `HTTP ${response.status}`);
-  return body;
+  return { body, credential };
+}
+
+/** Who the current credential belongs to, as the app answers it. */
+export async function whoami(): Promise<unknown> {
+  return (await identify()).body;
+}
+
+/** Where the credential comes from, as `walkeros auth whoami` names it. */
+export function credentialSourceLine(credential: Credential): string {
+  return credential.source === 'env'
+    ? 'Credential: WALKEROS_TOKEN'
+    : `Credential: signed in to ${credential.issuer}`;
 }
 
 // === CLI Command Handler ===
@@ -47,18 +65,19 @@ export async function whoamiCommand(
 ): Promise<void> {
   const logger = createCLILogger(options);
   try {
-    const result = await whoami();
+    const { body: result, credential } = await identify();
     if (options.json) {
       await writeResult(JSON.stringify(result, null, 2), options);
     } else {
       const identity = IdentitySchema.safeParse(result);
       if (!identity.success) {
         logger.info(JSON.stringify(result));
-        return;
+      } else {
+        const data = identity.data;
+        if (data.email) logger.info(data.email);
+        if (data.userId) logger.info(`User: ${data.userId}`);
       }
-      const data = identity.data;
-      if (data.email) logger.info(data.email);
-      if (data.userId) logger.info(`User: ${data.userId}`);
+      logger.info(credentialSourceLine(credential));
     }
   } catch (error) {
     handleCliError(error);

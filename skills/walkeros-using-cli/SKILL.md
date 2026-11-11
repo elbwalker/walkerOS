@@ -52,7 +52,8 @@ nothing, and both still print `success: true`.
 | `setup`       | Run a component's `setup()` to provision external resources                                      | ⚠️    |
 | `validate`    | Validate configs/events                                                                          | ✅    |
 | `cache`       | Manage caching                                                                                   | ✅    |
-| `auth`        | Check who the token in `WALKEROS_TOKEN` belongs to                                               | ✅    |
+| `login`       | Sign a person in with the walkerOS app in a browser; `logout` revokes it                         | ✅    |
+| `auth`        | Check who the credential belongs to and where it comes from                                      | ✅    |
 | `api`         | Call the walkerOS app API, or list its operations                                                | ⚠️    |
 | `diagnostics` | Show the CLI version, the app URL, and whether the app answers                                   | ✅    |
 | `telemetry`   | Show, enable or disable anonymous usage telemetry                                                | ✅    |
@@ -805,6 +806,15 @@ Unknown top-level keys are ignored; artifact entries are strict; local
 filesystem inputs are refused with `LOCAL_PATH_NOT_ALLOWED`. Only `--json`,
 `-v`, `-s` combine with it. Schemas: `BuildManifestSchema`, `BuildResultSchema`,
 `BUILD_ERROR_CODES` from `@walkeros/cli`.
+
+Optional `packages` makes every bundle artifact install one tree, reported in
+the result as `packages: { digest, tree }`: `{ resolve: { before, exempt } }`
+resolves once, taking only versions published at or before `before` except for
+names under an `exempt` prefix and the exact versions those declare; `{ tree }`
+installs exactly a recorded tree from its tarball URLs and sha512 values and
+resolves nothing (`PACKAGE_UNAVAILABLE` when the registry no longer serves an
+entry, `PACKAGE_TREE_INVALID` for a tree that fails the check). Without
+`packages` packages resolve fresh, as in a local build.
 
 ---
 

@@ -16,10 +16,10 @@ function isLoopback(hostname: string): boolean {
 /**
  * Refuse a URL that would carry a walkerOS credential in the clear.
  *
- * Every bearer the CLI holds (session, refresh, deploy) is sent to whatever
- * host the app URL names, and that string is user-settable: `WALKEROS_APP_URL`,
- * the config file, and `--url` all feed it. Over plain http to a remote host,
- * anything on the path reads the token.
+ * The bearer the CLI sends (`resolveAccessToken` in `core/auth.ts`) goes to
+ * whatever host the app URL names, and that string is user-settable:
+ * `WALKEROS_APP_URL`, the config file, and `--url` all feed it. Over plain
+ * http to a remote host, anything on the path reads the token.
  *
  * Applied where a credential is ATTACHED, never inside `resolveAppUrl`. That
  * resolver is the tempting single funnel, but it also feeds the paths that
@@ -45,4 +45,21 @@ export function requireSecureUrl(url: string): string {
     `Refusing to send walkerOS credentials over plain http to ${url}. ` +
       'Use https, or localhost / 127.0.0.1 / [::1] for local development.',
   );
+}
+
+/**
+ * Whether a URL may carry a walkerOS sign-in: `https:`, or `http:` on the
+ * local machine. Stricter than `requireSecureUrl`, which lets a string that
+ * is not a URL, and any other scheme, through to fail at the request: a
+ * sign-in checks every address it is given before it sends or opens anything.
+ */
+export function isSecureSignInUrl(url: string): boolean {
+  let parsed: URL;
+  try {
+    parsed = new URL(url);
+  } catch {
+    return false;
+  }
+  if (parsed.protocol === 'https:') return true;
+  return parsed.protocol === 'http:' && isLoopback(parsed.hostname);
 }

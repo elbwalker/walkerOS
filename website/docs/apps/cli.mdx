@@ -541,12 +541,45 @@ combine with it.
 | `buildEnv` | Base values for web `$env`, beneath `config.bundle.env`. Never the CLI process's own environment |
 | `artifacts[]` | At least one. Each has a unique `outputName` (a bare file name), a `putUrl`, and optional `contentType` and `headers`. A bundle artifact sets `target` (`cdn`, `cdn-skeleton`, `runner`, `simulate` or `push`); a wrap artifact sets `target: "wrap"`, `platform` and `skeleton` |
 | `resultPutUrl` | Presigned PUT URL for the result JSON |
+| `packages` | Optional. How bundle artifacts install their packages, see below |
 
-The result is `{ ok, toolchain, artifacts: [{ target, outputName, bytes, sha256 }], error? }`,
+The result is `{ ok, toolchain, artifacts: [{ target, outputName, bytes, sha256 }], packages?, error? }`,
 where `error` carries a `code`, a `message` and the `outputName` being built.
 Error codes: `INVALID_MANIFEST`, `TOOLCHAIN_MISMATCH`, `INVALID_CONFIG`,
 `MISSING_BUILD_ENV`, `WEB_SECRET_REF`, `UNSUPPORTED_PACKAGE_SPEC`,
-`LOCAL_PATH_NOT_ALLOWED`, `BUILD_FAILED`, `UPLOAD_FAILED`.
+`LOCAL_PATH_NOT_ALLOWED`, `BUILD_FAILED`, `PACKAGE_UNAVAILABLE`,
+`PACKAGE_TREE_INVALID`, `UPLOAD_FAILED`.
+
+#### Recorded package trees (`packages`)
+
+Without `packages`, every bundle artifact resolves its packages fresh from the
+registry, as a local build does. With it, every bundle artifact of the manifest
+installs one tree, and the result reports that tree as
+`packages: { digest, tree }` (`digest` is the sha256 of the tree's canonical
+JSON):
+
+- `{ "resolve": { "before": "<ISO time>", "exempt": ["@walkeros/"] } }`
+  resolves once. Every pick takes only a version published at or before
+  `before`, except for a package whose registry name starts with an `exempt`
+  prefix and an exact version such a package declares. A pick whose registry
+  entry has no publish time is refused, and so is an `npm:` alias whose name
+  and target fall on different sides of an `exempt` prefix. When no version
+  satisfies a range under the cutoff, the build fails with `BUILD_FAILED`
+  naming the package, the range and the cutoff.
+- `{ "tree": <tree> }` installs exactly a tree an earlier build reported, and
+  resolves nothing: each entry is fetched from its recorded tarball URL and
+  checked against its recorded sha512. A tarball the registry no longer
+  serves, or serves with other bytes, fails with `PACKAGE_UNAVAILABLE` naming
+  the entry. A tree that names another registry, a tarball URL outside it, an
+  integrity that is not sha512, a version that is not exact, an install path
+  outside `node_modules/<name>` and `node_modules/<name>/node_modules/<name>`,
+  a missing declared package, or an edge with no package in the tree fails
+  with `PACKAGE_TREE_INVALID` before anything is fetched.
+
+A tree is `{ version: 1, registry, before, packages }`, where `packages` maps
+each install path to `{ name, version, resolved, integrity, dependencies? }`.
+The schema and its check are exported as `PackageTreeSchema`,
+`packageTreeProblems` and `packageTreeDigest`.
 
 Unknown top-level fields are ignored, so an orchestrator can keep its own
 bookkeeping in the manifest. Artifact entries are strict. A manifest build
@@ -1588,7 +1621,52 @@ The entry validator:
 
 ## Authentication
 
-The CLI authenticates to the walkerOS app with one credential: the `WALKEROS_TOKEN` environment variable. Create a token in the app under Account > Automation tokens.
+People sign the CLI in with `walkeros login`; CI and other unattended runs use the `WALKEROS_TOKEN` environment variable. The commands that call the app (`walkeros api`, `walkeros auth whoami`) send whichever credential is in place.
+
+### Sign in with walkeros login
+
+<CodeSnippet
+  code={`walkeros login
+walkeros auth whoami`}
+  language="bash"
+/>
+
+`walkeros login` opens the walkerOS app in your browser. Sign in, check what the consent screen asks for, and Allow: the browser returns to the CLI on `127.0.0.1` and the sign-in finishes by itself, with nothing to copy. If the browser shows a connection error instead (the CLI runs in a container or on another machine), run `walkeros login --no-browser`.
+
+**No browser on this machine.** `walkeros login --no-browser` prints an address. Open it on any device, sign in and Allow, and the page shows a one-time code. Paste it at the prompt in the terminal. The code works once, within 5 minutes of Allow, and only in the terminal that started the sign-in. Paste it only into a terminal you started yourself.
+
+**No prompt (Remote Control, an agent).** Without a terminal to ask in, `walkeros login --no-browser` keeps the sign-in waiting for 15 minutes and exits. Finish it with the code the page shows:
+
+<CodeSnippet
+  code={`walkeros login --no-browser
+walkeros login --code <code>`}
+  language="bash"
+/>
+
+A code passed this way lands in your shell history; it works once, so it is spent there. The prompt stays the default way.
+
+| Option | Description |
+|--------|-------------|
+| `--no-browser` | Print an address to open on any device; the page after Allow shows a code to paste |
+| `--code <code>` | Finish a sign-in started with `--no-browser` where no prompt could ask for the code |
+| `--port <n>` | The loopback port the browser returns to (default: `WALKEROS_LOGIN_PORT`, else any free port) |
+
+What the CLI keeps, and where:
+
+- The sign-in is stored in `~/.config/walkeros/credentials.json` (or under `XDG_CONFIG_HOME`), readable only by you, one sign-in per app URL. Signed in to two apps (say a staging app and `https://app.walkeros.io`), the CLI keeps both and uses the one for the app URL in place.
+- A sign-in is used only for its own app: with `WALKEROS_APP_URL` pointing elsewhere, a command sends nothing and says where you are signed in.
+- The CLI renews the sign-in by itself while you use it. When the sign-in ends, a command says `your sign-in to <app> ended: run walkeros login`. It ends when:
+  - you disconnected walkerOS CLI in the app;
+  - it went unused too long;
+  - a renewal timed out on this computer after the app had already renewed it: once the app's 10-second window for repeating a renewal has passed, the next renewal ends the sign-in.
+- The CLI gets read and write access to the app's REST API, never to the hosted MCP server. Each sign-in sends you a notice email.
+- walkerOS CLI shows up once under Account, Connected apps, however many computers are signed in. `walkeros logout` signs this computer out and leaves it listed there; Disconnect there signs the CLI out on every computer.
+
+`walkeros logout` revokes the sign-in for the app URL and removes it from this computer. If the app cannot be reached, the CLI removes it anyway and says so: the sign-in then still works until you disconnect walkerOS CLI under Account, Connected apps, which signs the CLI out on every computer.
+
+### Tokens for CI
+
+Create an automation token in the app under Account > Automation tokens, and set it as `WALKEROS_TOKEN`. While `WALKEROS_TOKEN` is set, it is used instead of a `walkeros login`; `login` and `logout` say so.
 
 <CodeSnippet
   code={`read -rs WALKEROS_TOKEN; export WALKEROS_TOKEN
@@ -1599,13 +1677,14 @@ walkeros auth whoami`}
 - In a shell, read the token without echoing it, as above. Never type it inline: an inline value lands in your shell history.
 - In CI, set `WALKEROS_TOKEN` to your automation token from the secret store.
 - Set it only for the commands that call the app (`walkeros api`, `walkeros auth whoami`). `push` and `setup` run step package code in the same process.
-- Without a token, a command that calls the app stops with `no token: set WALKEROS_TOKEN to a token from Account > Automation tokens in the walkerOS app`.
+
+Without either credential, a command that calls the app stops with `not signed in: run walkeros login, or set WALKEROS_TOKEN to a token from Account > Automation tokens in the walkerOS app`.
 
 The CLI reads no credential from its config file, `~/.config/walkeros/config.json`. If that file holds `token`, `accessToken`, `accessTokenExpiresAt`, `refreshToken` or `email` fields, delete them.
 
 ### Whoami
 
-Show who the token belongs to: email and user ID.
+Show who the credential belongs to (email and user ID), and where it comes from.
 
 <CodeSnippet
   code={`walkeros auth whoami`}
@@ -1616,7 +1695,10 @@ Output:
 ```
 user@example.com
 User: usr_abc123
+Credential: signed in to https://app.walkeros.io
 ```
+
+With `WALKEROS_TOKEN` set, the last line reads `Credential: WALKEROS_TOKEN`.
 
 | Option | Description |
 |--------|-------------|
@@ -1991,7 +2073,8 @@ Two options work everywhere:
 
 | Variable | Purpose |
 |----------|---------|
-| `WALKEROS_TOKEN` | The token for `walkeros api` and `walkeros auth whoami` (an automation token, `wos_pat_...`) |
+| `WALKEROS_TOKEN` | The token for `walkeros api` and `walkeros auth whoami` (an automation token, `wos_pat_...`); used instead of a `walkeros login` while set |
+| `WALKEROS_LOGIN_PORT` | The loopback port `walkeros login` listens on, when `--port` is not given |
 | `WALKEROS_PROJECT_ID` | Fills `{projectId}` in a `walkeros api` path |
 | `WALKEROS_APP_URL` | Base URL override (default: `https://app.walkeros.io`) |
 | `BUILD_MANIFEST_URL` | Manifest location read by a bare `walkeros bundle --manifest` |
@@ -2004,9 +2087,9 @@ The runtime reads its own variables, see the [runtime environment variables](/do
 ## Diagnostics command
 
 `walkeros diagnostics` reports the CLI version, the app URL and where it comes
-from (`env`, `config` or `default`), and whether the app answers its public
-health route. It sends no credential, so it works without a token, and it exits 0
-whether or not the app answers.
+from (`env`, `config` or `default`), whether the app answers its public health
+route, and whether a command would be signed in there. It sends no credential,
+so it works without a token, and it exits 0 whether or not the app answers.
 
 <CodeSnippet
   code={`walkeros diagnostics
@@ -2018,9 +2101,10 @@ walkeros diagnostics --json`}
 cli 4.x.y
 app https://app.walkeros.io (default)
 health reachable, status ok, app 3f2a91c
+signed in to https://app.walkeros.io
 ```
 
-When the app cannot be reached, the health line reads `health unreachable (fetch failed (ECONNREFUSED))`. `--json` prints the same report as one object, `{ cli, appUrl, app }`.
+When the app cannot be reached, the health line reads `health unreachable (fetch failed (ECONNREFUSED))`. The last line reads `not signed in`, `sign-in WALKEROS_TOKEN`, or names the app you are signed in to instead; it never shows a token. `--json` prints the same report as one object, `{ cli, appUrl, app, signIn }`.
 
 ## Minimum client version
 
@@ -2158,16 +2242,19 @@ lsof -ti:8080 | xargs kill`}
 
 ### Authentication Issues
 
-If `walkeros api` exits 3, it has no credential or the app answered 401:
+If `walkeros api` exits 3, it has no credential, the sign-in ended or belongs to another app URL, or the app answered 401:
 
 <CodeSnippet
-  code={`# Check who the token belongs to
+  code={`# Check who the credential belongs to and where it comes from
 walkeros auth whoami
+walkeros diagnostics
 
-# Set a token from Account > Automation tokens, without echoing it
-read -rs WALKEROS_TOKEN; export WALKEROS_TOKEN`}
+# Sign in again (or, in CI, set a token from Account > Automation tokens)
+walkeros login`}
   language="bash"
 />
+
+If `walkeros login` says the port it listens on is in use, choose another with `--port <n>` or `WALKEROS_LOGIN_PORT`. If the browser shows a connection error after Allow, run `walkeros login --no-browser`.
 
 ### nft cannot trace a runtime asset
 

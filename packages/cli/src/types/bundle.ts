@@ -9,6 +9,7 @@
 
 import type { Flow } from '@walkeros/core';
 import type { BuildOptions as ESBuildOptions } from 'esbuild';
+import type { PackageInstall } from '../core/package-tree.js';
 
 // Re-export core Flow types for CLI consumers
 export type { Flow };
@@ -76,6 +77,14 @@ export interface BuildOptions extends CLIBuildOptions {
    * Only substitutes transitive specs; direct package specs always win.
    */
   overrides?: Record<string, string>;
+
+  /**
+   * How packages are installed, set by a manifest build only. Absent, they
+   * are resolved fresh (the zero-setup default). `tree` installs exactly a
+   * recorded tree; `resolve` resolves under a release-age cutoff and hands
+   * the installed tree to `onTree`.
+   */
+  packageInstall?: PackageInstall;
 
   /**
    * Extra paths or globs the bundler must include in the trace output.

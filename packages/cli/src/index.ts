@@ -40,15 +40,33 @@ export {
   BuildBundleArtifactSchema,
   BuildWrapArtifactSchema,
   BuildWrapOptionsSchema,
+  BuildPackagesSchema,
   BuildResultSchema,
 } from './schemas/build-manifest.js';
 export type {
   BuildManifest,
   BuildArtifact,
   BuildWrapOptions,
+  BuildPackages,
   BuildResult,
   BuildErrorCode,
 } from './schemas/build-manifest.js';
+export {
+  PACKAGE_TREE_VERSION,
+  PACKAGE_TREE_MAX_ENTRIES,
+  PackageTreeSchema,
+  PackageTreeError,
+  assertPackageTree,
+  canonicalPackageTree,
+  edgeIsExempt,
+  packageTreeDigest,
+  packageTreeProblems,
+} from './core/package-tree.js';
+export type {
+  PackageTree,
+  PackageTreeEntry,
+  PackageTreeCheckOptions,
+} from './core/package-tree.js';
 export type { WrapSkeletonOptions } from './commands/bundle/wrap.js';
 export {
   push,
@@ -66,7 +84,8 @@ export type {
   SimulateCollectorOptions,
 } from './commands/push/index.js';
 export { validate } from './commands/validate/index.js';
-export { resolveAccessToken } from './core/auth.js';
+export { resolveAccessToken, resolveCredential } from './core/auth.js';
+export type { Credential } from './core/auth.js';
 export { ApiError } from './core/api-error.js';
 export type { ApiErrorDetail } from './core/api-error.js';
 export {

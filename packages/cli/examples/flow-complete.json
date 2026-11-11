@@ -4736,10 +4736,10 @@
               "destinations": [
                 {
                   "operatingAccount": {
-                    "accountId": "$env.GADS_ACCOUNT_ID:123-456-7890",
+                    "accountId": "$env.GADS_ACCOUNT_ID:1234567890",
                     "accountType": "GOOGLE_ADS"
                   },
-                  "productDestinationId": "$env.GADS_CONVERSION_ACTION:AW-CONVERSION-123"
+                  "productDestinationId": "$env.GADS_CONVERSION_ACTION:987654321"
                 }
               ]
             },
@@ -4859,15 +4859,14 @@
               },
               "out": [
                 [
-                  "fetch",
+                  "sendServer",
                   "https://datamanager.googleapis.com/v1/events:ingest",
+                  "{\"events\":[{\"eventTimestamp\":\"2023-11-14T22:13:20.000Z\",\"transactionId\":\"ORD-100\",\"adIdentifiers\":{\"gclid\":\"gclid-abc123\"},\"conversionValue\":149.8,\"currency\":\"EUR\",\"eventDeviceInfo\":{\"ipAddress\":\"203.0.113.42\",\"userAgent\":\"Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/128.0.0.0 Safari/537.36\"},\"consent\":{\"adUserData\":\"CONSENT_GRANTED\"},\"eventSource\":\"WEB\"}],\"destinations\":[{\"operatingAccount\":{\"accountId\":\"1234567890\",\"accountType\":\"GOOGLE_ADS\"},\"productDestinationId\":\"987654321\"}],\"encoding\":\"HEX\"}",
                   {
-                    "method": "POST",
                     "headers": {
-                      "Authorization": "Bearer ya29.c.test_token",
-                      "Content-Type": "application/json"
+                      "authorization": "Bearer ya29.c.test_token"
                     },
-                    "body": "{\"events\":[{\"eventTimestamp\":\"2023-11-14T22:13:20.000Z\",\"transactionId\":\"ORD-100\",\"adIdentifiers\":{\"gclid\":\"gclid-abc123\"},\"conversionValue\":149.8,\"currency\":\"EUR\",\"eventDeviceInfo\":{\"ipAddress\":\"203.0.113.42\",\"userAgent\":\"Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/128.0.0.0 Safari/537.36\"},\"consent\":{\"adUserData\":\"CONSENT_GRANTED\"},\"eventSource\":\"WEB\"}],\"destinations\":[{\"operatingAccount\":{\"accountId\":\"123-456-7890\",\"accountType\":\"GOOGLE_ADS\"},\"productDestinationId\":\"AW-CONVERSION-123\"}],\"encoding\":\"HEX\"}"
+                    "timeout": 10000
                   }
                 ]
               ]

@@ -1,13 +1,20 @@
+import { mkdtempSync, rmSync } from 'fs';
+import { tmpdir } from 'os';
+import { join } from 'path';
 import { NOT_SIGNED_IN } from '../../../commands/api/index.js';
-import { whoami } from '../../../commands/auth/index.js';
+import type { Credential } from '../../../core/auth.js';
+import { credentialSourceLine, whoami } from '../../../commands/auth/index.js';
 
 describe('whoami', () => {
   const originalEnv = process.env;
   const originalFetch = globalThis.fetch;
+  let configHome: string;
 
   beforeEach(() => {
+    configHome = mkdtempSync(join(tmpdir(), 'walkeros-whoami-'));
     process.env = {
       ...originalEnv,
+      XDG_CONFIG_HOME: configHome,
       WALKEROS_TOKEN: 'wos_pat_test',
       WALKEROS_APP_URL: 'https://app.example.test',
     };
@@ -15,7 +22,23 @@ describe('whoami', () => {
   afterEach(() => {
     process.env = originalEnv;
     globalThis.fetch = originalFetch;
+    rmSync(configHome, { recursive: true, force: true });
   });
+
+  const sources: Array<[Credential, string]> = [
+    [{ source: 'env', token: 't' }, 'Credential: WALKEROS_TOKEN'],
+    [
+      { source: 'login', token: 't', issuer: 'https://app.walkeros.io' },
+      'Credential: signed in to https://app.walkeros.io',
+    ],
+  ];
+
+  it.each(sources)(
+    'names where the credential comes from, never the token',
+    (credential, line) => {
+      expect(credentialSourceLine(credential)).toBe(line);
+    },
+  );
 
   it('reads GET /api/auth/whoami with the token', async () => {
     let seen: { url: string; auth: string | null } | undefined;

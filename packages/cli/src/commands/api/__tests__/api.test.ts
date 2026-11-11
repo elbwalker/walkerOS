@@ -135,7 +135,7 @@ describe('walkeros api: exit codes by answer', () => {
     ).toBe(EXIT.auth);
     expect(calls()).toBe(0);
     expect(err.text()).toBe(
-      'walkeros api: no token: set WALKEROS_TOKEN to a token from Account > Automation tokens in the walkerOS app\n',
+      'walkeros api: not signed in: run walkeros login, or set WALKEROS_TOKEN to a token from Account > Automation tokens in the walkerOS app\n',
     );
   });
 

@@ -4,7 +4,12 @@ import type { Command, CommanderError } from 'commander';
 import { z } from 'zod';
 import { appErrorMessage, appFetch } from '../../core/app-fetch.js';
 import { APP_PATHS } from '../../core/app-paths.js';
-import { resolveAccessToken } from '../../core/auth.js';
+import {
+  resolveCredential,
+  sendWithCredential,
+  type Credential,
+} from '../../core/auth.js';
+import { SignInError } from '../../core/oauth-login.js';
 import { fetchFailureReason } from '../../core/fetch-failure.js';
 import { readStdin } from '../../core/stdin.js';
 import { resolveAppUrl } from '../../lib/config-file.js';
@@ -46,7 +51,7 @@ export interface ApiRequestOptions {
 
 /** Shown when there is no credential to send. */
 export const NOT_SIGNED_IN =
-  'no token: set WALKEROS_TOKEN to a token from Account > Automation tokens in the walkerOS app';
+  'not signed in: run walkeros login, or set WALKEROS_TOKEN to a token from Account > Automation tokens in the walkerOS app';
 
 const METHODS = new Set(['GET', 'POST', 'PUT', 'PATCH', 'DELETE']);
 /** Error bodies are read back for the stderr line; a bigger one is not parsed. */
@@ -217,6 +222,13 @@ async function relay(response: Response, io: ApiCommandIO): Promise<ApiExit> {
   return response.status === 401 ? EXIT.auth : EXIT.http;
 }
 
+/** A stored login that gives no token: say why, exit 4 when its app was unreachable, else 3. */
+function signInFailure(error: unknown, io: ApiCommandIO): ApiExit {
+  if (!(error instanceof SignInError)) throw error;
+  line(io.stderr, error.message);
+  return error.reason === 'unreachable' ? EXIT.unreachable : EXIT.auth;
+}
+
 /**
  * Send one request to the app and print its answer. Exit 0 for 2xx, 1 for any
  * other status, 2 for a usage error (nothing sent), 3 without a credential or
@@ -235,13 +247,18 @@ export async function runApi(
     return EXIT.usage;
   }
 
-  const token = resolveAccessToken();
-  if (!token) {
+  const appUrl = resolveAppUrl();
+  let credential: Credential | null;
+  try {
+    credential = await resolveCredential(appUrl);
+  } catch (error) {
+    return signInFailure(error, io);
+  }
+  if (!credential) {
     line(io.stderr, NOT_SIGNED_IN);
     return EXIT.auth;
   }
 
-  const appUrl = resolveAppUrl();
   try {
     requireSecureUrl(`${appUrl.replace(/\/+$/, '')}${request.path}`);
   } catch (error) {
@@ -251,14 +268,17 @@ export async function runApi(
 
   let response: Response;
   try {
-    response = await appFetch(request.path, {
-      method: request.method,
-      baseUrl: appUrl,
-      token,
-      headers: request.headers,
-      body: request.body,
-    });
+    response = await sendWithCredential(credential, (token) =>
+      appFetch(request.path, {
+        method: request.method,
+        baseUrl: appUrl,
+        token,
+        headers: request.headers,
+        body: request.body,
+      }),
+    );
   } catch (error) {
+    if (error instanceof SignInError) return signInFailure(error, io);
     line(
       io.stderr,
       `could not reach ${originOf(appUrl)}: ${fetchFailureReason(error)}`,

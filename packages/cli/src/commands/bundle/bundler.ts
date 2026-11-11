@@ -123,6 +123,7 @@ function generateInlineCode(
 import type { BuildOptions } from '../../types/bundle.js';
 import {
   downloadPackagesWithResolution,
+  installPackageTree,
   loadNpmConfigForPacote,
 } from '../../core/package-manager.js';
 import {
@@ -149,6 +150,7 @@ import type { CodeCacheKeyInputs } from '../../core/build-cache.js';
 import { assertWindowCollector } from '../../config/window-collector.js';
 import { hashInstalledDir, releaseDigest } from '../../core/content-digest.js';
 import { VERSION } from '../../version.js';
+import { treeVersionLines } from '../../core/package-tree.js';
 
 export interface BundleStats {
   totalSize: number;
@@ -198,12 +200,14 @@ export async function copyIncludes(
  * Generate cache key content from flow config and build options.
  * Excludes non-deterministic fields (tempDir, output) from cache key.
  *
- * Hashes pacote's resolved top-level set as the dependency-version signal:
- * a version bump in `flow.<name>.config.bundle.packages` (or any transitive re-resolution
- * pacote performs) produces a new `versionsHash`, which produces a new
- * cache key, which produces a new traced `node_modules/`. The user does
- * NOT maintain a `package-lock.json` for step packages in the zero-setup
- * design, so pacote's resolution is the authoritative version signal.
+ * Hashes the installed top-level set as the dependency-version signal: a
+ * version bump in `flow.<name>.config.bundle.packages` (or any transitive
+ * re-resolution) produces a new `versionsHash`, which produces a new cache
+ * key, which produces a new traced `node_modules/`. A local zero-setup build
+ * keeps no lockfile for step packages, so the resolution of that build is the
+ * version signal there. A manifest build can instead install a recorded tree
+ * exactly, or resolve under a release-age cutoff and report the tree it
+ * installed (`BuildOptions.packageInstall`, `core/package-tree.ts`).
  */
 export function generateCacheKeyContent(
   flowSettings: Flow,
@@ -282,6 +286,64 @@ export async function resolvedVersionLines(
   return lines;
 }
 
+/**
+ * Install the build's packages by `buildOptions.packageInstall`: exactly a
+ * recorded tree, resolved under a cutoff with the tree reported, or (absent)
+ * resolved fresh. Returns the installed top-level paths and the sorted
+ * `name@version` lines the cache key and the default release hash.
+ */
+async function installPackages(
+  packagesArray: Array<{ name: string; version: string; path?: string }>,
+  targetDir: string,
+  cacheDir: string,
+  buildOptions: BuildOptions,
+  npmConfig: Awaited<ReturnType<typeof loadNpmConfigForPacote>>,
+  logger: Logger.Instance,
+): Promise<{ packagePaths: Map<string, string>; versionLines: string[] }> {
+  const install = buildOptions.packageInstall;
+  if (install && 'tree' in install) {
+    const packagePaths = await installPackageTree(
+      install.tree,
+      targetDir,
+      logger,
+      {
+        npmConfig,
+        tmpDir: cacheDir,
+        declared: Object.fromEntries(
+          packagesArray.map((pkg) => [pkg.name, pkg.version]),
+        ),
+      },
+    );
+    return { packagePaths, versionLines: treeVersionLines(install.tree) };
+  }
+  // downloadPackagesWithResolution adds 'node_modules' subdirectory
+  // automatically and returns the underlying ResolutionResult so the
+  // install pipeline can pin extracted versions to the same graph the
+  // bundler resolved (no second resolve, no version drift).
+  const { packagePaths, resolution, tree } =
+    await downloadPackagesWithResolution(
+      packagesArray,
+      targetDir,
+      logger,
+      // A recorded tree is built from what was extracted, never a cache copy.
+      install ? false : buildOptions.cache,
+      buildOptions.configDir, // For resolving relative local paths
+      cacheDir,
+      buildOptions.overrides,
+      npmConfig,
+      install?.resolve,
+    );
+  if (install) {
+    if (!tree) throw new Error('A resolve under a cutoff returned no tree');
+    install.onTree(tree);
+    return { packagePaths, versionLines: treeVersionLines(tree) };
+  }
+  return {
+    packagePaths,
+    versionLines: await resolvedVersionLines(resolution.topLevel, packagePaths),
+  };
+}
+
 export async function bundleCore(
   flowSettings: Flow,
   buildOptions: BuildOptions,
@@ -346,21 +408,14 @@ export async function bundleCore(
         path: packageConfig.path, // Pass local path if defined
       }),
     );
-    // downloadPackagesWithResolution adds 'node_modules' subdirectory
-    // automatically and returns the underlying ResolutionResult so the
-    // install pipeline can pin extracted versions to the same graph the
-    // bundler resolved (no second resolve, no version drift).
-    const { packagePaths, resolution: resolutionResult } =
-      await downloadPackagesWithResolution(
-        packagesArray,
-        TEMP_DIR,
-        logger,
-        buildOptions.cache,
-        buildOptions.configDir, // For resolving relative local paths
-        CACHE_DIR,
-        buildOptions.overrides,
-        npmConfig,
-      );
+    const { packagePaths, versionLines } = await installPackages(
+      packagesArray,
+      TEMP_DIR,
+      CACHE_DIR,
+      buildOptions,
+      npmConfig,
+      logger,
+    );
 
     // Fix @walkeros packages to have proper ESM exports and scan every
     // resolved package's manifest for the legacy `walkerOS.bundle` field.
@@ -429,10 +484,7 @@ export async function bundleCore(
     // produces a new hash, which produces a new cache key, which forces a
     // fresh trace + esbuild. This is the right invalidation signal because
     // pacote (not the user's package-lock.json) is the install layer.
-    const sortedVersions = await resolvedVersionLines(
-      resolutionResult.topLevel,
-      packagePaths,
-    );
+    const sortedVersions = versionLines;
     const versionsHash = await getHashServer(sortedVersions.join('\n'), 12);
 
     // Collector defaults, for every call shape (`walkeros push` and simulate

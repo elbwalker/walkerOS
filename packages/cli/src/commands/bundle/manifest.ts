@@ -9,6 +9,10 @@
  *
  * Messages are written for the orchestrator to show a user, so they never
  * carry a URL query string (presigned credentials live there).
+ *
+ * With `packages`, every bundle artifact of the manifest installs one tree:
+ * the recorded one (`tree`), or the one the first bundle artifact resolves
+ * under the cutoff (`resolve`). The result then reports that tree.
  */
 
 import crypto from 'crypto';
@@ -18,6 +22,13 @@ import { FlowReferenceError } from '@walkeros/core';
 import { getErrorMessage } from '../../core/index.js';
 import { createCLILogger } from '../../core/cli-logger.js';
 import { UnsupportedPackageSpecError } from '../../core/package-spec.js';
+import { PackageUnavailableError } from '../../core/package-manager.js';
+import {
+  PackageTreeError,
+  packageTreeDigest,
+  type PackageInstall,
+  type PackageTree,
+} from '../../core/package-tree.js';
 import { loadBundleConfig, type LoadConfigResult } from '../../config/index.js';
 import { tmpRunDir } from '../../core/tmp-names.js';
 import { VERSION } from '../../version.js';
@@ -113,6 +124,8 @@ function classify(error: unknown, phase: 'config' | 'build'): BuildErrorCode {
   if (error instanceof UnsupportedPackageSpecError) {
     return 'UNSUPPORTED_PACKAGE_SPEC';
   }
+  if (error instanceof PackageTreeError) return 'PACKAGE_TREE_INVALID';
+  if (error instanceof PackageUnavailableError) return 'PACKAGE_UNAVAILABLE';
   return phase === 'config' ? 'INVALID_CONFIG' : 'BUILD_FAILED';
 }
 
@@ -200,6 +213,7 @@ async function buildArtifact(
   index: number,
   outputs: Map<string, string>,
   retry: BuildRetryOptions,
+  packageInstall?: PackageInstall,
 ): Promise<string> {
   const output = path.join(workDir, 'out', artifact.outputName);
   await fs.ensureDir(path.dirname(output));
@@ -241,7 +255,11 @@ async function buildArtifact(
     cache: false,
     // The base env is the manifest's, NEVER this process's own.
     buildEnv: manifest.buildEnv ?? {},
-    buildOverrides: { output, tempDir: scratch },
+    buildOverrides: {
+      output,
+      tempDir: scratch,
+      ...(packageInstall ? { packageInstall } : {}),
+    },
   });
   return output;
 }
@@ -330,6 +348,26 @@ export async function runBuildManifest(
     }
 
     const outputs = new Map<string, string>();
+    // One tree for every bundle artifact: the recorded one, or the one the
+    // first bundle artifact installs under the cutoff.
+    let tree: PackageTree | undefined =
+      manifest.packages && 'tree' in manifest.packages
+        ? manifest.packages.tree
+        : undefined;
+    const resolve =
+      manifest.packages && 'resolve' in manifest.packages
+        ? manifest.packages.resolve
+        : undefined;
+    const installFor = (): PackageInstall | undefined => {
+      if (tree) return { tree };
+      if (!resolve) return undefined;
+      return {
+        resolve: { before: new Date(resolve.before), exempt: resolve.exempt },
+        onTree: (installed) => {
+          tree = installed;
+        },
+      };
+    };
     for (const [index, artifact] of manifest.artifacts.entries()) {
       try {
         const output = await buildArtifact(
@@ -340,6 +378,7 @@ export async function runBuildManifest(
           index,
           outputs,
           retry,
+          artifact.target === 'wrap' ? undefined : installFor(),
         );
         outputs.set(artifact.outputName, output);
         const content = await fs.readFile(output);
@@ -369,6 +408,9 @@ export async function runBuildManifest(
       }
     }
 
+    if (manifest.packages && tree) {
+      result.packages = { digest: packageTreeDigest(tree), tree };
+    }
     result.ok = true;
     return { result, reported: await report(manifest.resultPutUrl, result) };
   } finally {

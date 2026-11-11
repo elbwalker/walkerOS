@@ -25,9 +25,17 @@
  * Local paths: a manifest build refuses every config-chosen filesystem input
  * (local step packages, `bundle.packages.<name>.path`, `bundle.traceInclude`,
  * `include`) with `LOCAL_PATH_NOT_ALLOWED`, before anything is fetched.
+ *
+ * Packages: without `packages` every bundle artifact resolves its packages
+ * fresh. `{ tree }` installs exactly that recorded tree for every bundle
+ * artifact and resolves nothing. `{ resolve }` resolves once, taking only
+ * versions published at or before `before` for every spec but the exempt ones,
+ * and installs that tree for every later artifact. Either way the result
+ * carries the installed tree and its digest.
  */
 
 import { z } from '@walkeros/core/dev';
+import { PackageTreeSchema } from '../core/package-tree.js';
 import type { BundleTarget } from '../commands/bundle/targets.js';
 import type { WrapSkeletonOptions } from '../commands/bundle/wrap.js';
 
@@ -173,6 +181,34 @@ export const BuildArtifactSchema = z.union([
   BuildWrapArtifactSchema,
 ]);
 
+export const BuildPackagesSchema = z
+  .union([
+    z
+      .object({
+        tree: PackageTreeSchema.describe(
+          'Install exactly this tree for every bundle artifact',
+        ),
+      })
+      .strict(),
+    z
+      .object({
+        resolve: z
+          .object({
+            before: z.iso
+              .datetime({ offset: true })
+              .describe('Only versions published at or before this time'),
+            exempt: z
+              .array(z.string().min(1))
+              .describe(
+                'Name prefixes the cutoff skips, with the exact versions packages under them declare',
+              ),
+          })
+          .strict(),
+      })
+      .strict(),
+  ])
+  .describe('How bundle artifacts install their packages');
+
 export const BuildManifestSchema = z
   .object({
     version: z.literal(BUILD_MANIFEST_VERSION),
@@ -193,6 +229,7 @@ export const BuildManifestSchema = z
       ),
     artifacts: z.array(BuildArtifactSchema).min(1),
     resultPutUrl: HttpUrlSchema.describe('Presigned PUT for the result JSON'),
+    packages: BuildPackagesSchema.optional(),
   })
   .loose()
   .superRefine((manifest, ctx) => {
@@ -231,6 +268,7 @@ export const BuildManifestSchema = z
   .meta({ id: 'BuildManifest', title: 'walkeros bundle --manifest input' });
 
 export type BuildManifest = z.infer<typeof BuildManifestSchema>;
+export type BuildPackages = z.infer<typeof BuildPackagesSchema>;
 export type BuildArtifact = z.infer<typeof BuildArtifactSchema>;
 export type BuildWrapOptions = z.infer<typeof BuildWrapOptionsSchema>;
 
@@ -263,6 +301,8 @@ export const BUILD_ERROR_CODES = [
   'UNSUPPORTED_PACKAGE_SPEC',
   'LOCAL_PATH_NOT_ALLOWED',
   'BUILD_FAILED',
+  'PACKAGE_UNAVAILABLE',
+  'PACKAGE_TREE_INVALID',
   'UPLOAD_FAILED',
 ] as const;
 
@@ -282,6 +322,13 @@ export const BuildResultSchema = z
         }),
       )
       .describe('Outputs PUT successfully, in manifest order'),
+    packages: z
+      .object({
+        digest: z.string().describe('sha256 of the canonical tree'),
+        tree: PackageTreeSchema,
+      })
+      .optional()
+      .describe('The tree the bundle artifacts installed, when asked for'),
     error: z
       .object({
         code: z.enum(BUILD_ERROR_CODES),

@@ -14,6 +14,7 @@ import { setupCommand } from './commands/setup/index.js';
 import { validateCommand } from './commands/validate/index.js';
 import { registerCacheCommand } from './commands/cache.js';
 import { whoamiCommand } from './commands/auth/index.js';
+import { runLogin, runLogout } from './commands/login/index.js';
 import { registerApiCommand } from './commands/api/index.js';
 import { diagnosticsCommand } from './commands/diagnostics/index.js';
 import {
@@ -275,6 +276,41 @@ authCmd
       verbose: options.verbose,
       silent: options.silent,
     });
+  });
+
+// Sign in with the walkerOS app, and out again
+program
+  .command('login')
+  .description(
+    'Sign the CLI in with the walkerOS app in a browser (WALKEROS_TOKEN still wins while it is set)',
+  )
+  .option(
+    '--no-browser',
+    'print an address to open on any device; the page after Allow shows a code to paste',
+  )
+  .option(
+    '--code <code>',
+    'finish a sign-in started with --no-browser where no prompt could ask for the code',
+  )
+  .option(
+    '--port <n>',
+    'the loopback port the browser returns to (default: WALKEROS_LOGIN_PORT, else any free port)',
+  )
+  .action(async (options) => {
+    process.exitCode = await runLogin({
+      browser: options.browser !== false,
+      code: options.code,
+      port: options.port,
+    });
+  });
+
+program
+  .command('logout')
+  .description(
+    'Revoke the sign-in of walkeros login for the app URL and remove it from this computer',
+  )
+  .action(async () => {
+    process.exitCode = await runLogout();
   });
 
 // Any app API operation, by method and path
