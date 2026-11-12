@@ -721,7 +721,7 @@ interface CollectorStatusView {
   status?: {
     destinations?: Record<string, { failed?: number; count?: number }>;
   };
-  destinations?: Record<string, { type?: string }>;
+  destinations?: Record<string, { type?: string; config?: { id?: string } }>;
 }
 
 /**
@@ -751,9 +751,12 @@ function buildFailureSummary(failedIds: string[], collector: unknown): string {
   const view = (
     collector !== null && typeof collector === 'object' ? collector : {}
   ) as CollectorStatusView;
-  const dests = view.destinations ?? {};
+  const dests = Object.entries(view.destinations ?? {});
+  // The status keys a destination by its `config.id`, else its key.
   const labels = failedIds.map((id) => {
-    const type = dests[id]?.type;
+    const type = dests.find(
+      ([key, dest]) => (dest.config?.id || key) === id,
+    )?.[1].type;
     return type ? `${id} (${type})` : id;
   });
   const noun = failedIds.length === 1 ? 'destination' : 'destinations';

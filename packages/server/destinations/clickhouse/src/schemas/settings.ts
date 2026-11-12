@@ -6,7 +6,7 @@ export const SettingsSchema = z
       .string()
       .min(1)
       .describe(
-        'ClickHouse HTTP endpoint (like https://host.clickhouse.cloud:8443)',
+        'ClickHouse HTTP endpoint (like https://host.clickhouse.cloud:8443); a path is the path every insert is sent to (like https://ingest.walkeros.io/events)',
       ),
     database: z
       .string()

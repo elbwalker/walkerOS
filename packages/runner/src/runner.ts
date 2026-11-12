@@ -6,12 +6,7 @@
  */
 
 import { resolve, dirname } from 'path';
-import type {
-  Collector,
-  Logger,
-  ObserverFn,
-  TelemetryLevel,
-} from '@walkeros/core';
+import type { Collector, Logger } from '@walkeros/core';
 import type { HealthServer } from './health-server.js';
 import { loadBundle } from './load-bundle.js';
 import type { FlowLogger } from './runtime-logging.js';
@@ -57,12 +52,6 @@ function isCollectorStatus(value: unknown): value is Collector.Status {
 /**
  * Load a pre-built flow bundle, mount its HTTP handler onto the health server,
  * and return a handle for managing it.
- *
- * `observers` is the telemetry observer array built by `pipeline.ts`;
- * `observeLevel` is the matching level supplier. The generated bundle factory
- * (see `generateServerEntry` in the CLI's bundler) installs each observer onto
- * `collector.observers` and the supplier onto `collector.observeLevel` after
- * `startFlow` returns.
  */
 export async function loadFlow(
   file: string,
@@ -70,8 +59,6 @@ export async function loadFlow(
   logger: Logger.Instance,
   loggerConfig?: Logger.Config,
   healthServer?: HealthServer,
-  observers?: Array<ObserverFn>,
-  observeLevel?: () => TelemetryLevel,
 ): Promise<FlowHandle> {
   const absolutePath = resolve(file);
   const flowDir = dirname(absolutePath);
@@ -81,8 +68,6 @@ export async function loadFlow(
     ...config,
     ...(loggerConfig ? { logger: loggerConfig } : {}),
     ...(healthServer ? { sourceSettings: { port: undefined } } : {}),
-    ...(observers ? { observers } : {}),
-    ...(observeLevel ? { observeLevel } : {}),
   };
 
   const result = await loadBundle(absolutePath, flowContext, logger);

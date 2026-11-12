@@ -358,6 +358,23 @@ describe('closed schemas (validate and the bundle preflight)', () => {
     ]);
   });
 
+  it('rejects any unknown flow config key and names the known ones', () => {
+    const file: Flow.Json = JSON.parse(
+      JSON.stringify({
+        version: 4,
+        flows: { web: { config: { platform: 'web', bundel: {} } } },
+      }),
+    );
+    expect(validateFlowStructure(file).errors).toEqual([
+      {
+        path: 'flows.web.config.bundel',
+        message:
+          'Unknown key "bundel" in flow config is ignored by the runtime. Known keys: bundle, platform, settings, url.',
+        code: 'UNKNOWN_KEY',
+      },
+    ]);
+  });
+
   it('accepts every known config key', () => {
     expect(
       validateFlowStructure(

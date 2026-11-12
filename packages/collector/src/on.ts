@@ -500,7 +500,7 @@ export async function callDestinationOn(
             collector,
             collector.logger,
             {
-              step: stepId('destination', destId),
+              step: stepId('destination', destination.config.id || destId),
               code: 'consent-not-applied',
             },
             'consent not applied: the destination on(consent) handler failed; its events are held until a retry succeeds',

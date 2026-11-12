@@ -45,6 +45,20 @@ export const BUILD_MANIFEST_VERSION = 1;
 const HttpUrlSchema = z.url({ protocol: /^https?$/ });
 
 /**
+ * The wrap's Observe option: the preview route and its token, baked as
+ * written (nothing resolves a reference here, so the url is the literal
+ * endpoint). Strict: `usage` or any other key fails. `wrapSkeleton` parses a
+ * direct caller's option with it too.
+ */
+export const BuildWrapObserveSchema = z
+  .object({
+    preview: z
+      .object({ url: HttpUrlSchema, token: z.string().min(1) })
+      .strict(),
+  })
+  .strict();
+
+/**
  * A bare file name: the output is written inside the build's own temp dir, so
  * path separators and leading dots are refused.
  */
@@ -125,22 +139,14 @@ export const BuildWrapOptionsSchema = z
       })
       .strict()
       .optional(),
-    previewGrantTargets: z.array(z.string()).optional(),
-    observe: z
-      .object({
-        url: z.string(),
-        binding: z.string(),
-        flowId: z.string().optional(),
-        level: z.enum(['off', 'standard', 'trace']).optional(),
-        sample: z.number().min(0).max(1).optional(),
-      })
-      .strict()
-      .optional(),
     moin: z
       .object({ app: z.string(), base: z.string() })
       .strict()
       .optional()
       .describe('Tag Mode loader target; absent, the production app'),
+    observe: BuildWrapObserveSchema.optional().describe(
+      "Browser only: Observe preview reporting, the preview route and its token. It replaces the flow's own collector.observe; a browser build never carries usage",
+    ),
     minify: z.boolean().optional(),
     minifyOptions: z
       .object({
@@ -159,6 +165,11 @@ export const BuildWrapOptionsSchema = z
   .strict()
   .describe('Options forwarded to wrapSkeleton');
 
+/** The refusals the wrap and the manifest share. */
+export const OBSERVE_NOT_ON_NODE = 'observe is a browser wrap option';
+export const OBSERVE_NOT_WITH_PREVIEW =
+  'observe is refused beside preview, which makes a host build';
+
 export const BuildWrapArtifactSchema = z
   .object({
     target: z.literal('wrap'),
@@ -174,7 +185,19 @@ export const BuildWrapArtifactSchema = z
     options: BuildWrapOptionsSchema.optional(),
     ...OutputFields,
   })
-  .strict();
+  .strict()
+  .refine(
+    (artifact) =>
+      artifact.platform === 'browser' ||
+      artifact.options?.observe === undefined,
+    { path: ['options', 'observe'], message: OBSERVE_NOT_ON_NODE },
+  )
+  .refine(
+    (artifact) =>
+      artifact.options?.observe === undefined ||
+      artifact.options.preview === undefined,
+    { path: ['options', 'observe'], message: OBSERVE_NOT_WITH_PREVIEW },
+  );
 
 export const BuildArtifactSchema = z.union([
   BuildBundleArtifactSchema,
@@ -287,6 +310,20 @@ const wrapOptionsComplete: [UnreachableWrapOption] extends [never]
   ? true
   : never = true;
 void wrapOptionsComplete;
+
+// Compile-time: the wrap's observe option is exactly the preview part of
+// Collector.Observe, so a usage block can never be typed into a browser build.
+type WrapObserve = NonNullable<BuildWrapOptions['observe']>;
+const wrapObserveIsPreviewOnly: [
+  Exclude<keyof WrapObserve, 'preview'>,
+] extends [never]
+  ? true
+  : never = true;
+void wrapObserveIsPreviewOnly;
+const wrapObserveFits = (
+  observe: WrapObserve,
+): NonNullable<WrapSkeletonOptions['observe']> => observe;
+void wrapObserveFits;
 
 /**
  * Error codes a result can carry. User-config codes first, then build and

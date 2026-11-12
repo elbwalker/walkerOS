@@ -576,9 +576,9 @@ real vendor.
   calls, not `init`.
 - Grammar (`parseCallPath`, shared by the recorder): an optional `call:` prefix,
   then `.`-separated segments; an empty segment makes the path unresolvable. The
-  one recorder is `observeEnv(env, paths)` in `@walkeros/core` (collector
-  `wrapEnv` and web-core `getEnv` delegate to it). It returns a Proxy view;
-  nothing on the env objects or prototypes is mutated.
+  one recorder is `recordEnv(env, paths)` in `@walkeros/core` (collector
+  `wrapEnv` delegates to it). It returns a Proxy view; nothing on the env
+  objects or prototypes is mutated.
 - Mid-path resolution: on an object, a segment is looked up as a property. After
   a function, a segment is the function's own property or a parent class's
   static; anything else (including `call`, `bind`, `name`, `length`) navigates

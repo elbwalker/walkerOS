@@ -1,16 +1,14 @@
-import type { Simulation } from '.';
 import type { StepKind } from './collector';
 
 /**
  * FlowState is the canonical observation record emitted at each hop in a
- * walkerOS pipeline. Telemetry helpers populate one of these per (step,
- * phase) tuple and pass it to a user-supplied emit callback. The shape is
- * stable across step kinds (source, transformer, collector, destination,
- * store) so a single observer can correlate work across the pipeline.
+ * walkerOS pipeline. The runtime hands one of these per (step, phase) tuple to
+ * every function in `collector.observers`. The shape is stable across step
+ * kinds (source, transformer, collector, destination, store) so a single
+ * observer can correlate work across the pipeline.
  *
  * Optional fields are populated only when meaningful for the (step, phase)
- * pair, or when the telemetry options explicitly opt in (e.g. trace level
- * for inEvent/outEvent).
+ * pair.
  */
 
 export type FlowStatePhase = 'init' | 'in' | 'out' | 'error' | 'skip' | 'flush';
@@ -43,26 +41,17 @@ export interface FlowState {
   parentEventId?: string;
   /** Originating source id (Ingest._meta.path[0]), when known. */
   sourceId?: string;
-  /** Per-poster monotonic record counter for gap detection. Stamped by the batched poster, not emitters. */
-  seq?: number;
-  /** Release provenance of the runtime that produced this state, e.g. a deployment id. Stamped by the wiring layer, not emitters. */
+  /** Release provenance of the runtime that produced this state, e.g. a deployment id. */
   release?: string;
-  /**
-   * Vendor calls recorded via wrapEnv on destination out records. Captured only
-   * at trace level and only when the destination declares a `calls` list
-   * (dot-paths of observable env callables); the recorded array then survives
-   * projection when level === 'trace' or includeOut === true.
-   */
-  calls?: Simulation.Call[];
   /** ISO 8601 timestamp. */
   timestamp: string;
   /** Milliseconds since the runtime's startedAt origin. Monotonic. */
   elapsedMs: number;
   /** Wall-clock duration of this step, if measured (typically only on 'out'). */
   durationMs?: number;
-  /** Inbound walker event for this hop. Only populated when level === 'trace' or includeIn === true. */
+  /** Inbound walker event for this hop. Every `in` record of an event carries it. */
   inEvent?: unknown;
-  /** Outbound walker event/payload for this hop. Only populated when level === 'trace' or includeOut === true. */
+  /** Outbound walker event or payload for this hop. Every `out` record of an event carries it. */
   outEvent?: unknown;
   /**
    * Error info when phase === 'error'. A delivery failure also carries its
@@ -91,7 +80,6 @@ export interface FlowState {
   skipReason?:
     | 'consent'
     | 'cache_hit'
-    | 'sampled_out'
     | 'disabled'
     | 'dropped'
     | 'ignored'

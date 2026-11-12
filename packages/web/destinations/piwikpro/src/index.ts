@@ -24,8 +24,7 @@ export * as DestinationPiwikPro from './types';
 // Trackers that already got enableLinkTracking, keyed like the identified
 // state by the collector that drives them. Neither `_paq` nor the env window
 // is a stable identity: the loaded tracker replaces the `_paq` array with its
-// own command object, and trace-level observation hands each push a freshly
-// wrapped env.
+// own command object, and a simulated push gets its own wrapped env view.
 const linkTracked = new WeakSet<object>();
 
 /**

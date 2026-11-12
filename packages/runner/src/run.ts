@@ -131,10 +131,11 @@ export async function runCommand(options: RunCommandOptions): Promise<void> {
     [Level.DEBUG]: 'debug',
   } as const;
 
-  // Every line, the runner's and the collector's, is tapped here. The text
-  // line feeds the rings (heartbeat, error sink); the tap also receives the
-  // line as a structured entry (scope, and the context with code, status,
-  // retryable, suppressed) for a forwarder.
+  // The runner's and the collector's lines are tapped here: every ERROR, WARN
+  // and INFO line, and a DEBUG line only with --verbose or a flow at DEBUG.
+  // The text line feeds the rings (heartbeat, error sink); the tap also
+  // receives the line as a structured entry (scope, and the context with code,
+  // status, retryable, suppressed) for a forwarder.
   const onLine = (level: Level, message: string) => {
     if (level === Level.ERROR) errorRing.add(message);
     logRing.add({ time: Date.now(), level: LEVEL_NAME[level], message });

@@ -20,6 +20,7 @@ import { ConfigSchema as TransformerConfigSchema } from './schemas/transformer';
 import { ConfigSchema as DestinationConfigSchema } from './schemas/destination';
 import { ConfigSchema as StoreConfigSchema } from './schemas/store';
 import { InitConfigSchema as CollectorInitConfigSchema } from './schemas/collector';
+import { ConfigSchema as FlowConfigSchema } from './schemas/flow';
 import {
   validateComponentNames,
   validateReference,
@@ -110,6 +111,11 @@ const CONFIG_KEYS: Record<Flow.StepKind, ReadonlyArray<string>> = {
 /** The keys a flow's `collector` block may carry (`Collector.InitConfig`). */
 const COLLECTOR_KEYS: ReadonlyArray<string> = Object.keys(
   CollectorInitConfigSchema.shape,
+);
+
+/** The keys a flow's `config` block may carry (`Flow.Config`). */
+const FLOW_CONFIG_KEYS: ReadonlyArray<string> = Object.keys(
+  FlowConfigSchema.shape,
 );
 
 function unknownKeyErrors(
@@ -348,8 +354,8 @@ export function validateStateStores(
  *   package or code, and each transformer entry is a closed, valid shape,
  * - every `$store.` reference points at a defined store,
  * - every `state` store is declared and is not a `file: true` store,
- * - no unknown key on a step entry, in a step's `config` or in the
- *   `collector` block (`UNKNOWN_KEY`),
+ * - no unknown key on a step entry, in a step's `config`, in the flow's
+ *   `config` or in the `collector` block (`UNKNOWN_KEY`),
  * - no mapping field that does nothing at its position (`MAPPING_NO_OP`),
  * - no mapping value object without an operator or with two producers,
  * - no `batch` on inline code without `pushBatch`,
@@ -455,10 +461,10 @@ export function validateFlowStructure(flowConfig: Flow.Json): ValidateResult {
       }
     }
 
-    // 2c. Closed keys on every step and its config, the collector block,
-    //     mapping fields that do nothing at their position (a transformer's
-    //     are checked in 2b), mapping value objects, and a batch the inline
-    //     code cannot honour.
+    // 2c. Closed keys on every step and its config, the flow's config, the
+    //     collector block, mapping fields that do nothing at their position
+    //     (a transformer's are checked in 2b), mapping value objects, and a
+    //     batch the inline code cannot honour.
     for (const section of STEP_SECTIONS) {
       const steps = getSection(flow, section);
       if (!steps) continue;
@@ -488,6 +494,12 @@ export function validateFlowStructure(flowConfig: Flow.Json): ValidateResult {
       );
     }
     errors.push(
+      ...unknownKeyErrors(
+        flow.config,
+        FLOW_CONFIG_KEYS,
+        `flows.${flowName}.config`,
+        'flow config',
+      ),
       ...unknownKeyErrors(
         flow.collector,
         COLLECTOR_KEYS,

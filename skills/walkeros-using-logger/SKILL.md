@@ -338,6 +338,29 @@ prints one JSON object per line (`severity`, `message`, `time`, `scope`,
 flow rejects `format`. The flow's own handler and the runtime's handler both see
 every line, so forwarding to a monitoring service needs no parsing.
 
+## Forwarding issues and masking
+
+The Observe reporter forwards the causes the logger writes, so a failure that
+reaches a screen is the same failure that reached the log. The cause log keeps
+one entry per step, code and status, with its count, last time and last message,
+and `collector.observe.usage` posts every held entry in each report. See the
+[Observe page](https://www.walkeros.io/docs/getting-started/observe).
+
+Text that leaves outside a log line passes the logger's mask:
+
+- `Logger.Config.mask` is optional, `(text: string) => string`. The handler
+  masks log lines on its own; `mask` is for text a log line never carries, such
+  as an issue message in a report. A node host passes one that hides its known
+  secret values (`createCLILoggerConfig` does); without one the text is returned
+  unchanged.
+- `Logger.Instance.mask` is required. A logger built by hand (a test double, a
+  host's own logger) needs a `mask`, and an identity function is enough:
+  `mask: (text) => text`. `createMockLogger` from `@walkeros/core` has one.
+- The reporter applies the host's mask first, then `redactLine` from
+  `@walkeros/core` (patterns, every `wos_` token, short `Bearer` and `Basic`
+  credentials), then cuts the message at 256 characters. A step throws a message
+  with no secret in it; the mask is the second line of defence, not the first.
+
 ## Related Skills
 
 - [walkeros-understanding-destinations](../walkeros-understanding-destinations/SKILL.md) -

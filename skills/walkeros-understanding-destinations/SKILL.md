@@ -78,15 +78,14 @@ expect(calls).toContainEqual({
 });
 ```
 
-### The env as observability seam
+### The env as the simulation seam
 
-The env pattern is also the interception seam for trace-level vendor-call
-capture. At `trace` level the collector may attach an `observe` recorder under
-the `observe` key of the env, and `@walkeros/web-core`'s `getEnv` wraps the
-callables the destination declared as observable, recording each call. A
-destination that reaches its vendor through `getEnv(env)` is automatically
-observable; one that reaches a global directly, bypassing `env`, is not. This is
-one more reason to route every external call through `env`.
+The env pattern is also the interception seam for simulation:
+`walkeros push --simulate` and the conformance kit record the calls a
+destination makes on the paths its `examples.env.simulation` names. A
+destination that reaches its vendor through `env` is recorded; one that reaches
+a global directly, bypassing `env`, is not. This is one more reason to route
+every external call through `env`.
 
 Rules that keep the seam intact:
 
@@ -96,11 +95,10 @@ Rules that keep the seam intact:
   `env.<key>` in `src`.
 - **`simulation` names the request call** (`sendServer`,
   `call:PubSub.topic.publishMessage`, `call:JSONWriter.appendRows`), not a
-  constructor. The one recorder is `observeEnv` in `@walkeros/core`; it
-  navigates constructors, factories and Promises, and records only the leaf.
-- **Trace-mode limit.** CLI and MCP simulate inject the mock env before `init`,
-  so a client built in `init` is recorded. Runtime trace mode wraps the env per
-  push only, so calls through a client built in `init` are not recorded there.
+  constructor. The one recorder is `recordEnv` in `@walkeros/core`; it navigates
+  constructors, factories and Promises, and records only the leaf.
+- **Clients built in `init`.** CLI and MCP simulate inject the mock env before
+  `init`, so a client built in `init` is recorded.
 - **Client IP and user agent.** Server conversion-API destinations (Meta,
   TikTok, Snapchat, Pinterest, Bing, Reddit, Criteo, X, Data Manager, Piwik PRO)
   expose `ip` and `userAgent` settings (`Mapping.Value | false`), defaulting to
@@ -184,7 +182,9 @@ resend (`acknowledge(result)` from `@walkeros/core`: `ack`, `retry` or
 `queued` with the reason `consent`; a server flow built by the CLI skips a
 consent-denied event instead (`consentDenied: 'skip'`, counted in
 `status.destinations[id].skipped`, a `debug` line). A rule with `ignore: true`
-is a skip as well, not a delivery.
+is not a delivery either, and lands in `status.destinations[id].ignored`.
+`count` counts delivered events, one per event for a single push and a batch
+alike, and the destination's counts sit under `config.id`, else its key.
 
 **Failed means thrown.** A destination reports a failure only by throwing a
 `StepError`; it never returns early, never returns `false` from `init`, never

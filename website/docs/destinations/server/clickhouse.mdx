@@ -36,11 +36,13 @@ An insert into a table that does not exist fails with `60 UNKNOWN_TABLE`, so rea
 
 ## Credentials
 
-`config.credentials` carries the `{ username, password }` of the ClickHouse user
-the destination writes as. Back the password with a managed secret
-(`$secret.NAME`) instead of writing it into the flow config. It wins over a
-username or password left in `settings.clickhouse`. Without credentials the
-client signs in as the `default` user with an empty password.
+`config.credentials` says how the destination signs in: the
+`{ username, password }` of the ClickHouse user it writes as, or a `{ token }`
+for an endpoint that takes one, such as walkerOS hosted ingest. Back the
+password or the token with a managed secret (`$secret.NAME`) instead of writing
+it into the flow config. The credentials win over the same keys left in `settings.clickhouse`.
+Without credentials the client signs in as the `default` user with an empty
+password.
 
 <CodeSnippet
   code={`"config": {
@@ -53,15 +55,46 @@ client signs in as the `default` user with an empty password.
   language="json"
 />
 
+A token travels as an `Authorization: Bearer` header. A path in `settings.url`
+is the path every insert is sent to, and the database stays the one
+`settings.database` names:
+
+<CodeSnippet
+  code={`"config": {
+  "settings": { "url": "https://ingest.walkeros.io/events" },
+  "credentials": { "token": "$secret.OBSERVE_EVENT" }
+}`}
+  language="json"
+/>
+
+A token beside a username or password, in `credentials`, `settings.clickhouse`
+or the userinfo of `settings.url`, fails init with code `config`, since
+ClickHouse signs in with one of them. An empty token and an `access_token` in
+the query of `settings.url` fail the same way: a token belongs in
+`credentials.token`. Every event then fails with that reason.
+
+An insert that the walkerOS data proxy refuses fails with the proxy's reason:
+when the answer carries no ClickHouse code and its first line starts with
+`walkerOS data proxy`, the failure and its ERROR line quote that line (at most
+200 characters). Any other answer is reported by its ClickHouse code or Node
+error code only, never by its text, since ClickHouse can quote the rows it
+refused. The batch is retried once, as before.
+
 ## Passthrough options
 
 `settings.clickhouse` reaches the `@clickhouse/client` constructor, and
 `settings.clickhouseSettings` travels with every insert, so both stay open for
-options this destination does not model itself. Two rules apply on top:
+options this destination does not model itself. Three rules apply on top:
 
 - `url` and `database` always win over the same keys in `settings.clickhouse`.
   An insert names only the table, so a passthrough `database` that disagreed
-  would move every row to a different database in silence.
+  would move every row to a different database in silence. A path in `url` is
+  the request path, never the database: name the database in
+  `settings.database`.
+- The client's own logger is off unless `settings.clickhouse.log` sets it. It
+  would print each failed request's answer, which can quote refused rows, to
+  the console outside the walkerOS logger. The destination reports every failed
+  insert itself.
 - If you enable `async_insert` through `clickhouseSettings`, keep
   `wait_for_async_insert = 1`. At `0` the server acknowledges before the data
   reaches storage, so a failure at the later flush has no way back to the

@@ -129,9 +129,7 @@ export const ConfigSchema = z
     name: z
       .string()
       .optional()
-      .describe(
-        "Flow name; keys this flow's entry in event.source.release and the observer flowId.",
-      ),
+      .describe("Flow name; keys this flow's entry in event.source.release."),
     release: z
       .string()
       .optional()
@@ -185,6 +183,58 @@ export const SessionDataSchema = PropertiesSchema.and(
     description: 'Session state and tracking data.',
   })
   .describe('Session state and tracking data');
+
+/**
+ * Observe - the reporter's options (`Collector.Observe`), strict at every
+ * level: a key it does not know, or a value out of range, fails at its path.
+ * At runtime a part that fails its check does nothing.
+ */
+const ObservePartSchema = z
+  .object({
+    // A reference is resolved before the collector starts, and the runtime
+    // check judges the resolved value.
+    url: z
+      .union([
+        z.url({ protocol: /^https?$/ }),
+        z.string().regex(/^\$(env|var)\./),
+      ])
+      .describe(
+        'Absolute http or https endpoint the part posts NDJSON rows to (like https://ingest.walkeros.io/usage; preview rows go to .../preview), or a $env. or $var. reference to one',
+      ),
+    token: z
+      .string()
+      .min(1)
+      .describe(
+        'Sent as Authorization: Bearer (a server flow reads it from a secret; a preview build carries the value)',
+      ),
+  })
+  .strict();
+
+export const ObserveSchema = z
+  .object({
+    usage: ObservePartSchema.extend({
+      interval: z
+        .number()
+        .int()
+        .min(10)
+        .max(300)
+        .optional()
+        .describe('Seconds between reports, 10 to 300 (default 60)'),
+    })
+      .strict()
+      .optional()
+      .describe('Counters and issues of this runtime, every interval'),
+    preview: ObservePartSchema.optional().describe(
+      'One row per event and per destination outcome',
+    ),
+  })
+  .strict()
+  .meta({
+    id: 'CollectorObserve',
+    title: 'Collector.Observe',
+    description: 'Observe reporter options: usage and preview.',
+  })
+  .describe('Observe reporter options');
 
 /**
  * InitConfig - Initialization configuration
@@ -251,36 +301,6 @@ export const InitConfigSchema = ConfigSchema.partial()
       })
       .optional()
       .describe('Pipeline observation hooks'),
-    observe: z
-      .union([
-        z.object({
-          url: z.string().describe('Observer base URL'),
-          binding: z
-            .string()
-            .describe('Public project binding the web credential must match'),
-        }),
-        z.object({
-          url: z.string().describe('Observer base URL'),
-          sessionId: z.string().describe('Session id the runtime posts under'),
-          token: z.string().describe('Ingest bearer token'),
-          level: z
-            .enum(['off', 'standard', 'trace'])
-            .optional()
-            .describe('Telemetry level'),
-          sample: z
-            .number()
-            .optional()
-            .describe('Deterministic sample fraction in [0, 1]'),
-        }),
-      ])
-      .meta({
-        id: 'CollectorObserve',
-        title: 'Observe',
-        description:
-          'Observation session connect config: web arm (url + binding) or server arm (url + sessionId + token).',
-      })
-      .optional()
-      .describe('Observation session connect config'),
     observers: z
       .unknown()
       .meta({
@@ -291,6 +311,7 @@ export const InitConfigSchema = ConfigSchema.partial()
       })
       .optional()
       .describe('Caller-supplied advisory observer functions'),
+    observe: ObserveSchema.optional(),
   })
   .meta({
     id: 'CollectorInitConfig',

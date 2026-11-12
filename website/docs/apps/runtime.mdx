@@ -174,7 +174,7 @@ fails to import with a syntax error. Either way nothing is bundled.
 | `PORT` | `8080` | Port for the health server and the flow's HTTP handler. A source's own `port` setting has no effect under the runtime, and nothing logs that |
 | `WALKEROS_FLOW_ID` | none | Flow ID in the walkerOS app (same as `--flow-id`) |
 | `WALKEROS_PROJECT_ID` | none | Project ID (same as `--project`) |
-| `WALKEROS_DEPLOYMENT_ID` | none | Deployment ID, sent with every heartbeat. The app accepts a heartbeat only with the deployment its runner token belongs to; without it, every beat logs `Heartbeat rejected (404)` at WARN. With the observer variables it also names where telemetry goes |
+| `WALKEROS_DEPLOYMENT_ID` | none | Deployment ID, sent with every heartbeat. The app accepts a heartbeat only with the deployment its runner token belongs to; without it, every beat logs `Heartbeat rejected (404)` at WARN. |
 | `WALKEROS_FLOW_RELEASE` | none | Release the loaded flow must carry, or the runtime refuses to start. The walkerOS app sets it when it deploys a flow |
 | `WALKEROS_FLOW_NAME` | none | Flow name the loaded flow must carry, checked only together with `WALKEROS_FLOW_RELEASE`. The walkerOS app sets it |
 | `WALKEROS_DEPLOY_TOKEN` | none | Runner token. Takes precedence over `WALKEROS_TOKEN` |
@@ -182,8 +182,6 @@ fails to import with a syntax error. Either way nothing is bundled.
 | `WALKEROS_APP_URL` | `https://app.walkeros.io` | App API base URL |
 | `WALKEROS_HEARTBEAT_INTERVAL` | `60` | Seconds between heartbeats. Values below `10`, or not a number, are clamped to `10` |
 | `WALKEROS_CACHE_DIR` | `$XDG_CACHE_HOME/walkeros`, else `~/.cache/walkeros` | Where the runtime persists recent errors between restarts. `CACHE_DIR` is read as a fallback |
-| `WALKEROS_OBSERVE_LEVEL` | unset (`standard`) | Baseline telemetry level: `off`, `standard` or `trace`. See [Observe](/docs/getting-started/observe#server) |
-| `WALKEROS_OBSERVER_URL`, `WALKEROS_INGEST_TOKEN` | none | Observer base URL and ingest token. With `WALKEROS_DEPLOYMENT_ID`, all three turn on telemetry to `<WALKEROS_OBSERVER_URL>/ingest/<WALKEROS_DEPLOYMENT_ID>`. An Observe session in the walkerOS app hands out all three, its session ID as the deployment ID |
 | `NODE_OPTIONS` | `--max-old-space-size=384 --no-warnings` in the image | Heap cap sized for a 512 MB container. Raise it with the container's memory, and keep `--no-warnings`: the runtime logs Node's process warnings itself |
 
 Every start logs the loaded flow as `Flow: <name> release <release>`. With
@@ -463,5 +461,5 @@ to a different flow. Mint a new one in the app.
 
 - [CLI](/docs/apps/cli): build, validate and simulate flows
 - [Deploy](/docs/getting-started/deploy): the build-then-run path end to end
-- [Observe](/docs/getting-started/observe): watch a running flow's records
+- [Observe](/docs/getting-started/observe): report a running flow's counters and issues
 - [Bundled mode](/docs/getting-started/modes/bundled): the `flow.json` format

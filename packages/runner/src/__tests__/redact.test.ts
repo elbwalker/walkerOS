@@ -37,11 +37,9 @@ describe('redactLine', () => {
   });
 
   // Case 4: KEY=value secret
-  it('masks WALKEROS_INGEST_TOKEN value but keeps key name', () => {
-    const result = redactLine(
-      'WALKEROS_INGEST_TOKEN=sk_live_abc123def456ghi789',
-    );
-    expect(result).toBe('WALKEROS_INGEST_TOKEN=***');
+  it('masks a token value but keeps key name', () => {
+    const result = redactLine('API_TOKEN=sk_live_abc123def456ghi789');
+    expect(result).toBe('API_TOKEN=***');
   });
 
   it('masks KEY: value style secret', () => {
@@ -189,12 +187,13 @@ describe('redactLine', () => {
 
   // Case 10: Adversarial large input completes without hanging
   it('handles ~10KB adversarial input without catastrophic backtracking', () => {
-    // Token is at the end of the large input; after truncation it won't appear in the
-    // 256-char window. The key assertion is no catastrophic backtracking (time bound)
-    // and that the raw token value is not visible in the output. 'Z' is non-hex and
-    // low-entropy so the padding survives unmasked and the result stays truncated.
+    // Token is at the end of the large input, a word of its own; after truncation it
+    // won't appear in the 256-char window. The key assertion is no catastrophic
+    // backtracking (time bound) and that the raw token value is not visible in the
+    // output. 'Z' is non-hex and low-entropy so the padding survives unmasked and the
+    // result stays truncated.
     const bigLine =
-      'Z'.repeat(10000) + 'sk_live_abc123def456ghi789jkl012345678';
+      'Z'.repeat(10000) + ' sk_live_abc123def456ghi789jkl012345678';
     const start = Date.now();
     const result = redactLine(bigLine);
     const elapsed = Date.now() - start;

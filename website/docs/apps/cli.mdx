@@ -57,7 +57,7 @@ The CLI uses types from `@walkeros/core`:
 
 - **`Flow.Json`** - Root config file format (`version`, `flows`, and optionally `$schema`, the JSON Schema URL for editor validation, plus `include`, `variables`, `contract`)
 - **`Flow`** - Single flow (has `config`, `sources`, `destinations`, `transformers`, `stores`, `collector`, `variables`)
-- **`Flow.Config`** - Per-flow config block (`platform`, `url`, `settings`, `bundle`, `observe`)
+- **`Flow.Config`** - Per-flow config block (`platform`, `url`, `settings`, `bundle`)
 - **`Collector.InitConfig`** - Runtime type passed to `startFlow()`
 
 The CLI transforms `Flow.Json` → `Flow` (per flow) → bundled code that uses `Collector.InitConfig` at runtime.
@@ -101,6 +101,8 @@ After tracing, the bundler checks every package in `bundle.packages` that the bu
 ```
 Package @walkeros/server-core is declared in bundle.packages but nothing imports it; it is not in the bundle. Remove it from bundle.packages if unused.
 ```
+
+When the declared package's installed copy has none of the entries its manifest names, the warning says that instead: `Package <name> is declared in bundle.packages, but its installed copy has no <entry>; it is not in the bundle.`
 
 ### Escape hatch: `traceInclude`
 
@@ -213,7 +215,8 @@ Add a `path` property to any package to use a local directory instead of npm:
 - **`path` takes precedence** - When both `path` and `version` are specified, `path` is used
 - **Relative paths** - Resolved relative to the config file's directory
 - **Absolute paths** - Used as-is
-- **dist folder** - If a `dist/` folder exists, it's used; otherwise the package root is used
+- **dist folder** - If a `dist/` folder exists, `package.json` and `dist/` are copied; otherwise the package root is used
+- **Entries outside `dist/`** - When the package's `main`, `module`, `exports` or `bin` points to a file outside `dist/` (a Node entry in `lib/`, for example), the package root is copied whole, so the entry arrives in the bundle. Links are followed, and `node_modules` and `.env` or `.env.*` files at any depth, plus `.turbo` and `.git` at the top, are left out. Type declarations (`.d.ts`, `types` and `typings` conditions) and `.json` files in `exports` do not count as entries, and `package.json` itself does not either
 
 ### Dependency Resolution
 
@@ -581,6 +584,13 @@ each install path to `{ name, version, resolved, integrity, dependencies? }`.
 The schema and its check are exported as `PackageTreeSchema`,
 `packageTreeProblems` and `packageTreeDigest`.
 
+A browser wrap's `options` can carry `observe: { preview: { url, token } }`. It
+is the build's whole Observe config: it replaces the flow file's own
+`collector.observe` and turns the reporter on in that build alone, and a
+production bundle carries no reporter. Any other key (`usage` included) is
+refused, and so is `observe` on a node wrap or beside `preview`. The error names
+the option's keys only, never a value. See [Observe](/docs/getting-started/observe#web-flows).
+
 Unknown top-level fields are ignored, so an orchestrator can keep its own
 bookkeeping in the manifest. Artifact entries are strict. A manifest build
 refuses every local filesystem input (local step packages, a package `path`,
@@ -757,6 +767,8 @@ A value that is not JSON, not a readable file and not a URL is taken as an event
 | Real | (none) | Real HTTP requests (server), recorded requests (web) | Integration testing, production validation |
 | Simulate | `--simulate` | Mocked (captured) | Safe local testing |
 | Mock | `--mock` | Returns mock value | Controlled testing |
+
+`push` and every simulate send nothing to [Observe](/docs/getting-started/observe): they drop the flow's `collector.observe` before the flow starts, whether the input is a flow config or a prebuilt bundle.
 
 **Recommended workflow:**
 - Use `push --simulate` first to validate configuration without side effects
@@ -976,7 +988,7 @@ success: true
 
 The browser source's example triggers apply their own `options.url` as a path: with `--page-url`, the `pageView` example keeps the `--page-url` origin and switches to its path (`https://shop.example.com/product/trail-runner`). `--page-url` is rejected for every other step, for a server source and for a real push: `--page-url sets the page of a simulated web source; for request context use --ingest.`
 
-**Simulate versus trace mode.** Simulate injects the mock env before the destination's `init`, so clients built in `init` (the BigQuery writer, the Pub/Sub client) are recorded. A running flow observed at trace level records calls per push only, so calls through a client built in `init` do not appear there.
+**Clients built in `init`.** Simulate injects the mock env before the destination's `init`, so clients built in `init` (the BigQuery writer, the Pub/Sub client) are recorded.
 
 **Secrets in simulate.** A `$secret.NAME` reference is read from the environment variable `NAME`, also in simulate. For a Sheets or GCS store the value must be a valid service-account JSON with a real-format RSA private key: the store signs its token request before the mocked `fetch` answers it, so a hand-made fake key fails at flow start with a key decoding error. A throwaway key is fine, it is never sent anywhere:
 
@@ -1709,7 +1721,7 @@ With `WALKEROS_TOKEN` set, the last line reads `Credential: WALKEROS_TOKEN`.
 
 ## API command
 
-`walkeros api` sends one authenticated request to the walkerOS app API and prints the answer. It reaches every operation of the app's public API (projects, flows, deployments, previews, secrets, Observe sessions and more) without a command of its own for each: you name the method and the path. The app validates every request; the CLI never does.
+`walkeros api` sends one authenticated request to the walkerOS app API and prints the answer. It reaches every operation of the app's public API (projects, flows, deployments, previews, secrets, Observe and more) without a command of its own for each: you name the method and the path. The app validates every request; the CLI never does.
 
 <CodeSnippet
   code={`walkeros api <METHOD> <path> [--data <json|@file|->] [--header 'Name: value']... [--project <id>] [--yes]`}

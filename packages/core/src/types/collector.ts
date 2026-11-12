@@ -11,7 +11,6 @@ import type {
   Mapping,
 } from '.';
 import type { Ingest } from './ingest';
-import type { ObserveServer, ObserveSlot, ObserveWeb } from '../observeConnect';
 import type { ObserverFn } from './observer';
 import type { CauseLog } from '../causeLog';
 import type { STEP_TYPES } from '../packageMeta';
@@ -42,13 +41,20 @@ export function stepId(kind: StepKind, id?: string): string {
 }
 
 /**
- * Drop counters at a single step. Each buffer is optional: a step kind
- * may have only `queue` (collector), only `dlq`, both (destinations
- * today), or neither. Counts are monotonic.
+ * Drop counters at a single step or position. Each counter is optional and
+ * monotonic. Buffer caps: `queue` (the collector's replay buffer, a
+ * destination's consent queue) and `dlq` (a destination's dead-letter
+ * queue). Events a collector-owned position kept from the destinations:
+ * `consent` (a source's consent not granted), `ignored` (a source rule's
+ * `ignore`) and `stopped` (a chain hop or a route `stop`), keyed by that
+ * position, such as `source.web`, `source.web.next` or `collector.next`.
  */
 export interface DroppedCounters {
   queue?: number;
   dlq?: number;
+  consent?: number;
+  ignored?: number;
+  stopped?: number;
 }
 
 /**
@@ -104,7 +110,7 @@ export interface Config {
    * that never receives a later grant for an event's own consent.
    */
   consentDenied?: 'queue' | 'skip';
-  /** Flow name; keys this flow's entry in event.source.release and the observer flowId. */
+  /** Flow name; keys this flow's entry in event.source.release. */
   name?: string;
   /** Config release id stamped into event.source.release for this flow. */
   release?: string;
@@ -116,6 +122,32 @@ export interface Config {
    * `destination.before`. Swappable at runtime via `walker config`.
    */
   next?: Transformer.Route;
+}
+
+/**
+ * The Observe reporter's options: where each part posts and with which token.
+ * Each part sends NDJSON rows with its token as `Authorization: Bearer`. A
+ * part that fails its check does nothing, and without a part nothing runs: no
+ * timer, no buffer, no observer, no request.
+ */
+export interface Observe {
+  /** Counters and issues of this runtime, every interval. */
+  usage?: {
+    url: string;
+    token: string;
+    /** Seconds between reports, a whole number from 10 to 300. Default 60. */
+    interval?: number;
+  };
+  /** One row per event and per destination outcome. */
+  preview?: { url: string; token: string };
+}
+
+/** The running Observe reporter. */
+export interface Reporter {
+  /** Sends what waits now; `keepalive` lets the request outlive a page leave. */
+  flush(keepalive?: boolean): Promise<void>;
+  /** Stops the timers and sends the last report. */
+  stop(): Promise<void>;
 }
 
 /**
@@ -141,20 +173,13 @@ export interface InitConfig extends Partial<Config> {
   /** Hooks for pipeline observation and interception */
   hooks?: Hooks.Functions;
   /**
-   * Observation session connect config, wired by `startFlow` before the run
-   * command. The server form attaches a telemetry poster directly from its
-   * config trio; the web form reads its credential through `slot`
-   * (`pageObserveSlot()` from `@walkeros/web-core`) and attaches only when
-   * one is present and its binding matches. Purely advisory: nothing on this
-   * path can affect event processing.
-   */
-  observe?: (ObserveWeb & { slot: ObserveSlot }) | ObserveServer;
-  /**
    * Caller-supplied observers, added verbatim to `collector.observers` by
    * `startFlow`. Escape hatch for custom emit targets; same advisory
    * contract as every observer (thrown values are swallowed by emitStep).
    */
   observers?: ObserverFn[];
+  /** The Observe reporter's options (`Observe`). */
+  observe?: Observe;
 }
 
 /**
@@ -202,13 +227,17 @@ export interface Status {
   sources: Record<string, SourceStatus>;
   destinations: Record<string, DestinationStatus>;
   /**
-   * Monotonic counts of events dropped due to buffer caps, keyed by
-   * stepId. See `stepId()` for key construction.
+   * Monotonic counts of dropped events, keyed by stepId (see `stepId()`) or
+   * by the collector-owned position that dropped them.
    *
    * Examples:
    *  - `dropped["collector"]?.queue`: collector replay buffer drops
    *  - `dropped["destination.ga4"]?.queue`: ga4's consent-denied buffer drops
    *  - `dropped["destination.ga4"]?.dlq`: ga4's dead-letter queue drops
+   *  - `dropped["source.web"]?.consent`: events the web source's consent
+   *    kept back
+   *  - `dropped["collector.next"]?.stopped`: events the collector chain
+   *    stopped
    */
   dropped: Record<string, DroppedCounters>;
   /**
@@ -261,15 +290,22 @@ export interface SourceStatus {
 }
 
 export interface DestinationStatus {
+  /** Events delivered: one per event, for a single push and a batch alike. */
   count: number;
   failed: number;
-  /**
-   * Events deliberately not sent: a consent-denied event under
-   * `consentDenied: 'skip'`, or an event a mapping rule `ignore`s.
-   */
+  /** Consent-denied events skipped under `consentDenied: 'skip'`. */
   skipped?: number;
+  /** Events a mapping rule `ignore`s. */
+  ignored?: number;
   lastAt?: number;
+  /** Milliseconds spent delivering: per push, and once per batch flush. */
   duration: number;
+  /**
+   * Delivery latency histogram: one count per push and one per batch flush,
+   * delivered or failed, in the buckets of `LATENCY_BOUNDS_MS` plus one above
+   * the last bound (12 counts).
+   */
+  latency?: number[];
   /** Current size of the destination's queuePush buffer (point-in-time). */
   queuePushSize: number;
   /** Current size of the destination's DLQ (point-in-time). */
@@ -415,14 +451,6 @@ export interface Instance {
    * swallowed. Subscribers add/remove via the standard Set API.
    */
   observers: Set<ObserverFn>;
-  /**
-   * Optional observation-level supplier installed by bundle codegen. Returns
-   * the level currently active for this runtime. Absent means no capture. At
-   * `trace` the per-event destination push wraps its env (via `wrapEnv`) to
-   * record a destination's declared vendor `calls`; `off`/`standard` and
-   * absence leave the push path untouched (zero added per-push cost).
-   */
-  observeLevel?: () => 'off' | 'standard' | 'trace';
   logger: Logger.Instance;
   /**
    * The collector's one cause log: every failure line goes through it, one
@@ -430,6 +458,8 @@ export interface Instance {
    * optional only so hand-built test collectors keep compiling.
    */
   causeLog?: CauseLog;
+  /** The Observe reporter, set by `startFlow` when an `observe` part runs. */
+  reporter?: Reporter;
   on: On.OnConfig;
   queue: WalkerOS.Events;
   /**
@@ -444,7 +474,7 @@ export interface Instance {
   round: number;
   /** Run-scoped W3C trace id, minted on each run and stamped onto events. */
   trace?: string;
-  /** Static flow name; keys source.release and the observer flowId. */
+  /** Static flow name; keys this flow's entry in source.release. */
   name?: string;
   /** Static config release id stamped into source.release for this flow. */
   release?: string;

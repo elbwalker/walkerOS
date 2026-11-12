@@ -63,6 +63,7 @@ describe('bundle stats display', () => {
         throw msg instanceof Error ? msg : new Error(msg);
       }),
       json: jest.fn(),
+      mask: jest.fn((text: string) => text),
       scope: jest.fn((): Logger.Instance => logger),
     };
 

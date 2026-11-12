@@ -1,4 +1,4 @@
-import { observeEnv } from '../observeEnv';
+import { parseCallPath, recordEnv } from '../recordEnv';
 import { expectSimulationResolves } from '../expectSimulationResolves';
 
 class MockTopic {
@@ -47,9 +47,9 @@ function slot(value: unknown, key: string): unknown {
   return Reflect.get(value, key);
 }
 
-describe('observeEnv', () => {
+describe('recordEnv', () => {
   it('records a call reached through a constructor and a method return', async () => {
-    const { env, calls, unresolved } = observeEnv({ PubSub: MockPubSub }, [
+    const { env, calls } = recordEnv({ PubSub: MockPubSub }, [
       'call:PubSub.topic.publishMessage',
     ]);
     const client = construct(env.PubSub, [{ projectId: 'p' }]);
@@ -58,7 +58,6 @@ describe('observeEnv', () => {
       await client.topic('events').publishMessage({ data: Buffer.from('x') }),
     ).toBe('msg-1');
     expect(client.peek()).toBe('s');
-    expect(unresolved).toEqual([]);
     expect(calls).toEqual([
       {
         fn: 'PubSub.topic.publishMessage',
@@ -69,7 +68,7 @@ describe('observeEnv', () => {
   });
 
   it('keeps static members', () => {
-    const { env } = observeEnv({ PubSub: MockPubSub }, ['PubSub']);
+    const { env } = recordEnv({ PubSub: MockPubSub }, ['PubSub']);
     const Ctor = env.PubSub;
     expect(
       typeof Ctor === 'function' && 'version' in Ctor
@@ -79,7 +78,7 @@ describe('observeEnv', () => {
   });
 
   it('records a constructor leaf once per construction', () => {
-    const { env, calls } = observeEnv({ PubSub: MockPubSub }, ['PubSub']);
+    const { env, calls } = recordEnv({ PubSub: MockPubSub }, ['PubSub']);
     const client = construct(env.PubSub, [{ projectId: 'p' }]);
     expect(client instanceof MockPubSub).toBe(true);
     expect(calls).toEqual([
@@ -89,7 +88,7 @@ describe('observeEnv', () => {
 
   it('records once on a chain that returns this', async () => {
     const client = new ChainClient();
-    const { env, calls } = observeEnv({ client }, [
+    const { env, calls } = recordEnv({ client }, [
       'call:client.dataset.table.insert',
     ]);
     const c = env.client;
@@ -101,7 +100,7 @@ describe('observeEnv', () => {
   it('leaves the caller env and prototypes untouched', () => {
     const original = { PubSub: MockPubSub };
     const topicBefore = MockPubSub.prototype.topic;
-    observeEnv(original, ['call:PubSub.topic.publishMessage']);
+    recordEnv(original, ['call:PubSub.topic.publishMessage']);
     expect(original.PubSub).toBe(MockPubSub);
     expect(MockPubSub.prototype.topic).toBe(topicBefore);
   });
@@ -119,7 +118,7 @@ describe('observeEnv', () => {
         return 1;
       }
     }
-    const { env } = observeEnv({ box: new Box() }, ['box.read']);
+    const { env } = recordEnv({ box: new Box() }, ['box.read']);
     const box = env.box;
     if (!(box instanceof Box)) throw new Error('instanceof lost');
     box.value = 5;
@@ -127,22 +126,8 @@ describe('observeEnv', () => {
   });
 
   it('keeps identity stable across reads', () => {
-    const { env } = observeEnv({ client: new ChainClient() }, [
-      'client.insert',
-    ]);
+    const { env } = recordEnv({ client: new ChainClient() }, ['client.insert']);
     expect(env.client).toBe(env.client);
-  });
-
-  it('lists an unwalkable object path as unresolved', () => {
-    const { unresolved } = observeEnv({ window: {} }, ['call:window.gtag']);
-    expect(unresolved).toEqual(['window.gtag']);
-  });
-
-  it('does not list a path that continues through a function', () => {
-    const { unresolved } = observeEnv({ open: async () => ({}) }, [
-      'call:open.prepare',
-    ]);
-    expect(unresolved).toEqual([]);
   });
 
   it('follows a mid-path Promise and records the leaf only', async () => {
@@ -153,7 +138,7 @@ describe('observeEnv', () => {
         return 'stmt';
       },
     };
-    const { env, calls } = observeEnv({ open: async () => db }, [
+    const { env, calls } = recordEnv({ open: async () => db }, [
       'call:open.prepare',
     ]);
     const handle = await call(env.open, 'file.db');
@@ -166,7 +151,7 @@ describe('observeEnv', () => {
 
   it('records an array method leaf such as dataLayer.push', () => {
     const dataLayer: unknown[] = [];
-    const { env, calls } = observeEnv({ window: { dataLayer } }, [
+    const { env, calls } = recordEnv({ window: { dataLayer } }, [
       'call:window.dataLayer.push',
     ]);
     call(slot(slot(env.window, 'dataLayer'), 'push'), { event: 'x' });
@@ -176,7 +161,7 @@ describe('observeEnv', () => {
 
   it('records once when a view is written back and read again', () => {
     const win: Record<string, unknown> = { dataLayer: [] };
-    const { env, calls } = observeEnv({ window: win }, [
+    const { env, calls } = recordEnv({ window: win }, [
       'call:window.dataLayer.push',
     ]);
     const view = env.window;
@@ -189,45 +174,16 @@ describe('observeEnv', () => {
 
   it('records a leaf installed after observation', () => {
     const win: Record<string, unknown> = {};
-    const { env, calls } = observeEnv({ window: win }, ['window.gtag']);
+    const { env, calls } = recordEnv({ window: win }, ['window.gtag']);
     win.gtag = () => 'real';
     expect(call(slot(env.window, 'gtag'), 'event')).toBe('real');
     expect(calls.map((x) => x.fn)).toEqual(['window.gtag']);
   });
 
-  it('forwards each call to an optional recorder and survives its throw', () => {
-    const seen: string[] = [];
-    const { env, calls } = observeEnv(
-      { api: { track: () => 'sent' } },
-      ['api.track'],
-      (fn) => {
-        seen.push(fn);
-        throw new Error('telemetry broke');
-      },
-    );
-    expect(call(slot(env.api, 'track'), 'a')).toBe('sent');
-    expect(seen).toEqual(['api.track']);
-    expect(calls).toEqual([]);
-  });
-
-  it('does not keep calls when a record callback is given', () => {
-    const seen: unknown[][] = [];
-    const { env, calls } = observeEnv(
-      { api: { track: () => 'sent' } },
-      ['call:api.track'],
-      (_fn, args) => seen.push(args),
-    );
-    call(slot(env.api, 'track'), 'a');
-    call(slot(env.api, 'track'), 'b');
-    expect(seen).toEqual([['a'], ['b']]);
-    expect(calls).toEqual([]);
-  });
-
   it('records a call through a frozen object without mutating it', () => {
     const sent: unknown[] = [];
     const lib = Object.freeze({ send: (x: unknown) => sent.push(x) });
-    const { env, calls, unresolved } = observeEnv({ lib }, ['call:lib.send']);
-    expect(unresolved).toEqual([]);
+    const { env, calls } = recordEnv({ lib }, ['call:lib.send']);
     const view = env.lib;
     call(slot(view, 'send'), 'a');
     expect(sent).toEqual(['a']);
@@ -244,8 +200,7 @@ describe('observeEnv', () => {
     const root = Object.freeze({
       lib: { send: (x: unknown) => sent.push(x) },
     });
-    const { env, calls, unresolved } = observeEnv(root, ['call:lib.send']);
-    expect(unresolved).toEqual([]);
+    const { env, calls } = recordEnv(root, ['call:lib.send']);
     call(slot(env.lib, 'send'), 'a');
     expect(sent).toEqual(['a']);
     expect(calls).toEqual([
@@ -266,26 +221,24 @@ describe('observeEnv', () => {
       enumerable: true,
     });
     const before = Object.getOwnPropertyDescriptor(root, 'lib');
-    const { env, calls, unresolved } = observeEnv(root, ['call:lib.send']);
-    expect(unresolved).toEqual([]);
+    const { env, calls } = recordEnv(root, ['call:lib.send']);
     call(slot(slot(env, 'lib'), 'send'), 'a');
     expect(sent).toEqual(['a']);
     expect(calls.map((c) => [c.fn, c.args])).toEqual([['lib.send', ['a']]]);
     expect(Object.getOwnPropertyDescriptor(root, 'lib')).toEqual(before);
   });
 
-  it('keeps a frozen callable root callable and reports its frozen static', () => {
+  it('keeps a frozen callable root callable', () => {
     const root = Object.freeze(
       Object.assign(() => 'called', { lib: { send: () => 'sent' } }),
     );
-    const { env, unresolved } = observeEnv(root, ['call:lib.send']);
+    const { env } = recordEnv(root, ['call:lib.send']);
     expect(call(env)).toBe('called');
-    expect(unresolved).toEqual(['lib.send']);
   });
 
   it('records a call through a frozen call result', () => {
     const client = Object.freeze({ send: () => 'ok' });
-    const { env, calls } = observeEnv({ make: () => client }, [
+    const { env, calls } = recordEnv({ make: () => client }, [
       'call:make.send',
     ]);
     expect(call(slot(call(env.make), 'send'), 1)).toBe('ok');
@@ -296,10 +249,7 @@ describe('observeEnv', () => {
     'navigates a call result whose method is named %s',
     (key) => {
       const make = () => ({ [key]: (x: number) => x + 1 });
-      const { env, calls, unresolved } = observeEnv({ make }, [
-        `call:make.${key}`,
-      ]);
-      expect(unresolved).toEqual([]);
+      const { env, calls } = recordEnv({ make }, [`call:make.${key}`]);
       expect(call(slot(call(env.make), key), 1)).toBe(2);
       expect(calls.map((c) => c.fn)).toEqual([`make.${key}`]);
     },
@@ -312,17 +262,13 @@ describe('observeEnv', () => {
       }
     }
     class Child extends Base {}
-    const { env, calls, unresolved } = observeEnv({ Child }, [
-      'call:Child.create',
-    ]);
-    expect(unresolved).toEqual([]);
+    const { env, calls } = recordEnv({ Child }, ['call:Child.create']);
     expect(call(Reflect.get(env.Child, 'create'))).toBe('made');
     expect(calls.map((c) => c.fn)).toEqual(['Child.create']);
   });
 
   it('skips malformed paths', () => {
-    const { unresolved, calls } = observeEnv({}, ['.a', 'a..b', '']);
-    expect(unresolved).toEqual([]);
+    const { calls } = recordEnv({}, ['.a', 'a..b', '']);
     expect(calls).toEqual([]);
   });
 });
@@ -384,5 +330,55 @@ describe('expectSimulationResolves', () => {
 
   it('passes an env without simulation paths', async () => {
     await expect(expectSimulationResolves({})).resolves.toBeUndefined();
+  });
+});
+
+describe('parseCallPath', () => {
+  it('splits a plain dot-path', () => {
+    expect(parseCallPath('a.b')).toEqual(['a', 'b']);
+  });
+
+  it('strips a leading call: prefix', () => {
+    expect(parseCallPath('call:window.gtag')).toEqual(['window', 'gtag']);
+  });
+
+  it('returns a single segment for a no-prefix single path', () => {
+    expect(parseCallPath('foo')).toEqual(['foo']);
+  });
+
+  it('keeps a single call: path after stripping', () => {
+    expect(parseCallPath('call:a.b.c')).toEqual(['a', 'b', 'c']);
+  });
+
+  it('strips only the literal call: prefix, never any other word:', () => {
+    // A `<word>:` that is not `call:` stays part of the path (wrapEnv parity).
+    expect(parseCallPath('window:gtag')).toEqual(['window:gtag']);
+    expect(parseCallPath('foo:bar.baz')).toEqual(['foo:bar', 'baz']);
+  });
+
+  it('strips only a single leading call: prefix', () => {
+    expect(parseCallPath('call:call:x')).toEqual(['call:x']);
+  });
+
+  it('returns [] for an empty string', () => {
+    expect(parseCallPath('')).toEqual([]);
+  });
+
+  it('returns [] for a lone call: prefix', () => {
+    expect(parseCallPath('call:')).toEqual([]);
+  });
+
+  it('returns [] for dots-only paths', () => {
+    expect(parseCallPath('..')).toEqual([]);
+    expect(parseCallPath('.')).toEqual([]);
+  });
+
+  it('returns [] for a consecutive-dot segment', () => {
+    expect(parseCallPath('a..b')).toEqual([]);
+  });
+
+  it('returns [] for a leading or trailing dot', () => {
+    expect(parseCallPath('.a')).toEqual([]);
+    expect(parseCallPath('a.')).toEqual([]);
   });
 });

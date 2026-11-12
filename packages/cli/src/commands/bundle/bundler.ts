@@ -3,7 +3,7 @@ import { builtinModules } from 'module';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import fs from 'fs-extra';
-import type { Flow, MoinTarget, ObserveWeb, PreviewKey } from '@walkeros/core';
+import type { Collector, Flow, MoinTarget, PreviewKey } from '@walkeros/core';
 import {
   getPlatform,
   packageNameToVariable,
@@ -129,6 +129,7 @@ import {
 import {
   traceAndCopy,
   assertDepsTraced,
+  missingEntry,
   collectImportedPackages,
 } from './nft-trace.js';
 import { assertConsumerDepsSatisfied } from './assert-consumer-deps.js';
@@ -714,7 +715,6 @@ export async function bundleCore(
               windowCollector: buildOptions.windowCollector,
               windowElb: buildOptions.windowElb,
               platform: buildOptions.platform as 'browser' | 'node',
-              observe: readObserveConnect(flowSettings, logger),
             })
           : generateServerEntry(stage1Path, dataPayload);
 
@@ -755,11 +755,12 @@ export async function bundleCore(
         // never from a copy in TEMP_DIR, which may predate it.
         stage2Options.plugins = [cliPackagesPlugin()];
         // Every build flag is defined from the flow's needs, so a feature the
-        // flow does not use folds out (see build-flags.ts).
+        // flow does not use folds out (see build-flags.ts). A production
+        // bundle never carries the reporter.
         stage2Options.define = {
           'process.env.NODE_ENV': '"production"',
           global: 'globalThis',
-          ...buildFlagDefines(flowNeeds(flowSettings)),
+          ...buildFlagDefines(flowNeeds(flowSettings), false),
         };
         stage2Options.target = resolveTarget(buildOptions);
       } else {
@@ -1150,8 +1151,14 @@ async function runNftServerPath(
       importedPackages: await collectImportedPackages(outputPath),
     });
     for (const name of unused) {
+      // A copy without its entry traces as nothing, used or not.
+      const entry = await missingEntry(
+        path.join(tempDir, 'node_modules', name),
+      );
       logger.warn(
-        `Package ${name} is declared in bundle.packages but nothing imports it; it is not in the bundle. Remove it from bundle.packages if unused.`,
+        entry
+          ? `Package ${name} is declared in bundle.packages, but its installed copy has no ${entry}; it is not in the bundle.`
+          : `Package ${name} is declared in bundle.packages but nothing imports it; it is not in the bundle. Remove it from bundle.packages if unused.`,
       );
     }
   }
@@ -1982,103 +1989,11 @@ ${HOST_LOGGER_MERGE}
 
   const result = await startFlow(config);
 
-  // Telemetry observer installation: the host (pipeline.ts) builds the
-  // observer functions via createTelemetryObserver + createBatchedPoster
-  // and forwards them through context. Added to collector.observers so the
-  // runtime self-emission loop drives them.
-  if (context.observers) {
-    for (const observer of context.observers) {
-      result.collector.observers.add(observer);
-    }
-  }
-
-  // The host forwards the level supplier beside the observers; the collector
-  // capture path reads it to decide destination call capture at trace.
-  if (context.observeLevel) result.collector.observeLevel = context.observeLevel;
-
   const httpSource = Object.values(result.collector.sources || {})
     .find(s => 'httpHandler' in s && typeof s.httpHandler === 'function');
 
   return { ...result, httpHandler: httpSource ? httpSource.httpHandler : undefined };
 }`;
-}
-
-/**
- * Read the STATIC observe connect config from a flow's `config.observe`.
- * Returns the public `{ url, binding }` pair (trimmed) plus the optional
- * `level`/`sample` controls only when both pair members are non-empty
- * strings; anything else yields undefined so the web entry emits zero
- * observe wiring bytes. Every carried field is public; dropping `level`
- * here would silently override an explicit `level: 'off'` with the
- * runtime's `standard` default once a credential attaches. A block that
- * names `url` or `binding` but does not form a usable pair (missing,
- * empty, or whitespace-only member) warns at build time, because silent
- * zero-wiring in a minified bundle is invisible to the author. A pure
- * level/sample block is valid managed-telemetry config, not a failed
- * connect pair, and stays silent. Secrets never live in flow config: the
- * runtime connect module reads the per-session credential out-of-band at
- * boot.
- */
-export function readObserveConnect(
-  flowSettings: Flow,
-  logger?: Logger.Instance,
-): ObserveWeb | undefined {
-  const observe = flowSettings.config?.observe;
-  if (!observe) return undefined;
-  const { url, binding, level, sample } = observe;
-  if (url === undefined && binding === undefined) return undefined;
-  const trimmedUrl = typeof url === 'string' ? url.trim() : '';
-  const trimmedBinding = typeof binding === 'string' ? binding.trim() : '';
-  if (trimmedUrl !== '' && trimmedBinding !== '') {
-    return {
-      url: trimmedUrl,
-      binding: trimmedBinding,
-      // Same JSON-borne prudence as the pair: only known-shaped public
-      // values reach the emitted literal.
-      ...(level === 'off' || level === 'standard' || level === 'trace'
-        ? { level }
-        : {}),
-      // Sample is a fraction in [0, 1] per the Flow.Observe contract; the
-      // range test also drops NaN and the infinities.
-      ...(typeof sample === 'number' && sample >= 0 && sample <= 1
-        ? { sample }
-        : {}),
-    };
-  }
-  const missing = [
-    ...(trimmedUrl === '' ? ['url'] : []),
-    ...(trimmedBinding === '' ? ['binding'] : []),
-  ].join(' and ');
-  logger?.warn(
-    `config.observe has no effect: missing or empty ${missing}. Observe connect wiring was skipped; set both config.observe.url and config.observe.binding to non-empty public values.`,
-  );
-  return undefined;
-}
-
-/** Imports the page's Observe credential slot into a browser entry. */
-const OBSERVE_SLOT_IMPORT =
-  "import { pageObserveSlot } from '@walkeros/web-core';\n";
-
-/**
- * Emit the STATIC observe connect assignment for a generated entry: bake
- * ONLY the public connect values (`url` + `binding`, plus the optional
- * `flowId`/`level`/`sample` scoping) onto the startFlow config, beside the
- * page slot the web arm reads its credential through. The runtime connect
- * module inside startFlow does the credential work at boot (the per-session
- * secret arrives out-of-band via the `elbObserve` companion); no emitted
- * byte here is ever secret. The entry imports the slot with
- * `OBSERVE_SLOT_IMPORT`.
- */
-function emitObserveAssignment(observe: ObserveWeb): string {
-  const literal: ObserveWeb = {
-    url: observe.url,
-    binding: observe.binding,
-    ...(observe.flowId !== undefined ? { flowId: observe.flowId } : {}),
-    ...(observe.level !== undefined ? { level: observe.level } : {}),
-    ...(observe.sample !== undefined ? { sample: observe.sample } : {}),
-  };
-  return `
-  config.observe = { ...${JSON.stringify(literal)}, slot: pageObserveSlot() };`;
 }
 
 /** Imports the Tag Mode loader into a browser entry. */
@@ -2141,13 +2056,6 @@ export function generateWebEntry(
     windowElb?: string;
     /** Runtime platform. 'browser' emits env.window/env.document injection; 'node' omits it. Default 'browser' for backward compat. */
     platform?: 'browser' | 'node';
-    /**
-     * STATIC observe connect config baked onto the startFlow config. PUBLIC
-     * values only (url + binding); the runtime connect module reads the
-     * per-session credential out-of-band at boot. Absent = zero observe
-     * wiring bytes in the emitted entry.
-     */
-    observe?: ObserveWeb;
   } = {},
 ): string {
   const assignments: string[] = [];
@@ -2180,20 +2088,15 @@ export function generateWebEntry(
 
   const stage1Specifier = toFileImportSpecifier(stage1Path);
 
-  const observeImport = options.observe ? OBSERVE_SLOT_IMPORT : '';
-  const observeBlock = options.observe
-    ? emitObserveAssignment(options.observe)
-    : '';
-
   const loaderImport = platform === 'browser' ? MOIN_IMPORT : '';
   const loaderCall = platform === 'browser' ? emitMoinCall() : '';
 
-  return `${loaderImport}${observeImport}import { startFlow, wireConfig } from '${stage1Specifier}';
+  return `${loaderImport}import { startFlow, wireConfig } from '${stage1Specifier}';
 
 const __configData = ${dataPayload};
 
 (async () => {${loaderCall}
-  const config = wireConfig(__configData);${envBlock}${observeBlock}
+  const config = wireConfig(__configData);${envBlock}
   const { collector, elb } = await startFlow(config);${assignmentCode}
 })();`;
 }
@@ -2226,6 +2129,14 @@ export interface WrapEntryPreview {
   previewOrigin: string;
 }
 
+/**
+ * Observe reporting baked into a preview build: the preview part only. A
+ * browser build is public, so it never carries a usage token.
+ */
+export interface WrapEntryObserve {
+  preview: NonNullable<Collector.Observe['preview']>;
+}
+
 export function generateWrapEntry(
   stage1Path: string,
   options: {
@@ -2238,30 +2149,12 @@ export function generateWrapEntry(
      */
     preview?: WrapEntryPreview;
     /**
-     * Preview-ARTIFACT wiring (the third wrap variant). When set, the emitted
-     * entry reads the session-forwarding grant from
-     * `localStorage['elbPreviewSession']` (the companion slot the activator
-     * persists alongside the activation grant) at boot and stamps it as the
-     * `X-Walkeros-Preview` header on each named server-bound destination
-     * (`config.destinations[k].config.settings.headers`), before `startFlow`.
-     * The grant is never baked into the artifact.
-     *
-     * Mutually exclusive with `preview`: a host bundle ACTIVATES a preview, an
-     * artifact INJECTS its grant. An artifact that also baked the activator
-     * would re-verify the stored grant and re-inject itself (infinite
-     * recursion), so setting both throws.
+     * Observe reporting of a preview build. Present, it is the collector's
+     * whole `observe`: the flow file's own block never runs in the build.
      */
-    previewGrantTargets?: string[];
+    observe?: WrapEntryObserve;
     /** Runtime platform. 'browser' emits env.window/env.document injection; 'node' omits it. Default 'browser' for backward compat. */
     platform?: 'browser' | 'node';
-    /**
-     * STATIC observe connect config baked onto the startFlow config. PUBLIC
-     * values only (`url` + `binding`, plus optional `flowId`/`level`/`sample`
-     * scoping); the runtime connect module reads the per-session credential
-     * out-of-band at boot via the `elbObserve` slot. This is the
-     * preview-artifact observation wiring: it bakes no ingest token.
-     */
-    observe?: ObserveWeb;
     /**
      * The Tag Mode loader target, internal deploy data like the preview
      * keyring. Absent, the loader trusts the production app.
@@ -2280,21 +2173,6 @@ export function generateWrapEntry(
   const assignmentCode =
     assignments.length > 0 ? '\n' + assignments.join('\n') : '';
 
-  // A host bundle activates a preview; a preview artifact injects its grant.
-  // Baking both would let an activated artifact re-verify the stored grant and
-  // re-inject itself (infinite recursion), so refuse the combination loudly
-  // rather than pick a silent precedence that hides a caller bug.
-  if (
-    options.preview !== undefined &&
-    options.previewGrantTargets !== undefined
-  ) {
-    throw new Error(
-      'generateWrapEntry: `preview` (host activator) and `previewGrantTargets` ' +
-        '(preview-artifact injection) are mutually exclusive. A host bundle ' +
-        'activates a preview; an artifact injects its grant. Pass at most one.',
-    );
-  }
-
   const preview = options.preview;
   const previewEnabled = !!preview?.enabled;
 
@@ -2303,46 +2181,6 @@ export function generateWrapEntry(
   const previewImport = previewEnabled
     ? `import { browserSwapActivator } from '@walkeros/web-core';\n`
     : '';
-
-  // Preview-artifact variant: read the SESSION-FORWARDING grant (the
-  // companion the activator persists to localStorage['elbPreviewSession'])
-  // at boot and stamp it as the X-Walkeros-Preview header on each named
-  // server-bound destination, before startFlow. Never the activation grant
-  // in 'elbPreview': the session container only accepts session-bound
-  // grants, so that value could only ever be rejected (sb-mismatch). The
-  // grant value never appears as a literal — only the runtime localStorage
-  // read. localStorage access is wrapped in try/catch (Safari private mode
-  // throws) and an absent key skips injection entirely so a plain page
-  // boots normally.
-  const grantTargets = options.previewGrantTargets ?? [];
-  const previewGrantBlock =
-    grantTargets.length > 0
-      ? `
-  // --- Preview grant injection ---
-  try {
-    const __previewGrant =
-      typeof localStorage !== 'undefined'
-        ? localStorage.getItem('elbPreviewSession')
-        : null;
-    if (__previewGrant && config.destinations) {
-${grantTargets
-  .map((key) => {
-    const ref = `config.destinations[${singleQuoteLiteral(key)}]`;
-    return `      if (${ref}) {
-        const __dest = ${ref};
-        const __cfg = __dest.config || (__dest.config = {});
-        const __settings = __cfg.settings || (__cfg.settings = {});
-        const __headers = __settings.headers || (__settings.headers = {});
-        __headers['X-Walkeros-Preview'] = __previewGrant;
-      }`;
-  })
-  .join('\n')}
-    }
-  } catch (__err) {
-    // localStorage can throw (Safari private mode); boot without the grant.
-  }
-  // --- End preview grant injection ---`
-      : '';
 
   const previewBlock =
     previewEnabled && preview
@@ -2375,37 +2213,32 @@ ${grantTargets
   }`
       : '';
 
-  const stage1Specifier = toFileImportSpecifier(stage1Path);
-
-  // STATIC observe connect wiring (see emitObserveAssignment): baked inside
-  // the IIFE AFTER the activator's early return, so an activated page (the
-  // artifact swapped in) never also installs the host's connect module.
-  const observeImport = options.observe ? OBSERVE_SLOT_IMPORT : '';
-  const observeBlock = options.observe
-    ? emitObserveAssignment(options.observe)
+  // Replaced, never merged: a web flow's own usage or preview block must not
+  // report from a preview build. Only the url and the token are baked.
+  const observe = options.observe && {
+    preview: {
+      url: options.observe.preview.url,
+      token: options.observe.preview.token,
+    },
+  };
+  const observeBlock = observe
+    ? `
+  config.observe = ${JSON.stringify(observe)};`
     : '';
+
+  const stage1Specifier = toFileImportSpecifier(stage1Path);
 
   // The loader runs first, before the activator: host and artifact both call
   // it, and its page guard keeps the first one.
   const loaderImport = platform === 'browser' ? MOIN_IMPORT : '';
   const loaderCall = platform === 'browser' ? emitMoinCall(options.moin) : '';
 
-  return `${loaderImport}${previewImport}${observeImport}import { startFlow, wireConfig, __configData } from '${stage1Specifier}';
+  return `${loaderImport}${previewImport}import { startFlow, wireConfig, __configData } from '${stage1Specifier}';
 
 (async () => {${loaderCall}${previewBlock}
-  const config = wireConfig(__configData);${envBlock}${previewGrantBlock}${observeBlock}
+  const config = wireConfig(__configData);${envBlock}${observeBlock}
   const { collector, elb } = await startFlow(config);${assignmentCode}
 })();`;
-}
-
-/**
- * Emit a single-quoted JS string literal for a destination key. Destination
- * keys come from a validated flow config, but escaping backslash and single
- * quote keeps the emitted codegen well-formed for any key and matches the
- * single-quote convention the preview-injection tests pin.
- */
-function singleQuoteLiteral(value: string): string {
-  return `'${value.replace(/\\/g, '\\\\').replace(/'/g, "\\'")}'`;
 }
 
 /**
@@ -2435,20 +2268,6 @@ ${HOST_LOGGER_MERGE}
   }
 
   const result = await startFlow(config);
-
-  // Telemetry observer installation: the host (pipeline.ts) builds the
-  // observer functions via createTelemetryObserver + createBatchedPoster
-  // and forwards them through context. Added to collector.observers so the
-  // runtime self-emission loop drives them.
-  if (context.observers) {
-    for (const observer of context.observers) {
-      result.collector.observers.add(observer);
-    }
-  }
-
-  // The host forwards the level supplier beside the observers; the collector
-  // capture path reads it to decide destination call capture at trace.
-  if (context.observeLevel) result.collector.observeLevel = context.observeLevel;
 
   const httpSource = Object.values(result.collector.sources || {})
     .find(s => 'httpHandler' in s && typeof s.httpHandler === 'function');

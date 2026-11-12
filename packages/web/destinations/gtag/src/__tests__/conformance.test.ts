@@ -2,7 +2,7 @@ import type { Flow, StandardEventName } from '@walkeros/core';
 import path from 'path';
 import { startFlow } from '@walkeros/collector';
 import { conformance, runExamples } from '@walkeros/collector/dev';
-import { clone, createLogger, observeEnv } from '@walkeros/core';
+import { clone, createLogger, recordEnv } from '@walkeros/core';
 import { expectSimulationResolves } from '@walkeros/core/dev';
 import { page } from '@walkeros/web-core/dev';
 import type { Config, Settings } from '../types';
@@ -122,7 +122,7 @@ describe('gtag init examples', () => {
     expect(example.in).toEqual(config);
     expect(SettingsSchema.safeParse(config.settings).error).toBeUndefined();
 
-    const observed = observeEnv(
+    const recorded = recordEnv(
       clone(examples.env.push),
       examples.env.simulation,
     );
@@ -130,12 +130,12 @@ describe('gtag init examples', () => {
     await destinationGtag.init?.({
       id: 'gtag',
       config,
-      env: observed.env,
+      env: recorded.env,
       logger: createLogger(),
       collector,
     });
 
-    expect(observed.calls.map(({ fn, args }) => [fn, ...args])).toEqual(
+    expect(recorded.calls.map(({ fn, args }) => [fn, ...args])).toEqual(
       example.out,
     );
   });

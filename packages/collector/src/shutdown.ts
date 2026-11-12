@@ -92,7 +92,7 @@ export async function flushDestinationBatches(
               collector,
               collector.logger,
               {
-                step: stepId('destination', id),
+                step: stepId('destination', dest.config.id || id),
                 code: reason.code,
                 status: reason.status,
               },

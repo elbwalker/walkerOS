@@ -1,268 +1,293 @@
 ---
 title: Observe
-description: Watch live events from a running flow, web or server
+description: Report a running flow's counters, issues and events to an ingest endpoint
 sidebar_position: 8
 ---
 
 # Observe
 
-You can verify a flow at three levels, each one step closer to production:
-
-1. **Simulate**: run an event through the built flow offline, with
-   destinations mocked, see [bundled mode](/docs/getting-started/modes/bundled#see-your-event).
-2. **Run locally**: run the flow where your app runs and watch each event in
-   your console, see
-   [integrated mode](/docs/getting-started/modes/integrated#see-your-event).
-3. **Observe**: attach a running flow to an Observe session and watch its
-   live records arrive in a feed, from any browser or server deployment.
-
-This page covers the third rung: connecting a flow to an observer.
-
-## What you commit vs what arrives later
-
-Your code and config carry only public connect values: the observer `url` and
-the project `binding`. Neither is a secret, both are safe to commit.
-
-The per-session credential arrives out-of-band: as a URL parameter in the
-browser, or as environment variables on the server. No credential is ever
-stored in a committed artifact: `flow.json`, a built bundle and your
-application code carry none.
-
-## Web, integrated mode
-
-Add the public connect pair to `startFlow`:
+Observe is the collector's reporter. Give it an endpoint and a token, and a
+running flow sends what it did: counters and issues of the whole runtime, and
+optionally one row for every event and every destination outcome. It adds no
+step to the flow and never holds an event back.
 
 <CodeSnippet
-  code={`import { startFlow } from '@walkeros/collector';
-import { pageObserveSlot } from '@walkeros/web-core';
-import { sourceBrowser } from '@walkeros/web-source-browser';
-
-const { elb } = await startFlow({
-  sources: {
-    browser: { code: sourceBrowser, config: { settings: { pageview: true } } },
-  },
-  observe: {
-    url: 'https://observer.example.com', // public, safe to commit
-    binding: 'pb_x', // public project binding, safe to commit
-    slot: pageObserveSlot(), // keeps the session credential in this browser
-  },
-});`}
-  language="typescript"
-/>
-
-`slot` is required in a browser: a web `observe` without it logs one error line
-naming `pageObserveSlot` and Observe stays off. The `observe` block under
-`collector` in a flow file cannot carry a slot, so use `config.observe` (bundled
-mode below) or a hand-written `startFlow` as shown.
-
-Then open your dev URL with a session credential appended:
-
-<CodeSnippet
-  code={`http://localhost:3000/?elbObserve=obsw_pb_x.ses_9.sec_1`}
-  language="text"
-/>
-
-On load, the runtime checks that the credential's binding matches the one in
-your config (a credential for another binding is ignored and logged at `WARN`,
-which the default `ERROR` log level hides), persists the credential in
-`localStorage`, removes the parameter
-from the address bar, and starts posting flow records to the observer. Later
-page loads reuse the stored credential, so one activation lasts until the
-Observe session ends.
-
-Without a credential, the same page does zero observation work: nothing is
-parsed, stored, or sent. When the Observe session ends, the observer rejects
-the next post and the runtime detaches and clears the stored credential on its
-own.
-
-## Web, bundled mode
-
-The same connect pair goes into `flow.json` under `config.observe`:
-
-<CodeSnippet
-  code={`{
-  "version": 4,
-  "flows": {
-    "default": {
-      "config": {
-        "platform": "web",
-        "observe": {
-          "url": "https://observer.example.com",
-          "binding": "pb_x"
-        },
-        "bundle": {
-          "packages": {
-            "@walkeros/collector": { "version": "^4" },
-            "@walkeros/web-source-browser": { "version": "^4" }
-          }
-        }
-      },
-      "sources": {
-        "browser": {
-          "package": "@walkeros/web-source-browser",
-          "config": { "settings": { "pageview": true } }
-        }
-      },
-      "collector": { "run": true }
+  code={`"collector": {
+  "observe": {
+    "usage": {
+      "url": "https://ingest.example.com/usage",
+      "token": "$secret.OBSERVE_USAGE"
     }
   }
 }`}
   language="json"
 />
 
-Build once:
+You can verify a flow at three levels, each one step closer to production:
 
-<CodeSnippet code={`walkeros bundle flow.json -o ./dist/walker.js`} language="bash" />
+1. **Simulate**: run an event through the built flow offline, with
+   destinations mocked, see
+   [bundled mode](/docs/getting-started/modes/bundled#see-your-event).
+2. **Run locally**: run the flow where your app runs and watch each event in
+   your console, see
+   [integrated mode](/docs/getting-started/modes/integrated#see-your-event).
+3. **Observe**: let a running flow report to an endpoint, so you see what it
+   delivered, what failed and why.
 
-The CLI adds the browser slot to the bundle, so a bundle needs an up-to-date
-CLI. The bundle carries only the public pair. `url` and `binding` must both be set:
-a partial pair warns at build time and wires nothing. Activation works exactly
-as in integrated mode, via the `?elbObserve=` parameter on any page that loads
-the bundle.
+This page covers the third rung.
 
-## Server
+## Options
 
-Server deployments read their connect config from the environment:
+`collector.observe` in a flow file, or `observe` in `startFlow`, takes two
+parts. Both are optional, and each posts to its own endpoint.
+
+| Part      | What it sends                                                       | Options                          |
+| --------- | ------------------------------------------------------------------- | -------------------------------- |
+| `usage`   | Counters, gauges and issues of this runtime, every `interval`       | `url`, `token`, `interval`       |
+| `preview` | One row per event and one per destination outcome, as they happen   | `url`, `token`                   |
+
+- `url` is an absolute http or https URL, or a `$env.` or `$var.` reference to
+  one. In a server bundle, `$env.NAME` becomes a read of `process.env.NAME`
+  (with its `:default`, if any) when the bundle loads, and `$secret.NAME` a read
+  of the secret's environment variable at the same point. The CLI's preview
+  build needs the literal URL.
+- `token` is sent as `Authorization: Bearer <token>`. In a server flow, back it
+  with a managed secret (`$secret.NAME`) instead of writing it into the file.
+- `interval` is a whole number of seconds from 10 to 300, default 60.
+
+Every other key fails `walkeros validate` at its path. Without options, nothing
+runs: no timer, no buffer, no observer, no request.
+
+At runtime a part that fails its check logs one ERROR line naming the key path
+and the value as written (never the token), does no work, and the flow runs on:
+
+```text
+Invalid observe option at observe.usage.interval: 5 is not a whole number of seconds from 10 to 300; usage not started
+```
+
+In `startFlow` the same options read:
 
 <CodeSnippet
   code={`import { startFlow } from '@walkeros/collector';
-import { observeFromEnv } from '@walkeros/core';
 
 const { elb } = await startFlow({
-  // undefined unless all three variables are set; undefined means zero observation work
-  observe: observeFromEnv(process.env),
+  observe: {
+    usage: {
+      url: 'https://ingest.example.com/usage',
+      token: process.env.OBSERVE_USAGE,
+      interval: 30,
+    },
+  },
   // ...your sources and destinations
 });`}
   language="typescript"
 />
 
-Set the environment on the deployment, never in code or config files:
+Outside the CLI, no build flag is defined, so the reporter runs wherever
+`observe` is passed.
+
+## What a report holds
+
+Each report is a set of rows, posted as NDJSON (`Content-Type:
+application/x-ndjson`), one JSON object per line. A body holds at most 60,000
+bytes, and a larger report goes out in several requests. Requests carry no
+cookies and no referrer, and wait at most 10 seconds for an answer.
+
+### Usage rows
+
+A usage report goes out when the collector starts, then every `interval`, soon
+after a new kind of issue first appears, and once more when the collector shuts
+down. Every row carries `instance` (16 hex characters naming this process),
+`seq` (1 for the first report of the instance, one more for each report),
+`final` (1 on the report at shutdown), `interval_s`, `release`, `part` (the
+collector's `name`, else `default`) and `reported_at`.
+
+Counters are cumulative since the collector started, so a lost or repeated
+report changes nothing about the totals. A counter at 0 is left out, except
+`collector.in`, which every report carries. Gauges go in every report, zero
+included.
+
+| `step`                    | `metric`                                                                                               |
+| ------------------------- | ------------------------------------------------------------------------------------------------------ |
+| `collector`               | `in`, `out`, `failed`                                                                                  |
+| a drop position           | `dropped_consent`, `dropped_ignored`, `dropped_stopped`, `dropped_queue`, `dropped_dlq`                |
+| `source.<id>`             | `count`, `rejected`                                                                                    |
+| `destination.<id>`        | `delivered`, `failed`, `skipped_consent`, `skipped_ignored`, `duration_ms`, `latency_ms_le_<bound>`    |
+| `destination.<id>`        | gauges: `queue`, `dlq`, `in_flight`                                                                    |
+| a step with a breaker     | gauge: `breaker_open` (1 or 0)                                                                         |
+| a step                    | `connection_errors`                                                                                    |
+| the step that failed      | `issue`, with `code`, `status`, `retryable`, a masked `message` and the count in `value`               |
+
+`latency_ms_le_<bound>` is one count per delivery or batch flush that took at
+most `<bound>` milliseconds, for the bounds 5, 10, 25, 50, 100, 250, 500, 1000,
+2500, 5000 and 10000, plus `latency_ms_le_inf` above the last. `@walkeros/core`
+exports them as `LATENCY_BOUNDS_MS`.
+
+Every issue the collector holds goes in every report, one row per step, code
+and status. Each is a line the logger writes at most once a minute, so a
+failing destination is one row, not one per event.
+
+### Preview rows
+
+A preview row says what happened to one event. Every row carries `instance`,
+`seq`, `release`, `part` and `reported_at`. The `seq` counts rows from 1, so a
+gap is a lost row: the buffer holds 500 rows, and a full buffer drops the
+oldest.
+
+An **event row** (`kind: "event"`) comes from the collector's own record of the
+push: `event_id`, `trace_id`, `name`, `source`, `timestamp`, the event as
+`payload`, an `outcome` and the list of `outcomes`.
+
+| `outcome` | Meaning                                                                    |
+| --------- | -------------------------------------------------------------------------- |
+| `done`    | Every destination delivered the event                                      |
+| `queued`  | The event waits: for consent, for a batch, or for `run` or a page leave    |
+| `failed`  | A destination or the collector failed it                                   |
+| `skipped` | A consent skip, a rule ignore or a drop; never a delivery or a failure      |
+
+Each element of `outcomes` holds `destination`, `phase`, `outcome`, `code`,
+`status`, `message` (masked), `mapping_key` and `ms`. An element with
+`destination: ""` is the collector's own: a drop, a failed push, or why an event
+waits (`run`, `page-leave`).
+
+An **outcome row** (`kind: "outcome"`) follows each destination's own result,
+flush, error or skip, with the same `event_id` and one element in `outcomes`.
+It carries no payload. An error row carries no `name`, since only the first
+record of an event holds the event.
+
+Rows go out in batches of up to 100, or after 2 seconds, whichever comes first.
+
+## What stays out of a row
+
+Every message the reporter sends passes one mask, in this order:
+
+1. the secret values the host knows (a server flow's `$secret` values),
+2. patterns for credentials in text: keys, tokens, short `Bearer` and `Basic`
+   credentials and private keys,
+3. every token that starts with `wos_`,
+4. a cut at 256 characters.
+
+The masking applies to issue messages and to every `outcomes[].message`. The
+event `payload` is the event itself: what a flow redacts before its
+destinations is redacted there too, so mask personal data in the flow, not in
+the reporter. Tokens never reach `collector.config` or a log line.
+
+A host that builds its own logger passes a `mask` for this. `Logger.Config.mask`
+is optional, and the logger's `mask(text)` is what the reporter calls. The CLI's
+logger masks the secret values it knows.
+
+## Delivery never waits for a report
+
+The reporter is never awaited on the event path and never throws. A report that
+fails, whether the endpoint refuses it (401, 403, 413, 429), errs (500, 502) or
+hangs, costs delivery nothing. One ERROR line a minute carries the message
+`Observe usage report failed` (or `Observe preview report failed`) and a context
+of `step` (`observe.usage` or `observe.preview`), `code` (`report-failed`),
+`status` when the endpoint answered one, and `error`: the reason, the ClickHouse
+code when the answer has one, and `last success` with the time of the last
+good report or `never`. Repeats within the minute are counted in `suppressed`
+on the next line. How the context prints depends on the logger's format.
+
+A screen that reads the reports shows a missing report as "no report since
+10:42", never as 0.
+
+On shutdown the final usage report goes out after the destinations' flush and
+waits at most 3 seconds. A report already in flight at that moment keeps its
+request up to its own 10-second timeout, so a Node host without `process.exit`
+stays alive that long.
+
+## Web flows
+
+A web flow reports from the visitor's browser, so a token in the page is public.
+That shapes what a build carries.
+
+- **A production web bundle carries no reporter.** A `collector.observe` block
+  in a web flow file ships in the bundle's bytes with its token, and is not
+  used: the page logs `observe: not in this build, config ignored`. Do not put a
+  token in a web flow file. A self-hosted bundle logs the line, and a deploy of
+  such a part to the walkerOS app is refused.
+- **A preview build carries the preview part only.** The CLI's browser wrap takes
+  `observe: { preview: { url, token } }`, which replaces the flow file's own
+  block and turns the reporter on in that build alone. Any other key, `usage`
+  included, is refused, and so is `observe` on a node wrap or beside preview
+  activation.
+- **`walkeros push` and every simulate report nothing.** They drop the flow's
+  `collector.observe` before the flow starts, for a flow config and a prebuilt
+  bundle alike.
+
+On a page with a Content Security Policy, add the origin of the preview `url`
+to `connect-src`, for example `https://ingest.example.com`. Without it the
+browser blocks the rows and the console shows an error.
+
+### When the page is left
+
+The browser source sends a `flush` command when the page is hidden, and the
+preview part answers with one `keepalive` request:
+
+- It sends at most 16 KiB, the newest rows first. Older rows are dropped, and
+  the `seq` gap shows them.
+- An event that has not settled yet arrives as `queued` with the element
+  `page-leave`. If the page lives on, the settled row replaces it.
+- A row sent while leaving carries no payload, so a redaction in the flow is
+  never skipped. The settled row brings the processed event.
+
+This is proven in Chromium 148 and Firefox 150 with a destination still sending
+as the page left: the clicked event arrived as `queued`. Other browsers are not
+tested.
+
+The 16 KiB cap leaves the rest of the page's 64 KiB keepalive budget to your
+destinations. A destination's own page-leave batch of 48 to 64 KiB can still be
+refused beside the reporter's body, in a preview build only. The destination
+then reports a transport failure.
+
+A preview build is larger than a production one. For the minimal flow it adds
+16,064 bytes raw and 6,308 gzipped.
+
+## Server flows
+
+A server flow reads `collector.observe` from its own config, with the token from
+a secret:
 
 <CodeSnippet
-  code={`WALKEROS_OBSERVER_URL=https://observer.example.com
-WALKEROS_DEPLOYMENT_ID=ses_1a2b3c
-WALKEROS_INGEST_TOKEN=... # secret, inject via deployment env only
-WALKEROS_OBSERVE_LEVEL=standard # optional: off | standard | trace`}
-  language="bash"
+  code={`"collector": {
+  "observe": {
+    "usage": {
+      "url": "$env.OBSERVE_URL",
+      "token": "$secret.OBSERVE_USAGE",
+      "interval": 60
+    }
+  }
+}`}
+  language="json"
 />
 
-`observeFromEnv` returns a config only when the full trio (`URL`,
-`DEPLOYMENT_ID`, `INGEST_TOKEN`) is present; otherwise it returns `undefined`
-and the deployment does no observation work. A set but unrecognized
-`WALKEROS_OBSERVE_LEVEL` (a typo like `offf`) also makes it return
-`undefined`, so nothing is observed. The ingest token is the one secret in
-this setup, which is why it lives in the deployment environment and nowhere
-else.
+`$env.OBSERVE_URL` is read from `process.env` when the bundle loads, so the
+URL can differ per environment without a rebuild, and `$var.` references are
+resolved when the CLI bundles. Built with `walkeros bundle`
+and run with `runneros`, it starts with the flow.
 
-A bundled server flow needs no code for this: `runneros start` reads the same
-variables and observes once all three are set. It handles an unrecognized
-`WALKEROS_OBSERVE_LEVEL` differently: it logs
-`Ignoring invalid WALKEROS_OBSERVE_LEVEL` and observes at `standard`.
+## Self-hosting an endpoint
 
-## Connect values vs telemetry knobs
+Any HTTP endpoint that accepts a `POST` of NDJSON rows with a Bearer token can
+take the reports. The reporter's bodies are at most 60,000 bytes, and 16 KiB at a
+page leave. The endpoint should answer `2xx` once the rows are stored, and,
+when a preview build posts from a page, allow a cross-origin `POST` with the
+`Authorization` and `Content-Type` headers.
 
-The `observe` block carries two kinds of fields, and they answer different
-questions:
+The rows are the columns named above, and an endpoint may drop a column it does
+not store. The ClickHouse destination can write to such an endpoint when it
+needs a token: see
+[Credentials](/docs/destinations/server/clickhouse#credentials).
 
-| Fields | Question | Who sets them |
-| --- | --- | --- |
-| `url`, `binding` | Where to attach, and which project may attach | You, committed once |
-| `level`, `sample` | How verbose the records are, and what fraction of events they cover | You, in the web bundle's config; on a server, `level` in `WALKEROS_OBSERVE_LEVEL` and `sample` only in code, on the `observe` object of `startFlow` |
+## Observers
 
-The web connect pair is `url` and `binding`, nothing else. `level`
-(`off` | `standard` | `trace`) and `sample` (a fraction from 0 to 1) decide
-what gets captured. A web arm captures at the level and sample baked into the
-bundle it loads, from `config.observe` or the `observe` object of `startFlow`;
-unset, they are `standard` and `1`. On the server, `WALKEROS_OBSERVE_LEVEL` is
-the same knob in environment form; the `config.observe` block of a server flow
-has no effect on `runneros start`. An Observe session in the walkerOS app sets
-the level of the container arm it starts.
-
-## Bring your own observer
-
-Observation also works without the hosted app: any function can receive the
-same flow records via `observers`:
-
-<CodeSnippet
-  code={`const { elb } = await startFlow({
-  observers: [(state) => console.log('flow state', state.stepId, state.phase)],
-});`}
-  language="typescript"
-/>
-
-Observers are advisory by contract: they run inside the collector's emit loop,
-and a throwing observer never breaks event processing. Use this to stream
-records to your own endpoint, a log pipeline, or a test assertion.
-
-## Observability and runtime tracing
-
-`level` decides what a runtime emits:
-
-| Level | What the runtime emits |
-|-------|------------------------|
-| `off` | No records. Under `runneros start`, a trace window can still raise it to `trace` (see below). |
-| `standard` (default) | Structural FlowState records, without inbound or outbound event payloads. |
-| `trace` | Full payloads on every hop, inbound and outbound. |
-
-### Activating trace at runtime (no redeploy)
-
-`runneros start` can turn trace on and off for a running server flow without a rebuild or redeploy. The mechanism is a poll, not the heartbeat:
-
-1. When the three observer variables are set and the level is not already `trace`, the runtime calls `GET <WALKEROS_OBSERVER_URL>/trace/<WALKEROS_DEPLOYMENT_ID>` with the ingest token, at start and then about every 15 seconds.
-2. The observer answers `{ "traceUntil": "<ISO timestamp>" | null }`.
-3. The runtime feeds the value into `resolveTelemetryOptions({ traceUntil })` in `@walkeros/core`.
-
-The resolver applies the value per emit:
-
-- A `traceUntil` that parses to a **future** ISO timestamp forces `level: trace` with full inbound and outbound payloads and `sample: 1`, overriding the baseline level (`WALKEROS_OBSERVE_LEVEL`).
-- A `null` or **past** value reverts to the baseline level.
-- The window self-expires once the timestamp passes, so trace stops on its own with no further action.
-
-Only a `200` with a parseable body changes the active trace state. A network error, a non-200, or an unparseable response leaves the current window untouched, so a transient observer outage never silently disables (or enables) tracing.
-
-Web bundles and a `startFlow` with `observeFromEnv` do not poll; they keep their configured level. The walkerOS app sets no trace window, so the poll matters only for an observer you run yourself that serves this endpoint.
-
-### Journey correlation across flows
-
-Every FlowState record carries correlation fields so a single observer can stitch one request across web and server flows. These fields are present at every level, including `standard`.
-
-| Field | Meaning |
-|-------|---------|
-| `traceId` | W3C 32-hex trace id of the originating run. Resolved as `event.source.trace`, falling back to an inbound header's trace, then the run-scoped collector trace. Never synthesized per hop. |
-| `eventId` | W3C span id of the walker event at this hop (`event.id`). |
-| `parentEventId` | The upstream runtime's `event.id`, present when this flow was entered across a `$flow` crossing (from an inbound `traceparent`). |
-| `sourceId` | The originating source id. |
-| `seq` | Per-poster monotonic counter, stamped on transport (see [Loss-visible transport](#loss-visible-transport)). |
-
-Correlation crosses the wire via the W3C `traceparent` header:
-
-- **Emit.** The web `api` destination adds `traceparent: 00-<traceId>-<eventId>-01` to each non-batched send when the event carries both ids. A `traceparent` you configure yourself always wins (matched case-insensitively). Batched sends carry no `traceparent`, since one batch may aggregate distinct upstream traces.
-- **Adopt.** Any server source with a request header bag (for example an Express or fetch handler) reads a valid inbound `traceparent` and threads its trace and parent span into the ingest context, so the receiving flow's records share the caller's `traceId` and link back via `parentEventId`. An absent or malformed header is ignored.
-
-### Journey status
-
-The records of one event assemble into a single journey, identified by that event's id. A `traceId` is run-scoped rather than per event, so it is carried as a shared handle that links every journey of one page load or container run. Each journey carries a status derived from the hops observed so far:
-
-| Status | Meaning |
-|--------|---------|
-| `pending` | The journey is still settling: its last record arrived within the settle window (15 seconds by default), so more may follow. |
-| `complete` | Every expected hop reached a terminal state (`out`, `error`, or `skip`) or was handed to a batch. |
-| `partial` | The journey has settled, but an expected hop never produced a terminal record. |
-
-"Expected" comes from the flow's step topology when one is known (only steps downstream of a processed hop are expected); without a topology, a journey is `complete` once every observed hop is terminal. A separate `lossy` flag is orthogonal to status: a journey is `lossy` when a `seq` gap (see [Loss-visible transport](#loss-visible-transport)) overlaps its window, so a journey can be `complete` and `lossy`, or `partial` and `lossy`, at once.
-
-### Vendor-call capture
-
-At `trace` level a destination can record the outgoing vendor calls it makes, so an observer sees the exact call that left for the vendor as well as the mapped event. A destination opts in by declaring its observable callables as dot-paths (the `gtag` destination declares `call:window.gtag`); the runtime then wraps those callables and records each `{ fn, args, ts }` onto the record's outbound payload, with arguments sanitized to JSON-safe markers.
-
-Capture works whenever the destination reaches its callable through the env. Server and simulate runs carry the callable in the env directly. On live web a destination resolves a real global (for example `window.gtag`) through `@walkeros/web-core`'s `getEnv`; the runtime wraps the declared callables at that resolution point, so calls are recorded without the destination or the page changing. The batched delivery path is not captured: batched sends flush against the unwrapped env, so a batching destination shows its per-event input and output but not its vendor calls. Recorded calls are payload-class: they appear only when the outbound payload does (`trace`, or an explicit `includeOut`).
-
-### Loss-visible transport
-
-The batched poster stamps each record with a monotonic `seq` before sending. A dropped or rejected POST is never re-sequenced, so a gap in `seq` at the observer shows lost telemetry. The poster also splits a batch by real UTF-8 byte size (`maxBodyBytes`, default 60000) rather than letting an oversized body fail with a 413.
+Observe reports what a flow did. To handle every record of a flow yourself, use
+the collector's [observers](/docs/collector#observers).
 
 ## Next steps
 
-- [Deploy](/docs/getting-started/deploy): take the flow to production first
-- [Bundled mode](/docs/getting-started/modes/bundled): the `flow.json` workflow
-- [Collector reference](/docs/collector): full `startFlow()` API documentation
+- [**Collector**](/docs/collector): counters on `collector.status`, observers
+  and trace correlation
+- [**Logger**](/docs/collector/logger): failure lines, codes and masking
+- [**Runtime**](/docs/apps/runtime): run a built server flow
+- [**Deploy**](/docs/getting-started/deploy): from config to a running flow

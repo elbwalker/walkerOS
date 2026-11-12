@@ -21,6 +21,7 @@ const mockLogger: Logger.Instance = {
     throw message instanceof Error ? message : new Error(message);
   }),
   json: jest.fn(),
+  mask: jest.fn((text: string) => text),
   scope: jest.fn().mockReturnThis(),
 };
 

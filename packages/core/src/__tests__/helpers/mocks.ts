@@ -67,6 +67,7 @@ export function createMockLogger(
     info: jest.fn(),
     debug: jest.fn(),
     json: jest.fn(),
+    mask: jest.fn((text: string) => text),
     throw: jest.fn((message: string | Error) => {
       throw message instanceof Error ? message : new Error(message);
     }),

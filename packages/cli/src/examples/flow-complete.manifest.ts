@@ -166,7 +166,7 @@ const teaching = {
     chapter: 'tour',
     level: 'beginner',
     useCases: [],
-    note: 'config holds what the build needs: platform, url, settings, bundle, observe.',
+    note: 'config holds what the build needs: platform, url, settings, bundle.',
     docs: [{ page: 'getting-started/flow/index' }],
   },
   'flow-sources': {
@@ -473,7 +473,7 @@ const teaching = {
     chapter: 'step-envelope',
     level: 'intermediate',
     useCases: ['observability'],
-    note: 'type names the inline step in logs and Observe.',
+    note: 'type names the inline step in logs.',
     docs: [],
   },
   'step-config': {
@@ -1763,30 +1763,6 @@ const teaching = {
   },
 
   // operate
-  'observe-public': {
-    pointer: '/flows/web/config/observe',
-    chapter: 'operate',
-    level: 'intermediate',
-    useCases: ['observability'],
-    note: 'A web flow reports to Observe through a public url and binding.',
-    docs: [],
-  },
-  'observe-level': {
-    pointer: '/flows/server/config/observe/level',
-    chapter: 'operate',
-    level: 'intermediate',
-    useCases: ['observability'],
-    note: 'level standard reports step outcomes; trace adds payloads.',
-    docs: [],
-  },
-  'observe-sample': {
-    pointer: '/flows/server/config/observe/sample',
-    chapter: 'operate',
-    level: 'intermediate',
-    useCases: ['observability'],
-    note: 'sample reports one event in ten.',
-    docs: [],
-  },
   'collector-logger': {
     pointer: '/flows/server/collector/logger',
     chapter: 'operate',
@@ -1883,7 +1859,6 @@ export const flowCompleteCoverage = {
     url: 'config-url',
     settings: 'config-settings',
     bundle: 'bundle-packages',
-    observe: 'observe-public',
   } satisfies Coverage<keyof Flow.Config>,
   bundle: {
     packages: 'bundle-packages',
@@ -1899,12 +1874,6 @@ export const flowCompleteCoverage = {
     },
     path: { excluded: 'local development only; tests inject it in memory' },
   } satisfies Coverage<keyof Flow.BundlePackage>,
-  observe: {
-    level: 'observe-level',
-    sample: 'observe-sample',
-    url: 'observe-public',
-    binding: 'observe-public',
-  } satisfies Coverage<keyof Flow.Observe>,
   code: {
     push: 'code-push',
     type: 'code-type',
@@ -2114,8 +2083,11 @@ export const flowCompleteCoverage = {
     stores: FLOW_LEVEL,
     custom: 'collector-custom',
     hooks: RUNTIME('hooks'),
-    observe: RUNTIME('observe'),
     observers: RUNTIME('observers'),
+    observe: {
+      excluded:
+        'the reporter needs an ingest endpoint and a token; this example posts to none',
+    },
   } satisfies Coverage<keyof Collector.InitConfig>,
   mappingConfig: {
     consent: 'destination-consent',

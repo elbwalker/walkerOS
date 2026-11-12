@@ -233,9 +233,10 @@ Two flags control what a destination does with an event whose rule matched:
   `data`, and the rule's `policy`. Use for suppression. An ignored event counts
   as a deliberate skip: the push result lists the destination
   neither under `done` nor under `failed`, `status.out` and the destination's
-  `count` do not move, and `status.destinations.<id>.skipped` counts the event.
-  The collector writes a DEBUG line, and Observe shows a skip with the reason
-  `ignored`.
+  `count` do not move, and `status.destinations.<id>.ignored` counts the event
+  (`skipped` counts consent skips only). The collector writes a DEBUG line, and
+  an [Observe](/docs/getting-started/observe) preview row lists the event with
+  the outcome `skipped`.
 - `silent: true`: the rule matched and the destination's `push()` **is** called
   with the rule. Every destination honours `silent`: `settings.identify`,
   `settings.revenue`, `settings.group`, and other side effects still run and

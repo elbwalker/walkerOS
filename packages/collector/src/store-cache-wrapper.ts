@@ -5,7 +5,7 @@ import {
   readCacheEnvelope,
   wrapCacheEnvelope,
 } from '@walkeros/core';
-import { stepState } from './observerEmit';
+import { observed, stepState } from './observerEmit';
 import { errorMeta } from './report-error';
 
 /**
@@ -132,7 +132,7 @@ export function wrapStoreWithCache(
   // record cache metadata without coupling to wrapper internals. When
   // `collector` is absent (unit-test path), reporting is skipped.
   const reportCacheStatus = (key: string, status: 'hit' | 'miss'): void => {
-    if (!collector) return;
+    if (!collector || !observed(collector)) return;
     const state = stepState(collector, `store.${storeId}`, 'store', 'in', '');
     state.meta = {
       op: 'cache',

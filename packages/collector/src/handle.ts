@@ -140,6 +140,13 @@ export async function commonHandleCommand(
         break;
 
       case Const.Commands.Flush:
+        // The waiting preview rows go first, with keepalive so the request
+        // outlives the page: a destination's flush can take a round trip,
+        // and by then the page may be gone. Never awaited: no flush waits on
+        // ingest. The rows the flushes below make go with the next window
+        // if the page stays.
+        if (typeof __WALKEROS_OBSERVE__ === 'undefined' || __WALKEROS_OBSERVE__)
+          void collector.reporter?.flush(true);
         // Deliver every pending destination batch now (a page going away),
         // through the same flush shutdown uses. The collector keeps running.
         result = await flushDestinationBatches(collector);
@@ -195,6 +202,14 @@ export async function commonHandleCommand(
         if (!collector.hasShutdown) {
           collector.hasShutdown = true;
           await destroyAllSteps(collector);
+          // The last report goes after every destination flushed, so its
+          // counters are final; its own time is bounded, so a hung ingest
+          // never takes the destinations' shutdown time.
+          if (
+            typeof __WALKEROS_OBSERVE__ === 'undefined' ||
+            __WALKEROS_OBSERVE__
+          )
+            await collector.reporter?.stop();
         }
         break;
 
@@ -308,7 +323,7 @@ export function createEvent(
 /**
  * Checked once per incoming event: an event JSON cannot carry (a cycle, a
  * BigInt, a throwing getter or `toJSON`) fails in every step that serializes
- * it (a request body, the server transport, Observe). Refused here, it is
+ * it (a request body, the server transport). Refused here, it is
  * reported once, as the producer's invalid input.
  */
 function assertSerializable(event: WalkerOS.Event): void {

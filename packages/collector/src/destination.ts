@@ -10,7 +10,6 @@ import type {
   Ingest,
   Mapping,
   RespondFn,
-  Simulation,
 } from '@walkeros/core';
 import {
   assign,
@@ -31,7 +30,6 @@ import {
   isDefined,
   isFunction,
   isObject,
-  OBSERVE_ENV_KEY,
   processEventMapping,
   reportCause,
   StepError,
@@ -42,6 +40,7 @@ import {
 import {
   emitDestinationState,
   journeyFields,
+  observed,
   observerStepError,
   stepState,
 } from './observerEmit';
@@ -60,8 +59,6 @@ import {
   heldState,
 } from './destination-outcome-state';
 import { compileStepState, runStepState, warnStateOff } from './state';
-import { wrapEnv } from './wrapEnv';
-import { attachCalls } from './sanitizeArgs';
 import {
   beginInitFlush,
   callDestinationOn,
@@ -93,6 +90,7 @@ import {
   bumpDropped,
   ensureDestStatus,
   buildReportError,
+  recordLatency,
 } from './report-error';
 import { reconcilePending } from './pending';
 import { runCollectorNext } from './collector-next';
@@ -432,11 +430,20 @@ export async function pushToDestinations(
   return mergePushResults(first, failure ? [...rest, failure] : rest);
 }
 
-/** What became of one event of a delivery pass at one destination. */
+/**
+ * What became of one event of a delivery pass at one destination. A before
+ * chain may fan the event out, so `count` and a failure's `delivered` say how
+ * many of its children the destination received.
+ */
 type EntryOutcome =
-  | { kind: 'delivered'; response?: unknown }
+  | { kind: 'delivered'; count: number; response?: unknown }
   | { kind: 'batched' }
-  | { kind: 'failed'; reason: FailureReason; error: unknown }
+  | {
+      kind: 'failed';
+      reason: FailureReason;
+      error: unknown;
+      delivered?: number;
+    }
   | { kind: 'queued'; reason: QueuedReason }
   | { kind: 'skipped' };
 
@@ -521,7 +528,7 @@ interface DestinationOutcome {
   error?: unknown;
   response?: unknown;
   totalDuration?: number;
-  /** Events delivered synchronously. */
+  /** Events delivered synchronously, each child of a before-chain fan-out. */
   delivered?: number;
   /** Events that entered a batch window. */
   batched?: number;
@@ -540,9 +547,11 @@ function passOutcome(
   let batched = 0;
   let response: unknown;
   for (const outcome of outcomes) {
-    if (outcome.kind === 'failed') failed = failed ?? outcome;
-    else if (outcome.kind === 'delivered') {
-      delivered++;
+    if (outcome.kind === 'failed') {
+      failed = failed ?? outcome;
+      delivered += outcome.delivered ?? 0;
+    } else if (outcome.kind === 'delivered') {
+      delivered += outcome.count;
       if (outcome.response !== undefined) response = outcome.response;
     } else if (outcome.kind === 'batched') batched++;
     else if (outcome.kind === 'queued') queued = queued ?? outcome.reason;
@@ -938,7 +947,7 @@ async function deliverToDestinations(
         // not settle. Consent first: a denied event waits for consent as
         // anywhere else. A granted one is held in the destination's own queue
         // for one retry window (`queued`, reason `held`; a waiting state, no
-        // Observe record until its `out` or `error`); once the hold outlasts
+        // observer record until its `out` or `error`); once the hold outlasts
         // that window the destination is blocked: the event and the held ones
         // before it fail (`blocked`) until a retry succeeds.
         const holdOutcome = (): DestinationOutcome | undefined => {
@@ -1334,9 +1343,17 @@ async function deliverToDestinations(
             } = { delivered: 0, batched: 0 };
             const settled = (): EntryOutcome =>
               tally.failure
-                ? { kind: 'failed', ...tally.failure }
+                ? {
+                    kind: 'failed',
+                    ...tally.failure,
+                    delivered: tally.delivered,
+                  }
                 : tally.delivered
-                  ? { kind: 'delivered', response: tally.response }
+                  ? {
+                      kind: 'delivered',
+                      count: tally.delivered,
+                      response: tally.response,
+                    }
                   : tally.batched
                     ? { kind: 'batched' }
                     : { kind: 'skipped' };
@@ -1393,7 +1410,7 @@ async function deliverToDestinations(
                   reason: chainResult.failure.reason,
                   error: `Transformer "${chainResult.failure.by}" failed: ${chainResult.failure.reason.message}`,
                 };
-                ensureDestStatus(collector, id).failed++;
+                ensureDestStatus(collector, canonicalId).failed++;
               }
 
               if (chainResult.copies.length === 0) {
@@ -1484,7 +1501,7 @@ async function deliverToDestinations(
               let pushFailed = false;
               const result = await tryCatchAsync(pushMapped, (err) => {
                 // The one outcome sink: counters, DLQ, breaker, one cause
-                // line. pushMapped emitted the Observe error already.
+                // line. pushMapped emitted the observer error record already.
                 const reason = recordFailure(
                   collector,
                   destination,
@@ -1676,24 +1693,26 @@ async function deliverToDestinations(
       data: result.response, // Capture push() return value
     };
 
-    // Ensure destination status entry exists
-    ensureDestStatus(collector, result.id);
-    const destStatus = collector.status.destinations[result.id];
+    // Kept under the canonical id, as every other count of the destination;
+    // the refs keep the map key.
+    const destStatus = ensureDestStatus(
+      collector,
+      destination.config.id || result.id,
+    );
     const now = Date.now();
 
     // Refresh point-in-time buffer sizes after the destination's push pass.
     destStatus.queuePushSize = destination.queuePush?.length ?? 0;
     destStatus.dlqSize = destination.dlq?.length ?? 0;
 
-    // Events delivered synchronously count once per pass (the historical
-    // semantics: one bump per pushToDestinations call, regardless of the
-    // number of events), whatever else happened in the pass.
+    // Every event delivered synchronously in the pass counts, whatever else
+    // happened in it.
     const delivered = result.delivered ?? 0;
     if (delivered > 0) {
-      destStatus.count++;
+      destStatus.count += delivered;
       destStatus.lastAt = now;
       destStatus.duration += result.totalDuration || 0;
-      collector.status.out++;
+      collector.status.out += delivered;
     }
 
     if (result.failed) {
@@ -2001,7 +2020,7 @@ async function pushMapped<Destination extends Destination.Instance>(
     throw err;
   }
 
-  // An ignored event is a deliberate skip: counted in `skipped`, never `done`.
+  // An ignored event is a deliberate skip: counted in `ignored`, never `done`.
   if (processed.ignore) {
     recordSkip(collector, destination, destId, event, 'ignored');
     const { mappingKey } = processed;
@@ -2169,7 +2188,7 @@ async function pushMapped<Destination extends Destination.Instance>(
             batchError = err;
             // The whole batch failed: every entry through the one outcome
             // sink (counters, DLQ, breaker, one cause line). The per-entry
-            // Observe frames follow below.
+            // observer records follow below.
             failure = recordFailure(
               collector,
               destination,
@@ -2266,30 +2285,37 @@ async function pushMapped<Destination extends Destination.Instance>(
         // retried: nothing drains `destination.dlq`, which is a bounded
         // in-memory buffer kept for inspection and evicted oldest-first.
         const settledAt = Date.now();
-        snapshot.entries.forEach((entry, index) => {
-          const failed = batchThrew || failedRows.has(index);
-          const journey = journeyFields(entry.event, entry.ingest, collector);
-          const state = stepState(
-            collector,
-            stepId('destination', destId),
-            'destination',
-            failed ? 'error' : 'flush',
-            typeof entry.event.id === 'string' ? entry.event.id : '',
-            settledAt,
-            journey,
-          );
-          state.batch = { size: snapshot.entries.length, index };
-          // Every frame carries the transport latency, so a batched delivery
-          // is as measurable as the non-batched `out` path.
-          state.durationMs = settledAt - flushStarted;
-          if (failed) {
-            const err = batchThrew ? batchError : failedRows.get(index);
-            state.error = observerStepError(err);
-          }
-          emitStep(collector, state);
-        });
+        if (observed(collector)) {
+          snapshot.entries.forEach((entry, index) => {
+            const failed = batchThrew || failedRows.has(index);
+            const journey = journeyFields(entry.event, entry.ingest, collector);
+            const state = stepState(
+              collector,
+              stepId('destination', destId),
+              'destination',
+              failed ? 'error' : 'flush',
+              typeof entry.event.id === 'string' ? entry.event.id : '',
+              settledAt,
+              journey,
+            );
+            state.batch = { size: snapshot.entries.length, index };
+            // Every frame carries the transport latency, so a batched delivery
+            // is as measurable as the non-batched `out` path.
+            state.durationMs = settledAt - flushStarted;
+            if (failed) {
+              const err = batchThrew ? batchError : failedRows.get(index);
+              state.error = observerStepError(err);
+            }
+            emitStep(collector, state);
+          });
+        }
 
         destLogger.debug('push batch done');
+
+        // Every flush, delivered or failed, adds its time once and one
+        // latency count, whatever the batch size.
+        destStatus.duration += settledAt - flushStarted;
+        recordLatency(destStatus, settledAt - flushStarted);
 
         // Decrement in-flight regardless of outcome.
         destStatus.inFlightBatch = Math.max(
@@ -2346,45 +2372,47 @@ async function pushMapped<Destination extends Destination.Instance>(
     // Emit a per-event in/out pair at enqueue time so observers see every
     // event that entered the batch, not just the later flush frame. Enqueue is
     // synchronous, so there is no vendor call to time and no durationMs. The
-    // terminal out record carries the batch coordinates the assembler reads to
-    // confirm batched delivery: size is the queue length after this enqueue,
-    // index is this entry's slot. The coordinates live on the out record only.
-    const batchEventId =
-      typeof processed.event.id === 'string' ? processed.event.id : '';
-    const batchJourney = journeyFields(event, ingest, collector);
-    const enqueuedAt = Date.now();
-    const batchInState = stepState(
-      collector,
-      stepId('destination', destId),
-      'destination',
-      'in',
-      batchEventId,
-      enqueuedAt,
-      batchJourney,
-    );
-    if (processed.mappingKey) batchInState.mappingKey = processed.mappingKey;
-    if (processed.event.consent) {
-      batchInState.consent = { ...processed.event.consent };
-    }
-    batchInState.inEvent = processed.event;
-    emitStep(collector, batchInState);
+    // out record carries the batch coordinates: size is the queue length after
+    // this enqueue, index is this entry's slot. The coordinates live on the
+    // out record only.
+    if (observed(collector)) {
+      const batchEventId =
+        typeof processed.event.id === 'string' ? processed.event.id : '';
+      const batchJourney = journeyFields(event, ingest, collector);
+      const enqueuedAt = Date.now();
+      const batchInState = stepState(
+        collector,
+        stepId('destination', destId),
+        'destination',
+        'in',
+        batchEventId,
+        enqueuedAt,
+        batchJourney,
+      );
+      if (processed.mappingKey) batchInState.mappingKey = processed.mappingKey;
+      if (processed.event.consent) {
+        batchInState.consent = { ...processed.event.consent };
+      }
+      batchInState.inEvent = processed.event;
+      emitStep(collector, batchInState);
 
-    const batchOutState = stepState(
-      collector,
-      stepId('destination', destId),
-      'destination',
-      'out',
-      batchEventId,
-      enqueuedAt,
-      batchJourney,
-    );
-    if (processed.mappingKey) batchOutState.mappingKey = processed.mappingKey;
-    batchOutState.outEvent = processed.event;
-    batchOutState.batch = {
-      size: batchState.batched.entries.length,
-      index: batchState.batched.entries.length - 1,
-    };
-    emitStep(collector, batchOutState);
+      const batchOutState = stepState(
+        collector,
+        stepId('destination', destId),
+        'destination',
+        'out',
+        batchEventId,
+        enqueuedAt,
+        batchJourney,
+      );
+      if (processed.mappingKey) batchOutState.mappingKey = processed.mappingKey;
+      batchOutState.outEvent = processed.event;
+      batchOutState.batch = {
+        size: batchState.batched.entries.length,
+        index: batchState.batched.entries.length - 1,
+      };
+      emitStep(collector, batchOutState);
+    }
 
     // In-flight bookkeeping for operational visibility.
     const destIdResolved = destination.config.id || destId;
@@ -2400,62 +2428,31 @@ async function pushMapped<Destination extends Destination.Instance>(
   } else {
     destLogger.debug('push', { event: processed.event.name });
 
-    // Trace-level vendor-call capture (presence-gated). Only when an
-    // observeLevel supplier reports 'trace' AND this destination declares
-    // observable callables do we wrap the merged env with recording proxies
-    // for this push. wrapEnv deep-clones the env per push, so this must never
-    // run on the default path; prod stays zero-cost beyond the guard check.
-    // Build flag (see @walkeros/core build-flags): a lean bundle folds the
-    // capture out, and `attachCalls` below with it.
-    let recordedCalls: Simulation.Call[] | undefined;
-    if (
-      (typeof __WALKEROS_OBSERVE__ === 'undefined' || __WALKEROS_OBSERVE__) &&
-      collector.observeLevel?.() === 'trace' &&
-      Array.isArray(destination.calls) &&
-      destination.calls.length > 0
-    ) {
-      const wrapped = wrapEnv({
-        ...context.env,
-        simulation: destination.calls,
-      });
-      context.env = wrapped.wrappedEnv;
-      recordedCalls = wrapped.calls;
-
-      // Paths wrapEnv could not resolve here (e.g. a live-web global not yet
-      // installed) travel to the resolution-point wrapper (web-core getEnv) as
-      // a typed recorder. Both channels push onto the SAME calls array, so the
-      // out-record attach + sanitize below covers wrapped and recorded calls
-      // alike. getEnv strips this key before the destination sees the env.
-      if (wrapped.unresolved.length > 0) {
-        wrapped.wrappedEnv[OBSERVE_ENV_KEY] = {
-          paths: wrapped.unresolved,
-          record: (fn, args) =>
-            wrapped.calls.push({ fn, args, ts: Date.now() }),
-        } satisfies Destination.EnvObserve;
-      }
-    }
-
     // Emit a per-event observer pair around the destination.push call so
     // observers see the work this destination did for this event.
     const eventIdValue =
       typeof processed.event.id === 'string' ? processed.event.id : '';
-    const journey = journeyFields(event, ingest, collector);
+    const journey = observed(collector)
+      ? journeyFields(event, ingest, collector)
+      : undefined;
     const pushStarted = Date.now();
-    const inState = stepState(
-      collector,
-      stepId('destination', destId),
-      'destination',
-      'in',
-      eventIdValue,
-      pushStarted,
-      journey,
-    );
-    if (processed.mappingKey) inState.mappingKey = processed.mappingKey;
-    if (processed.event.consent) {
-      inState.consent = { ...processed.event.consent };
+    if (journey) {
+      const inState = stepState(
+        collector,
+        stepId('destination', destId),
+        'destination',
+        'in',
+        eventIdValue,
+        pushStarted,
+        journey,
+      );
+      if (processed.mappingKey) inState.mappingKey = processed.mappingKey;
+      if (processed.event.consent) {
+        inState.consent = { ...processed.event.consent };
+      }
+      inState.inEvent = processed.event;
+      emitStep(collector, inState);
     }
-    inState.inEvent = processed.event;
-    emitStep(collector, inState);
 
     try {
       // It's time to go to the destination's side now. Race the push against a
@@ -2477,30 +2474,39 @@ async function pushMapped<Destination extends Destination.Instance>(
       );
 
       const pushFinished = Date.now();
-      const outState = stepState(
-        collector,
-        stepId('destination', destId),
-        'destination',
-        'out',
-        eventIdValue,
-        pushFinished,
-        journey,
+      recordLatency(
+        ensureDestStatus(collector, destination.config.id || destId),
+        pushFinished - pushStarted,
       );
-      outState.durationMs = pushFinished - pushStarted;
-      outState.outEvent = processed.event;
-      // Attach the vendor calls recorded during this push.
-      attachCalls(outState, recordedCalls);
-      if (isDefined(response)) {
-        outState.meta = { ...outState.meta, response };
+      if (observed(collector)) {
+        const outState = stepState(
+          collector,
+          stepId('destination', destId),
+          'destination',
+          'out',
+          eventIdValue,
+          pushFinished,
+          journey ?? journeyFields(event, ingest, collector),
+        );
+        outState.durationMs = pushFinished - pushStarted;
+        outState.outEvent = processed.event;
+        if (isDefined(response)) {
+          outState.meta = { ...outState.meta, response };
+        }
+        if (processed.mappingKey) outState.mappingKey = processed.mappingKey;
+        emitStep(collector, outState);
       }
-      if (processed.mappingKey) outState.mappingKey = processed.mappingKey;
-      emitStep(collector, outState);
 
       destLogger.debug('push done');
 
       return response;
     } catch (err) {
       const { mappingKey } = processed;
+      const failedAt = Date.now();
+      recordLatency(
+        ensureDestStatus(collector, destination.config.id || destId),
+        failedAt - pushStarted,
+      );
       emitDestinationState(
         collector,
         destId,
@@ -2508,11 +2514,8 @@ async function pushMapped<Destination extends Destination.Instance>(
         processed.event,
         ingest,
         (state) => {
-          state.durationMs = Date.now() - pushStarted;
+          state.durationMs = failedAt - pushStarted;
           state.error = observerStepError(err);
-          // Surface the vendor calls recorded before the failure, so a
-          // mid-push error doesn't discard them.
-          attachCalls(state, recordedCalls);
           if (mappingKey) state.mappingKey = mappingKey;
         },
       );

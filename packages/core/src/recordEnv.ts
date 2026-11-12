@@ -1,27 +1,5 @@
-import type { Destination, Simulation } from './types';
+import type { Simulation } from './types';
 import { isThenable } from './is';
-
-/**
- * Env key under which the collector injects the observe-mode call recorder
- * (`Destination.EnvObserve`) into a per-push env. The resolution-point wrapper
- * strips this key before handing the env to the destination.
- */
-export const OBSERVE_ENV_KEY = 'observe' as const;
-
-/**
- * Structural guard for `Destination.EnvObserve`: an object whose `paths` is a
- * string array and whose `record` is a function. Extra keys are tolerated.
- */
-export function isEnvObserve(value: unknown): value is Destination.EnvObserve {
-  if (typeof value !== 'object' || value === null) return false;
-  if (!('paths' in value) || !('record' in value)) return false;
-  const { paths, record } = value;
-  return (
-    Array.isArray(paths) &&
-    paths.every((path) => typeof path === 'string') &&
-    typeof record === 'function'
-  );
-}
 
 /**
  * Prefix marking a dot-path as a recordable call. Only this literal prefix is
@@ -31,10 +9,10 @@ export function isEnvObserve(value: unknown): value is Destination.EnvObserve {
 const CALL_PREFIX = 'call:';
 
 /**
- * Parse a `simulation`/`calls` dot-path into segments, sharing one grammar with
- * `wrapEnv` so the two capture layers cannot drift. Strips a single leading
- * `call:` prefix (only the literal `call:`, never any other `<word>:`), then
- * splits on `.`. An empty path or any empty segment (leading, trailing, or
+ * Parse a `simulation` dot-path into segments, the one grammar of the
+ * recorder, the dev boundary and `expectSimulationResolves`. Strips a single
+ * leading `call:` prefix (only the literal `call:`, never any other
+ * `<word>:`), then splits on `.`. An empty path or any empty segment (leading, trailing, or
  * consecutive dots) is unresolvable and yields `[]`.
  */
 export function parseCallPath(raw: string): string[] {
@@ -54,20 +32,11 @@ interface Tracked {
 
 type Callable = (...args: unknown[]) => unknown;
 
-export interface ObservedEnv<T extends object = Record<string, unknown>> {
+export interface RecordedEnv<T extends object = Record<string, unknown>> {
   /** Proxy view of the env; declared paths record, everything else passes through. */
   env: T;
-  /**
-   * Mutable array: each call on a declared path is pushed here once. Stays
-   * empty when a `record` callback is given, which then receives every call.
-   */
+  /** Mutable array: each call on a declared path is pushed here once. */
   calls: Simulation.Call[];
-  /**
-   * Declared paths whose object intermediates or leaf are absent at wrap time,
-   * as the post-`call:` dot-path. A path that continues through a function
-   * (constructor, factory, method result) resolves lazily and is not listed.
-   */
-  unresolved: string[];
 }
 
 function isCallable(value: unknown): value is Callable {
@@ -126,30 +95,7 @@ function trackedKey(tracked: Tracked[]): string {
 }
 
 /**
- * Walk a declared path at wrap time. Object intermediates must exist and the
- * leaf must be a function; once the walk reaches a function whose next segment
- * is not a static of it (or a Promise without that property), the rest
- * resolves at call time. A static the function view cannot substitute (a
- * frozen function) is unresolvable.
- */
-function resolvesAtWrapTime(env: object, segments: string[]): boolean {
-  let current: unknown = env;
-  for (const segment of segments) {
-    if (isCallable(current)) {
-      if (!hasStatic(current, segment)) return true;
-      if (!canSubstitute(current, segment)) return false;
-    } else if (isThenable(current)) {
-      if (!(segment in current)) return true;
-    } else if (!isNavigable(current) || !(segment in current)) {
-      return false;
-    }
-    current = Reflect.get(current, segment);
-  }
-  return isCallable(current);
-}
-
-/**
- * Observe calls on declared dot-paths of an env without touching it.
+ * Record calls on declared dot-paths of an env without touching it.
  *
  * Returns a Proxy view of `env`. Declared paths use the `parseCallPath`
  * grammar; the recorded `fn` is the full path without `call:` and `args` are
@@ -158,28 +104,23 @@ function resolvesAtWrapTime(env: object, segments: string[]): boolean {
  * on the call result (or constructed instance); a Promise result is followed
  * with `.then`. An object whose tracked properties a Proxy may not substitute
  * (frozen, or non-writable and non-configurable) is viewed through a shadow
- * target, so its calls still record and the object itself is never changed. Apply and construct traps call the originals through
- * `Reflect`, with `this` bound to the real target, so `instanceof`, statics and
- * `#private` fields keep working and a chain that returns `this` records once.
- * Nothing on the caller's objects or prototypes is replaced. `record`, when
- * given, receives every call instead of `calls` (a long-lived view must not
- * grow an array); a throw there never stops the real call.
+ * target, so its calls still record and the object itself is never changed.
+ * Apply and construct traps call the originals through `Reflect`, with `this`
+ * bound to the real target, so `instanceof`, statics and `#private` fields
+ * keep working and a chain that returns `this` records once.
+ * Nothing on the caller's objects or prototypes is replaced.
  */
-export function observeEnv<T extends object = Record<string, unknown>>(
+export function recordEnv<T extends object = Record<string, unknown>>(
   env: T,
   paths: string[],
-  record?: Destination.EnvObserve['record'],
-): ObservedEnv<T> {
+): RecordedEnv<T> {
   const calls: Simulation.Call[] = [];
-  const unresolved: string[] = [];
   const tracked: Tracked[] = [];
 
   for (const raw of paths) {
     const segments = parseCallPath(raw);
     if (segments.length === 0) continue;
-    const fn = segments.join('.');
-    tracked.push({ rest: segments, fn });
-    if (!resolvesAtWrapTime(env, segments)) unresolved.push(fn);
+    tracked.push({ rest: segments, fn: segments.join('.') });
   }
 
   const objectProxies = new WeakMap<object, Map<string, object>>();
@@ -189,17 +130,7 @@ export function observeEnv<T extends object = Record<string, unknown>>(
   const views = new WeakSet<object>();
 
   function recordCall(leafs: string[], args: unknown[]): void {
-    for (const fn of leafs) {
-      if (!record) {
-        calls.push({ fn, args, ts: Date.now() });
-        continue;
-      }
-      try {
-        record(fn, args);
-      } catch {
-        // Telemetry must never suppress the real vendor call.
-      }
-    }
+    for (const fn of leafs) calls.push({ fn, args, ts: Date.now() });
   }
 
   function navigate(value: unknown, next: Tracked[]): unknown {
@@ -255,8 +186,8 @@ export function observeEnv<T extends object = Record<string, unknown>>(
    * both go through here.
    */
   function viewObject<V extends object>(target: V, next: Tracked[]): V {
-    // A shadow is not callable, so a callable root keeps the plain view; its
-    // unsubstitutable statics are already reported by `resolvesAtWrapTime`.
+    // A shadow is not callable, so a callable root keeps the plain view; a
+    // static of it that a Proxy cannot substitute records nothing.
     if (isCallable(target)) return createObjectProxy(target, next);
     const shadowed = next.some((t) => !canSubstitute(target, t.rest[0]));
     return shadowed
@@ -406,5 +337,5 @@ export function observeEnv<T extends object = Record<string, unknown>>(
     return proxy;
   }
 
-  return { env: viewObject(env, tracked), calls, unresolved };
+  return { env: viewObject(env, tracked), calls };
 }

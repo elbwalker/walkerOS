@@ -135,6 +135,14 @@ for `debug` traces and for notes that are not failures.
 | `throw(message, context?)`   | Throw an exception (returns `never`); it writes no log line |
 | `json(data)`                 | Output structured JSON data                              |
 | `scope(name)`                | Create a scoped logger with a prefixed scope             |
+| `mask(text)`                 | Mask text that leaves outside a log line, such as an Observe report message |
+
+A logger masks its log lines on its own. `mask(text)` is for text a log line
+never carries: the [Observe](/docs/getting-started/observe) reporter masks every
+issue and outcome message it sends with it, then with its own patterns. In
+`logger` config, `mask` is optional, and the CLI's logger passes one that hides
+the secret values it knows. A logger you build by hand needs a `mask` on the
+instance; an identity function is enough.
 
 ### Error handling
 

@@ -1,5 +1,3 @@
-import type { FlowState, Simulation } from '@walkeros/core';
-
 /** Depth beyond which sanitizeArgs stops descending and emits a marker. */
 const SANITIZE_MAX_DEPTH = 6;
 
@@ -14,9 +12,8 @@ function isPlainObject(value: object): value is Record<string, unknown> {
 }
 
 /**
- * Read one property without letting a hostile getter escape. Sanitization
- * runs inside the push try-block after a successful delivery, so a throwing
- * getter must degrade to a marker, never surface as a push failure.
+ * Read one property without letting a hostile getter escape: a throwing
+ * getter degrades to a marker, never to a throw.
  */
 function readProp(source: Record<string, unknown>, key: string): unknown {
   try {
@@ -39,14 +36,14 @@ function objectTag(value: object): string {
 }
 
 /**
- * Produce a JSON-safe deep copy of recorded vendor-call arguments. Vendor
- * calls can receive functions, DOM nodes, or cyclic structures that break or
- * silently vanish under the poster's JSON.stringify. Replace those leaves with
- * stable marker strings so the recorded calls always serialize:
+ * Produce a JSON-safe deep copy of a list of values. Values can be functions,
+ * DOM nodes, or cyclic structures that break or silently vanish under
+ * JSON.stringify. Replace those leaves with stable marker strings so the copy
+ * always serializes:
  * functions -> '[function]', non-plain objects -> their String() tag, cyclic
  * refs -> '[circular]', anything past SANITIZE_MAX_DEPTH -> '[truncated]',
  * and values a throwing getter/hostile proxy makes unreadable -> '[unreadable]'.
- * Never throws: a sanitize failure must not alter push semantics.
+ * Never throws.
  */
 export function sanitizeArgs(args: unknown[]): unknown[] {
   const seen = new WeakSet<object>();
@@ -95,34 +92,4 @@ export function sanitizeArgs(args: unknown[]): unknown[] {
   };
 
   return args.map((arg) => walk(arg, 0));
-}
-
-/**
- * Sanitize every recorded call's args into a JSON-safe projection. `fn` and
- * `ts` are already primitives; only `args` needs the deep pass.
- */
-export function sanitizeCalls(calls: Simulation.Call[]): Simulation.Call[] {
-  return calls.map((call) => ({
-    fn: call.fn,
-    args: sanitizeArgs(call.args),
-    ts: call.ts,
-  }));
-}
-
-/**
- * Attach the vendor calls recorded during a push to its out or error record,
- * sanitized. Only when trace capture ran and something was recorded. Build
- * flag (see @walkeros/core build-flags): a bundle without observe folds this
- * out.
- */
-export function attachCalls(
-  state: FlowState,
-  calls: Simulation.Call[] | undefined,
-): void {
-  if (
-    (typeof __WALKEROS_OBSERVE__ === 'undefined' || __WALKEROS_OBSERVE__) &&
-    calls &&
-    calls.length > 0
-  )
-    state.calls = sanitizeCalls(calls);
 }

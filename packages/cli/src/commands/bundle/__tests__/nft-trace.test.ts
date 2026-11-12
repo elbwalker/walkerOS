@@ -2,6 +2,7 @@ import {
   traceAndCopy,
   assertDepsTraced,
   collectImportedPackages,
+  missingEntry,
 } from '../nft-trace';
 import * as path from 'node:path';
 import * as fs from 'node:fs/promises';
@@ -379,5 +380,49 @@ describe('traceAndCopy', () => {
       .catch(() => false);
     expect(protoExists).toBe(true);
     expect(result.copied).toBeGreaterThan(0);
+  });
+});
+
+// A copy without its entry traces as nothing, so it would look unused.
+describe('missingEntry', () => {
+  let dir: string;
+
+  beforeEach(async () => {
+    dir = await mkTmp('missing-entry-');
+  });
+
+  afterEach(async () => {
+    await fs.rm(dir, { recursive: true, force: true });
+  });
+
+  async function manifest(value: unknown, files: string[] = []) {
+    await fs.writeFile(path.join(dir, 'package.json'), JSON.stringify(value));
+    for (const file of files) {
+      await fs.mkdir(path.dirname(path.join(dir, file)), { recursive: true });
+      await fs.writeFile(path.join(dir, file), '');
+    }
+  }
+
+  it('names the entry a copy lacks', async () => {
+    await manifest({ main: 'lib/index.js' }, ['dist/qs.js']);
+    expect(await missingEntry(dir)).toBe('lib/index.js');
+  });
+
+  it.each<[string, unknown, string[]]>([
+    ['its main is there', { main: 'lib/index.js' }, ['lib/index.js']],
+    [
+      'one exports condition is there',
+      { exports: { '.': { import: './dist/a.mjs', require: './dist/a.cjs' } } },
+      ['dist/a.cjs'],
+    ],
+    ['it names no entry', { name: 'pkg' }, []],
+    ['it has only patterns', { exports: { './*': './dist/*' } }, []],
+  ])('says nothing when %s', async (_name, value, files) => {
+    await manifest(value, files);
+    expect(await missingEntry(dir)).toBeUndefined();
+  });
+
+  it('says nothing without a manifest', async () => {
+    expect(await missingEntry(dir)).toBeUndefined();
   });
 });

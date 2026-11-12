@@ -155,8 +155,7 @@ loads it itself, events go nowhere while the push still reports them as done.
           "packages": {},               // NPM packages pacote will install
           "overrides": {},              // Transitive dep version pins (npm-style)
           "traceInclude": []            // Optional: nft escape hatch (paths/globs)
-        },
-        "observe": {}                   // Optional, web flows only: url + binding, level, sample
+        }
       },
       "sources": {},                    // Event sources
       "destinations": {},               // Event destinations (each with its own mapping)
@@ -185,13 +184,18 @@ win over overrides; overrides only substitute transitive resolution.
 `config.bundle.external` field fails `walkeros validate` (`Unrecognized key`);
 the bundle only warns and builds, so remove it.
 
-**`config.observe` bakes only public values.** For web flows, `walkeros bundle`
-emits the `url` + `binding` connect pair statically into the bundle; the
-per-session credential arrives out-of-band at runtime (`?elbObserve=` URL
-param), so no secret ever enters the artifact. A partial pair (only one of the
-two set) warns at build time and wires nothing. A server flow ignores
-`config.observe`: the runner reads its level from `WALKEROS_OBSERVE_LEVEL`
-instead (see Runtime environment below).
+**`collector.observe` starts the reporter.** A server flow reads
+`"collector": { "observe": { "usage": { "url", "token", "interval" }, "preview": { "url", "token" } } }`
+from its own config, with the token from a `$secret`; `usage` is counters and
+issues every 10 to 300 seconds, `preview` is one row per event. A production web
+bundle carries no reporter: a web flow's own `collector.observe` block ships in
+the bundle bytes, token included, and is not used (the page logs
+`observe: not in this build, config ignored`), so never put a token there. Only
+a browser wrap given `observe: { preview: { url, token } }` (a preview build;
+`usage`, a node wrap or `observe` beside preview activation is refused) carries
+the reporter. `walkeros push` and every simulate drop the block, so they report
+nothing. See the
+[Observe page](https://www.walkeros.io/docs/getting-started/observe).
 
 For detailed configuration options, see
 [flow-configuration.md](flow-configuration.md).
@@ -317,10 +321,8 @@ Consent mental model (what decides whether a destination receives an event):
 | `config.consent: { marketing }` | Each event checked against collector consent plus `event.consent`; denied = skipped | grant via `--consent` or the event; else `skipped`       |
 | `event.consent`                 | Per event, counted on top of collector consent                                      | part of the `-e` event                                   |
 
-- **Trace-mode limit.** Simulate injects the mock env before `init`, so clients
-  built in `init` (BigQuery writer, Pub/Sub client) are recorded. Runtime trace
-  mode (an Observe session at trace level) wraps the env per push only, so calls
-  through a client built in `init` are not recorded there.
+- **Clients built in `init`.** Simulate injects the mock env before `init`, so
+  clients built in `init` (BigQuery writer, Pub/Sub client) are recorded.
 
 ### Same flow via MCP (`flow_simulate`)
 
@@ -631,6 +633,13 @@ trace, else the build throws `nft-trace: resolved packages missing from trace`.
 A declared package that is neither imported nor traced (e.g. a type-only
 dependency) only warns:
 `Package <name> is declared in bundle.packages but nothing imports it; it is not in the bundle. Remove it from bundle.packages if unused.`
+When the installed copy has none of the entries its manifest names, the warning
+reads `... but its installed copy has no <entry>; it is not in the bundle.`
+instead. A local package (`path`) whose `main`, `module`, `exports` or `bin`
+points outside `dist/` is copied whole, so a Node entry in `lib/` arrives.
+`node_modules` and `.env` or `.env.*` files (any depth) and a top-level `.turbo`
+and `.git` are left out, and type declarations and `.json` leaves of `exports`
+do not trigger the whole copy.
 
 **Bundle directory (the server flow's unpacked artifact):**
 
@@ -759,7 +768,6 @@ flag forbids it. Generate two steps (bundle, then start), never one.
 | `WALKEROS_APP_URL`                         | App base URL (default `https://app.walkeros.io`)                                                                                                                                   |
 | `WALKEROS_HEARTBEAT_INTERVAL`              | Seconds (default 60, minimum 10)                                                                                                                                                   |
 | `WALKEROS_CACHE_DIR`                       | Error cache dir (then `CACHE_DIR`, then XDG `~/.cache/walkeros`)                                                                                                                   |
-| `WALKEROS_OBSERVE_LEVEL`                   | `off`, `standard` or `trace`                                                                                                                                                       |
 
 Secrets are fetched ONCE at boot when connected (401/403 is fatal). There is no
 config polling and no hot-swap: a new flow version is a rebuild and a redeploy.

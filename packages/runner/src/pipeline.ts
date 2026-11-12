@@ -6,38 +6,18 @@
  * config is provided. The served artifact is immutable for the life of the
  * process: there is no config polling and no hot-swap.
  *
- * Env surface: `WALKEROS_OBSERVER_URL` + `WALKEROS_INGEST_TOKEN` +
- * `WALKEROS_DEPLOYMENT_ID` together gate telemetry and the trace poller;
- * `WALKEROS_OBSERVE_LEVEL` sets the baseline telemetry level (a `trace`
- * baseline also skips the trace poller). `WALKEROS_FLOW_RELEASE` (with
- * `WALKEROS_FLOW_NAME`) names the artifact the container must run; any other
- * artifact fails the boot.
+ * Env surface: `WALKEROS_FLOW_RELEASE` (with `WALKEROS_FLOW_NAME`) names the
+ * artifact the container must run; any other artifact fails the boot.
  */
 
-import type {
-  Logger,
-  ObserverFn,
-  PreviewKey,
-  TelemetryLevel,
-} from '@walkeros/core';
-import {
-  createBatchedPoster,
-  createTelemetryObserver,
-  getTraceUntil,
-  resolveTelemetryOptions,
-} from '@walkeros/core';
-import {
-  createHealthServer,
-  type HealthServer,
-  type PreviewGateConfig,
-} from './health-server.js';
+import type { Logger } from '@walkeros/core';
+import { createHealthServer, type HealthServer } from './health-server.js';
 import { loadFlow, type RuntimeConfig, type FlowHandle } from './runner.js';
 import {
   createHeartbeat,
   getInstanceId,
   type HeartbeatHandle,
 } from './heartbeat.js';
-import { createTracePoller, type TracePollerHandle } from './trace-poller.js';
 import { fetchSecrets } from './secrets-fetcher.js';
 import { RunnerAuthError } from './runner-auth-error.js';
 import type { ErrorRing, LogRing } from './log-ring.js';
@@ -110,15 +90,8 @@ export async function runPipeline(options: PipelineOptions): Promise<void> {
   logger.info(`walkeros/flow v${VERSION}`);
   logger.info(`Instance: ${getInstanceId()}`);
 
-  // Preview intake gate: resolved once from the boot env. A production
-  // container has no `WALKEROS_PREVIEW_*` vars, so this is undefined and the
-  // health server delegates exactly as before. A preview container is stamped
-  // with all five vars (by the app) and gets an armed gate. A partial or
-  // malformed set throws here, before the server binds (see resolvePreviewGate).
-  const previewGate = resolvePreviewGate();
-
   // Health server (always on)
-  const healthServer = await createHealthServer(port, logger, previewGate);
+  const healthServer = await createHealthServer(port, logger);
 
   // Wire the out-of-band degrade net into the already-registered guards. A
   // sustained loop of uncaught exceptions / unhandled rejections (a wedged
@@ -142,25 +115,6 @@ export async function runPipeline(options: PipelineOptions): Promise<void> {
   });
   guards.setOnOutOfBandError(() => outOfBandTracker.record());
 
-  // Telemetry observers: only wire when observer URL, ingest token, and
-  // deployment id are all present. Missing env (local dev, run --flow without
-  // API) results in a no-op telemetry path. The active trace window arrives
-  // via the trace-poller below (which writes the shared `traceUntil` holder);
-  // the per-emit supplier reads it, so trace flips on and off at runtime
-  // without a redeploy. WALKEROS_OBSERVE_LEVEL sets the baseline telemetry
-  // level for the process; `traceUntil` keeps higher priority in the
-  // resolver, so a standard (or off) baseline can still be elevated to trace.
-  const observeLevel = readObserveLevel(logger);
-  const telemetryObservers = buildTelemetryObservers(
-    api?.flowId ?? 'flow',
-    observeLevel,
-  );
-  // Gated on the observers: no telemetry wired means the bundle must see no
-  // observeLevel either (collector capture stays fully absent).
-  const telemetryObserveLevel = telemetryObservers
-    ? buildObserveLevelSupplier(api?.flowId ?? 'flow', observeLevel)
-    : undefined;
-
   // Load flow
   const runtimeConfig: RuntimeConfig = { port, ...options.flowLogger };
   let handle: FlowHandle;
@@ -171,8 +125,6 @@ export async function runPipeline(options: PipelineOptions): Promise<void> {
       logger,
       loggerConfig,
       healthServer,
-      telemetryObservers,
-      telemetryObserveLevel,
     );
     const loaded = showIdentity(handle.collector);
     logger.info(`Flow: ${loaded.name} release ${loaded.release}`);
@@ -196,35 +148,6 @@ export async function runPipeline(options: PipelineOptions): Promise<void> {
 
   // API features (heartbeat)
   let heartbeat: HeartbeatHandle | null = null;
-  let tracePoller: TracePollerHandle | null = null;
-
-  // Trace-poller: GET the observer's `/trace/:deploymentId` and feed the
-  // result into the shared `traceUntil` holder. Gated on the SAME env as the
-  // telemetry observers (observer base + ingest token + deployment id), NOT on
-  // `api`: a flow with `api` but no observer env (local dev) must not start a
-  // poller that errors every interval.
-  const observerBase = process.env.WALKEROS_OBSERVER_URL;
-  const ingestToken = process.env.WALKEROS_INGEST_TOKEN;
-  const deploymentId = process.env.WALKEROS_DEPLOYMENT_ID;
-  if (observerBase && ingestToken && deploymentId) {
-    if (observeLevel === 'trace') {
-      // The poller only exists to elevate the level via `traceUntil`. With a
-      // trace baseline there is nothing to elevate, so polling would burn a
-      // request every interval for no effect.
-      logger.info('Trace poller: skipped (observe level is trace)');
-    } else {
-      tracePoller = createTracePoller(
-        {
-          url: `${observerBase}/trace/${deploymentId}`,
-          token: ingestToken,
-          intervalMs: 15_000,
-        },
-        logger,
-      );
-      tracePoller.start();
-      logger.info('Trace poller: active (every 15s)');
-    }
-  }
 
   if (shouldStartHeartbeat(api)) {
     heartbeat = createHeartbeat(
@@ -259,7 +182,6 @@ export async function runPipeline(options: PipelineOptions): Promise<void> {
   // injected `runShutdown` so the final-flush ordering is unit-testable.
   const shutdown = (signal: string) =>
     runShutdown(signal, {
-      tracePoller,
       heartbeat,
       collector: handle.collector,
       healthServer,
@@ -281,7 +203,6 @@ export async function runPipeline(options: PipelineOptions): Promise<void> {
  * Mirrors the {@link ProcessGuardDeps} pattern.
  */
 export interface ShutdownDeps {
-  tracePoller: TracePollerHandle | null;
   heartbeat: HeartbeatHandle | null;
   collector: FlowHandle['collector'];
   healthServer: Pick<
@@ -296,9 +217,8 @@ export interface ShutdownDeps {
 
 /**
  * Orchestrate a graceful shutdown. Order:
- *   /ready drops to 503 → tracePoller.stop → final heartbeat sendOnce (await,
- *   best-effort) → heartbeat.stop → collector shutdown → healthServer.close →
- *   exit(0).
+ *   /ready drops to 503 → final heartbeat sendOnce (await, best-effort) →
+ *   heartbeat.stop → collector shutdown → healthServer.close → exit(0).
  *
  * Readiness drops FIRST so a load balancer stops routing new traffic to a
  * container that is draining.
@@ -324,8 +244,6 @@ export async function runShutdown(
   }, deps.forceTimeoutMs);
 
   try {
-    if (deps.tracePoller) deps.tracePoller.stop();
-
     // Final out-of-band beat: egress the last ring contents (incl. the failure
     // that may have triggered this shutdown) before stopping/draining. Best-
     // effort: a slow or rejecting POST must not wedge shutdown.
@@ -594,120 +512,6 @@ const OUT_OF_BAND_THRESHOLD = 5;
 /** Rolling window for the out-of-band degrade counter. */
 const OUT_OF_BAND_WINDOW_MS = 60_000;
 
-/**
- * The five env vars that stamp a preview container's identity. All five are set
- * together by the app when it boots a preview session container; a production
- * container has none of them. `iss` and `pb` are as load-bearing as the keyring:
- * without `pb`, `verifyActivation` returns `pb-mismatch` for every grant, and
- * `iss` is a required verifier input, so three vars could never work.
- */
-const PREVIEW_ENV_VARS = {
-  keyring: 'WALKEROS_PREVIEW_KEYRING',
-  ses: 'WALKEROS_PREVIEW_SES',
-  sb: 'WALKEROS_PREVIEW_SB',
-  iss: 'WALKEROS_PREVIEW_ISS',
-  pb: 'WALKEROS_PREVIEW_PB',
-} as const;
-
-type PreviewEnvKey = keyof typeof PREVIEW_ENV_VARS;
-const PREVIEW_ENV_KEYS: PreviewEnvKey[] = ['keyring', 'ses', 'sb', 'iss', 'pb'];
-
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === 'object' && value !== null && !Array.isArray(value);
-}
-
-/**
- * Parse `WALKEROS_PREVIEW_KEYRING` defensively, it is attacker-adjacent config.
- * A malformed value throws (fail closed at boot), never falls through to inert:
- * an inert-on-parse-error path would silently reopen the exact hole the gate
- * closes. Expects a non-empty JSON array of `{ kid: string, spki: string }`.
- */
-function parsePreviewKeyring(raw: string): PreviewKey[] {
-  let parsed: unknown;
-  try {
-    parsed = JSON.parse(raw);
-  } catch {
-    throw new Error(
-      `${PREVIEW_ENV_VARS.keyring} is not valid JSON (expected a JSON array of {kid, spki})`,
-    );
-  }
-  if (!Array.isArray(parsed) || parsed.length === 0) {
-    throw new Error(
-      `${PREVIEW_ENV_VARS.keyring} must be a non-empty JSON array of {kid, spki}`,
-    );
-  }
-  const keyring: PreviewKey[] = [];
-  for (const entry of parsed) {
-    if (
-      !isRecord(entry) ||
-      typeof entry.kid !== 'string' ||
-      entry.kid === '' ||
-      typeof entry.spki !== 'string' ||
-      entry.spki === ''
-    ) {
-      throw new Error(
-        `${PREVIEW_ENV_VARS.keyring} entries must each be {kid: string, spki: string}`,
-      );
-    }
-    keyring.push({ kid: entry.kid, spki: entry.spki });
-  }
-  return keyring;
-}
-
-/**
- * Resolve the preview intake gate from the boot env. Three outcomes, and the
- * partial case is deliberately loud:
- *
- * - NONE of the five vars present → returns undefined. The runner is a
- *   production container; intake stays byte-identical to today.
- * - ALL five present → returns a resolved {@link PreviewGateConfig}. The gate is
- *   armed and every delegated request must carry a session-bound grant.
- * - A PARTIAL set (or malformed keyring) → throws. A partial set is an app-side
- *   stamping bug; running unauthenticated would reopen the hole this gate
- *   closes, and 401-ing everything would be undiagnosable, so we fail the boot
- *   loudly naming the offending vars. An empty-string var counts as absent.
- *
- * Injectable `env` for testing; defaults to `process.env` at the boot site.
- */
-export function resolvePreviewGate(
-  env: NodeJS.ProcessEnv = process.env,
-): PreviewGateConfig | undefined {
-  const value = (key: PreviewEnvKey): string | undefined => {
-    const raw = env[PREVIEW_ENV_VARS[key]];
-    return raw === undefined || raw === '' ? undefined : raw;
-  };
-
-  const present = PREVIEW_ENV_KEYS.filter((key) => value(key) !== undefined);
-  if (present.length === 0) return undefined;
-
-  if (present.length < PREVIEW_ENV_KEYS.length) {
-    const missing = PREVIEW_ENV_KEYS.filter(
-      (key) => value(key) === undefined,
-    ).map((key) => PREVIEW_ENV_VARS[key]);
-    throw new Error(
-      `Incomplete preview gate env: missing ${missing.join(', ')}. All of ` +
-        `${PREVIEW_ENV_KEYS.map((key) => PREVIEW_ENV_VARS[key]).join(', ')} ` +
-        `must be set together (app-side container stamping bug).`,
-    );
-  }
-
-  const keyringRaw = value('keyring');
-  const iss = value('iss');
-  const pb = value('pb');
-  const ses = value('ses');
-  const sb = value('sb');
-  // present.length === PREVIEW_ENV_KEYS.length guarantees all are defined; the
-  // guard keeps the types honest without a cast.
-  if (!keyringRaw || !iss || !pb || !ses || !sb) return undefined;
-
-  return {
-    keyring: parsePreviewKeyring(keyringRaw),
-    iss,
-    pb,
-    expectSession: { ses, sb },
-  };
-}
-
 /** A flow's identity as its bundle baked it onto the collector. */
 type ArtifactIdentity = Pick<FlowHandle['collector'], 'name' | 'release'>;
 
@@ -771,97 +575,6 @@ export function shouldStartHeartbeat(
   api: PipelineOptions['api'],
 ): api is NonNullable<PipelineOptions['api']> {
   return Boolean(api);
-}
-
-const OBSERVE_LEVELS: ReadonlyArray<TelemetryLevel> = [
-  'off',
-  'standard',
-  'trace',
-];
-
-/**
- * Read and validate `WALKEROS_OBSERVE_LEVEL` once at boot. The value sets
- * the runtime's baseline telemetry level (`off` | `standard` | `trace`).
- * The resolver gives the runtime `traceUntil` window higher priority, so a
- * baseline of `off` or `standard` can still be elevated to trace at runtime.
- * Unset or empty means the resolver's standard default applies. Invalid
- * values are logged and ignored (treated as unset).
- */
-function readObserveLevel(logger: Logger.Instance): TelemetryLevel | undefined {
-  const raw = process.env.WALKEROS_OBSERVE_LEVEL;
-  if (raw === undefined || raw === '') return undefined;
-  const level = OBSERVE_LEVELS.find((candidate) => candidate === raw);
-  if (!level) {
-    logger.warn(
-      `Ignoring invalid WALKEROS_OBSERVE_LEVEL "${raw}" (expected off, standard, or trace)`,
-    );
-    return undefined;
-  }
-  return level;
-}
-
-/**
- * Build the telemetry observer array the runtime forwards through the
- * bundle context. Returns undefined when telemetry is disabled (missing env
- * vars). The bundle then sees no `context.observers` and skips the install
- * loop entirely.
- *
- * `WALKEROS_OBSERVER_URL` is the observer base; the ingest POST URL is built
- * as `${base}/ingest/${WALKEROS_DEPLOYMENT_ID}`. Transport-level env is
- * sampled once at boot: rebuilding the poster on every emit would discard
- * the batch buffer. Projection-level opts (`level`, `sample`,
- * `includeIn`/`Out`/`MappingKey`, plus the active `traceUntil`) are
- * re-resolved per emit through the supplier so the trace-poller's writes to
- * the shared holder reach the projection. The optional `observeLevel`
- * baseline (from `WALKEROS_OBSERVE_LEVEL`) feeds the resolver's `observe`
- * block; `traceUntil` keeps its higher priority.
- */
-function buildTelemetryObservers(
-  flowId: string,
-  observeLevel?: TelemetryLevel,
-): Array<ObserverFn> | undefined {
-  const base = process.env.WALKEROS_OBSERVER_URL;
-  const token = process.env.WALKEROS_INGEST_TOKEN;
-  const deploymentId = process.env.WALKEROS_DEPLOYMENT_ID;
-  if (!base || !token || !deploymentId) return undefined;
-
-  const url = `${base}/ingest/${deploymentId}`;
-  const emit = createBatchedPoster({ url, token });
-  const observe =
-    observeLevel !== undefined ? { level: observeLevel } : undefined;
-  return [
-    createTelemetryObserver(emit, () =>
-      resolveTelemetryOptions({ flowId, observe, traceUntil: getTraceUntil() }),
-    ),
-  ];
-}
-
-/**
- * Build the level supplier forwarded through the bundle context beside the
- * observers. The generated server entry installs it as
- * `collector.observeLevel`, which the collector's destination capture path
- * reads to gate call capture at trace. Resolves through the SAME
- * `resolveTelemetryOptions` inputs as the observer's per-emit supplier, so
- * the reported level follows the trace-poller's `traceUntil` window exactly:
- * null (off with no active trace) maps to 'off', otherwise the resolved
- * level ('standard' fallback matches the observer's own default).
- */
-function buildObserveLevelSupplier(
-  flowId: string,
-  observeLevel?: TelemetryLevel,
-): () => TelemetryLevel {
-  const observe =
-    observeLevel !== undefined ? { level: observeLevel } : undefined;
-  return () => {
-    const opts = resolveTelemetryOptions({
-      flowId,
-      observe,
-      traceUntil: getTraceUntil(),
-    });
-    // The ?? fallback satisfies the non-optional return type only; the
-    // resolver always sets level on a non-null result, so it never fires.
-    return opts ? (opts.level ?? 'standard') : 'off';
-  };
 }
 
 async function injectSecrets(

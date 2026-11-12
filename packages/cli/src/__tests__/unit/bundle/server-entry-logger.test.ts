@@ -210,9 +210,14 @@ describe('generateServerEntry merges the flow logger with the host logger', () =
 
   it('keeps the host default when the flow sets no logger', async () => {
     const { ring } = await run({}, () => ({}));
-    // The host passes every level to its handler, which hides DEBUG unless
-    // verbose: the same lines reach the terminal as before the merge.
-    expect(ring).toHaveLength(4);
+    // The host passes every level to its handler, which keeps DEBUG from the
+    // terminal and the ring unless verbose: the same lines reach the terminal
+    // as before the merge.
+    expect(ring.map(([level]) => level)).toEqual([
+      Level.INFO,
+      Level.WARN,
+      Level.ERROR,
+    ]);
     expect(logSpy.mock.calls.map((call) => call[0])).toEqual([
       '[dest] info line',
       '[dest] warn line',

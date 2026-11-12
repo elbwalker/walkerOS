@@ -21,6 +21,7 @@ function makeSpyLogger(): Logger.Instance {
       throw new Error(typeof message === 'string' ? message : message.message);
     },
     json: jest.fn(),
+    mask: jest.fn((text: string) => text),
     scope: (_name: string): Logger.Instance => logger,
   };
   return logger;
@@ -216,6 +217,7 @@ describe('heartbeat snapshot suppliers', () => {
         );
       },
       json: jest.fn(),
+      mask: jest.fn((text: string) => text),
       scope: (_name: string): Logger.Instance => logger,
     };
     return logger;
@@ -356,6 +358,7 @@ describe('heartbeat per-destination breakdown (dlqSize + dropped)', () => {
         );
       },
       json: jest.fn(),
+      mask: jest.fn((text: string) => text),
       scope: (_name: string): Logger.Instance => logger,
     };
     return logger;
@@ -445,6 +448,7 @@ describe('heartbeat flushSoon (debounced out-of-band beat)', () => {
         );
       },
       json: jest.fn(),
+      mask: jest.fn((text: string) => text),
       scope: (_name: string): Logger.Instance => logger,
     };
     return logger;
@@ -529,6 +533,7 @@ describe('heartbeat intervalMs (advertised cadence)', () => {
         );
       },
       json: jest.fn(),
+      mask: jest.fn((text: string) => text),
       scope: (_name: string): Logger.Instance => logger,
     };
     return logger;
@@ -580,6 +585,7 @@ describe('heartbeat uptime (restart evidence)', () => {
         );
       },
       json: jest.fn(),
+      mask: jest.fn((text: string) => text),
       scope: (_name: string): Logger.Instance => logger,
     };
     return logger;

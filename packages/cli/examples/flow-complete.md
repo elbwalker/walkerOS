@@ -65,7 +65,7 @@ warehouse  pubsub pull -> bigquery (keeps everything)
   - `platform` at `/flows/web/config/platform`: platform decides how a flow is
     built: a browser bundle or a server artifact.
   - `flow-config` at `/flows/web/config`: config holds what the build needs:
-    platform, url, settings, bundle, observe.
+    platform, url, settings, bundle.
   - `flow-sources` at `/flows/web/sources`: Sources turn whatever happens (a CMP
     decision, a dataLayer push, a click) into events.
   - `flow-transformers` at `/flows/server/transformers`: Transformers are named
@@ -225,7 +225,7 @@ curl -I http://localhost:8080/walker.js
   - `code-push` at `/flows/web/transformers/pageGroup/code/push`: push is the
     step function, written as $code.
   - `code-type` at `/flows/web/transformers/pageGroup/code/type`: type names the
-    inline step in logs and Observe.
+    inline step in logs.
   - `step-config` at `/flows/server/destinations/meta/config`: config is the
     same envelope for every step kind: settings, mapping, consent, reliability.
   - `step-settings` at `/flows/server/destinations/meta/config/settings`:
@@ -924,16 +924,10 @@ walkeros cache info
 - **In GTM:** publishing a container version.
 - **Docs:** `getting-started/flow/index`.
 
-## operate: Observe, CI and deploy
+## operate: logs, CI and deploy
 
-- **Purpose:** watch live events, gate changes in CI, deploy through the app.
+- **Purpose:** read the logs, gate changes in CI, deploy through the app.
 - **Features:**
-  - `observe-public` at `/flows/web/config/observe`: A web flow reports to
-    Observe through a public url and binding.
-  - `observe-level` at `/flows/server/config/observe/level`: level standard
-    reports step outcomes; trace adds payloads.
-  - `observe-sample` at `/flows/server/config/observe/sample`: sample reports
-    one event in ten.
   - `collector-logger` at `/flows/server/collector/logger`: The log level comes
     from the flow variable, so LOG_LEVEL changes it per environment.
 - **CI:** `walkeros validate packages/cli/examples/flow-complete.json --strict`

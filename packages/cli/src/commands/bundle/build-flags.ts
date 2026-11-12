@@ -8,7 +8,10 @@ import { isObject } from '@walkeros/core';
  * Only browser bundles get them: the `cdn` stage 2 and the browser wrap.
  */
 
-/** The optional runtime features a flow uses. */
+/**
+ * The optional runtime features a flow uses. `observe` is false for every
+ * flow file and is never read for a define (see `buildFlagDefines`).
+ */
 export interface FlowNeeds {
   observe: boolean;
   stores: boolean;
@@ -30,9 +33,7 @@ export function flowNeeds(flow: Flow): FlowNeeds {
     ...Object.values(flow.destinations ?? {}),
   ];
   return {
-    observe:
-      flow.config?.observe !== undefined ||
-      flow.collector?.observe !== undefined,
+    observe: false,
     stores: Object.keys(flow.stores ?? {}).length > 0,
     state: steps.some(carriesState),
   };
@@ -41,21 +42,25 @@ export function flowNeeds(flow: Flow): FlowNeeds {
 /**
  * The esbuild `define` map for a browser bundle. Validation is always off:
  * the CLI validates the flow at build time. Without needs (a skeleton from an
- * older CLI) every flag is on, which is the full behaviour.
+ * older CLI) every other flag is on, which is the full behaviour. The
+ * reporter's flag is the caller's alone: a browser build carries the reporter
+ * only when a preview wrap is given `observe`, whatever a flow file or a
+ * skeleton says, so no web flow reports from every visitor of its site.
  */
 export function buildFlagDefines(
   needs: FlowNeeds | undefined,
+  observe: boolean,
 ): Record<BuildFlag, string> {
   if (!needs) {
     return {
-      __WALKEROS_OBSERVE__: 'true',
+      __WALKEROS_OBSERVE__: String(observe),
       __WALKEROS_STORES__: 'true',
       __WALKEROS_STATE__: 'true',
       __WALKEROS_VALIDATE__: 'true',
     };
   }
   return {
-    __WALKEROS_OBSERVE__: String(needs.observe),
+    __WALKEROS_OBSERVE__: String(observe),
     __WALKEROS_STORES__: String(needs.stores),
     __WALKEROS_STATE__: String(needs.state),
     __WALKEROS_VALIDATE__: 'false',

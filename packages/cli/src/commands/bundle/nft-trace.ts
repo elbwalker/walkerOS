@@ -4,6 +4,7 @@ import type { NodeFileTraceReasons } from '@vercel/nft';
 import * as path from 'node:path';
 import * as fs from 'node:fs/promises';
 import picomatch from 'picomatch';
+import { stringLeaves } from '../../core/local-packages.js';
 
 export interface TraceOptions {
   entry: string;
@@ -141,6 +142,39 @@ export function assertDepsTraced(opts: AssertDepsOptions): string[] {
   return opts.declaredPackages.filter(
     (dep) => !opts.importedPackages.has(dep) && !isTraced(dep),
   );
+}
+
+/**
+ * The entry an installed package's manifest names when none of its entries
+ * exists in the copy, else undefined. nft traces nothing of such a package,
+ * so it looks unused although something may load it. Patterns (`./dist/*`)
+ * are not checked; without a manifest or an entry there is nothing to say.
+ */
+export async function missingEntry(
+  packageDir: string,
+): Promise<string | undefined> {
+  let manifest: unknown;
+  try {
+    manifest = JSON.parse(
+      await fs.readFile(path.join(packageDir, 'package.json'), 'utf8'),
+    );
+  } catch {
+    return undefined;
+  }
+  if (!manifest || typeof manifest !== 'object') return undefined;
+  const entries = ['main', 'module', 'exports']
+    .flatMap((field) => stringLeaves(Reflect.get(manifest, field)))
+    .filter((entry) => !entry.includes('*') && !entry.endsWith('package.json'));
+  if (entries.length === 0) return undefined;
+  for (const entry of entries) {
+    try {
+      await fs.access(path.join(packageDir, entry));
+      return undefined;
+    } catch {
+      // Not this one; the next entry may exist.
+    }
+  }
+  return entries[0];
 }
 
 /**

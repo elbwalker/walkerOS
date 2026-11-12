@@ -32,6 +32,7 @@ function silentLogger(): Logger.Instance {
       throw new Error(typeof message === 'string' ? message : message.message);
     },
     json: jest.fn(),
+    mask: jest.fn((text: string) => text),
     scope: (_name: string): Logger.Instance => logger,
   };
   return logger;

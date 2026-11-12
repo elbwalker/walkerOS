@@ -2,7 +2,8 @@ import type { PushOverrides } from './overrides.js';
 
 /**
  * Apply push overrides (disabled/mock/env) to a collector config object.
- * Mutates config.destinations and config.transformers in place.
+ * Mutates config.destinations and config.transformers in place, and drops
+ * the flow's own Observe reporter options.
  */
 export function applyOverrides(
   config: Record<string, unknown>,
@@ -33,6 +34,10 @@ export function applyOverrides(
   // Collector settings are spread onto the root config (not nested),
   // so `run` is a top-level key when the flow declares collector.run.
   config.run = true;
+
+  // Push and simulate run test events: they never report them, whatever the
+  // flow's own collector.observe says.
+  delete config.observe;
 
   // Transformer path-specific mocks
   if (overrides.transformerMocks) {

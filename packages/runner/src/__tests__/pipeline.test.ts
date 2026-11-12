@@ -67,7 +67,6 @@ describe('runShutdown (extracted orchestrator)', () => {
 
   function baseDeps(overrides: Partial<ShutdownDeps>): ShutdownDeps {
     return {
-      tracePoller: null,
       heartbeat: null,
       collector: { command: undefined, status: undefined },
       healthServer: {
@@ -153,28 +152,6 @@ describe('runShutdown (extracted orchestrator)', () => {
     } finally {
       jest.useRealTimers();
     }
-  });
-
-  it('stops the tracePoller before the final beat', async () => {
-    const calls: string[] = [];
-    const tracePoller = {
-      start: jest.fn(),
-      stop: jest.fn(() => {
-        calls.push('tracePoller.stop');
-      }),
-      pollOnce: jest.fn(() => Promise.resolve()),
-    };
-    const { handle } = makeHeartbeat(() => {
-      calls.push('sendOnce');
-      return Promise.resolve();
-    });
-
-    await runShutdown(
-      'SIGTERM',
-      baseDeps({ tracePoller, heartbeat: handle, exit: jest.fn() }),
-    );
-
-    expect(calls).toEqual(['tracePoller.stop', 'sendOnce']);
   });
 
   it('drops /ready before the final beat and the collector drain', async () => {

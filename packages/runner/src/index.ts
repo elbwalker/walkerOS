@@ -10,7 +10,6 @@ export type { RunCommandOptions } from './types.js';
 export {
   runPipeline,
   runShutdown,
-  resolvePreviewGate,
   type PipelineOptions,
   type ShutdownDeps,
 } from './pipeline.js';
@@ -29,11 +28,7 @@ export {
   type HeartbeatConfig,
   type HeartbeatHandle,
 } from './heartbeat.js';
-export {
-  createHealthServer,
-  type HealthServer,
-  type PreviewGateConfig,
-} from './health-server.js';
+export { createHealthServer, type HealthServer } from './health-server.js';
 export { fetchSecrets, SecretsHttpError } from './secrets-fetcher.js';
 export { resolveRunToken, resolveAppUrl } from './credentials.js';
 export {

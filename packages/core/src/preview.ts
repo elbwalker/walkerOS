@@ -20,10 +20,6 @@ export interface ActivationGrant {
   jti: string;
   /** Preview id, for correlation. Never a project id. */
   pid: string;
-  /** Session id, present only on cross-part (web+server) grants. */
-  ses?: string;
-  /** Opaque per-session binding. Present iff `ses` is. */
-  sb?: string;
 }
 
 export type PreviewFailure =
@@ -35,7 +31,6 @@ export type PreviewFailure =
   | 'expired'
   | 'aud-mismatch'
   | 'pb-mismatch'
-  | 'sb-mismatch'
   | 'cap-mismatch'
   | 'no-subtle'
   | 'swap-failed';
@@ -130,9 +125,7 @@ function isGrant(value: unknown): value is ActivationGrant {
     typeof g.pb === 'string' &&
     g.cap === 'activate' &&
     typeof g.jti === 'string' &&
-    typeof g.pid === 'string' &&
-    (g.ses === undefined || typeof g.ses === 'string') &&
-    (g.sb === undefined || typeof g.sb === 'string')
+    typeof g.pid === 'string'
   );
 }
 
@@ -167,7 +160,7 @@ export function parseGrant(raw: string): ParsedGrant | null {
   };
 }
 
-/** A public key a bundle or container will accept grants from. */
+/** A public key a bundle accepts grants from. */
 export interface PreviewKey {
   kid: string;
   /** base64url-encoded P-256 SPKI. */
@@ -209,20 +202,12 @@ export interface PreviewCrypto {
   subtle?: PreviewSubtle;
 }
 
-/**
- * The two real callers of `verifyActivation` bind audience differently: the
- * web loader always has a page origin and checks `aud` against it, while a
- * container has no origin at all and is bound to one session instead. A
- * discriminated union (rather than an optional `origin`) turns "the caller
- * forgot `origin`" from a silent aud-check skip into a compile error on the
- * web arm; `expectSession` is forced on the container arm for the same
- * reason, since that arm's whole job is proving it checked *something*.
- */
-type VerifyAudience =
-  | { origin: string; expectSession?: undefined }
-  | { origin?: undefined; expectSession: { ses: string; sb: string } };
-
-export type VerifyParams = VerifyAudience & {
+export interface VerifyParams {
+  /**
+   * The page origin the grant must name in `aud`. Required, so a caller that
+   * forgets it gets a compile error instead of a silent aud-check skip.
+   */
+  origin: string;
   /** Keys this host accepts. Current + previous, so rotation is non-disruptive. */
   keyring: PreviewKey[];
   /** Expected issuer, e.g. 'app:stage'. */
@@ -238,7 +223,7 @@ export type VerifyParams = VerifyAudience & {
   now: number;
   /** Defaults to the global crypto. Injectable for jsdom/node tests. */
   crypto?: PreviewCrypto;
-};
+}
 
 /** A grant handed over in a URL is only accepted this long after `iat`. */
 export const URL_WINDOW_MS = 15 * 60 * 1000;
@@ -311,13 +296,11 @@ export async function verifyActivation(
   // Exact membership only: no prefix/suffix/substring matching, so a lookalike
   // origin (an evil.com path containing the real origin, or a subdomain of it)
   // can never satisfy this.
-  if (params.origin !== undefined && !grant.aud.includes(params.origin)) {
+  if (!grant.aud.includes(params.origin)) {
     return { ok: false, reason: 'aud-mismatch' };
   }
   if (params.acceptForeign) {
-    // Demo grants are single-origin by contract: enforced verifier-side too,
-    // and independent of whether an origin was supplied, so a container-side
-    // caller (no `origin`) can't skip this gate.
+    // Demo grants are single-origin by contract: enforced verifier-side too.
     const allow = params.demoAllowlist ?? [];
     if (grant.aud.length !== 1 || !grant.aud.every((a) => allow.includes(a))) {
       return { ok: false, reason: 'aud-mismatch' };
@@ -330,25 +313,6 @@ export async function verifyActivation(
     if (!params.pb || grant.pb !== params.pb) {
       return { ok: false, reason: 'pb-mismatch' };
     }
-  }
-
-  // sb binds a grant to one session's container: without it, "valid signature"
-  // would prove nothing about which tenant minted the grant, since one key
-  // signs for the whole environment. Symmetric in both directions: a
-  // session-scoped grant presented where no session is expected must not
-  // silently pass either, or a grant minted for one session could activate at
-  // a host that never asked to be bound to it.
-  const grantIsSessionScoped =
-    grant.ses !== undefined || grant.sb !== undefined;
-  if (params.expectSession) {
-    if (grant.ses !== params.expectSession.ses) {
-      return { ok: false, reason: 'sb-mismatch' };
-    }
-    if (!grant.sb || grant.sb !== params.expectSession.sb) {
-      return { ok: false, reason: 'sb-mismatch' };
-    }
-  } else if (grantIsSessionScoped) {
-    return { ok: false, reason: 'sb-mismatch' };
   }
 
   const key = params.keyring.find((k) => k.kid === kid);
@@ -385,14 +349,3 @@ export async function verifyActivation(
 
   return { ok: true, grant };
 }
-
-/**
- * Storage slot for the observe ingest credential companion (`obsw_...`), a
- * plaintext bearer credential riding the activation URL. The web arm never
- * verifies it (the observer is its verifier): the activator only ferries it
- * from the activation URL into storage, where the observe wiring reads it to
- * attach to the observation session. Same lifecycle as the session companion:
- * set (or cleared) whenever a URL activation succeeds, cleared whenever the
- * stored activation clears.
- */
-export const OBSERVE_STORAGE_KEY = 'elbObserve';

@@ -69,10 +69,6 @@ function checkScripts(config: Config, env?: Env): void {
 export const destinationGtag: Destination = {
   type: 'google-gtag',
 
-  // Observable env callable for trace-level vendor-call capture. Mirrors the
-  // dev-env simulation list (src/examples/env.ts).
-  calls: ['call:window.gtag'],
-
   config: { settings: {} },
 
   async init({ config, env, logger }) {

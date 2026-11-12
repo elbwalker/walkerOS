@@ -4,7 +4,9 @@ import * as os from 'os';
 import {
   wrapSkeleton,
   extractDevExternals,
+  observeProblem,
 } from '../../../commands/bundle/wrap.js';
+import { generateWrapEntry } from '../../../commands/bundle/bundler.js';
 
 /**
  * wrapSkeleton consumes a Stage 1 skeleton ESM file that exports
@@ -110,11 +112,7 @@ export const __configData = { test: true };
     expect(output).toContain('httpHandler');
   });
 
-  it('a plain browser wrap contains no baked observer machinery or poll loop', async () => {
-    // The baked-token telemetry path no longer exists as an input, so every
-    // wrapped browser bundle must be free of observer installs and trace-poll
-    // machinery; observation wiring is the bake-nothing `observe` connect
-    // config alone, installed by the runtime at boot.
+  it('a plain browser wrap merges no hooks into its config', async () => {
     const skeletonPath = await writeFakeSkeleton();
     const outputPath = path.join(tmpDir, 'walker.js');
 
@@ -126,13 +124,10 @@ export const __configData = { test: true };
     });
 
     const output = await fs.readFile(outputPath, 'utf-8');
-    expect(output).not.toMatch(/observers\.add/);
     expect(output).not.toContain('config.hooks');
-    expect(output).not.toMatch(/setInterval/);
-    expect(output).not.toMatch(/\/trace\//);
   });
 
-  it('preview wrap bakes only public connect values, never an ingest token literal', async () => {
+  it('a wrap without preview bakes no activator', async () => {
     const skeletonPath = await writeFakeSkeleton();
     const outputPath = path.join(tmpDir, 'walker.js');
 
@@ -141,44 +136,6 @@ export const __configData = { test: true };
       platform: 'browser',
       outputPath,
       minify: false,
-      previewGrantTargets: ['api'],
-      observe: {
-        url: 'https://observer.example.com',
-        binding: 'pb_a',
-        flowId: 'flow_x',
-        level: 'trace',
-      },
-    });
-
-    const output = await fs.readFile(outputPath, 'utf-8');
-
-    // The STATIC connect module bakes ONLY the public values.
-    expect(output).toContain('config.observe');
-    expect(output).toContain('https://observer.example.com');
-    expect(output).toContain('pb_a');
-    expect(output).toContain('flow_x');
-    // Former bake sites: no credential prefix, no bearer literal, no
-    // ingest-token-shaped string anywhere in the wrapped preview output. The
-    // per-session secret arrives via the elbObserve slot at boot instead
-    // (startFlow's connect module; pinned in the collector's observe tests).
-    expect(output).not.toMatch(/obsw_/);
-    expect(output).not.toMatch(/Bearer\s+[A-Za-z0-9]/);
-    expect(output).not.toMatch(/ingestToken|tok_/);
-    // And no baked observer machinery: the runtime installs it at boot.
-    expect(output).not.toMatch(/observers\.add/);
-  });
-
-  it('preview artifact output still never bakes the activator (anti-recursion)', async () => {
-    const skeletonPath = await writeFakeSkeleton();
-    const outputPath = path.join(tmpDir, 'walker.js');
-
-    await wrapSkeleton({
-      skeletonPath,
-      platform: 'browser',
-      outputPath,
-      minify: false,
-      previewGrantTargets: ['api'],
-      observe: { url: 'https://observer.example.com', binding: 'pb_a' },
     });
 
     const output = await fs.readFile(outputPath, 'utf-8');
@@ -360,21 +317,47 @@ ${marker}`,
     expect(output).not.toContain('__WALKEROS_');
   });
 
-  it('a baked observe turns observe on', async () => {
-    const output = await wrapText({
-      skeletonPath: await flagSkeleton(LEAN),
-      observe: { url: 'https://observer.example.com', binding: 'pb_a' },
-    });
-    expect(output).toContain('observe: true');
-  });
-
-  it('an older skeleton without needs wraps with every flag on', async () => {
+  it('an older skeleton without needs wraps with every flag on but the reporter', async () => {
     const output = await wrapText({ skeletonPath: await flagSkeleton() });
-    expect(output).toContain('observe: true');
+    expect(output).toContain('observe: false');
     expect(output).toContain('stores: true');
     expect(output).toContain('state: true');
     expect(output).toContain('validate: true');
   });
+
+  const OBSERVING =
+    '/* walkeros:needs {"observe":true,"stores":false,"state":false} */';
+  const PREVIEW = {
+    url: 'https://ingest.example.com/preview',
+    token: 'wos_preview_t1_secret',
+  };
+
+  it.each([
+    ['needs that say observe', OBSERVING],
+    ['no needs', ''],
+  ])(
+    'a wrap without observe carries no reporter, for a skeleton with %s',
+    async (_, marker) => {
+      const output = await wrapText({
+        skeletonPath: await flagSkeleton(marker),
+      });
+      expect(output).toContain('observe: false');
+    },
+  );
+
+  it.each([
+    ['lean needs', LEAN],
+    ['no needs', ''],
+  ])(
+    'a wrap given observe carries the reporter, for a skeleton with %s',
+    async (_, marker) => {
+      const output = await wrapText({
+        skeletonPath: await flagSkeleton(marker),
+        observe: { preview: PREVIEW },
+      });
+      expect(output).toContain('observe: true');
+    },
+  );
 
   it('a node wrap defines no flags', async () => {
     const output = await wrapText({
@@ -382,6 +365,133 @@ ${marker}`,
       platform: 'node',
     });
     expect(output).toContain('__WALKEROS_OBSERVE__');
+  });
+});
+
+describe('observeProblem', () => {
+  const PREVIEW = {
+    url: 'https://ingest.example.com/preview',
+    token: 'wos_preview_t1_secret',
+  };
+  const BROWSER = { platform: 'browser' as const, preview: false };
+
+  it.each<
+    [
+      string,
+      unknown,
+      typeof BROWSER | { platform: 'node'; preview: boolean },
+      RegExp,
+    ]
+  >([
+    [
+      'usage',
+      { preview: PREVIEW, usage: PREVIEW },
+      BROWSER,
+      /^Invalid observe: .*"usage"/,
+    ],
+    ['not an object', 'preview', BROWSER, /^Invalid observe: /],
+    ['no preview', {}, BROWSER, /^Invalid observe\.preview: /],
+    [
+      'an unknown preview key',
+      { preview: { ...PREVIEW, interval: 60 } },
+      BROWSER,
+      /^Invalid observe\.preview: .*"interval"/,
+    ],
+    [
+      'a url that is not http',
+      { preview: { ...PREVIEW, url: 'ftp://x/p' } },
+      BROWSER,
+      /^Invalid observe\.preview\.url: /,
+    ],
+    [
+      'a reference',
+      { preview: { ...PREVIEW, url: '$env.OBSERVE_URL' } },
+      BROWSER,
+      /^Invalid observe\.preview\.url: /,
+    ],
+    [
+      'an empty token',
+      { preview: { ...PREVIEW, token: '' } },
+      BROWSER,
+      /^Invalid observe\.preview\.token: /,
+    ],
+    [
+      'a node wrap',
+      { preview: PREVIEW },
+      { platform: 'node', preview: false },
+      /^observe is a browser wrap option$/,
+    ],
+    [
+      'preview activation beside it',
+      { preview: PREVIEW },
+      { platform: 'browser', preview: true },
+      /^observe is refused beside preview, which makes a host build$/,
+    ],
+  ])(
+    'refuses observe with %s, naming keys only',
+    (_, observe, wrap, message) => {
+      const problem = observeProblem(observe, wrap);
+      expect(problem).toMatch(message);
+      expect(problem).not.toContain(PREVIEW.token);
+    },
+  );
+
+  it('accepts the preview route and its token', () => {
+    expect(observeProblem({ preview: PREVIEW }, BROWSER)).toBeUndefined();
+  });
+
+  it('makes wrapSkeleton throw before any build', async () => {
+    const dir = await fs.mkdtemp(path.join(os.tmpdir(), 'wrap-observe-test-'));
+    try {
+      await expect(
+        wrapSkeleton({
+          skeletonPath: path.join(dir, 'missing.mjs'),
+          platform: 'node',
+          outputPath: path.join(dir, 'flow.mjs'),
+          observe: { preview: PREVIEW },
+        }),
+      ).rejects.toThrow('observe is a browser wrap option');
+    } finally {
+      await fs.remove(dir);
+    }
+  });
+});
+
+describe('generateWrapEntry observe', () => {
+  const PREVIEW = {
+    url: 'https://ingest.example.com/preview',
+    token: 'wos_preview_t1_secret',
+  };
+
+  it("replaces the flow's own observe block with the wrap's, after the config is wired and before the flow starts", () => {
+    const entry = generateWrapEntry('/tmp/skeleton.mjs', {
+      observe: { preview: PREVIEW },
+    });
+    const wired = entry.indexOf('wireConfig(__configData)');
+    const baked = entry.indexOf(
+      `config.observe = ${JSON.stringify({ preview: PREVIEW })};`,
+    );
+    const started = entry.indexOf('await startFlow(config)');
+    expect(wired).toBeGreaterThan(-1);
+    expect(baked).toBeGreaterThan(wired);
+    expect(started).toBeGreaterThan(baked);
+  });
+
+  it('bakes only the preview url and token', () => {
+    // A value with more keys than the type names, as an untyped caller has.
+    const observe = { preview: { ...PREVIEW, extra: 'x' }, usage: PREVIEW };
+    const entry = generateWrapEntry('/tmp/skeleton.mjs', { observe });
+    expect(entry).toContain(
+      `config.observe = ${JSON.stringify({ preview: PREVIEW })};`,
+    );
+    expect(entry).not.toContain('usage');
+    expect(entry).not.toContain('extra');
+  });
+
+  it('without observe leaves the config as wired', () => {
+    expect(generateWrapEntry('/tmp/skeleton.mjs')).not.toContain(
+      'config.observe',
+    );
   });
 });
 

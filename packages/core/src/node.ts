@@ -115,9 +115,10 @@ export interface CLILoggerOptions {
   json?: boolean;
   stderr?: boolean;
   /**
-   * Taps every line before any visibility gate: the masked text line, and
-   * the same line as a structured entry (scope, and the context with fields
-   * such as code, status, retryable and suppressed) for forwarding.
+   * Taps every ERROR, WARN and INFO line before any visibility gate, and a
+   * DEBUG line only with `verbose`: the masked text line, and the same line
+   * as a structured entry (scope, and the context with fields such as code,
+   * status, retryable and suppressed) for forwarding.
    */
   onLine?: (level: Level, message: string, entry: LogEntry) => void;
   /**
@@ -315,13 +316,12 @@ export function createCLILoggerConfig(
     level: Level.DEBUG,
     handler: (level, message, context, scope) => {
       // Machine output (`json`) prints only its result; silent keeps errors;
-      // DEBUG needs verbose. A line nobody prints and no tap reads costs
-      // nothing more.
-      const shown =
-        !json &&
-        (level === Level.ERROR || !silent) &&
-        (level !== Level.DEBUG || readVerbose());
-      const tap = options.onLine;
+      // DEBUG needs verbose, for the console and the tap alike. A line nobody
+      // prints and no tap reads costs nothing more: it returns before the
+      // entry and the text are built.
+      const debugOpen = level !== Level.DEBUG || readVerbose();
+      const shown = !json && (level === Level.ERROR || !silent) && debugOpen;
+      const tap = debugOpen ? options.onLine : undefined;
       if (!shown && !tap) return;
       const asJson = shown && readFormat() === 'json';
 
@@ -363,7 +363,8 @@ export function createCLILoggerConfig(
           : undefined;
       const fullMessage = tap || !asJson ? textLine() : '';
 
-      // Tap every line before the gate so no level is dropped from capture.
+      // The tap reads every line it is open for, before the console gate, so
+      // ERROR, WARN and INFO reach it even when nothing prints.
       if (tap && built) {
         try {
           tap(level, fullMessage, built.entry);
@@ -397,6 +398,9 @@ export function createCLILoggerConfig(
     jsonHandler: (data) => {
       if (!silent) out(JSON.stringify(data, null, 2));
     },
+    // A logger built from this config masks the same known values in text
+    // that leaves outside a line; the handler above masks the lines.
+    mask: (text) => maskKnownValues(text, readKnown()),
   };
 }
 

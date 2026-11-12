@@ -67,23 +67,50 @@ export async function deliver(
   logger.debug('ClickHouse insert ok', { rows: entries.length });
 }
 
+/** The longest answer line a failure message quotes. */
+const ANSWER_LINE_MAX = 200;
+
+/** How every answer of the walkerOS data proxy in front of ClickHouse begins. */
+const PROXY_PREFIX = 'walkerOS data proxy';
+
+/**
+ * The first line of an answer from the walkerOS data proxy, cut short.
+ *
+ * The client turns a failed answer into an error whose message is the answer
+ * body, and reads a ClickHouse code from it only when the body is
+ * ClickHouse's. A proxy's refusal therefore arrives with no code and no Node
+ * errno, and its first line is the one place the reason is named. Only the
+ * walkerOS proxy's own fixed lines are quoted: any other body, ClickHouse's
+ * included, can echo the rows or the event it refused.
+ */
+function proxyLine(error: unknown): string | undefined {
+  if (typeof error !== 'object' || error === null) return undefined;
+  if (!('message' in error) || typeof error.message !== 'string')
+    return undefined;
+
+  const [line = ''] = error.message.trim().split(/\r?\n/, 1);
+
+  return line.startsWith(PROXY_PREFIX)
+    ? line.slice(0, ANSWER_LINE_MAX)
+    : undefined;
+}
+
 /**
  * A failed insert as the package's StepError. The message names the ClickHouse
  * code, or the Node errno of a rejection that never reached the server
  * (`ECONNRESET` is the commonest retryable failure there is), plus the advice
- * for the terminal codes that need one. Never the server's own text: it can
- * quote the rows it could not parse. The original error stays the cause.
+ * for the terminal codes that need one, or else the walkerOS data proxy's
+ * reason. Never the server's own text: it can quote the rows it could not
+ * parse. The original error stays the cause.
  */
 function insertError(error: unknown): StepError {
   const code = errorCode(error);
   const reason = code ? `code ${code}` : errnoOf(error);
-  return new StepError(
-    adviceFor(code) ??
-      `ClickHouse insert failed${reason ? ` (${reason})` : ''}`,
-    {
-      code: 'transport',
-      retryable: classify(error) === 'retryable',
-      cause: error,
-    },
-  );
+  const line = reason ? undefined : proxyLine(error);
+  const detail = reason ? ` (${reason})` : line ? `: ${line}` : '';
+  return new StepError(adviceFor(code) ?? `ClickHouse insert failed${detail}`, {
+    code: 'transport',
+    retryable: classify(error) === 'retryable',
+    cause: error,
+  });
 }

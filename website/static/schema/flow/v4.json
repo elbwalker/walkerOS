@@ -164,35 +164,6 @@
       "title": "Flow.Bundle",
       "description": "Bundle configuration (packages + overrides + traceInclude + env)."
     },
-    "FlowObserve": {
-      "type": "object",
-      "properties": {
-        "level": {
-          "description": "Telemetry verbosity. 'off' emits no records, 'standard' emits structural records, 'trace' emits full payloads.",
-          "type": "string",
-          "enum": ["off", "standard", "trace"]
-        },
-        "sample": {
-          "description": "Deterministic sample fraction in [0, 1]. Defaults to 1.",
-          "type": "number",
-          "minimum": 0,
-          "maximum": 1
-        },
-        "url": {
-          "description": "Observer base URL for the web connect form. Public, safe to commit. Paired with binding.",
-          "type": "string",
-          "minLength": 1
-        },
-        "binding": {
-          "description": "Public project binding a web observe credential must match. Paired with url; public, safe to commit.",
-          "type": "string",
-          "minLength": 1
-        }
-      },
-      "additionalProperties": false,
-      "title": "Flow.Observe",
-      "description": "Observability configuration of a web flow: public connect pair (url + binding), telemetry level and sample. A server flow ignores it."
-    },
     "FlowConfig": {
       "type": "object",
       "properties": {
@@ -221,20 +192,12 @@
               "$ref": "#/definitions/FlowBundle"
             }
           ]
-        },
-        "observe": {
-          "description": "Observability configuration of a web flow: public connect pair, telemetry level and sample. A server flow ignores it.",
-          "allOf": [
-            {
-              "$ref": "#/definitions/FlowObserve"
-            }
-          ]
         }
       },
       "required": ["platform"],
       "additionalProperties": false,
       "title": "Flow.Config",
-      "description": "Per-flow configuration block: platform identity, optional public URL, settings, bundle, observe."
+      "description": "Per-flow configuration block: platform identity, optional public URL, settings, bundle."
     },
     "FlowCode": {
       "type": "object",
@@ -1371,11 +1334,85 @@
               "$ref": "#/definitions/Route"
             }
           ]
+        },
+        "observe": {
+          "description": "Observe reporter options",
+          "allOf": [
+            {
+              "$ref": "#/definitions/CollectorObserve"
+            }
+          ]
         }
       },
       "additionalProperties": {},
       "title": "Collector.InitConfig",
       "description": "Collector configuration for event processing (Collector.InitConfig)."
+    },
+    "CollectorObserve": {
+      "type": "object",
+      "properties": {
+        "usage": {
+          "description": "Counters and issues of this runtime, every interval",
+          "type": "object",
+          "properties": {
+            "url": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "format": "uri"
+                },
+                {
+                  "type": "string",
+                  "pattern": "^\\$(env|var)\\."
+                }
+              ],
+              "description": "Absolute http or https endpoint the part posts NDJSON rows to (like https://ingest.walkeros.io/usage; preview rows go to .../preview), or a $env. or $var. reference to one"
+            },
+            "token": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Sent as Authorization: Bearer (a server flow reads it from a secret; a preview build carries the value)"
+            },
+            "interval": {
+              "description": "Seconds between reports, 10 to 300 (default 60)",
+              "type": "integer",
+              "minimum": 10,
+              "maximum": 300
+            }
+          },
+          "required": ["url", "token"],
+          "additionalProperties": false
+        },
+        "preview": {
+          "description": "One row per event and per destination outcome",
+          "type": "object",
+          "properties": {
+            "url": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "format": "uri"
+                },
+                {
+                  "type": "string",
+                  "pattern": "^\\$(env|var)\\."
+                }
+              ],
+              "description": "Absolute http or https endpoint the part posts NDJSON rows to (like https://ingest.walkeros.io/usage; preview rows go to .../preview), or a $env. or $var. reference to one"
+            },
+            "token": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Sent as Authorization: Bearer (a server flow reads it from a secret; a preview build carries the value)"
+            }
+          },
+          "required": ["url", "token"],
+          "additionalProperties": false
+        }
+      },
+      "additionalProperties": false,
+      "title": "Collector.Observe",
+      "description": "Observe reporter options: usage and preview."
     },
     "Flow": {
       "type": "object",

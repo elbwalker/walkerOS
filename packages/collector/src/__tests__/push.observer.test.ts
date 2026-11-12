@@ -1,5 +1,4 @@
 import type { FlowState, WalkerOS } from '@walkeros/core';
-import { createTelemetryObserver } from '@walkeros/core';
 import { startFlow } from '..';
 
 describe('collector.push self-emission', () => {
@@ -54,19 +53,14 @@ describe('collector.push self-emission', () => {
     expect(destError?.error?.message).toContain('destination kaboom');
   });
 
-  test('trace observer keeps inEvent on the collector.push in frame', async () => {
+  test('an observer receives inEvent on the collector.push in frame', async () => {
     const states: FlowState[] = [];
 
     const { collector, elb } = await startFlow({
       run: true,
       destinations: {},
     });
-    collector.observers.add(
-      createTelemetryObserver((state) => states.push(state), {
-        flowId: 'default',
-        level: 'trace',
-      }),
-    );
+    collector.observers.add((state) => states.push(state));
 
     const inbound: WalkerOS.DeepPartialEvent = { name: 'page view', data: {} };
     await elb(inbound);
@@ -83,32 +77,6 @@ describe('collector.push self-emission', () => {
     // that the record and the event it describes share one identity.
     expect(inFrame?.eventId).toBeTruthy();
     expect(inFrame?.inEvent).toEqual({ ...inbound, id: inFrame?.eventId });
-  });
-
-  test('standard observer strips inEvent from the collector.push in frame', async () => {
-    const states: FlowState[] = [];
-
-    const { collector, elb } = await startFlow({
-      run: true,
-      destinations: {},
-    });
-    collector.observers.add(
-      createTelemetryObserver((state) => states.push(state), {
-        flowId: 'default',
-        level: 'standard',
-      }),
-    );
-
-    await elb({ name: 'page view', data: {} });
-
-    const inFrame = states.find(
-      (s) =>
-        s.stepId === 'collector.push' &&
-        s.stepType === 'collector' &&
-        s.phase === 'in',
-    );
-    expect(inFrame).toBeDefined();
-    expect(inFrame?.inEvent).toBeUndefined();
   });
 
   test('a pre-collector drop emits one collector skip / dropped', async () => {

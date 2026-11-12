@@ -234,10 +234,6 @@
         "settings": {
           "windowCollector": "walkerCollector"
         },
-        "observe": {
-          "url": "$env.OBSERVE_URL:https://app.walkeros.io/observe",
-          "binding": "$env.OBSERVE_BINDING:obs-web"
-        },
         "bundle": {
           "packages": {
             "@walkeros/collector": {
@@ -1771,10 +1767,6 @@
       "config": {
         "platform": "server",
         "url": "$env.SERVER_URL:http://localhost:8080/collect",
-        "observe": {
-          "level": "standard",
-          "sample": 0.1
-        },
         "bundle": {
           "packages": {
             "@walkeros/collector": {

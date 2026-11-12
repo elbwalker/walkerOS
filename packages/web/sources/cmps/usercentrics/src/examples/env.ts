@@ -26,5 +26,6 @@ export const noopLogger: Logger.Instance = {
     throw typeof message === 'string' ? new Error(message) : message;
   },
   json: noop,
+  mask: (text: string) => text,
   scope: () => noopLogger,
 };

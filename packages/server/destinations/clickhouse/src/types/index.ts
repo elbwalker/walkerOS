@@ -28,7 +28,10 @@ export type ClickHouseClientFactory = (
  * created the client. Every field is present.
  */
 export interface Settings {
-  /** ClickHouse HTTP endpoint, like https://host.clickhouse.cloud:8443. */
+  /**
+   * ClickHouse HTTP endpoint, like https://host.clickhouse.cloud:8443. A path,
+   * like https://ingest.walkeros.io/events, is the path every insert is sent to.
+   */
   url: string;
   /** Database holding the events table. */
   database: string;
@@ -53,7 +56,10 @@ export interface Settings {
  * fills the rest from the documented defaults.
  */
 export interface InitSettings {
-  /** ClickHouse HTTP endpoint, like https://host.clickhouse.cloud:8443. */
+  /**
+   * ClickHouse HTTP endpoint, like https://host.clickhouse.cloud:8443. A path,
+   * like https://ingest.walkeros.io/events, is the path every insert is sent to.
+   */
   url: string;
   /** Database holding the events table. Default `default`. */
   database?: string;
@@ -84,11 +90,16 @@ export interface InitSettings {
  */
 export interface Mapping {}
 
-/** Username and password for the ClickHouse user the destination writes as. */
-export interface Credentials {
-  username: string;
-  password: string;
-}
+/**
+ * How the destination signs in: the username and password of the ClickHouse
+ * user it writes as, or a token, sent as `Authorization: Bearer`, for an
+ * endpoint that takes one (a proxy in front of ClickHouse). One of the two:
+ * the client signs in with one, and init refuses a token beside a username or
+ * password wherever they sit.
+ */
+export type Credentials =
+  | { username: string; password: string }
+  | { token: string };
 
 /**
  * Env carries the client factory so tests and simulations inject a recording

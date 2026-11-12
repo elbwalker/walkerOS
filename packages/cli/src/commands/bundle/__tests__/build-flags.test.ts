@@ -22,28 +22,6 @@ describe('flowNeeds', () => {
     });
   });
 
-  it('observe follows config.observe and collector.observe', () => {
-    expect(
-      flowNeeds({
-        config: {
-          platform: 'web',
-          observe: { url: 'https://obs.example', binding: 'pb_x' },
-        },
-      }).observe,
-    ).toBe(true);
-    expect(
-      flowNeeds({
-        collector: {
-          observe: {
-            url: 'https://obs.example',
-            sessionId: 'ses_1',
-            token: 'tok',
-          },
-        },
-      }).observe,
-    ).toBe(true);
-  });
-
   it('stores follow declared stores', () => {
     expect(flowNeeds({ stores: {} }).stores).toBe(false);
     expect(
@@ -77,7 +55,7 @@ describe('flowNeeds', () => {
 describe('buildFlagDefines', () => {
   it('defines every flag from the needs, with validation off', () => {
     expect(
-      buildFlagDefines({ observe: false, stores: true, state: false }),
+      buildFlagDefines({ observe: false, stores: true, state: false }, false),
     ).toEqual({
       __WALKEROS_OBSERVE__: 'false',
       __WALKEROS_STORES__: 'true',
@@ -86,13 +64,23 @@ describe('buildFlagDefines', () => {
     });
   });
 
-  it('turns every flag on without needs', () => {
-    expect(buildFlagDefines(undefined)).toEqual({
-      __WALKEROS_OBSERVE__: 'true',
+  it('turns every other flag on without needs', () => {
+    expect(buildFlagDefines(undefined, false)).toEqual({
+      __WALKEROS_OBSERVE__: 'false',
       __WALKEROS_STORES__: 'true',
       __WALKEROS_STATE__: 'true',
       __WALKEROS_VALIDATE__: 'true',
     });
+  });
+
+  // The reporter's flag is the caller's alone, never the needs' bit.
+  it.each([
+    ['needs that say observe', { observe: true, stores: false, state: false }],
+    ['needs that do not', { observe: false, stores: false, state: false }],
+    ['no needs', undefined],
+  ])('takes the reporter flag from its caller, with %s', (_name, needs) => {
+    expect(buildFlagDefines(needs, false).__WALKEROS_OBSERVE__).toBe('false');
+    expect(buildFlagDefines(needs, true).__WALKEROS_OBSERVE__).toBe('true');
   });
 });
 

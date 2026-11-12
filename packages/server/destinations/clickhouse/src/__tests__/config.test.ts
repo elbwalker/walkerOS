@@ -1,5 +1,7 @@
+import { ClickHouseLogLevel } from '@clickhouse/client';
 import { createMockLogger } from '@walkeros/core';
 import {
+  DEFAULT_DATABASE,
   DEFAULT_TIMEOUT_MS,
   MIN_REQUEST_TIMEOUT_MS,
   normalizeMaxRetries,
@@ -237,7 +239,33 @@ describe('client options', () => {
       database: 'analytics',
       request_timeout: 4812,
       compression: { request: true },
+      log: { level: ClickHouseLogLevel.OFF },
     });
+  });
+
+  // The client's own logger prints a failed request's answer, which can quote
+  // refused rows, to the console outside the walkerOS logger. The destination
+  // reports every failed insert itself, so the client's logger is off unless a
+  // flow asks for it.
+  it.each([
+    [
+      'off when the flow sets none',
+      undefined,
+      { level: ClickHouseLogLevel.OFF },
+    ],
+    [
+      'as the flow set it',
+      { level: ClickHouseLogLevel.WARN },
+      { level: ClickHouseLogLevel.WARN },
+    ],
+  ])("keeps the client's own logger %s", (_name, log, expected) => {
+    const options = resolveClientOptions(
+      { ...base, clickhouse: log ? { log } : {} },
+      undefined,
+      DEFAULT_TIMEOUT_MS,
+    );
+
+    expect(options.log).toEqual(expected);
   });
 
   it('yields to an explicit request timeout in the passthrough', () => {
@@ -310,6 +338,83 @@ describe('client options', () => {
       username: 'walkeros_writer',
       password: 'secret',
     });
+  });
+
+  // Lowest layer first: the passthrough, the derived defaults where it left a
+  // key unset, the url with its path and the database, then the credentials.
+  it('merges the passthrough, the defaults, the endpoint, then the credentials', () => {
+    const options = resolveClientOptions(
+      {
+        ...base,
+        url: 'https://ingest.walkeros.io/events',
+        clickhouse: {
+          url: 'https://other.example.com:8443',
+          pathname: '/other',
+          database: 'other',
+          username: 'passthrough',
+          password: 'weak',
+          max_open_connections: 25,
+        },
+      },
+      { username: 'walkeros_writer', password: 'secret' },
+      DEFAULT_TIMEOUT_MS,
+    );
+
+    expect(options).toEqual({
+      url: 'https://ingest.walkeros.io',
+      pathname: '/events',
+      database: 'analytics',
+      username: 'walkeros_writer',
+      password: 'secret',
+      max_open_connections: 25,
+      request_timeout: 4812,
+      compression: { request: true },
+      log: { level: ClickHouseLogLevel.OFF },
+    });
+  });
+
+  // The client reads a path in its url as the database. Handed over as the
+  // request path instead, it moves no row to another database.
+  it.each([
+    [
+      'https://ingest.walkeros.io/events',
+      'https://ingest.walkeros.io',
+      '/events',
+    ],
+    [
+      'https://walkeros_writer@ingest.walkeros.io:8443/events/',
+      'https://walkeros_writer@ingest.walkeros.io:8443',
+      '/events/',
+    ],
+    [
+      'https://ingest.walkeros.io/events?ch_wait_end_of_query=1',
+      'https://ingest.walkeros.io?ch_wait_end_of_query=1',
+      '/events',
+    ],
+  ])('sends the path of %s as the request path', (given, bare, pathname) => {
+    const options = resolveClientOptions(
+      { ...base, database: DEFAULT_DATABASE, url: given },
+      undefined,
+      DEFAULT_TIMEOUT_MS,
+    );
+
+    expect(options).toMatchObject({
+      url: bare,
+      pathname,
+      database: DEFAULT_DATABASE,
+    });
+  });
+
+  it('hands a token to the client as access_token, with no username or password', () => {
+    const options = resolveClientOptions(
+      base,
+      { token: 'wos_events_token' },
+      DEFAULT_TIMEOUT_MS,
+    );
+
+    expect(options.access_token).toBe('wos_events_token');
+    expect(options).not.toHaveProperty('username');
+    expect(options).not.toHaveProperty('password');
   });
 
   it('leaves a passthrough credential alone when the slot is empty', () => {

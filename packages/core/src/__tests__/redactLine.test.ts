@@ -127,6 +127,62 @@ describe('scrubSecrets', () => {
       expect(result).not.toContain('AKIAIOSFODNN7EXAMPLE');
       expect(result).toContain('***');
     });
+
+    // Every walkerOS token starts with wos_, so it is masked by that prefix,
+    // not only when its shape or entropy gives it away.
+    it.each([
+      [
+        'a usage token of low entropy',
+        `wos_usage_${'a'.repeat(16)}_${'a'.repeat(43)}`,
+      ],
+      ['a short app token', 'wos_at_shorttoken'],
+    ])('masks %s by its prefix', (_name, token) => {
+      expect(redactLine(`report refused for ${token} at /usage`)).toBe(
+        'report refused for *** at /usage',
+      );
+    });
+
+    // In serialized JSON an escape ends the word before a token.
+    it('masks a token right after a JSON escape, keeping the escape', () => {
+      expect(redactLine('{"m":"line\\nsk_live_abc"}')).toBe(
+        '{"m":"line\\n***"}',
+      );
+    });
+
+    // The credential after an auth scheme masks whatever its length; an
+    // ordinary word after the scheme name stays.
+    it.each([
+      ['Authorization: Bearer Ab3dEf6hIj9lMn2pQr', 'Authorization: Bearer ***'],
+      ['Authorization: Basic dXNlcjpzM2NyZXQ=', 'Authorization: Basic ***'],
+      ['retry with bearer abc123', 'retry with bearer ***'],
+      ['falls back to basic auth', 'falls back to basic auth'],
+      [
+        'Basic Auth failed for the basic plan',
+        'Basic Auth failed for the basic plan',
+      ],
+      ['the bearer token was refused', 'the bearer token was refused'],
+    ])('masks the credential after an auth scheme in %s', (line, masked) => {
+      expect(redactLine(line)).toBe(masked);
+    });
+
+    // In a URL a percent escape ends the word before a token.
+    it.each([
+      ['auth=Bearer%20sk_live_abc', 'auth=Bearer%20***'],
+      ['q=Bearer%20wos_at_shorttoken&x=1', 'q=Bearer%20***&x=1'],
+      ['k%3Dsk_test_abc', 'k%3D***'],
+    ])('masks a token right after a percent escape in %s', (line, masked) => {
+      expect(redactLine(line)).toBe(masked);
+    });
+
+    // A prefix inside a word is ordinary text.
+    it.each([
+      'task_queue failed',
+      'disk-full on /var',
+      'mask-rule not applied',
+      'twos_complement',
+    ])('leaves %s unchanged', (line) => {
+      expect(redactLine(line)).toBe(line);
+    });
   });
 
   // ── PEM + all five SA-JSON fields unaffected by the path relaxation ────────

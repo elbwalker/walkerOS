@@ -295,10 +295,8 @@ prints them with `formatPushResult`; programmatic `push()` does not simulate.
   step: `events`, `calls`, `mappingKey?`, `skipped?`, `error?`; `skipped` says
   why a destination sent nothing: `pending` on its `require`, or a `consent`
   skip)
-- Trace-mode limit: simulate injects the mock env before `init`, so a client
-  built in `init` is recorded. Runtime trace mode wraps the env per push only
-  (`collector/src/destination.ts`), so calls through a client built in `init`
-  are not recorded there.
+- Clients built in `init`: simulate injects the mock env before `init`, so a
+  client built in `init` is recorded.
 - The `mockEnv()` and env pattern examples above remain correct for unit testing
   individual step functions directly
 

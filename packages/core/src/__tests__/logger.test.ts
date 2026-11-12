@@ -112,4 +112,22 @@ describe('logger', () => {
       expect(jsonHandler).toHaveBeenCalledWith({ scoped: true });
     });
   });
+  describe('mask', () => {
+    const mask = (text: string) => text.replace('sk-known-value-123', '***');
+
+    it('masks with the configured mask, in a scoped logger too', () => {
+      const logger = createLogger({ mask });
+
+      expect(logger.mask('key sk-known-value-123 refused')).toBe(
+        'key *** refused',
+      );
+      expect(logger.scope('d').mask('key sk-known-value-123 refused')).toBe(
+        'key *** refused',
+      );
+    });
+
+    it('returns the text unchanged without a mask', () => {
+      expect(createLogger().mask('nothing to hide')).toBe('nothing to hide');
+    });
+  });
 });

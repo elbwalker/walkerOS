@@ -185,7 +185,7 @@ runneros start flow.tar.gz
 Send one authenticated request to the walkerOS app API and print the answer. The
 CLI knows no app operation of its own: name the method and the path, and the app
 validates the request. Projects, flows, deployments, previews, secrets and
-Observe sessions are all reached this way.
+Observe are all reached this way.
 
 ### Usage
 

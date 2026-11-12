@@ -319,4 +319,19 @@ describe('applyOverrides', () => {
       applyOverrides(config, {});
     });
   });
+
+  describe('observe', () => {
+    it("drops the flow's own observe block", () => {
+      const config: Record<string, unknown> = {
+        observe: {
+          usage: { url: 'https://ingest.example.com/usage', token: 't' },
+        },
+        destinations: {},
+      };
+
+      applyOverrides(config, {});
+
+      expect(config).not.toHaveProperty('observe');
+    });
+  });
 });

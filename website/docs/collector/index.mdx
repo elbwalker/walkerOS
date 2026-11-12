@@ -216,6 +216,41 @@ completed event. What the chain does reaches every destination:
   the chain's output; the chain never runs twice for one event.
 - `walker config` can replace `next` for later events.
 
+## Observers
+
+`observers` hands every flow record to your own functions: one record per step
+and phase (`init`, `in`, `out`, `error`, `skip`, `flush`), for sources,
+transformers, the collector, destinations and stores.
+
+<CodeSnippet
+  code={`const { elb } = await startFlow({
+  observers: [(state) => console.log(state.stepId, state.phase)],
+});`}
+  language="typescript"
+/>
+
+Observers are advisory: they run synchronously inside the collector's emit
+loop, and a throwing observer never breaks event processing. Use them to stream
+records to your own endpoint, a log pipeline or a test assertion. The `in` and
+`out` records carry the whole event (`inEvent`, `outEvent`, user data
+included), and a destination's `out` record carries its response
+(`meta.response`), so treat what an observer forwards as event data.
+
+Each record carries fields that let one observer follow a request across web
+and server flows: `traceId` (the run's W3C trace id: `event.source.trace`, else
+an inbound header's trace, else the collector's run trace), `eventId` (the
+event's `id` at this hop), `parentEventId` (the upstream runtime's `event.id`
+when the flow was entered across a `$flow` crossing) and `sourceId`. The trace
+crosses the wire as a W3C `traceparent` header: the web `api` destination adds
+it to each non-batched send (a `traceparent` you set yourself wins), and a
+server source with request headers, such as an Express or fetch handler, reads a
+valid inbound `traceparent`, so the receiving flow's records share the caller's
+`traceId` and name it in `parentEventId`.
+
+The `observe` option goes one step further than observers: it reports a
+runtime's counters, issues and events to an endpoint. See
+[Observe](/docs/getting-started/observe).
+
 ## Status
 
 The collector tracks delivery metrics on `collector.status`:
@@ -236,8 +271,9 @@ console.log(collector.status);
 //     browser: { count: 100, lastAt: 1707580900000, duration: 1200 }
 //   },
 //   destinations: {
-//     ga4:  { count: 95, failed: 0, skipped: 0, lastAt: 1707580900000,
-//             duration: 800, queuePushSize: 0, dlqSize: 0 },
+//     ga4:  { count: 95, failed: 0, skipped: 0, ignored: 0,
+//             lastAt: 1707580900000, duration: 800,
+//             latency: [/* 12 bucket counts */], queuePushSize: 0, dlqSize: 0 },
 //     meta: { count: 0, failed: 5, lastAt: 1707580850000, duration: 400,
 //             queuePushSize: 0, dlqSize: 5 }
 //   },
@@ -245,16 +281,38 @@ console.log(collector.status);
 //   // \`@walkeros/core\`. Entries are created lazily on first drop.
 //   dropped: {
 //     // "collector" is the reserved stepId for the collector-level buffer.
-//     // "destination.<id>" keys each destination's drop counters.
-//     // Each entry exposes optional { queue?, dlq? } counts.
+//     // "destination.<id>" keys each destination's buffer drops
+//     // ({ queue?, dlq? }). A source or chain position such as
+//     // "source.web" or "collector.next" counts the events it kept from
+//     // the destinations ({ consent?, ignored?, stopped? }).
 //   }
 // }
 
-// Compute average destination push time
+// Average delivery time per event (a batch flush adds its time once)
 const ga4 = collector.status.destinations.ga4;
 const avgMs = ga4.duration / (ga4.count + ga4.failed);`}
   language="typescript"
 />
+
+### What the counters count
+
+- `count` and `out` count events: one per delivered event, for a single push, a
+  batch and a before-chain fan-out alike. Before, a pass that delivered several
+  events at once counted one.
+- `skipped` counts events held back by consent under `consentDenied: 'skip'`;
+  `ignored` counts events a rule's `ignore: true` stopped. Neither is a failure.
+- `latency` is a histogram of delivery time: one count per push and per batch
+  flush, delivered or failed, in the buckets of `LATENCY_BOUNDS_MS` (5, 10, 25,
+  50, 100, 250, 500, 1000, 2500, 5000 and 10000 milliseconds) and one above the
+  last. Both are exported by `@walkeros/core`.
+- A destination's counts, its failure lines and its cause steps sit under
+  `config.id`, else its key in the flow. A destination whose `config.id` differs
+  from its key now counts everything under the id, where an unbatched one
+  counted part of it under the key.
+- A destination-level drop, such as a `before` chain drop or a cache hit, is
+  counted nowhere.
+
+[Observe](/docs/getting-started/observe) reports these counters.
 
 ### What a push answers
 
@@ -269,9 +327,9 @@ event ends in one of three places:
   a `code`, a `message` and `retryable` (see the table in
   [Logger](./logger#failure-codes)).
 
-An event a destination skips on purpose, because a rule has `ignore: true`
-or because consent is denied on a server collector, appears under none of the
-three and is counted in `status.destinations.<id>.skipped`.
+An event a destination skips on purpose appears under none of the three. A rule
+with `ignore: true` is counted in `status.destinations.<id>.ignored`, and
+consent denied on a server collector in `status.destinations.<id>.skipped`.
 
 `ok` is `false` when any destination failed, and also when a step before the
 destinations failed: `reason` then names the cause, for example `queue-full`
@@ -469,9 +527,15 @@ caps on each destination:
   language="typescript"
 />
 
-Operators alarm on the `dropped` counters to detect sustained overflow.
-Counters live on `collector.status.dropped`, keyed by stepId (build the
-key with `stepId()` from `@walkeros/core`):
+Operators alarm on the buffer counters (`queue` and `dlq`) to detect sustained
+overflow. Counters live on `collector.status.dropped`, keyed by stepId (build
+the key with `stepId()` from `@walkeros/core`). The same map also holds the
+routine drops of the pipeline: `consent`, `ignored` and `stopped` at the source
+and collector positions (`source.<id>`, `source.<id>.before`,
+`source.<id>.next`, `collector.next`, and for an event pushed without a source
+`collector.push` and `collector.push.preChain`) count events a consent state, a rule's `ignore` or a chain stop kept from the
+destinations on purpose. An alarm that sums every entry of `dropped` fires on
+those intended drops, so read the two buffer keys:
 
 <CodeSnippet
   code={`import { stepId } from '@walkeros/core';

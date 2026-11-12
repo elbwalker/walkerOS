@@ -311,6 +311,25 @@ describe('createCLILogger format json', () => {
     );
   });
 
+  it.each([
+    [false, []],
+    [true, ['detail']],
+  ])('with verbose %s the tap reads DEBUG lines: %j', (verbose, expected) => {
+    const logSpy = jest.spyOn(console, 'log').mockImplementation(() => {});
+    const lines: string[] = [];
+    const logger = createLogger(
+      createCLILoggerConfig({
+        verbose,
+        onLine: (_level, message) => lines.push(message),
+      }),
+    );
+
+    logger.debug('detail');
+
+    logSpy.mockRestore();
+    expect(lines).toEqual(expected);
+  });
+
   it('hands onLine the text line and the structured entry, in both formats', () => {
     const taps: Array<[Level, string, LogEntry]> = [];
     const logger = createLogger(
@@ -343,6 +362,23 @@ describe('createCLILogger format json', () => {
         },
       ],
     ]);
+  });
+});
+
+// A logger built from this config, as a host hands it to a flow, masks the
+// known values in text that leaves outside a log line, including values
+// learned after the config was made.
+describe('createCLILoggerConfig mask', () => {
+  it('masks the known values only, read when the logger masks', () => {
+    const known: string[] = [];
+    const config = createCLILoggerConfig({ knownSecrets: () => known });
+    const logger = createLogger({ ...config, level: Level.ERROR });
+    known.push('fetched-at-startup');
+
+    // Known values only: the pattern pass is the caller's (redactLine).
+    expect(logger.mask('fetched-at-startup and AKIAIOSFODNN7EXAMPLE')).toBe(
+      '*** and AKIAIOSFODNN7EXAMPLE',
+    );
   });
 });
 

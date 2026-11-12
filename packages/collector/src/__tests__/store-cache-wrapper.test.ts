@@ -12,6 +12,7 @@ interface MockLogger extends Logger.Instance {
   info: jest.Mock;
   debug: jest.Mock;
   json: jest.Mock;
+  mask: jest.Mock;
   scope: jest.Mock;
 }
 
@@ -33,6 +34,7 @@ function createMockLogger(): MockLogger {
     debug: jest.fn(),
     throw: throwFn,
     json: jest.fn(),
+    mask: jest.fn((text: string) => text),
     scope: jest.fn(),
   };
   instance.scope.mockReturnValue(instance);

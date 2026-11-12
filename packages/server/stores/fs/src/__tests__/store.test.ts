@@ -14,6 +14,7 @@ describe('FsStore', () => {
     debug: jest.fn(),
     throw: jest.fn() as unknown as Logger.ThrowFn,
     json: jest.fn(),
+    mask: jest.fn((text: string) => text),
     scope: jest.fn().mockReturnThis(),
   };
 

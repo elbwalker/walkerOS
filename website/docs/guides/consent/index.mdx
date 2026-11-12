@@ -164,8 +164,8 @@ matches, on top of the destination's `config.consent`:
 Both must hold. Events the rule matches wait in the same queue and are
 delivered in queue order once both are granted (with an async `condition`, an
 event joins the queue when its condition settles); server flows built by the CLI
-skip them instead. Observe and `walkeros push --simulate` show the
-rule's key and the missing consent.
+skip them instead. `walkeros push --simulate` shows the rule's key and the
+missing consent.
 
 ### Gate a source with `consent`
 

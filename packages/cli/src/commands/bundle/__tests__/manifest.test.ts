@@ -661,6 +661,55 @@ describe('BuildManifestSchema wrap options', () => {
         .success,
     ).toBe(false);
   });
+
+  const PREVIEW = {
+    url: 'https://ingest.example.com/preview',
+    token: 'wos_preview_t1_secret',
+  };
+
+  it('accepts Observe preview reporting', () => {
+    expect(
+      BuildManifestSchema.safeParse(manifest({ observe: { preview: PREVIEW } }))
+        .success,
+    ).toBe(true);
+  });
+
+  it.each([
+    ['usage', { preview: PREVIEW, usage: PREVIEW }],
+    ['usage alone', { usage: PREVIEW }],
+    ['no preview', {}],
+    ['an unknown preview key', { preview: { ...PREVIEW, interval: 60 } }],
+    ['an empty token', { preview: { ...PREVIEW, token: '' } }],
+    ['a url that is not http', { preview: { ...PREVIEW, url: 'ftp://x/p' } }],
+    ['a reference', { preview: { ...PREVIEW, url: '$env.OBSERVE_URL' } }],
+  ])('refuses observe with %s', (_, observe) => {
+    expect(BuildManifestSchema.safeParse(manifest({ observe })).success).toBe(
+      false,
+    );
+  });
+
+  it('refuses observe beside preview activation, which makes a host build', () => {
+    const activation = {
+      enabled: true,
+      keyring: [],
+      iss: 'https://app.example.com',
+      previewOrigin: 'cdn.example.com',
+    };
+    expect(
+      BuildManifestSchema.safeParse(
+        manifest({ observe: { preview: PREVIEW }, preview: activation }),
+      ).success,
+    ).toBe(false);
+    expect(
+      BuildManifestSchema.safeParse(manifest({ preview: activation })).success,
+    ).toBe(true);
+  });
+
+  it('refuses observe on a node wrap', () => {
+    const node = manifest({ observe: { preview: PREVIEW } });
+    node.artifacts[0].platform = 'node';
+    expect(BuildManifestSchema.safeParse(node).success).toBe(false);
+  });
 });
 
 describe('runBuildManifest packages', () => {

@@ -1,5 +1,4 @@
 import type { FlowState, WalkerOS } from '@walkeros/core';
-import { createTelemetryObserver } from '@walkeros/core';
 import { startFlow } from '..';
 
 describe('transformer.push self-emission', () => {
@@ -102,7 +101,7 @@ describe('transformer.push self-emission', () => {
     expect(collector.status.failed - failedBefore).toBe(1);
   });
 
-  test('trace observer keeps inEvent/outEvent on the transformer frames', async () => {
+  test('an observer receives inEvent/outEvent on the transformer frames', async () => {
     const states: FlowState[] = [];
     let seenEvent: WalkerOS.DeepPartialEvent | undefined;
 
@@ -127,12 +126,7 @@ describe('transformer.push self-emission', () => {
         },
       },
     });
-    collector.observers.add(
-      createTelemetryObserver((state) => states.push(state), {
-        flowId: 'default',
-        level: 'trace',
-      }),
-    );
+    collector.observers.add((state) => states.push(state));
 
     await elb({ name: 'page view', data: {} });
 
@@ -154,45 +148,5 @@ describe('transformer.push self-emission', () => {
     );
     expect(outFrame).toBeDefined();
     expect(outFrame?.outEvent).toEqual({ event: seenEvent });
-  });
-
-  test('standard observer strips inEvent from the transformer in frame', async () => {
-    const states: FlowState[] = [];
-
-    const { collector, elb } = await startFlow({
-      run: true,
-      transformers: {
-        echo: {
-          code: async (context) => ({
-            type: 'echo',
-            config: context.config,
-            push: async (event) => ({ event }),
-          }),
-        },
-      },
-      destinations: {
-        sink: {
-          code: { type: 'sink', config: {}, push: async () => undefined },
-          before: 'echo',
-        },
-      },
-    });
-    collector.observers.add(
-      createTelemetryObserver((state) => states.push(state), {
-        flowId: 'default',
-        level: 'standard',
-      }),
-    );
-
-    await elb({ name: 'page view', data: {} });
-
-    const inFrame = states.find(
-      (s) =>
-        s.stepType === 'transformer' &&
-        s.stepId === 'transformer.echo' &&
-        s.phase === 'in',
-    );
-    expect(inFrame).toBeDefined();
-    expect(inFrame?.inEvent).toBeUndefined();
   });
 });

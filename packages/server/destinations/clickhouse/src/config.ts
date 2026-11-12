@@ -4,7 +4,7 @@ import type {
 } from '@clickhouse/client';
 import type { Logger } from '@walkeros/core';
 import { StepError } from '@walkeros/core';
-import { createClient } from '@clickhouse/client';
+import { ClickHouseLogLevel, createClient } from '@clickhouse/client';
 import type {
   ClickHouseClientFactory,
   Config,
@@ -185,6 +185,48 @@ function endpointHost(url: string): string {
   }
 }
 
+/** The url the client parses, the path it sends to, and how it signs in. */
+interface Endpoint {
+  url: string;
+  pathname?: string;
+  userinfo: boolean;
+  /** An `access_token` in the query, which the client reads as config. */
+  queryToken: boolean;
+}
+
+/**
+ * The configured url, split for the client.
+ *
+ * The client reads a path in its url as the database, and that path wins over
+ * the configured `database` with a client warning only, so every row would
+ * land in a database named after the route. Handed over as `pathname` instead,
+ * the path stays the request path and the database the configured one. A url
+ * without a path travels as written, and so does one the parser rejects, for
+ * the client to refuse in its own words.
+ */
+function splitEndpoint(url: string): Endpoint {
+  let parsed: URL;
+  try {
+    parsed = new URL(url);
+  } catch {
+    return { url, userinfo: false, queryToken: false };
+  }
+
+  const userinfo = parsed.username !== '' || parsed.password !== '';
+  const queryToken = parsed.searchParams.has('access_token');
+  if (parsed.pathname.length <= 1) return { url, userinfo, queryToken };
+
+  const password = parsed.password ? `:${parsed.password}` : '';
+  const auth = userinfo ? `${parsed.username}${password}@` : '';
+
+  return {
+    url: `${parsed.protocol}//${auth}${parsed.host}${parsed.search}`,
+    pathname: parsed.pathname,
+    userinfo,
+    queryToken,
+  };
+}
+
 /** The resolved settings before init attaches the live client. */
 type ResolvedSettings = Omit<Settings, 'client'>;
 
@@ -208,14 +250,24 @@ function withDefaults(settings: InitSettings | undefined): ResolvedSettings {
  * The options `createClient` receives, merged lowest layer first:
  *
  * 1. `settings.clickhouse`, the raw SDK passthrough.
- * 2. The derived defaults, `request_timeout` and request compression, each
- *    applied only where the passthrough left its key unset.
- * 3. `url` and `database`, the destination's own first-class settings. They
- *    always win: an insert names only the table, so a passthrough `database`
- *    that disagreed would move every row to a different database in silence.
- * 4. `credentials`, the strictly typed slot backed by a managed secret. It wins
- *    over a username or password left in the passthrough; with the slot empty
- *    the passthrough reaches the client untouched.
+ * 2. The derived defaults, `request_timeout`, request compression and the
+ *    client's own logger switched off, each applied only where the
+ *    passthrough left its key unset.
+ * 3. `url`, with its path as `pathname`, and `database`, the destination's own
+ *    first-class settings. They always win: an insert names only the table,
+ *    so a passthrough `database` that disagreed would move every row to a
+ *    different database in silence.
+ * 4. `credentials`, the strictly typed slot backed by a managed secret: a
+ *    username and password, or a token as `access_token`. It wins over the
+ *    same keys left in the passthrough; with the slot empty the passthrough
+ *    reaches the client untouched.
+ *
+ * Refused with a StepError, code `config`, before any client exists: a token
+ * beside a username or password, wherever each sits (the client signs in with
+ * one of the two and throws its own error on both, which would name neither
+ * place); an empty token, which would go out as an empty Bearer header; and a
+ * token in the url's query, which belongs in `credentials.token`, backed by a
+ * managed secret. No message repeats the url or a credential.
  *
  * The table, the retry count and the per-insert settings are not client
  * options and stay off this object.
@@ -238,13 +290,54 @@ export function resolveClientOptions(
   if (options.compression === undefined)
     options.compression = { request: true };
 
-  options.url = settings.url;
+  // The client's own logger prints each failed request with its answer, which
+  // can quote the rows ClickHouse refused, to the console: outside the walkerOS
+  // logger, unmasked and unthrottled. The destination reports every failed
+  // insert itself, so the client's logger stays off unless a flow asks for it.
+  if (options.log === undefined)
+    options.log = { level: ClickHouseLogLevel.OFF };
+
+  const endpoint = splitEndpoint(settings.url);
+  if (endpoint.queryToken)
+    throw new StepError(
+      'Config settings url carries an access_token; a token belongs in credentials.token',
+      { code: 'config', retryable: false },
+    );
+  options.url = endpoint.url;
+  if (endpoint.pathname) options.pathname = endpoint.pathname;
   options.database = settings.database;
 
-  if (credentials) {
+  let tokenAt =
+    options.access_token === undefined ? undefined : 'settings.clickhouse';
+  let signInAt =
+    options.username === undefined && options.password === undefined
+      ? undefined
+      : 'settings.clickhouse';
+
+  if (credentials && 'token' in credentials) {
+    if (!credentials.token)
+      throw new StepError('Config credentials token missing', {
+        code: 'config',
+        retryable: false,
+      });
+    options.access_token = credentials.token;
+    tokenAt = 'credentials';
+    // A flow file has no type check, so the slot can carry both.
+    if ('username' in credentials || 'password' in credentials)
+      signInAt = 'credentials';
+  } else if (credentials) {
     options.username = credentials.username;
     options.password = credentials.password;
+    signInAt = 'credentials';
   }
+
+  if (endpoint.userinfo) signInAt ??= 'settings.url';
+
+  if (tokenAt && signInAt)
+    throw new StepError(
+      `Config has a token and a username or password (token in ${tokenAt}, username or password in ${signInAt}); ClickHouse signs in with one of them`,
+      { code: 'config', retryable: false },
+    );
 
   return options;
 }

@@ -159,14 +159,19 @@ export function createLogger(config: Config = {}): Instance {
     handler: customHandler,
     jsonHandler,
     scope,
+    mask: config.mask ?? unchanged,
   });
+}
+
+function unchanged(text: string): string {
+  return text;
 }
 
 /**
  * Internal logger creation with resolved config
  */
 function createLoggerInternal(config: InternalConfig): Instance {
-  const { level, handler, jsonHandler, scope } = config;
+  const { level, handler, jsonHandler, scope, mask } = config;
 
   /**
    * Internal log function that checks level and delegates to handler
@@ -222,7 +227,9 @@ function createLoggerInternal(config: InternalConfig): Instance {
         handler,
         jsonHandler,
         scope: [...scope, name],
+        mask,
       }),
+    mask,
   };
 }
 

@@ -6,7 +6,13 @@ import type {
   StepKind,
   WalkerOS,
 } from '@walkeros/core';
-import { reportCause, stepId, toFailureReason } from '@walkeros/core';
+import {
+  latencyBucket,
+  LATENCY_BOUNDS_MS,
+  reportCause,
+  stepId,
+  toFailureReason,
+} from '@walkeros/core';
 import { recordFailure } from './outcome';
 
 /**
@@ -35,14 +41,29 @@ export function ensureDestStatus(
 }
 
 /**
- * Bump a drop counter under `status.dropped[stepId][buffer]`. Lazily
+ * Count one delivery's latency in its destination's histogram: one of
+ * `LATENCY_BOUNDS_MS.length + 1` buckets, created on the first count.
+ */
+export function recordLatency(
+  status: Collector.DestinationStatus,
+  ms: number,
+): void {
+  const latency =
+    status.latency ??
+    (status.latency = new Array<number>(LATENCY_BOUNDS_MS.length + 1).fill(0));
+  const bucket = latencyBucket(ms);
+  latency[bucket] = (latency[bucket] ?? 0) + 1;
+}
+
+/**
+ * Bump a drop counter under `status.dropped[id][counter]`. Lazily
  * creates the per-step entry; returns the new counter value so callers
  * can pass it straight into the warn-once log payload.
  */
 export function bumpDropped(
   status: Collector.Status,
   id: string,
-  buffer: 'queue' | 'dlq',
+  buffer: keyof Collector.DroppedCounters,
   n: number,
 ): number {
   if (!status.dropped[id]) status.dropped[id] = {};
@@ -98,9 +119,9 @@ export function errorMeta(err: unknown): {
  *   the broken writer and gets DLQ'd).
  * - event-bearing (`reportError(err, event)`): the event goes through the
  *   one outcome sink an in-band push failure uses (`recordFailure`: counters,
- *   DLQ, breaker, Observe, one cause line), for a destination. A step kind
- *   without a DLQ (or a destination not passed) still gets `failed`-counted
- *   and one cause line, never silently dropped.
+ *   DLQ, breaker, observer record, one cause line), for a destination. A step
+ *   kind without a DLQ (or a destination not passed) still gets
+ *   `failed`-counted and one cause line, never silently dropped.
  */
 export function buildReportError(
   collector: Collector.Instance,
@@ -109,7 +130,8 @@ export function buildReportError(
   logger: Logger.Instance,
   destination?: Destination.Instance,
 ): NonNullable<Context.Base['reportError']> {
-  const key = stepId(kind, id);
+  // A destination counts under its canonical id, like its other counts.
+  const key = stepId(kind, destination?.config.id || id);
   return (err: unknown, event?: WalkerOS.Event): void => {
     try {
       if (event) {

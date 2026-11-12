@@ -11,7 +11,7 @@ export const SERVER_INSTRUCTIONS = `walkerOS is an open-source, privacy-first ev
 
 This server runs on your machine and works on flow files. Its tools read a file path, an http(s) URL or inline JSON, and validate, simulate, bundle and push flows here. It needs no account and no token.
 
-What the walkerOS app stores (projects, saved flows, deployments, previews, Observe sessions, frames, release history, secrets, feedback) is served by the hosted walkerOS MCP server at \`https://app.walkeros.io/api/mcp\`. Add it to your MCP client as a remote server; it signs you in with OAuth. Both servers offer \`flow_validate\`, \`flow_examples\`, \`flow_load\`, \`package_search\` and \`package_get\`: use the hosted one for a saved flow and this one for a file.
+What the walkerOS app stores (projects, saved flows, deployments, previews, Observe, frames, release history, secrets, feedback) is served by the hosted walkerOS MCP server at \`https://app.walkeros.io/api/mcp\`. Add it to your MCP client as a remote server; it signs you in with OAuth. Both servers offer \`flow_validate\`, \`flow_examples\`, \`flow_load\`, \`package_search\` and \`package_get\`: use the hosted one for a saved flow and this one for a file.
 
 To simulate, bundle or push a saved flow here, ask the hosted \`flow_manage\` for a config link (\`action: "config_url"\`) and pass that URL as the input of \`flow_load\`, \`flow_simulate\`, \`flow_bundle\` or \`flow_push\`. A link lasts about ten minutes; an expired one fails with its HTTP status.
 

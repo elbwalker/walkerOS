@@ -2,8 +2,8 @@ import type { PageElb } from '../shared/controls';
 
 /**
  * The managed walker.js of the app flow "Tagging demo", the one the static
- * tagging demo runs. Its bundle carries the `elbPreview` loader, so the app's
- * Preview and Observe can swap in a session bundle.
+ * tagging demo runs. Its bundle carries the `elbPreview` loader, so an app
+ * preview link can swap in the preview bundle.
  */
 export const WALKER_JS_URL =
   'https://stage.cdn.walkeros.io/d/pl4y9p4n0dea/walker.js';

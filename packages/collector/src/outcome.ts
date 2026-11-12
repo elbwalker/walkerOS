@@ -67,7 +67,7 @@ export function asStepError(err: unknown, code: string): StepError {
 }
 
 export interface FailureOptions {
-  /** The caller already emitted the Observe `error` state of these events. */
+  /** The caller already emitted the observer `error` record of these events. */
   observed?: boolean;
   /** The cause line's message; `Push failed` by default. */
   message?: string;
@@ -84,9 +84,9 @@ export interface FailureOptions {
  * The one outcome sink for events a destination failed: derives the reason,
  * bumps the destination's and the global `failed`, writes the bounded DLQ
  * (an eviction is an ERROR cause line), records the breaker outcome, emits
- * Observe `error` per event and writes one cause line (rate limited, never
- * the payload). Called with no events for a failure that lost none (an init
- * that threw on a flush without events). Returns the reason.
+ * an observer `error` record per event and writes one cause line (rate
+ * limited, never the payload). Called with no events for a failure that lost
+ * none (an init that threw on a flush without events). Returns the reason.
  */
 export function recordFailure(
   collector: Collector.Instance,
@@ -97,8 +97,11 @@ export function recordFailure(
   options: FailureOptions = {},
 ): FailureReason {
   const reason = toFailureReason(error);
-  const step = stepId('destination', id);
-  const destStatus = ensureDestStatus(collector, id);
+  // Counted and named under the canonical id (`config.id`, else the map key),
+  // like the breaker and every other count of the destination.
+  const canonicalId = destination.config.id || id;
+  const step = stepId('destination', canonicalId);
+  const destStatus = ensureDestStatus(collector, canonicalId);
   const now = Date.now();
 
   if (events.length) {
@@ -166,10 +169,11 @@ export function recordFailure(
 }
 
 /**
- * The one skip path: an event deliberately not sent to a destination (its
- * consent denied under `consentDenied: 'skip'`, or a rule that `ignore`s
- * it). Counted in `status.destinations[id].skipped`, one DEBUG line. The
- * caller emits the Observe `skip` with its reason.
+ * The one skip path: an event deliberately not sent to a destination. A
+ * consent denied under `consentDenied: 'skip'` counts in
+ * `status.destinations[id].skipped`, a rule that `ignore`s it in `.ignored`;
+ * one DEBUG line. The caller emits the observer `skip` record with its
+ * reason.
  */
 export function recordSkip(
   collector: Collector.Instance,
@@ -178,8 +182,9 @@ export function recordSkip(
   event: WalkerOS.Event,
   reason: 'consent' | 'ignored',
 ): void {
-  const destStatus = ensureDestStatus(collector, id);
-  destStatus.skipped = (destStatus.skipped ?? 0) + 1;
+  const destStatus = ensureDestStatus(collector, destination.config.id || id);
+  if (reason === 'ignored') destStatus.ignored = (destStatus.ignored ?? 0) + 1;
+  else destStatus.skipped = (destStatus.skipped ?? 0) + 1;
   collector.logger
     .scope(destination.type || 'unknown')
     .debug('event skipped', { reason, event: event.name });

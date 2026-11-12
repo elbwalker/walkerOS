@@ -1,7 +1,12 @@
 import type { ClickHouseClientConfigOptions } from '@clickhouse/client';
-import type { MockLogger } from '@walkeros/core';
-import { createMockContext, createMockLogger } from '@walkeros/core';
-import { __getCalls, __reset } from '../__mocks__/@clickhouse/client';
+import type { Logger, MockLogger } from '@walkeros/core';
+import { startFlow } from '@walkeros/collector';
+import { createMockContext, createMockLogger, getEvent } from '@walkeros/core';
+import {
+  __getCalls,
+  __reset,
+  createClient,
+} from '../__mocks__/@clickhouse/client';
 import destination from '../';
 import type {
   ClickHouseClientSurface,
@@ -239,29 +244,41 @@ describe('insert settings', () => {
 
 describe('credentials', () => {
   const { username, password } = credentials;
+  const token = 'wos_events_aaaabbbbccccdddd_secret';
 
   // Every place a credential can legitimately sit. The url row is the one that
   // bites: the client accepts userinfo, so a partner can put a password in the
   // one field that reads like an innocent endpoint.
-  const sources: Array<[string, PartialConfig]> = [
-    ['the credentials slot', { settings: { url }, credentials }],
+  const sources: Array<[string, PartialConfig, string[]]> = [
+    [
+      'the credentials slot',
+      { settings: { url }, credentials },
+      [username, password],
+    ],
+    [
+      'the credentials token',
+      { settings: { url }, credentials: { token } },
+      [token],
+    ],
     [
       'the clickhouse passthrough',
       { settings: { url, clickhouse: { username, password } } },
+      [username, password],
     ],
     [
       'the url userinfo',
       {
         settings: {
-          url: `https://${username}:${password}@ch.example.com:8443`,
+          url: `https://${username}:${password}@ch.example.com:8443/events`,
         },
       },
+      [username, password],
     ],
   ];
 
   it.each(sources)(
     'never reach a logged object from %s',
-    async (_source, config) => {
+    async (_source, config, secrets) => {
       const { env } = createStub();
       const logger = createMockLogger();
 
@@ -277,10 +294,65 @@ describe('credentials', () => {
 
       // The assertion is only worth something while init logs at all.
       expect(logger.debug).toHaveBeenCalled();
-      expect(logged).not.toContain(password);
-      expect(logged).not.toContain(username);
+      for (const secret of secrets) expect(logged).not.toContain(secret);
     },
   );
+
+  // The fourth place a token and a username can meet: a passthrough token
+  // beside the credentials slot's username and password.
+  it('refuses a passthrough access_token beside credentials before any client exists', async () => {
+    const { env, options } = createStub();
+
+    await expect(
+      destination.init(
+        initContext(
+          {
+            settings: { url, clickhouse: { access_token: token } },
+            credentials,
+          },
+          env,
+        ),
+      ),
+    ).rejects.toMatchObject({ name: 'StepError', code: 'config' });
+    expect(options).toEqual([]);
+  });
+
+  // The client signs in with one of the two and throws its own error on both,
+  // so init says it first, and the collector fails every event with the
+  // reason instead of a client error.
+  it('fails the events of a token beside a username with code config and one ERROR line', async () => {
+    const errors: string[] = [];
+    // The line as a runner prints it: the message and its context.
+    const handler: Logger.Handler = (_level, message, context) => {
+      errors.push(`${message} ${JSON.stringify(context)}`);
+    };
+    const { collector, elb } = await startFlow({
+      logger: { level: 'ERROR', handler },
+      destinations: {
+        clickhouse: {
+          code: destination,
+          config: {
+            settings: { url: 'https://ingest.walkeros.io/events' },
+            credentials: { token, username },
+          },
+          env: { ClickHouseClient: createClient },
+        },
+      },
+    });
+
+    const result = await elb(getEvent('page view'));
+
+    expect(result.failed?.clickhouse?.reason).toMatchObject({
+      code: 'config',
+      message: expect.stringContaining('a token and a username or password'),
+    });
+    expect(errors).toEqual([
+      expect.stringContaining('a token and a username or password'),
+    ]);
+    expect(__getCalls()).toEqual([]);
+
+    await collector.command('shutdown');
+  });
 });
 
 describe('destroy', () => {

@@ -21,7 +21,7 @@
  * (TS2403). Consumers must not redeclare the names as `const` (TS2451).
  */
 declare global {
-  /** Observe: telemetry posting and trace-level vendor-call capture. */
+  /** Observe: the usage and preview reporter. */
   var __WALKEROS_OBSERVE__: boolean | undefined;
   /** Declared flow stores. The default `__cache` store always exists. */
   var __WALKEROS_STORES__: boolean | undefined;
