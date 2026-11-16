@@ -1,0 +1,100 @@
+// Terminal (@walkeros/explorer/design/components): a terminal window, a dark
+// island in both themes, its bar in the browser frame's style. A status line
+// leads with its icon and word in the status colour.
+@layer components {
+  .elb-terminal {
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+    overflow: hidden;
+    color: var(--code-fg);
+    background: var(--code-bg);
+    border: 1px solid var(--code-border);
+    border-radius: var(--radius-lg);
+  }
+
+  .elb-terminal__bar {
+    display: flex;
+    align-items: center;
+    gap: var(--space-3);
+    padding: 10px 12px;
+    background: var(--code-bar);
+    border-bottom: 1px solid var(--code-border);
+  }
+
+  .elb-terminal__dots {
+    display: flex;
+    flex: none;
+    gap: 7px;
+
+    > span {
+      width: 10px;
+      height: 10px;
+      background: var(--border-strong);
+      border-radius: var(--radius-full);
+    }
+  }
+
+  .elb-terminal__title {
+    min-width: 0;
+    overflow: hidden;
+    color: var(--fg-2);
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    font-family: var(--type-small-family);
+    font-size: var(--type-small-size);
+    line-height: var(--type-small-line-height);
+  }
+
+  .elb-terminal__body {
+    display: flex;
+    flex-direction: column;
+    padding: 12px 16px;
+    font-family: var(--type-code-step-family);
+    font-size: var(--type-code-step-size);
+    line-height: var(--type-code-step-line-height);
+  }
+
+  .elb-terminal__line {
+    white-space: pre-wrap;
+    overflow-wrap: anywhere;
+  }
+
+  .elb-terminal__prompt {
+    color: var(--fg-3);
+  }
+
+  .elb-terminal__icon {
+    margin-right: 6px;
+    vertical-align: -2px;
+  }
+
+  .elb-terminal__word {
+    font-weight: 600;
+  }
+
+  .elb-terminal__line--success :is(.elb-terminal__icon, .elb-terminal__word) {
+    color: var(--success);
+  }
+
+  .elb-terminal__line--warning :is(.elb-terminal__icon, .elb-terminal__word) {
+    color: var(--warning);
+  }
+
+  .elb-terminal__line--danger :is(.elb-terminal__icon, .elb-terminal__word) {
+    color: var(--danger);
+  }
+
+  .elb-terminal__line--info :is(.elb-terminal__icon, .elb-terminal__word) {
+    color: var(--info);
+  }
+
+  .elb-terminal__caret {
+    display: inline-block;
+    width: 0.6em;
+    height: 1.2em;
+    margin-left: 2px;
+    vertical-align: text-bottom;
+    background: var(--code-fg);
+  }
+}

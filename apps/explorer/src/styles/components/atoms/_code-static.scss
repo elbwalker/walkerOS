@@ -1,6 +1,8 @@
 // CodeStatic component - Shiki-rendered, read-only code
 // Visual parity with .elb-code (Monaco wrapper) so CodeView matches CodeBox:
 // a dark island that paints the code panel in both page themes.
+@use '../design/visually-hidden' as a11y;
+
 .elb-code-static {
   flex: 1;
   min-height: 0;
@@ -36,5 +38,61 @@
     line-height: inherit !important;
     background: transparent !important;
     display: block;
+  }
+
+  // The gutter is not part of the code: a copy leaves it out.
+  .elb-code-static__number,
+  .elb-code-static__mark {
+    display: inline-block;
+    color: var(--code-line-number);
+    user-select: none;
+  }
+
+  .elb-code-static__number {
+    min-width: 2ch;
+    margin-right: 12px;
+    text-align: right;
+  }
+
+  .elb-code-static__mark {
+    width: 1ch;
+    margin-right: 8px;
+  }
+
+  .elb-code-static__word {
+    @include a11y.visually-hidden;
+  }
+
+  .elb-code-static__caret {
+    display: inline-block;
+    width: 2px;
+    height: 1.2em;
+    margin-left: 1px;
+    vertical-align: text-bottom;
+    background: var(--code-fg);
+  }
+}
+
+// A marked line's ground spans the pane's width.
+.elb-code-static--marks {
+  .line {
+    display: inline-block;
+    min-width: 100%;
+  }
+
+  .line[data-mark='add'] {
+    background: var(--code-inserted-bg);
+
+    .elb-code-static__mark {
+      color: var(--code-fg);
+    }
+  }
+
+  .line[data-mark='focus'] {
+    background: var(--code-selection);
+
+    .elb-code-static__mark {
+      color: var(--code-fg);
+    }
   }
 }

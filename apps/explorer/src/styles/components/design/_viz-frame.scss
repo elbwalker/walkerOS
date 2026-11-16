@@ -23,7 +23,7 @@
     }
   }
 
-  .elb-viz--hero {
+  .elb-viz--tagging {
     border: 1px solid var(--border);
   }
 
@@ -36,7 +36,7 @@
     min-width: 0;
   }
 
-  .elb-viz--hero > .elb-viz__body {
+  .elb-viz--tagging > .elb-viz__body {
     padding: 16px;
   }
 
@@ -45,7 +45,7 @@
   }
 
   @container (max-width: 639px) {
-    .elb-viz--hero > .elb-viz__body {
+    .elb-viz--tagging > .elb-viz__body {
       padding: 12px;
     }
 

@@ -1,7 +1,7 @@
-// HeroTaggingViz (@walkeros/explorer/design/components): the hero demo. Static
+// TaggingViz (@walkeros/explorer/design/components): the tagging demo. Static
 // looks here; per-frame values arrive as --elb-viz-* properties, defaults below.
 @layer components {
-  .elb-viz-hero {
+  .elb-viz-tagging {
     --elb-viz-fade: 1;
     --elb-viz-card-opacity: 1;
     --elb-viz-card-offset: 0;
@@ -17,7 +17,7 @@
     align-items: stretch;
   }
 
-  .elb-viz-hero__pane {
+  .elb-viz-tagging__pane {
     display: flex;
     flex: 1.2 1 520px;
     flex-direction: column;
@@ -28,7 +28,7 @@
     border-radius: var(--radius-lg);
   }
 
-  .elb-viz-hero__bar {
+  .elb-viz-tagging__bar {
     display: flex;
     align-items: center;
     gap: var(--space-3-5);
@@ -36,7 +36,7 @@
     border-bottom: 1px solid var(--viz-surface);
   }
 
-  .elb-viz-hero__dots {
+  .elb-viz-tagging__dots {
     display: flex;
     gap: 7px;
 
@@ -48,13 +48,13 @@
     }
   }
 
-  .elb-viz-hero__file {
+  .elb-viz-tagging__file {
     color: var(--primary);
     font-family: var(--type-viz-code-family);
     font-size: var(--type-viz-code-size);
   }
 
-  .elb-viz-hero__code {
+  .elb-viz-tagging__code {
     min-height: 268px;
     padding: 12px 0 14px;
     font-family: var(--type-viz-code-family);
@@ -63,11 +63,11 @@
     opacity: var(--elb-viz-fade);
   }
 
-  .elb-viz-hero__line--on {
+  .elb-viz-tagging__line--on {
     background: color-mix(in srgb, var(--event-entity) 7%, transparent);
   }
 
-  .elb-viz-hero__stage {
+  .elb-viz-tagging__stage {
     position: relative;
     display: flex;
     flex: 1;
@@ -83,7 +83,7 @@
     border-top: 1px solid var(--viz-surface);
   }
 
-  .elb-viz-hero__card {
+  .elb-viz-tagging__card {
     position: relative;
     display: flex;
     gap: var(--space-3-5);
@@ -97,11 +97,11 @@
     transform: translateY(calc(var(--elb-viz-card-offset) * 1px));
   }
 
-  .elb-viz-hero__card--tagged {
+  .elb-viz-tagging__card--tagged {
     border-color: var(--event-entity);
   }
 
-  .elb-viz-hero__pills {
+  .elb-viz-tagging__pills {
     position: absolute;
     top: -10px;
     left: 12px;
@@ -109,7 +109,7 @@
     gap: 6px;
   }
 
-  .elb-viz-hero__thumb {
+  .elb-viz-tagging__thumb {
     position: relative;
     flex: none;
     width: 112px;
@@ -126,7 +126,7 @@
     }
   }
 
-  .elb-viz-hero__text {
+  .elb-viz-tagging__text {
     display: flex;
     flex: 1;
     flex-direction: column;
@@ -134,7 +134,14 @@
     min-width: 0;
   }
 
-  .elb-viz-hero__kicker {
+  // Every part can hold the cursor of a click on it.
+  .elb-viz-tagging__kicker,
+  .elb-viz-tagging__title,
+  .elb-viz-tagging__meta {
+    position: relative;
+  }
+
+  .elb-viz-tagging__kicker {
     align-self: flex-start;
     margin-left: -3px;
     padding: 0 3px;
@@ -146,27 +153,39 @@
     outline: 1.5px solid transparent;
   }
 
-  .elb-viz-hero__title {
+  .elb-viz-tagging__title {
     font-size: var(--type-viz-body-size);
     font-weight: 600;
     line-height: 1.3;
     text-wrap: pretty;
   }
 
-  .elb-viz-hero__mark {
+  .elb-viz-tagging__meta {
+    align-self: flex-start;
+    margin-left: -3px;
+    padding: 0 3px;
+    color: var(--viz-fg);
+    border-radius: var(--radius-xs);
+    font-family: var(--type-viz-code-family);
+    font-size: var(--type-viz-chip-size);
+    outline: 1.5px solid transparent;
+  }
+
+  .elb-viz-tagging__mark {
     border-radius: var(--radius-xs);
     outline: 1.5px solid transparent;
     outline-offset: 1px;
   }
 
-  .elb-viz-hero__kicker--on,
-  .elb-viz-hero__mark--on {
+  .elb-viz-tagging__kicker--on,
+  .elb-viz-tagging__meta--on,
+  .elb-viz-tagging__mark--on {
     outline-color: var(--event-property);
     box-shadow: 0 0 10px 1px
       color-mix(in srgb, var(--event-property) 55%, transparent);
   }
 
-  .elb-viz-hero__foot {
+  .elb-viz-tagging__foot {
     display: flex;
     align-items: center;
     gap: var(--space-2);
@@ -174,7 +193,7 @@
     padding-top: 6px;
   }
 
-  .elb-viz-hero__link {
+  .elb-viz-tagging__link {
     position: relative;
     margin-left: -5px;
     padding: 1px 5px;
@@ -186,11 +205,11 @@
     outline: 1.5px solid transparent;
   }
 
-  .elb-viz-hero__link--on {
+  .elb-viz-tagging__link--on {
     outline-color: var(--event-action);
   }
 
-  .elb-viz-hero__cursor {
+  .elb-viz-tagging__cursor {
     position: absolute;
     left: calc(var(--elb-viz-cursor-x) * 1px);
     top: calc(var(--elb-viz-cursor-y) * 1px);
@@ -201,40 +220,40 @@
     opacity: var(--elb-viz-cursor-opacity);
   }
 
-  .elb-viz-hero__ring,
-  .elb-viz-hero__pointer {
+  .elb-viz-tagging__ring,
+  .elb-viz-tagging__pointer {
     position: absolute;
     inset: 0;
     border-radius: var(--radius-full);
   }
 
-  .elb-viz-hero__ring {
+  .elb-viz-tagging__ring {
     border: 2px solid var(--event-entity);
     opacity: var(--elb-viz-ring-opacity);
     transform: scale(var(--elb-viz-ring-scale));
   }
 
-  .elb-viz-hero__pointer {
+  .elb-viz-tagging__pointer {
     background: color-mix(in srgb, var(--viz-fg) 22%, transparent);
     border: 2px solid color-mix(in srgb, var(--viz-fg) 90%, transparent);
     transform: scale(var(--elb-viz-press));
   }
 
   @container (max-width: 639px) {
-    .elb-viz-hero__pane,
-    .elb-viz-hero > .elb-viz-table {
+    .elb-viz-tagging__pane,
+    .elb-viz-tagging > .elb-viz-table {
       flex-basis: 100%;
     }
 
-    .elb-viz-hero__code {
+    .elb-viz-tagging__code {
       font-size: var(--type-viz-code-size);
     }
 
-    .elb-viz-hero__stage {
+    .elb-viz-tagging__stage {
       padding: 24px 12px;
     }
 
-    .elb-viz-hero__thumb {
+    .elb-viz-tagging__thumb {
       width: 88px;
     }
   }

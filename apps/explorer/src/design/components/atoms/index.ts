@@ -20,3 +20,5 @@ export { InstallCommand } from './InstallCommand';
 export type { InstallCommandProps } from './InstallCommand';
 export { PhotoPlaceholder } from './PhotoPlaceholder';
 export type { PhotoPlaceholderProps } from './PhotoPlaceholder';
+export { StepNumber } from './StepNumber';
+export type { StepNumberProps } from './StepNumber';

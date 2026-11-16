@@ -1,0 +1,27 @@
+// StepMarker (@walkeros/explorer/design/components): a chapter of a
+// walk-through, the step's ring beside where it happens and its title.
+@layer components {
+  .elb-step-marker {
+    display: flex;
+    align-items: center;
+    gap: var(--space-3);
+    color: var(--fg);
+  }
+
+  .elb-step-marker__text {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    min-width: 0;
+  }
+
+  .elb-step-marker__title {
+    margin: 0;
+    color: var(--fg);
+    font-family: var(--type-title-plan-family);
+    font-size: var(--type-title-plan-size);
+    line-height: var(--type-title-plan-line-height);
+    font-weight: var(--type-title-plan-weight);
+    letter-spacing: var(--type-title-plan-tracking);
+  }
+}

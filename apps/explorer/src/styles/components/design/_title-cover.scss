@@ -1,0 +1,16 @@
+// TitleCover (@walkeros/explorer/design/components): the opening card of a
+// video or a post, centred in the frame it fills.
+@layer components {
+  // Fills and centres through .elb-full-frame.
+  .elb-title-cover {
+    justify-items: center;
+    gap: 32px;
+    color: var(--fg);
+    text-align: center;
+  }
+
+  .elb-title-cover__logo {
+    display: flex;
+    justify-content: center;
+  }
+}

@@ -7,7 +7,10 @@ export type IconName =
   | 'lock'
   | 'reload'
   | 'bookmark'
-  | 'warning';
+  | 'warning'
+  | 'success'
+  | 'danger'
+  | 'info';
 
 export interface IconProps extends Omit<SVGAttributes<SVGSVGElement>, 'name'> {
   name: IconName;
@@ -109,6 +112,53 @@ const GLYPHS: Readonly<
         <path d="M10.3 3.9 2.4 18a2 2 0 0 0 1.7 3h15.8a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z" />
         <path d="M12 9v4" />
         <path d="M12 17h.01" />
+      </g>
+    ),
+  },
+  success: {
+    viewBox: '0 0 24 24',
+    strokes: (
+      <g
+        fill="none"
+        stroke="currentColor"
+        strokeWidth={2}
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      >
+        <circle cx={12} cy={12} r={10} />
+        <path d="m9 12 2 2 4-4" />
+      </g>
+    ),
+  },
+  danger: {
+    viewBox: '0 0 24 24',
+    strokes: (
+      <g
+        fill="none"
+        stroke="currentColor"
+        strokeWidth={2}
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      >
+        <circle cx={12} cy={12} r={10} />
+        <path d="M12 8v4" />
+        <path d="M12 16h.01" />
+      </g>
+    ),
+  },
+  info: {
+    viewBox: '0 0 24 24',
+    strokes: (
+      <g
+        fill="none"
+        stroke="currentColor"
+        strokeWidth={2}
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      >
+        <circle cx={12} cy={12} r={10} />
+        <path d="M12 16v-4" />
+        <path d="M12 8h.01" />
       </g>
     ),
   },
