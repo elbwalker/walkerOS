@@ -21,6 +21,7 @@ so you need no event listener code of your own.
 | CMP | Package |
 | --- | ------- |
 | [Cookiebot](/docs/sources/web/cmps/cookiebot/) | `@walkeros/web-source-cmp-cookiebot` |
+| [CookieConsent (orestbida)](/docs/sources/web/cmps/cookieconsent/) | `@walkeros/web-source-cmp-cookieconsent` |
 | [CookieFirst](/docs/sources/web/cmps/cookiefirst/) | `@walkeros/web-source-cmp-cookiefirst` |
 | [CookiePro / OneTrust](/docs/sources/web/cmps/cookiepro/) | `@walkeros/web-source-cmp-cookiepro` |
 | [Usercentrics](/docs/sources/web/cmps/usercentrics/) | `@walkeros/web-source-cmp-usercentrics` |
@@ -115,7 +116,8 @@ mappings map each category to its own group.
 By default every CMP source reports only a choice the visitor made: the
 Cookiebot, CookiePro and Usercentrics sources support `explicitOnly` (default:
 `true`) to skip implicit or default consent and report only active user choices,
-and the CookieFirst source reports nothing until the visitor has made a choice.
+and the CookieFirst and CookieConsent sources report nothing until the visitor
+has made a choice.
 A visitor who never makes a choice, for example one Cookiebot never asks because
 they are outside the regions where your site asks for consent, sends no consent.
 Destinations gated with `config.consent` then keep that visitor's events queued
@@ -126,8 +128,8 @@ destination with `require: ["consent"]` never starts, and sources gated with
 
 Strictly necessary cookies need no consent, so no CMP source maps them to a
 consent group: the Cookiebot, CookieFirst and CookiePro sources report them as
-`necessary`, and the Usercentrics source reports your essential category under
-its own name.
+`necessary`, and the Usercentrics and CookieConsent sources report your
+essential category under its own name.
 
 For more details on how consent works in walkerOS, see the
 [consent management guide](/docs/guides/consent).

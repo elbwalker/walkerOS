@@ -123,6 +123,7 @@ const sidebars: SidebarsConfig = {
               },
               items: [
                 'sources/web/cmps/cookiebot/index',
+                'sources/web/cmps/cookieconsent/index',
                 'sources/web/cmps/cookiefirst/index',
                 'sources/web/cmps/cookiepro/index',
                 'sources/web/cmps/usercentrics/index',
