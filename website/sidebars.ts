@@ -300,9 +300,20 @@ const sidebars: SidebarsConfig = {
                   className: 'sidebar-badge-web',
                 },
                 {
-                  type: 'doc',
-                  id: 'destinations/web/matomo',
-                  className: 'sidebar-badge-web',
+                  type: 'category',
+                  label: 'Matomo',
+                  items: [
+                    {
+                      type: 'doc',
+                      id: 'destinations/web/matomo',
+                      className: 'sidebar-badge-web',
+                    },
+                    {
+                      type: 'doc',
+                      id: 'destinations/server/matomo',
+                      className: 'sidebar-badge-server',
+                    },
+                  ],
                 },
                 {
                   type: 'category',

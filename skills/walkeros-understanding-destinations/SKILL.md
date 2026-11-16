@@ -109,7 +109,10 @@ Rules that keep the seam intact:
   its own few lines (no shared helper). Data Manager fills them by default only
   when an entry of `settings.destinations` is `GOOGLE_ADS`; a Google
   Analytics-only step sends neither unless `ip` or `userAgent` is set or the
-  field is mapped.
+  field is mapped. Matomo, an analytics server destination, fills neither
+  (ruling analytics-destinations-no-ip-autofill): Matomo has `ip` and
+  `userAgent` settings without a default, and its `init` refuses `ip` without
+  `credentials.token`, since Matomo rejects `cip` without a token.
 
 ## Destination Config
 

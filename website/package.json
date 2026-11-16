@@ -40,6 +40,7 @@
     "@walkeros/server-destination-kafka": "^4.9.0",
     "@walkeros/server-destination-klaviyo": "^4.9.0",
     "@walkeros/server-destination-linkedin": "^4.9.0",
+    "@walkeros/server-destination-matomo": "^4.9.0",
     "@walkeros/server-destination-meta": "^4.9.0",
     "@walkeros/server-destination-mixpanel": "^4.9.0",
     "@walkeros/server-destination-mparticle": "^4.9.0",
