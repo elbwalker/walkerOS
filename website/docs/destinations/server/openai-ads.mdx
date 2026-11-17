@@ -1,0 +1,108 @@
+---
+title: OpenAI Ads Conversions API
+description: "Server-side conversions to the OpenAI Ads (ChatGPT ads) Conversions API"
+path: /docs/destinations/server/openai-ads
+sidebar_position: 10
+package: '@walkeros/server-destination-openai-ads'
+---
+import data from '@walkeros/server-destination-openai-ads/walkerOS.json';
+import Configuration from '@site/src/components/snippets/_configuration.mdx';
+import Quickstart from '@site/src/components/snippets/_quickstart.mdx';
+
+import WhereThisFits from '@site/src/components/snippets/_where-this-fits.mdx';
+
+# OpenAI Ads Conversions API
+
+<PackageLink env="server" github="packages/server/destinations/openai-ads" npm="@walkeros/server-destination-openai-ads" status="beta" />
+
+Server-side conversions to the OpenAI Ads Conversions API, the conversion endpoint of ads in ChatGPT.
+
+<WhereThisFits
+  pre={<>OpenAI Ads Conversions API is a <strong>server destination</strong> in the walkerOS flow:</>}
+  flowMap={{
+    destinations: { default: { label: 'Destination', text: 'OpenAI Ads', highlight: true } },
+  }}
+  post={<>Sends one event per request to <code>{'POST https://bzr.openai.com/v1/events?pid=<pixelId>'}</code> with the Conversions API key as Bearer token, using raw HTTP (no SDK). Email, phone and external id are normalised and SHA-256 hashed before sending. Each event carries the walkerOS event id, which OpenAI uses to deduplicate it.</>}
+/>
+
+## Installation
+
+<Quickstart data={data} />
+
+<Configuration type="destination" data={data} />
+
+## Event types
+
+The mapped event name is the OpenAI event type; a space becomes `_`. Standard types and the shape of their `data`:
+
+| Type | `data.type` |
+|---|---|
+| `appointment_scheduled`, `lead_created`, `registration_completed` | `customer_action` |
+| `checkout_started`, `contents_viewed`, `items_added`, `order_created`, `page_viewed` | `contents` |
+| `subscription_created`, `trial_started` | `plan_enrollment` |
+
+Any other name is sent as `type: "custom"` with that name, lowercased, as `custom_event_name` (lowercase letters, digits, `_` and `-`, at most 64 characters). An invalid name fails the push without a request.
+
+<CodeSnippet
+  code={`"mapping": {
+  "order": { "complete": { "name": "order_created", "data": { "map": {
+    "amount": "data.total",
+    "currency": "data.currency",
+    "email": "user.email",
+    "oppref": "globals.oppref"
+  } } } },
+  "demo": { "booked": { "name": "demo_booked" } }
+}`}
+  language="json"
+/>
+
+## Mapped data
+
+| Field | Sent as |
+|---|---|
+| `email` | `user.emails_sha256` (trimmed, lowercased, SHA-256) |
+| `phone` | `user.phone_numbers_sha256` (digits with country code, no leading `+` or zeroes, SHA-256) |
+| `external_id` | `user.external_ids_sha256` (trimmed, SHA-256) |
+| `oppref` | `oppref`, the OpenAI click reference from the landing URL, unchanged |
+| `obref` | `user.obref`, the OpenAI pixel's `__obref` cookie, unchanged |
+| `country` | `user.countries`, uppercased |
+| `user_agent`, `ip_address` | `user.user_agent`, `user.ip_address` (in clear) |
+| `amount`, `currency` | `data.amount` in integer minor units (99.90 USD is `9990`), `data.currency` uppercased |
+| `plan_id` | `data.plan_id`, on `plan_enrollment` and custom events |
+| `source_url` | `source_url` (default: `event.source.url`) |
+
+`email`, `phone`, `external_id` and `country` take a string or a list; at most three values are sent per field. A value that already is a SHA-256 hex digest is sent as it is, never hashed twice. Map personal data only to these keys.
+
+## Client IP and user agent
+
+The destination sends the client IP as `user.ip_address` and the user agent as `user.user_agent` by default. The `ip` and `userAgent` settings resolve against `{ ingest, event }` and default to `["ingest.ip", "event.user.ip"]` and `["ingest.userAgent", "event.user.userAgent"]` (see the `config.ingest` recipe on the [Express source](/docs/sources/server/express#ingest-metadata)). A mapped `ip_address` or `user_agent` wins. Set either setting to `false` to turn it off.
+
+## Consent
+
+The quickstart sets no `config.consent`, so OpenAI Ads receives every event, whatever consent the event carries. Add `consent: { marketing: true }` to `config`, next to `settings`, to send only events with marketing consent (see [Gate a destination with consent](/docs/guides/consent#gate-a-destination-with-consent)).
+
+## Failures
+
+- A web event (`action_source` `web`, the default) without a source URL, an `amount` without `currency`, a negative or non-numeric amount, or an invalid custom name fails with the code `mapping`, marked not retryable, and nothing is sent.
+- A response outside the 2xx range, a network error or no answer within 5 seconds fails with `transport` (with the HTTP status) or `timeout`, and the event goes to the dead-letter queue. 429 and 5xx are marked retryable, other 4xx not; nothing resends the event by itself.
+- Without `apiKey` or `pixelId` the destination does not start: every push answers `failed` with the code `config`.
+- A rule with `silent: true` sends nothing.
+
+OpenAI refuses events older than 7 days or more than 10 minutes in the future: `timestamp_ms` is the walkerOS event timestamp.
+
+## Testing
+
+Set `validate_only: true` in settings: OpenAI validates each request and records nothing.
+
+<CodeSnippet
+  code={`"settings": {
+  "apiKey": "$secret.OPENAI_ADS_API_KEY",
+  "pixelId": "YOUR_PIXEL_ID",
+  "validate_only": true
+}`}
+  language="json"
+/>
+
+## Links
+
+- [OpenAI Ads Conversions API](https://developers.openai.com/ads/conversions-api)
