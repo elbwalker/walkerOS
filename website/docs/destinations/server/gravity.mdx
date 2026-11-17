@@ -1,0 +1,87 @@
+---
+title: Gravity Conversions API
+description: "Server-side conversions to Gravity, ads in AI assistants"
+path: /docs/destinations/server/gravity
+sidebar_position: 8
+package: '@walkeros/server-destination-gravity'
+---
+import data from '@walkeros/server-destination-gravity/walkerOS.json';
+import Configuration from '@site/src/components/snippets/_configuration.mdx';
+import Quickstart from '@site/src/components/snippets/_quickstart.mdx';
+
+import WhereThisFits from '@site/src/components/snippets/_where-this-fits.mdx';
+
+# Gravity Conversions API
+
+<PackageLink env="server" github="packages/server/destinations/gravity" npm="@walkeros/server-destination-gravity" status="beta" />
+
+Server-side conversions to the [Gravity Conversions API](https://docs.trygravity.com/advertisers/server-conversions), for ads shown in AI assistants.
+
+<WhereThisFits
+  pre={<>Gravity Conversions API is a <strong>server destination</strong> in the walkerOS flow:</>}
+  flowMap={{
+    destinations: { default: { label: 'Destination', text: 'Gravity', highlight: true } },
+  }}
+  post={<>Sends one event per request to `POST https://api.trygravity.com/gateway/events` with the API key as Bearer token, using raw HTTP (no SDK). Email and phone are normalised and SHA-256 hashed. Each event carries the walkerOS event id, which Gravity uses with the event name to deduplicate for 48 hours.</>}
+/>
+
+## Installation
+
+<Quickstart data={data} />
+
+<Configuration type="destination" data={data} />
+
+## Event name
+
+The mapped name is sent as `event_name`: a Gravity standard event (`Purchase`, `Lead`, `CompleteRegistration`, `Subscribe`, `StartTrial`, `InitiateCheckout`, `Schedule`, …) or any custom name.
+
+<CodeSnippet
+  code={`"mapping": {
+  "order": { "complete": { "name": "Purchase", "data": { "map": {
+    "email": "user.email",
+    "grclid": "globals.grclid",
+    "value": "data.total",
+    "currency": "data.currency",
+    "order_id": "data.id"
+  } } } }
+}`}
+  language="json"
+/>
+
+## Mapped data
+
+| Field | Sent as |
+|---|---|
+| `email`, `phone` | `user_data.em`, `user_data.ph` (email trimmed and lowercased, phone digits only, then SHA-256; an existing SHA-256 hex digest is kept) |
+| `external_id` | `user_data.external_id`, as it is |
+| `grclid`, `grcpid`, `grpuid`, `gradid`, `grsig`, `graid`, `oppref` | `user_data`, as they are |
+| `ip_address`, `user_agent` | `user_data.client_ip_address`, `user_data.client_user_agent` |
+| `client_context` | `client_context` (from the Gravity pixel's `getCAPIData()`) |
+| `value`, `currency`, `order_id` | `custom_data` (currency uppercased, `USD` when a value has none) |
+| `source_url` | `event_source_url` (default: `event.source.url`) |
+
+Gravity attributes a conversion through its click parameters: store every one of them on the landing page and send them back with each conversion.
+
+## Client IP and user agent
+
+The destination sends the client IP and user agent by default. The `ip` and `userAgent` settings resolve against `{ ingest, event }` and default to `["ingest.ip", "event.user.ip"]` and `["ingest.userAgent", "event.user.userAgent"]` (see the `config.ingest` recipe on the [Express source](/docs/sources/server/express#ingest-metadata)). A mapped `ip_address` or `user_agent` wins. Set either setting to `false` to turn it off.
+
+## Consent
+
+The quickstart sets no `config.consent`, so Gravity receives every event, whatever consent the event carries. Add `consent: { marketing: true }` to `config`, next to `settings`, to send only events with marketing consent (see [Gate a destination with consent](/docs/guides/consent#gate-a-destination-with-consent)).
+
+## Failures
+
+- Gravity answers HTTP 200 with a status per event: an `error` status fails the push, marked not retryable.
+- A negative or non-numeric `value`, or a `currency` that is not a 3-letter code, fails with the code `mapping`, marked not retryable, and nothing is sent.
+- A response outside the 2xx range, a network error or no answer within 5 seconds fails with `transport` (with the HTTP status) or `timeout`, and the event goes to the dead-letter queue. 429 and 5xx are marked retryable, other 4xx not; nothing resends the event by itself.
+- Without `apiKey` the destination does not start: every push answers `failed` with the code `config`.
+- A rule with `silent: true` sends nothing.
+
+## Testing
+
+Set `test_event_code` to a code from Events Manager > Set up tracking: Gravity validates the events and does not record them.
+
+## Links
+
+- [Gravity server conversions](https://docs.trygravity.com/advertisers/server-conversions)
