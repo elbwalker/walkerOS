@@ -21,7 +21,7 @@ export const SettingsSchema = z
         'Pixel ID of the web data source, sent as the pid query parameter (like px_abc123)',
       ),
     action_source: ActionSourceSchema.describe(
-      'Where the conversion happened: web, app or offline. Default: web. A web event needs a source URL.',
+      'Where the conversion happened: web, mobile_app, offline, physical_store, phone_call, email or other. Default: web. A web event needs a source URL.',
     ).optional(),
     validate_only: z
       .boolean()
@@ -31,6 +31,7 @@ export const SettingsSchema = z
       .optional(),
     integration_source: z
       .string()
+      .regex(/^[A-Za-z0-9][A-Za-z0-9._-]{0,63}$/)
       .describe('Label of the sending integration (like walkerOS)')
       .optional(),
     url: z

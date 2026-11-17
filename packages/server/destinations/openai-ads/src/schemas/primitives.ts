@@ -4,7 +4,15 @@ import { z } from '@walkeros/core/dev';
  * Where the conversion happened.
  * https://developers.openai.com/ads/conversions-api
  */
-export const ActionSourceSchema = z.enum(['web', 'app', 'offline']);
+export const ActionSourceSchema = z.enum([
+  'web',
+  'mobile_app',
+  'offline',
+  'physical_store',
+  'phone_call',
+  'email',
+  'other',
+]);
 
 /**
  * Standard OpenAI Ads event types. Any other mapped name is sent as a

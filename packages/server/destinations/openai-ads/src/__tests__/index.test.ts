@@ -155,12 +155,12 @@ describe('Server Destination OpenAI Ads', () => {
     expect(mockSendServer).not.toHaveBeenCalled();
   });
 
-  test('app event needs no source url', async () => {
+  test('mobile_app event needs no source url', async () => {
     const noUrl = event('order_created', {
       source: { type: 'express', platform: 'server' },
     });
-    await push(noUrl, {}, { action_source: 'app' });
-    expect(conversion().action_source).toBe('app');
+    await push(noUrl, {}, { action_source: 'mobile_app' });
+    expect(conversion().action_source).toBe('mobile_app');
     expect(conversion()).not.toHaveProperty('source_url');
   });
 
@@ -262,6 +262,44 @@ describe('Server Destination OpenAI Ads', () => {
     expect(conversion()).not.toHaveProperty('user');
   });
 
+  test('client fields follow the event consent, not the collector one', async () => {
+    const ingest = { ...createIngest('test'), ip: '203.0.113.7' };
+    const consented = { key: 'ingest.ip', consent: { marketing: true } };
+    await push(
+      event('lead_created', { consent: {} }),
+      {},
+      { ip: consented, userAgent: false },
+      { ingest, collector: { consent: { marketing: true } } },
+    );
+    expect(conversion()).not.toHaveProperty('user');
+
+    mockSendServer.mockClear();
+    await push(
+      event('lead_created', { consent: { marketing: true } }),
+      {},
+      { ip: consented, userAgent: false },
+      { ingest },
+    );
+    expect(conversion().user).toEqual({ ip_address: '203.0.113.7' });
+  });
+
+  test('client field callbacks receive the event', async () => {
+    await push(
+      event('lead_created', {
+        user: { id: 'u1', userAgent: 'Mozilla/5.0 from event' },
+      }),
+      {},
+      {
+        ip: false,
+        userAgent: {
+          fn: (_: unknown, context: { event?: WalkerOS.DeepPartialEvent }) =>
+            context.event?.user?.userAgent,
+        },
+      },
+    );
+    expect(conversion().user).toEqual({ user_agent: 'Mozilla/5.0 from event' });
+  });
+
   test('silent rule sends nothing', async () => {
     await push(event('order_created'), {}, {}, { rule: { silent: true } });
     expect(mockSendServer).not.toHaveBeenCalled();
@@ -281,6 +319,17 @@ describe('hashList', () => {
       await getHashServer('x@y.z'),
       await getHashServer('u@v.w'),
     ]);
+  });
+
+  test('values that normalise to nothing do not take a slot', async () => {
+    expect(
+      await hashList([' ', 'a@b.c', 'd@e.f', 'g@h.i'], normalizeEmail),
+    ).toEqual([
+      await getHashServer('a@b.c'),
+      await getHashServer('d@e.f'),
+      await getHashServer('g@h.i'),
+    ]);
+    expect(await hashList('()', normalizePhone)).toBeUndefined();
   });
 
   test('empty input gives undefined', async () => {

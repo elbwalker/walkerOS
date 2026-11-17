@@ -62,7 +62,14 @@ export type Rules = WalkerOSMapping.Rules<Rule>;
 // OpenAI Ads Conversions API types
 // https://developers.openai.com/ads/conversions-api
 
-export type ActionSource = 'web' | 'app' | 'offline';
+export type ActionSource =
+  | 'web'
+  | 'mobile_app'
+  | 'offline'
+  | 'physical_store'
+  | 'phone_call'
+  | 'email'
+  | 'other';
 
 export type StandardEventType =
   | 'appointment_scheduled'

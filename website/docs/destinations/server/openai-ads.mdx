@@ -22,7 +22,7 @@ Server-side conversions to the OpenAI Ads Conversions API, the conversion endpoi
   flowMap={{
     destinations: { default: { label: 'Destination', text: 'OpenAI Ads', highlight: true } },
   }}
-  post={<>Sends one event per request to `POST https://bzr.openai.com/v1/events?pid=<pixelId>` with the Conversions API key as Bearer token, using raw HTTP (no SDK). Email, phone and external id are normalised and SHA-256 hashed before sending. Each event carries the walkerOS event id, which OpenAI uses to deduplicate it.</>}
+  post={<>Sends one event per request to <code>{'POST https://bzr.openai.com/v1/events?pid=<pixelId>'}</code> with the Conversions API key as Bearer token, using raw HTTP (no SDK). Email, phone and external id are normalised and SHA-256 hashed before sending. Each event carries the walkerOS event id, which OpenAI uses to deduplicate it.</>}
 />
 
 ## Installation
@@ -83,8 +83,8 @@ The quickstart sets no `config.consent`, so OpenAI Ads receives every event, wha
 
 ## Failures
 
-- A web event (`action_source` `web`, the default) without a source URL, an `amount` without `currency`, a negative or non-numeric amount, or an invalid custom name fails with the code `mapping`, not retried, and nothing is sent.
-- A response outside the 2xx range, a network error or no answer within 5 seconds fails with `transport` (with the HTTP status) or `timeout`; 429 and 5xx are retried.
+- A web event (`action_source` `web`, the default) without a source URL, an `amount` without `currency`, a negative or non-numeric amount, or an invalid custom name fails with the code `mapping`, marked not retryable, and nothing is sent.
+- A response outside the 2xx range, a network error or no answer within 5 seconds fails with `transport` (with the HTTP status) or `timeout`, and the event goes to the dead-letter queue. 429 and 5xx are marked retryable, other 4xx not; nothing resends the event by itself.
 - Without `apiKey` or `pixelId` the destination does not start: every push answers `failed` with the code `config`.
 - A rule with `silent: true` sends nothing.
 

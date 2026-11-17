@@ -33,9 +33,13 @@ export async function hashList(
     toList(value).map(async (item) => {
       const digest = item.trim().toLowerCase();
       if (SHA256_HEX.test(digest)) return digest;
-      return getHashServer(normalize(item));
+      const normalized = normalize(item);
+      return normalized ? getHashServer(normalized) : undefined;
     }),
   );
-  const unique = [...new Set(hashed)].slice(0, 3);
+  // Values that normalise to nothing are dropped before the three-value limit.
+  const unique = [
+    ...new Set(hashed.filter((item): item is string => !!item)),
+  ].slice(0, 3);
   return unique.length ? unique : undefined;
 }
