@@ -1,7 +1,7 @@
 import { hashUserData } from '../hash';
 
 describe('hashUserData', () => {
-  test('hashes email, phone_number, external_id', async () => {
+  test('hashes email, phone_number (sent as phone), external_id', async () => {
     const userData = {
       email: 'user@example.com',
       phone_number: '+14135552671',
@@ -12,12 +12,13 @@ describe('hashUserData', () => {
 
     // All three fields should be hashed (not equal to original)
     expect(result.email).not.toBe(userData.email);
-    expect(result.phone_number).not.toBe(userData.phone_number);
+    expect(result.phone_number).toBeUndefined();
+    expect(result.phone).not.toBe(userData.phone_number);
     expect(result.external_id).not.toBe(userData.external_id);
 
     // Should be SHA256 hex strings (64 chars)
     expect(result.email).toMatch(/^[a-f0-9]{64}$/);
-    expect(result.phone_number).toMatch(/^[a-f0-9]{64}$/);
+    expect(result.phone).toMatch(/^[a-f0-9]{64}$/);
     expect(result.external_id).toMatch(/^[a-f0-9]{64}$/);
   });
 
@@ -48,8 +49,24 @@ describe('hashUserData', () => {
     expect(result.email).toBe('user@example.com');
 
     // phone_number and external_id should still be hashed
-    expect(result.phone_number).not.toBe('+14135552671');
+    expect(result.phone).not.toBe('+14135552671');
     expect(result.external_id).not.toBe('user-123');
+  });
+
+  test('normalises before hashing and keeps existing digests', async () => {
+    const a = await hashUserData({
+      email: ' User@Example.COM ',
+      phone: '+1 (413) 555-2671',
+    });
+    const b = await hashUserData({
+      email: 'user@example.com',
+      phone: '+14135552671',
+    });
+    expect(a).toEqual(b);
+
+    const digest =
+      'b4c9a289323b21a01c3e940f150eb9b8c542587f1abfd8f0e1cc1ffc5e475514';
+    expect(await hashUserData({ email: digest })).toEqual({ email: digest });
   });
 
   test('handles empty object', async () => {

@@ -7,17 +7,18 @@ import { createEvent, getEvent } from '@walkeros/core';
  * At push time, the destination calls
  * `env.sendServer(url, body, { headers })` where `url` is the fixed
  * TikTok Events API endpoint and `body` is the JSON-stringified payload
- * `{ pixel_code, partner_name, data: [tiktokEvent] }`.
+ * `{ event_source, event_source_id, partner_name, data: [tiktokEvent] }`
+ * (Events API 2.0).
  *
  * The test fixture pins `accessToken = 's3cr3t'` and `pixelCode = 'PIXEL_CODE'`.
  *
  * Body fields are emitted in the order the destination constructs them
  * (insertion order matters for `JSON.stringify` string equality):
- *   pixel_code, partner_name, data[] with { event, event_id, timestamp,
- *   context: { user?, page }, properties }.
+ *   event_source, event_source_id, partner_name, data[] with { event,
+ *   event_time (seconds), event_id, user?, page?, properties }.
  *
- * User identity fields (`email`, `phone_number`, `external_id`) are hashed
- * with SHA-256.
+ * User identity fields (`email`, `phone`, `external_id`) are normalised and
+ * hashed with SHA-256; `phone_number` is sent as `phone`.
  */
 const ENDPOINT = 'https://business-api.tiktok.com/open_api/v1.3/event/track/';
 const HEADERS = {
@@ -87,21 +88,20 @@ export const purchase: Flow.StepExample = {
       'sendServer',
       ENDPOINT,
       JSON.stringify({
-        pixel_code: 'PIXEL_CODE',
+        event_source: 'web',
+        event_source_id: 'PIXEL_CODE',
         partner_name: 'walkerOS',
         data: [
           {
             event: 'Purchase',
+            event_time: 1700000900,
             event_id: 'd1e2f3a4b5c60001',
-            timestamp: '2023-11-14T22:28:20.000Z',
-            context: {
-              user: {
-                external_id:
-                  'fcdec6df4d44dbc637c7c5b58efface52a7f8a88535423430255be0bb89bedd8',
-              },
-              page: {
-                url: 'https://shop.example.com/checkout/complete',
-              },
+            user: {
+              external_id:
+                'fcdec6df4d44dbc637c7c5b58efface52a7f8a88535423430255be0bb89bedd8',
+            },
+            page: {
+              url: 'https://shop.example.com/checkout/complete',
             },
             properties: {
               value: 249.99,
@@ -188,17 +188,16 @@ export const addToCart: Flow.StepExample = {
       'sendServer',
       ENDPOINT,
       JSON.stringify({
-        pixel_code: 'PIXEL_CODE',
+        event_source: 'web',
+        event_source_id: 'PIXEL_CODE',
         partner_name: 'walkerOS',
         data: [
           {
             event: 'AddToCart',
+            event_time: 1700000901,
             event_id: 'd1e2f3a4b5c60002',
-            timestamp: '2023-11-14T22:28:21.000Z',
-            context: {
-              page: {
-                url: 'https://shop.example.com/products/running-shoes',
-              },
+            page: {
+              url: 'https://shop.example.com/products/running-shoes',
             },
             properties: {
               content_type: 'product',
@@ -240,17 +239,16 @@ export const pageView: Flow.StepExample = {
       'sendServer',
       ENDPOINT,
       JSON.stringify({
-        pixel_code: 'PIXEL_CODE',
+        event_source: 'web',
+        event_source_id: 'PIXEL_CODE',
         partner_name: 'walkerOS',
         data: [
           {
             event: 'page view',
+            event_time: 1700000902,
             event_id: 'd1e2f3a4b5c60003',
-            timestamp: '2023-11-14T22:28:22.000Z',
-            context: {
-              page: {
-                url: 'https://example.com/docs/',
-              },
+            page: {
+              url: 'https://example.com/docs/',
             },
             properties: {},
           },
@@ -294,22 +292,21 @@ export const lead: Flow.StepExample = {
       'sendServer',
       ENDPOINT,
       JSON.stringify({
-        pixel_code: 'PIXEL_CODE',
+        event_source: 'web',
+        event_source_id: 'PIXEL_CODE',
         partner_name: 'walkerOS',
         data: [
           {
             event: 'SubmitForm',
+            event_time: 1700000903,
             event_id: 'd1e2f3a4b5c60004',
-            timestamp: '2023-11-14T22:28:23.000Z',
-            context: {
-              user: {
-                // sha256('user@example.com')
-                email:
-                  'b4c9a289323b21a01c3e940f150eb9b8c542587f1abfd8f0e1cc1ffc5e475514',
-              },
-              page: {
-                url: 'https://example.com/contact',
-              },
+            user: {
+              // sha256('user@example.com')
+              email:
+                'b4c9a289323b21a01c3e940f150eb9b8c542587f1abfd8f0e1cc1ffc5e475514',
+            },
+            page: {
+              url: 'https://example.com/contact',
             },
             properties: {},
           },

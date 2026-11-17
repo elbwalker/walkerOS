@@ -54,9 +54,10 @@ export type PushEvents = DestinationServer.PushEvents<Mapping>;
 export type Rule = WalkerOSMapping.Rule<Mapping>;
 export type Rules = WalkerOSMapping.Rules<Rule>;
 
-// TikTok Events API Request Body
+// TikTok Events API 2.0 request body (POST /open_api/v1.3/event/track/)
 export interface RequestBody {
-  pixel_code: string;
+  event_source: 'web';
+  event_source_id: string;
   partner_name?: string;
   test_event_code?: string;
   data: EventData[];
@@ -66,39 +67,31 @@ export interface RequestBody {
 export interface EventData {
   event: string;
   event_id: string;
-  timestamp: string;
-  context?: EventContext;
+  /** Unix time in seconds */
+  event_time: number;
+  user?: UserData;
+  page?: PageContext;
   properties?: Record<string, unknown>;
 }
 
-// Context object within each event
-export interface EventContext {
-  ip?: string;
-  user_agent?: string;
-  user?: UserData;
-  page?: PageContext;
-  ad?: AdContext;
-}
-
-// User identity fields
+// User identity and client fields
 export interface UserData {
   email?: string;
+  /** Sent as `phone`; `phone_number` is accepted as a mapping key */
+  phone?: string;
   phone_number?: string;
   external_id?: string;
   ttp?: string;
   ttclid?: string;
   locale?: string;
+  ip?: string;
+  user_agent?: string;
 }
 
 // Page context
 export interface PageContext {
   url?: string;
   referrer?: string;
-}
-
-// Ad attribution context
-export interface AdContext {
-  callback?: string;
 }
 
 // TikTok API response
