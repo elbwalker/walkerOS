@@ -117,7 +117,7 @@ const send: PushFn = async function (
 
   const body: RequestBody = {
     ...(test_mode ? { test_mode: true } : {}),
-    data: { events: [hashedServerEvent] },
+    events: [hashedServerEvent],
   };
 
   const endpoint = `${url}${pixelId}`;

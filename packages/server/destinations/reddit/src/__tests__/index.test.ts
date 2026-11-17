@@ -204,7 +204,7 @@ describe('Server Destination Reddit', () => {
     await elb(event);
 
     const requestBody = JSON.parse(mockSendServer.mock.calls[0][1]);
-    expect(requestBody.data.events[0].event_type).toEqual({
+    expect(requestBody.events[0].event_type).toEqual({
       tracking_type: 'Purchase',
     });
   });
@@ -227,7 +227,7 @@ describe('Server Destination Reddit', () => {
     await elb(event);
 
     const requestBody = JSON.parse(mockSendServer.mock.calls[0][1]);
-    expect(requestBody.data.events[0].event_type).toEqual({
+    expect(requestBody.events[0].event_type).toEqual({
       tracking_type: 'Custom',
       custom_event_name: 'my_custom_event',
     });
@@ -249,10 +249,10 @@ describe('Server Destination Reddit', () => {
     );
 
     const requestBody = JSON.parse(mockSendServer.mock.calls[0][1]);
-    expect(requestBody.data.events[0].event_at).toBe(
+    expect(requestBody.events[0].event_at).toBe(
       new Date(event.timestamp!).toISOString(),
     );
-    expect(requestBody.data.events[0].event_at_ms).toBe(event.timestamp);
+    expect(requestBody.events[0].event_at_ms).toBe(event.timestamp);
   });
 
   test('conversion_id from event.id', async () => {
@@ -271,12 +271,10 @@ describe('Server Destination Reddit', () => {
     );
 
     const requestBody = JSON.parse(mockSendServer.mock.calls[0][1]);
-    expect(requestBody.data.events[0].event_metadata.conversion_id).toBe(
-      event.id,
-    );
+    expect(requestBody.events[0].event_metadata.conversion_id).toBe(event.id);
   });
 
-  test('nested payload structure', async () => {
+  test('v2.0 payload structure', async () => {
     const event = getEvent();
     const config: Config = {
       settings: { accessToken, pixelId },
@@ -292,10 +290,10 @@ describe('Server Destination Reddit', () => {
     );
 
     const requestBody = JSON.parse(mockSendServer.mock.calls[0][1]);
-    // Nested data.events (not flat data[])
-    expect(requestBody.data).toHaveProperty('events');
-    expect(Array.isArray(requestBody.data.events)).toBe(true);
-    expect(requestBody.data.events).toHaveLength(1);
+    // v2.0 body: events at the top level, no v3 data envelope
+    expect(requestBody).not.toHaveProperty('data');
+    expect(Array.isArray(requestBody.events)).toBe(true);
+    expect(requestBody.events).toHaveLength(1);
   });
 
   test('hashing', async () => {
@@ -317,7 +315,7 @@ describe('Server Destination Reddit', () => {
         uuid: '123',
       },
     });
-    // ip_address and user_agent ARE hashed (unlike Meta/Pinterest)
+    // ip_address is hashed, user_agent is sent as is
     expect(
       await hashEvent({
         user: {
@@ -327,9 +325,19 @@ describe('Server Destination Reddit', () => {
       }),
     ).toEqual({
       user: {
-        ip_address: expect.any(String),
-        user_agent: expect.any(String),
+        ip_address: expect.stringMatching(/^[a-f0-9]{64}$/),
+        user_agent: 'Mozilla/5.0',
       },
+    });
+    // email is trimmed and lowercased before hashing
+    expect(await hashEvent({ user: { email: '  M@I.L ' } })).toEqual(
+      await hashEvent({ user: { email: 'm@i.l' } }),
+    );
+    // an existing SHA-256 digest is not hashed twice
+    const digest =
+      'd42649b85459f1140acba6d88f5325256ad2519782c520b7666c51390d9744f0';
+    expect(await hashEvent({ user: { email: digest } })).toEqual({
+      user: { email: digest },
     });
     // opt_out pass-through
     expect(
@@ -400,7 +408,7 @@ describe('Server Destination Reddit', () => {
     await elb(event);
 
     const requestBody = JSON.parse(mockSendServer.mock.calls[0][1]);
-    const user = requestBody.data.events[0].user;
+    const user = requestBody.events[0].user;
     // All three sources of user data are merged (email, external_id, aaid are hashed)
     expect(user.email).toEqual(expect.any(String));
     expect(user.external_id).toEqual(expect.any(String));
@@ -428,7 +436,7 @@ describe('Server Destination Reddit', () => {
     expect(result.done).toBeDefined();
     expect(Object.keys(result.done!)).toHaveLength(1);
     const requestBody = JSON.parse(mockSendServer.mock.calls[0][1]);
-    const capiEvent = requestBody.data.events[0];
+    const capiEvent = requestBody.events[0];
     expect(capiEvent.event_type.tracking_type).toBe('Purchase');
     expect(capiEvent.event_at).toBe(new Date(event.timestamp!).toISOString());
     expect(capiEvent.event_at_ms).toBe(event.timestamp);
@@ -461,10 +469,10 @@ describe('Server Destination Reddit', () => {
           ingest,
         }),
       );
-      expect(sent().data.events[0].user.ip_address).toBe(
+      expect(sent().events[0].user.ip_address).toBe(
         await expected('203.0.113.7'),
       );
-      expect(sent().data.events[0].user.user_agent).toBeDefined();
+      expect(sent().events[0].user.user_agent).toBeDefined();
     });
 
     test('falls back to event.user.ip and userAgent', async () => {
@@ -477,10 +485,10 @@ describe('Server Destination Reddit', () => {
           env: testEnv,
         }),
       );
-      expect(sent().data.events[0].user.ip_address).toBe(
+      expect(sent().events[0].user.ip_address).toBe(
         await expected('198.51.100.2'),
       );
-      expect(sent().data.events[0].user.user_agent).toBeDefined();
+      expect(sent().events[0].user.user_agent).toBeDefined();
     });
 
     test('sends neither when disabled with false', async () => {
@@ -494,8 +502,8 @@ describe('Server Destination Reddit', () => {
           ingest,
         }),
       );
-      expect(sent().data.events[0].user.ip_address).toBeUndefined();
-      expect(sent().data.events[0].user.user_agent).toBeUndefined();
+      expect(sent().events[0].user.ip_address).toBeUndefined();
+      expect(sent().events[0].user.user_agent).toBeUndefined();
     });
 
     test('lets an explicitly mapped value win', async () => {
@@ -508,9 +516,7 @@ describe('Server Destination Reddit', () => {
           ingest,
         }),
       );
-      expect(sent().data.events[0].user.ip_address).toBe(
-        await expected('10.0.0.1'),
-      );
+      expect(sent().events[0].user.ip_address).toBe(await expected('10.0.0.1'));
     });
   });
 });
