@@ -99,8 +99,9 @@ describe('generateServerEntry merges the flow logger with the host logger', () =
       logger: createCLILoggerConfig({
         verbose: () => extra.verbose === true || host.debug,
         format: () => host.format,
-        onLine: (level, message, line) => {
-          ring.push([level, message, line]);
+        onLine: (level, line) => {
+          const message = line.masked();
+          ring.push([level, message, line.entry()]);
           calls.push(['host', message]);
         },
       }),

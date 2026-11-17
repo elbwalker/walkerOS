@@ -140,12 +140,20 @@ export function startObserve(
 
   return {
     flush: (keepalive) => (preview ? preview.flush(keepalive) : resolved()),
-    stop: () =>
-      within(
-        Promise.all([usage?.stop(), preview?.stop()]).then(noop),
-        FINAL_TIMEOUT_MS,
-      ),
+    stop: (deadlineAt) => {
+      const deadline = stopDeadline(deadlineAt);
+      return within(
+        Promise.all([usage?.stop(deadline), preview?.stop()]).then(noop),
+        deadline - Date.now(),
+      );
+    },
   };
+}
+
+/** When a stop ends: its own 3 s from now, or a caller's earlier deadline. */
+function stopDeadline(deadlineAt?: number): number {
+  const own = Date.now() + FINAL_TIMEOUT_MS;
+  return deadlineAt === undefined ? own : Math.min(own, deadlineAt);
 }
 
 // ── Options ──────────────────────────────────────────────────────────────────
@@ -264,7 +272,7 @@ function startUsage(
   options: Part & { interval: number },
   identity: Identity,
   mask: Mask,
-): { stop(): Promise<void> } {
+): { stop(deadline: number): Promise<void> } {
   const poster: BatchedPoster<UsageRow> = createBatchedPoster<UsageRow>({
     url: options.url,
     token: options.token,
@@ -347,12 +355,11 @@ function startUsage(
     // there is no final, and nothing starts after the deadline. A regular
     // report already in flight keeps its request up to its own 10 s timeout:
     // a host that ends without process.exit stays alive until it settles.
-    async stop() {
+    async stop(deadline) {
       stopped = true;
       clearInterval(timer);
       if (soon !== undefined) clearTimeout(soon);
       collector.causeLog?.setListener(noop);
-      const deadline = Date.now() + FINAL_TIMEOUT_MS;
       if (current) await within(current, deadline - Date.now());
       const left = deadline - Date.now();
       if (left > 0) await report(true, left);
@@ -918,7 +925,7 @@ function clickhouseTime(ms: number): string {
 /** Resolves when the work settles or the time is up, whichever comes first. */
 function within(work: Promise<void>, ms: number): Promise<void> {
   return new Promise<void>((resolve) => {
-    const timer = setTimeout(resolve, ms);
+    const timer = setTimeout(resolve, Math.max(0, ms));
     unrefTimer(timer);
     work.then(
       () => {

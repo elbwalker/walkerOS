@@ -71,7 +71,7 @@ await startFlow({
   language="typescript"
 />
 
-The pull source is event-driven: consumption starts when the collector runs, and the source then opens the streaming subscription and forwards each delivered message to the collector via `env.push`. The source's `push()` called without arguments does nothing; called with a synthetic message it runs the same handler (tests, simulation). `destroy()` closes the subscriber gracefully, honoring `shutdownTimeoutMs` (default 30000).
+The pull source is event-driven: consumption starts when the collector runs, and the source then opens the streaming subscription and forwards each delivered message to the collector via `env.push`. The source's `push()` called without arguments does nothing; called with a synthetic message it runs the same handler (tests, simulation). `destroy()` closes the subscriber gracefully, honoring `shutdownTimeoutMs` (default 5000).
 
 ### Pull settings
 
@@ -85,7 +85,7 @@ The pull source is event-driven: consumption starts when the collector runs, and
 | `decoder`            | `'json' \| 'text' \| 'raw'`       | `'json'`                        | How the subscriber decodes message bodies before forwarding.             |
 | `flowControl`        | `{ maxMessages?, maxBytes? }`     | `{ maxMessages: 100, maxBytes: 10 MB }` | Subscriber pull rate (in-flight cap).                            |
 | `ackDeadline`        | `number`                          | `60`                            | Per-message ack window in seconds.                                       |
-| `shutdownTimeoutMs`  | `number`                          | `30000`                         | Graceful drain budget on `destroy()`.                                    |
+| `shutdownTimeoutMs`  | `number`                          | `5000`                          | Graceful drain budget on `destroy()`.                                    |
 | `onPushError`        | `'nack' \| 'ack'`                 | `'nack'`                        | Behavior when forwarding to the collector throws or fails for a retryable reason. |
 
 ## Push webhook
@@ -229,7 +229,7 @@ The pull source is a long-running listener. The other server sources (express, l
 
 1. `init()` returns the `Source.Instance`. When the collector runs, the source opens the streaming subscriber, which runs in the background.
 2. The instance's `push()` called without arguments does nothing; called with a synthetic message it runs the same handler (tests, simulation).
-3. `destroy()` closes the subscriber. On shutdown the source stops accepting new messages, drains in-flight ack/nacks, and force-closes after `shutdownTimeoutMs`.
+3. `destroy()` closes the subscriber. On shutdown the source stops taking messages and lets those in flight finish. At `shutdownTimeoutMs` it nacks what is left, so Pub/Sub redelivers it. The collector's whole shutdown has 8 seconds, so a value above 5000 takes time from the batch flush.
 
 ## Troubleshooting
 

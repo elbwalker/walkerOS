@@ -11,6 +11,7 @@ import {
 import { writeCredentials } from '../../../lib/credentials.js';
 
 const APP = 'https://app.example.test';
+const AUTH = 'https://auth.example.test';
 const env = process.env;
 let configHome: string;
 beforeEach(() => {
@@ -54,9 +55,9 @@ describe('walkeros diagnostics', () => {
       http.get(`${APP}/api/health`, () => HttpResponse.json({ status: 'ok' })),
     );
     const login = {
-      client_id: `${APP}/oauth/walkeros-cli`,
-      token_endpoint: `${APP}/api/oauth/token`,
-      revocation_endpoint: `${APP}/api/oauth/revoke`,
+      client_id: `${AUTH}/oauth/walkeros-cli`,
+      token_endpoint: `${AUTH}/api/oauth/token`,
+      revocation_endpoint: `${AUTH}/api/oauth/revoke`,
       access_token: 'wos_at_secret',
       expires_at: Date.now() + 3600_000,
       refresh_token: 'wos_rt_secret',
@@ -70,16 +71,19 @@ describe('walkeros diagnostics', () => {
     };
 
     expect(await lines()).toBe('not signed in');
-    writeCredentials({ [APP]: { issuer: APP, ...login } });
-    expect(await lines()).toBe(`signed in to ${APP}`);
     writeCredentials({
-      'https://stage.example.test': {
-        issuer: 'https://stage.example.test',
+      [AUTH]: { issuer: AUTH, resource: `${APP}/api`, ...login },
+    });
+    expect(await lines()).toBe(`signed in to ${AUTH}`);
+    writeCredentials({
+      'https://auth.stage.example.test': {
+        issuer: 'https://auth.stage.example.test',
+        resource: 'https://stage.example.test/api',
         ...login,
       },
     });
     expect(await lines()).toBe(
-      `not signed in to ${APP} (signed in to https://stage.example.test)`,
+      `not signed in to ${APP} (signed in to https://auth.stage.example.test)`,
     );
     process.env.WALKEROS_TOKEN = 'wos_pat_secret';
     expect(await lines()).toBe('sign-in WALKEROS_TOKEN');

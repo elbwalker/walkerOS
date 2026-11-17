@@ -1,11 +1,25 @@
 import { mkdtempSync, readFileSync, existsSync, writeFileSync } from 'fs';
 import { tmpdir } from 'os';
 import { join } from 'path';
+import { Level } from '@walkeros/core';
 import { LogRing, ErrorRing } from '../log-ring.js';
 import type { RingEntry, DedupedError } from '../log-ring.js';
 
 function makeEntry(time: number, message: string): RingEntry {
-  return { time, level: 'info', message };
+  return {
+    time,
+    level: 'info',
+    line: {
+      level: Level.INFO,
+      time,
+      masked: () => message,
+      entry: () => ({
+        severity: 'INFO',
+        message,
+        time: new Date(time).toISOString(),
+      }),
+    },
+  };
 }
 
 describe('LogRing', () => {
@@ -22,8 +36,8 @@ describe('LogRing', () => {
     const snap = ring.snapshot();
     expect(snap).toHaveLength(5);
     // oldest dropped: only messages 5..9 remain
-    expect(snap[0].message).toBe('msg-5');
-    expect(snap[4].message).toBe('msg-9');
+    expect(snap[0].line.masked()).toBe('msg-5');
+    expect(snap[4].line.masked()).toBe('msg-9');
   });
 
   it('snapshot(limit) returns the most recent limit entries oldest-first', () => {
@@ -33,9 +47,9 @@ describe('LogRing', () => {
     }
     const snap = ring.snapshot(3);
     expect(snap).toHaveLength(3);
-    expect(snap[0].message).toBe('msg-5');
-    expect(snap[1].message).toBe('msg-6');
-    expect(snap[2].message).toBe('msg-7');
+    expect(snap[0].line.masked()).toBe('msg-5');
+    expect(snap[1].line.masked()).toBe('msg-6');
+    expect(snap[2].line.masked()).toBe('msg-7');
   });
 });
 

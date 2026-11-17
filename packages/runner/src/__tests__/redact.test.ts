@@ -1,3 +1,8 @@
+import {
+  compileKnown,
+  createCLILogger,
+  createKnownValues,
+} from '@walkeros/core/node';
 import { redactLine, redactErrors, redactLogs } from '../redact.js';
 import type { DedupedError, RingEntry } from '../log-ring.js';
 
@@ -340,10 +345,10 @@ describe('redactLine', () => {
 });
 
 describe('redactErrors', () => {
-  it('masks secrets in error messages and converts timestamps to ISO strings', () => {
+  it('masks known values in stored error messages, cuts them at 256 and converts timestamps to ISO strings', () => {
     const errors: DedupedError[] = [
       {
-        message: 'token AKIAIOSFODNN7EXAMPLEKEY123456 leaked',
+        message: `token learned-later-value leaked ${'x'.repeat(300)}`,
         count: 3,
         firstSeen: 1700000000000,
         lastSeen: 1700000060000,
@@ -356,13 +361,14 @@ describe('redactErrors', () => {
       },
     ];
 
-    const result = redactErrors(errors);
+    const result = redactErrors(errors, compileKnown(['learned-later-value']));
 
     expect(result).toHaveLength(2);
 
-    // First entry: secret masked, timestamps as ISO
-    expect(result[0].message).not.toContain('AKIAIOSFODNN7EXAMPLEKEY123456');
-    expect(result[0].message).toContain('***');
+    // First entry: known value masked, cut to the wire cap, timestamps as ISO
+    expect(result[0].message).not.toContain('learned-later-value');
+    expect(result[0].message.startsWith('token *** leaked ')).toBe(true);
+    expect(result[0].message).toHaveLength(256);
     expect(result[0].count).toBe(3);
     expect(result[0].firstSeen).toBe(new Date(1700000000000).toISOString());
     expect(result[0].lastSeen).toBe(new Date(1700000060000).toISOString());
@@ -375,18 +381,18 @@ describe('redactErrors', () => {
 });
 
 describe('redactLogs', () => {
-  it('masks secrets in log entries and converts timestamps to ISO strings', () => {
+  it('masks ringed lines as it reads them and converts timestamps to ISO strings', () => {
+    const lines: RingEntry['line'][] = [];
+    const logger = createCLILogger({
+      silent: true,
+      knownSecrets: createKnownValues(),
+      onLine: (_level, line) => lines.push(line),
+    });
+    logger.info('Connected to postgres://admin:s3cr3tP4ss@db.example.com/mydb');
+    logger.info('Service started successfully');
     const entries: RingEntry[] = [
-      {
-        time: 1700000000000,
-        level: 'info',
-        message: 'Connected to postgres://admin:s3cr3tP4ss@db.example.com/mydb',
-      },
-      {
-        time: 1700000030000,
-        level: 'error',
-        message: 'Service started successfully',
-      },
+      { time: 1700000000000, level: 'info', line: lines[0] },
+      { time: 1700000030000, level: 'error', line: lines[1] },
     ];
 
     const result = redactLogs(entries);

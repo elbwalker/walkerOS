@@ -1643,7 +1643,9 @@ walkeros auth whoami`}
   language="bash"
 />
 
-`walkeros login` opens the walkerOS app in your browser. Sign in, check what the consent screen asks for, and Allow: the browser returns to the CLI on `127.0.0.1` and the sign-in finishes by itself, with nothing to copy. If the browser shows a connection error instead (the CLI runs in a container or on another machine), run `walkeros login --no-browser`.
+`walkeros login` opens the walkerOS sign-in on `auth.walkeros.io` in your browser. Sign in, check what the consent screen asks for, and Allow: the browser returns to the CLI on `127.0.0.1` and the sign-in finishes by itself, with nothing to copy. If the browser shows a connection error instead (the CLI runs in a container or on another machine), run `walkeros login --no-browser`.
+
+The app URL (`WALKEROS_APP_URL`, default `https://app.walkeros.io`) stays the one address you set, an origin with no path. The CLI asks the app where to sign in: against `https://stage.app.walkeros.io` the sign-in opens on `auth.stage.walkeros.io`.
 
 **No browser on this machine.** `walkeros login --no-browser` prints an address. Open it on any device, sign in and Allow, and the page shows a one-time code. Paste it at the prompt in the terminal. The code works once, within 5 minutes of Allow, and only in the terminal that started the sign-in. Paste it only into a terminal you started yourself.
 
@@ -1667,7 +1669,7 @@ What the CLI keeps, and where:
 
 - The sign-in is stored in `~/.config/walkeros/credentials.json` (or under `XDG_CONFIG_HOME`), readable only by you, one sign-in per app URL. Signed in to two apps (say a staging app and `https://app.walkeros.io`), the CLI keeps both and uses the one for the app URL in place.
 - A sign-in is used only for its own app: with `WALKEROS_APP_URL` pointing elsewhere, a command sends nothing and says where you are signed in.
-- The CLI renews the sign-in by itself while you use it. When the sign-in ends, a command says `your sign-in to <app> ended: run walkeros login`. It ends when:
+- The CLI renews the sign-in by itself while you use it. When the sign-in ends, a command says `your sign-in to https://auth.walkeros.io ended: run walkeros login`. It ends when:
   - you disconnected walkerOS CLI in the app;
   - it went unused too long;
   - a renewal timed out on this computer after the app had already renewed it: once the app's 10-second window for repeating a renewal has passed, the next renewal ends the sign-in.
@@ -1707,7 +1709,7 @@ Output:
 ```
 user@example.com
 User: usr_abc123
-Credential: signed in to https://app.walkeros.io
+Credential: signed in to https://auth.walkeros.io
 ```
 
 With `WALKEROS_TOKEN` set, the last line reads `Credential: WALKEROS_TOKEN`.
@@ -2113,10 +2115,10 @@ walkeros diagnostics --json`}
 cli 4.x.y
 app https://app.walkeros.io (default)
 health reachable, status ok, app 3f2a91c
-signed in to https://app.walkeros.io
+signed in to https://auth.walkeros.io
 ```
 
-When the app cannot be reached, the health line reads `health unreachable (fetch failed (ECONNREFUSED))`. The last line reads `not signed in`, `sign-in WALKEROS_TOKEN`, or names the app you are signed in to instead; it never shows a token. `--json` prints the same report as one object, `{ cli, appUrl, app, signIn }`.
+When the app cannot be reached, the health line reads `health unreachable (fetch failed (ECONNREFUSED))`. The last line reads `not signed in`, `sign-in WALKEROS_TOKEN`, or names where you are signed in instead; it never shows a token. `--json` prints the same report as one object, `{ cli, appUrl, app, signIn }`.
 
 ## Minimum client version
 

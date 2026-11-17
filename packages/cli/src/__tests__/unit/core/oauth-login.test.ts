@@ -19,12 +19,14 @@ import {
   createPkce,
   createState,
   discover,
+  LoginError,
   refreshStoredLogin,
   SignInError,
 } from '../../../core/oauth-login.js';
 import { resolveAccessToken, resolveCredential } from '../../../core/auth.js';
 import {
   getCredentialsPath,
+  loginForAppUrl,
   writeCredentials,
   type StoredLogin,
 } from '../../../lib/credentials.js';
@@ -38,6 +40,7 @@ let configHome: string;
 function stored(overrides: Partial<StoredLogin> = {}): StoredLogin {
   return {
     issuer: app.issuer,
+    resource: `${app.appUrl}/api`,
     client_id: `${app.issuer}/oauth/walkeros-cli`,
     token_endpoint: `${app.issuer}/api/oauth/token`,
     revocation_endpoint: `${app.issuer}/api/oauth/revoke`,
@@ -70,7 +73,7 @@ beforeEach(async () => {
   process.env = {
     ...env,
     XDG_CONFIG_HOME: configHome,
-    WALKEROS_APP_URL: app.issuer,
+    WALKEROS_APP_URL: app.appUrl,
   };
   delete process.env.WALKEROS_TOKEN;
 });
@@ -82,7 +85,7 @@ afterEach(async () => {
 });
 
 describe('PKCE and the authorization request', () => {
-  it('makes an S256 pair, a base64url state of at most 128 characters, and sends no resource', async () => {
+  it('makes an S256 pair, a base64url state of at most 128 characters, and names the REST API as the resource', async () => {
     const pkce = createPkce();
     expect(pkce.verifier).toMatch(/^[A-Za-z0-9_-]{43}$/);
     expect(pkce.challenge).toBe(
@@ -92,7 +95,7 @@ describe('PKCE and the authorization request', () => {
     expect(state).toMatch(/^[A-Za-z0-9_-]{1,128}$/);
 
     const url = new URL(
-      authorizeUrl(await discover(app.issuer), {
+      authorizeUrl(await discover(app.appUrl), {
         redirectUri: 'http://127.0.0.1:1234/callback',
         challenge: pkce.challenge,
         state,
@@ -106,20 +109,202 @@ describe('PKCE and the authorization request', () => {
       code_challenge_method: 'S256',
       scope: 'read write offline_access',
       state,
+      resource: `${app.appUrl}/api`,
     });
   });
 });
 
 describe('discovery', () => {
-  it('takes the client id from the issuer and picks the code page by origin, not by scheme', async () => {
-    await expect(discover(`${app.issuer}/`)).resolves.toEqual({
+  it('finds the authorization server through the REST API, takes the client id from its issuer and picks the code page by origin, not by scheme', async () => {
+    await expect(discover(`${app.appUrl}/`)).resolves.toEqual({
       issuer: app.issuer,
+      resource: `${app.appUrl}/api`,
       authorizationEndpoint: `${app.issuer}/oauth/authorize`,
       tokenEndpoint: `${app.issuer}/api/oauth/token`,
       revocationEndpoint: `${app.issuer}/api/oauth/revoke`,
       clientId: `${app.issuer}/oauth/walkeros-cli`,
       codePage: `${app.issuer}/oauth/cli-code`,
     });
+  });
+
+  const METADATA = '/.well-known/oauth-authorization-server';
+  const CLIENT = '/oauth/walkeros-cli';
+
+  it.each<[string, () => void, string, string[]]>([
+    [
+      'a resource document for another resource',
+      () => {
+        app.resourceDocument.resource = `${app.appUrl}/api/mcp`;
+      },
+      'names another resource than',
+      [],
+    ],
+    [
+      'no authorization server',
+      () => {
+        app.resourceDocument.authorization_servers = [];
+      },
+      'names 0 authorization servers, not one',
+      [],
+    ],
+    [
+      'two authorization servers',
+      () => {
+        app.resourceDocument.authorization_servers = [
+          app.issuer,
+          'https://auth.walkeros.io',
+        ];
+      },
+      'names 2 authorization servers, not one',
+      [],
+    ],
+    [
+      'an authorization server over plain http to another host',
+      () => {
+        app.resourceDocument.authorization_servers = [
+          'http://auth.example.test',
+        ];
+      },
+      'the authorization server http://auth.example.test is neither https nor http on this machine',
+      [],
+    ],
+    [
+      'metadata that names another issuer',
+      () => {
+        app.metadata.issuer = app.appUrl;
+      },
+      'name another issuer',
+      [METADATA],
+    ],
+    [
+      'metadata that publishes no PKCE methods',
+      () => {
+        delete app.metadata.code_challenge_methods_supported;
+      },
+      'does not offer PKCE with S256, which walkeros login needs',
+      [METADATA],
+    ],
+    [
+      'an authorization endpoint on another origin',
+      () => {
+        app.metadata.authorization_endpoint = `${app.appUrl}/oauth/authorize`;
+      },
+      '/oauth/authorize is not on http://127.0.0.1:',
+      [METADATA],
+    ],
+    [
+      'an authorization endpoint that is a file',
+      () => {
+        app.metadata.authorization_endpoint = 'file:///etc/passwd';
+      },
+      'authorization_endpoint file:///etc/passwd is neither https nor http on this machine',
+      [METADATA],
+    ],
+    [
+      'a token endpoint on another origin',
+      () => {
+        app.metadata.token_endpoint = 'https://evil.example/token';
+      },
+      'token_endpoint https://evil.example/token is not on',
+      [METADATA],
+    ],
+    [
+      'a revocation endpoint over plain http to another host',
+      () => {
+        app.metadata.revocation_endpoint = 'http://evil.example/revoke';
+      },
+      'revocation_endpoint http://evil.example/revoke is neither https nor http on this machine',
+      [METADATA],
+    ],
+    [
+      'a client document with another id',
+      () => {
+        app.clientDocument.client_id = `${app.appUrl}/oauth/walkeros-cli`;
+      },
+      'does not serve the walkerOS CLI client',
+      [METADATA, CLIENT],
+    ],
+    [
+      'a code page off the issuer',
+      () => {
+        app.clientDocument.redirect_uris = [
+          'http://127.0.0.1/callback',
+          `${app.appUrl}/oauth/cli-code`,
+        ];
+      },
+      'does not register the loopback and a code page',
+      [METADATA, CLIENT],
+    ],
+  ])(
+    'refuses %s before anything is sent',
+    async (_name, change, fact, issuerPaths) => {
+      change();
+      const refused = discover(app.appUrl);
+      await expect(refused).rejects.toThrow(LoginError);
+      await expect(refused).rejects.toThrow(fact);
+      await expect(refused).rejects.toThrow(
+        /: check the app URL \(WALKEROS_APP_URL, or appUrl in the walkerOS config\)$/,
+      );
+      expect(app.requests.filter((r) => r.method !== 'GET')).toEqual([]);
+      expect(
+        app.requests.filter((r) => r.origin === app.issuer).map((r) => r.path),
+      ).toEqual(issuerPaths);
+    },
+  );
+});
+
+describe('the app URL', () => {
+  it.each([
+    ['a path', (origin: string) => `${origin}/walkeros`],
+    ['a query', (origin: string) => `${origin}?tenant=1`],
+  ])(
+    'with %s is refused by name before anything is read',
+    async (_name, appUrlOf) => {
+      const appUrl = appUrlOf(app.appUrl);
+      await expect(discover(appUrl)).rejects.toThrow(
+        `walkeros login takes the app URL as an origin, and ${appUrl} has a path, a query or a fragment: check the app URL (WALKEROS_APP_URL, or appUrl in the walkerOS config)`,
+      );
+      expect(app.requests).toEqual([]);
+    },
+  );
+});
+
+describe('loginForAppUrl', () => {
+  function login(issuer: string, resource: string): StoredLogin {
+    return {
+      issuer,
+      resource,
+      client_id: `${issuer}/oauth/walkeros-cli`,
+      token_endpoint: `${issuer}/api/oauth/token`,
+      revocation_endpoint: `${issuer}/api/oauth/revoke`,
+      access_token: 'wos_at_stored',
+      expires_at: Date.now() + 3600_000,
+    };
+  }
+
+  it.each([
+    [
+      'finds the login whose resource is on the app URL',
+      'https://app.example.test',
+      login('https://auth.example.test', 'https://app.example.test/api'),
+      true,
+    ],
+    [
+      'finds it for an app URL with a trailing slash',
+      'https://app.example.test/',
+      login('https://auth.example.test', 'https://app.example.test/api'),
+      true,
+    ],
+    [
+      'skips a login whose issuer is on the app URL but whose resource is not',
+      'https://app.example.test',
+      login('https://app.example.test', 'https://other.example.test/api'),
+      false,
+    ],
+  ])('%s', (_name, appUrl, stored, found) => {
+    expect(loginForAppUrl({ [stored.issuer]: stored }, appUrl)).toEqual(
+      found ? stored : undefined,
+    );
   });
 });
 
@@ -166,6 +351,7 @@ describe('resolveCredential', () => {
       grant_type: 'refresh_token',
       client_id: `${app.issuer}/oauth/walkeros-cli`,
       refresh_token: refresh,
+      resource: `${app.appUrl}/api`,
     });
   });
 
@@ -342,7 +528,7 @@ describe('walkeros api with a stored login', () => {
 async function mintRefreshToken(): Promise<string> {
   const pkce = createPkce();
   const state = createState();
-  const discovery = await discover(app.issuer);
+  const discovery = await discover(app.appUrl);
   const authorize = authorizeUrl(discovery, {
     redirectUri: discovery.codePage,
     challenge: pkce.challenge,

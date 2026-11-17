@@ -1025,7 +1025,7 @@ describe('bundleCore server nft wiring (Phase 2)', () => {
     const lines: string[] = [];
     const lineLogger = createCLILogger({
       silent: true,
-      onLine: (_level, message) => lines.push(message),
+      onLine: (_level, line) => lines.push(line.masked()),
     });
     try {
       const flowSettings: Flow = { config: { platform: 'server' } };

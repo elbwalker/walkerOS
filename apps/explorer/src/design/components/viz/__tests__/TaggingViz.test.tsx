@@ -1,7 +1,7 @@
 import React from 'react';
 import { renderToString } from 'react-dom/server';
 import { render } from '@testing-library/react';
-import { TaggingViz } from '../TaggingViz';
+import { TaggingViz, type TaggingPane } from '../TaggingViz';
 import { htmlTokens, type TaggingScript } from '../data/tagging';
 
 const CARD: TaggingScript = {
@@ -115,6 +115,26 @@ describe('TaggingViz', () => {
     expect(
       container.querySelectorAll('.elb-viz-table__row--event'),
     ).toHaveLength(1);
+  });
+
+  it.each<[string, TaggingPane[] | undefined, string[]]>([
+    ['all three by default', undefined, ['code', 'page', 'events']],
+    ['the page alone', ['page'], ['page']],
+    ['the code and the page', ['code', 'page'], ['code', 'page']],
+  ])('panes: %s', (_name, panes, shown) => {
+    const { container } = render(
+      <TaggingViz script={CARD} t={600000} panes={panes} />,
+    );
+    const present = {
+      code: '.elb-viz-tagging__code',
+      page: '.elb-viz-tagging__stage',
+      events: '.elb-viz-table',
+    };
+    expect(
+      Object.entries(present)
+        .filter(([, selector]) => container.querySelector(selector))
+        .map(([pane]) => pane),
+    ).toEqual(shown);
   });
 
   it('names a line that lights a missing part, once', () => {

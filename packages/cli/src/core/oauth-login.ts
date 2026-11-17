@@ -16,12 +16,13 @@ import {
 } from '../lib/credentials.js';
 
 /**
- * `walkeros login` speaks standard OAuth 2.1, code plus PKCE, to the app URL
- * it is configured with. Everything but one path comes from the app's own
- * documents: the authorization server metadata (RFC 8414) names the
- * endpoints, and the CLI's client document (`APP_PATHS.cliClient`) names its
- * client id and its two return addresses, a loopback on this machine and a
- * code page on the app for a sign-in finished on another device.
+ * `walkeros login` speaks standard OAuth 2.1, code plus PKCE, with the
+ * authorization server the configured app URL names. The app's protected
+ * resource document for its REST API (RFC 9728, `APP_PATHS.protectedResource`)
+ * names that server; the server's metadata (RFC 8414) names the endpoints;
+ * and the CLI's client document on the server (its URL is the CLI's client
+ * id) names its two return addresses, a loopback on this machine and a code
+ * page on the server for a sign-in finished on another device.
  */
 
 /** `offline_access` buys the refresh token the CLI keeps. */
@@ -42,18 +43,38 @@ export const REQUEST_TIMEOUT_MS = 10_000;
 /** An access token is used only while it stays valid this much longer. */
 const FRESH_FOR_MS = 60_000;
 
+/** The REST API: every token the CLI asks for is for this resource (RFC 8707). */
+const REST_API = '/api';
+
+/** Read on the authorization server's origin (RFC 8414 section 3.1). */
+const AUTHORIZATION_SERVER_METADATA = '/.well-known/oauth-authorization-server';
+
+/** The CLI's client document on the authorization server; its URL is the client id. */
+const CLI_CLIENT = '/oauth/walkeros-cli';
+
 /** A sign-in step that stopped; its message names what to do next. */
 export class LoginError extends Error {}
 
-export interface Discovery {
+/** The authorization server's endpoints and the CLI's client there. */
+export interface AuthorizationServer {
   issuer: string;
   authorizationEndpoint: string;
   tokenEndpoint: string;
   revocationEndpoint: string;
   clientId: string;
-  /** The return address on the app that shows a code to paste. */
+  /** The return address on the authorization server that shows a code to paste. */
   codePage: string;
 }
+
+export interface Discovery extends AuthorizationServer {
+  /** The app's REST API, named in the authorization and every token request. */
+  resource: string;
+}
+
+const ResourceDocumentSchema = z.object({
+  resource: z.string(),
+  authorization_servers: z.array(z.string()),
+});
 
 const MetadataSchema = z.object({
   issuer: z.string(),
@@ -78,51 +99,53 @@ function originOf(url: string): string | null {
   }
 }
 
-/** The issuer an app URL stands for: the URL without trailing slashes. */
-export function issuerOf(appUrl: string): string {
-  return appUrl.replace(/\/+$/, '');
-}
-
 const CHECK_APP_URL =
   'check the app URL (WALKEROS_APP_URL, or appUrl in the walkerOS config)';
 
-async function readDocument(issuer: string, path: string): Promise<unknown> {
+async function readDocument(base: string, path: string): Promise<unknown> {
   let response: Response;
   try {
     response = await appFetch(path, {
-      baseUrl: issuer,
+      baseUrl: base,
       redirect: 'error',
       signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),
     });
   } catch (error) {
     throw new LoginError(
-      `could not reach ${issuer}: ${fetchFailureReason(error, REQUEST_TIMEOUT_MS)}: ${CHECK_APP_URL} and the connection`,
+      `could not reach ${base}: ${fetchFailureReason(error, REQUEST_TIMEOUT_MS)}: ${CHECK_APP_URL} and the connection`,
     );
   }
   if (!response.ok)
     throw new LoginError(
-      `${issuer} answered HTTP ${response.status} for ${path}: ${CHECK_APP_URL}`,
+      `${base} answered HTTP ${response.status} for ${path}: ${CHECK_APP_URL}`,
     );
   try {
     const body: unknown = await response.json();
     return body;
   } catch {
     throw new LoginError(
-      `${issuer} answered ${path} with something that is not JSON: ${CHECK_APP_URL}`,
+      `${base} answered ${path} with something that is not JSON: ${CHECK_APP_URL}`,
     );
   }
 }
 
-/** The sign-in address of the endpoint, or why it may not be used. */
+/** Why an address may not carry a sign-in, or null. */
+function addressProblem(name: string, value: string): string | null {
+  if (CONTROL_CHARACTERS.test(value))
+    return `${name} holds a control character`;
+  if (!isSecureSignInUrl(value))
+    return `${name} ${value} is neither https nor http on this machine`;
+  return null;
+}
+
+/** Why an endpoint of `issuer` may not be used, or null. */
 function endpointProblem(
   name: string,
   value: string,
   issuer: string,
 ): string | null {
-  if (CONTROL_CHARACTERS.test(value))
-    return `${name} holds a control character`;
-  if (!isSecureSignInUrl(value))
-    return `${name} ${value} is neither https nor http on this machine`;
+  const problem = addressProblem(name, value);
+  if (problem !== null) return problem;
   if (originOf(value) !== originOf(issuer))
     return `${name} ${value} is not on ${issuer}`;
   return null;
@@ -143,23 +166,28 @@ function isLoopbackEntry(uri: string): boolean {
 }
 
 /**
- * Read and check the app's sign-in documents. Nothing is sent to an endpoint
- * before all of these hold: the metadata's `issuer` is the app URL itself
- * (RFC 8414 3.3); every endpoint is on the issuer's origin and is https or
- * http on this machine; the client document's id is
+ * Read and check the authorization server's documents. Nothing is sent to an
+ * endpoint before all of these hold: the issuer is https or http on this
+ * machine; the metadata, read with its well-known suffix between the issuer's
+ * host and path (RFC 8414 3.1), names that issuer byte for byte (3.3); every
+ * endpoint is on the issuer's origin and is https or http on this machine;
+ * the metadata offers PKCE with S256; the client document's id is
  * `<issuer>/oauth/walkeros-cli`, it registers the loopback, and one of its
  * return addresses is on the issuer's origin (picked by origin, never by
- * scheme: a local app is http like the loopback).
+ * scheme: a local server is http like the loopback).
  */
-export async function discover(appUrl: string): Promise<Discovery> {
-  const issuer = issuerOf(appUrl);
-  if (CONTROL_CHARACTERS.test(issuer) || !isSecureSignInUrl(issuer))
-    throw new LoginError(
-      `walkeros login signs in only over https, or http on this machine, and the app URL is ${issuer}: ${CHECK_APP_URL}`,
-    );
+export async function discoverAuthorizationServer(
+  issuer: string,
+): Promise<AuthorizationServer> {
+  const problem = addressProblem('the authorization server', issuer);
+  if (problem !== null) throw new LoginError(`${problem}: ${CHECK_APP_URL}`);
+  const server = new URL(issuer);
 
   const metadata = MetadataSchema.safeParse(
-    await readDocument(issuer, APP_PATHS.authorizationServer),
+    await readDocument(
+      server.origin,
+      `${AUTHORIZATION_SERVER_METADATA}${server.pathname.replace(/\/+$/, '')}`,
+    ),
   );
   if (!metadata.success)
     throw new LoginError(
@@ -176,23 +204,22 @@ export async function discover(appUrl: string): Promise<Discovery> {
     ['revocation_endpoint', m.revocation_endpoint],
   ];
   for (const [name, value] of endpoints) {
-    const problem = endpointProblem(name, value, issuer);
-    if (problem)
+    const endpoint = endpointProblem(name, value, issuer);
+    if (endpoint)
       throw new LoginError(
-        `the sign-in settings of ${issuer} are refused: ${problem}: ${CHECK_APP_URL}`,
+        `the sign-in settings of ${issuer} are refused: ${endpoint}: ${CHECK_APP_URL}`,
       );
   }
-  if (
-    m.code_challenge_methods_supported !== undefined &&
-    !m.code_challenge_methods_supported.includes('S256')
-  )
+  // A server that publishes no PKCE methods may ignore the challenge, and a
+  // code taken on this machine would then work without the verifier.
+  if (!(m.code_challenge_methods_supported ?? []).includes('S256'))
     throw new LoginError(
       `${issuer} does not offer PKCE with S256, which walkeros login needs: ${CHECK_APP_URL}`,
     );
 
-  const clientId = `${issuer}${APP_PATHS.cliClient}`;
+  const clientId = `${issuer}${CLI_CLIENT}`;
   const document = ClientDocumentSchema.safeParse(
-    await readDocument(issuer, APP_PATHS.cliClient),
+    await readDocument(issuer, CLI_CLIENT),
   );
   if (!document.success || document.data.client_id !== clientId)
     throw new LoginError(
@@ -219,6 +246,49 @@ export async function discover(appUrl: string): Promise<Discovery> {
   };
 }
 
+/**
+ * Find and check the authorization server of an app URL, which must be an
+ * origin: the app serves its resources from its origin, and for an origin the
+ * document's address (RFC 9728 3.1) is the origin plus the well-known path.
+ * Its REST API is the resource `<app URL>/api`; the app's document for it
+ * must name exactly that resource (RFC 9728 3.3) and exactly one
+ * authorization server, whose own documents `discoverAuthorizationServer`
+ * then checks. Nothing is read from that server before the app's document
+ * passes.
+ */
+export async function discover(appUrl: string): Promise<Discovery> {
+  const app = appUrl.replace(/\/+$/, '');
+  if (CONTROL_CHARACTERS.test(app) || !isSecureSignInUrl(app))
+    throw new LoginError(
+      `walkeros login signs in only over https, or http on this machine, and the app URL is ${app}: ${CHECK_APP_URL}`,
+    );
+  const url = new URL(app);
+  if (url.pathname !== '/' || url.search !== '' || url.hash !== '')
+    throw new LoginError(
+      `walkeros login takes the app URL as an origin, and ${app} has a path, a query or a fragment: ${CHECK_APP_URL}`,
+    );
+  const resource = `${app}${REST_API}`;
+
+  const document = ResourceDocumentSchema.safeParse(
+    await readDocument(app, APP_PATHS.protectedResource),
+  );
+  if (!document.success)
+    throw new LoginError(
+      `the resource metadata of ${app} lacks a resource or authorization servers: ${CHECK_APP_URL}`,
+    );
+  if (document.data.resource !== resource)
+    throw new LoginError(
+      `the resource metadata of ${app} names another resource than ${resource}: ${CHECK_APP_URL}`,
+    );
+  const servers = document.data.authorization_servers;
+  if (servers.length !== 1)
+    throw new LoginError(
+      `the resource metadata of ${app} names ${servers.length} authorization servers, not one: ${CHECK_APP_URL}`,
+    );
+
+  return { ...(await discoverAuthorizationServer(servers[0])), resource };
+}
+
 // === PKCE and the authorization request ===
 
 export interface Pkce {
@@ -238,7 +308,7 @@ export function createState(): string {
   return randomBytes(24).toString('base64url');
 }
 
-/** The authorization address. No `resource`: the app gives the CLI's client the REST API only. */
+/** The authorization address, naming the REST API as its resource (RFC 8707 2). */
 export function authorizeUrl(
   discovery: Discovery,
   request: { redirectUri: string; challenge: string; state: string },
@@ -251,6 +321,7 @@ export function authorizeUrl(
   url.searchParams.set('code_challenge_method', 'S256');
   url.searchParams.set('scope', LOGIN_SCOPE);
   url.searchParams.set('state', request.state);
+  url.searchParams.set('resource', discovery.resource);
   return url.toString();
 }
 
@@ -348,6 +419,7 @@ export function exchangeCode(request: {
   code: string;
   redirectUri: string;
   verifier: string;
+  resource: string;
 }): Promise<EndpointAnswer> {
   return postForm(
     request.tokenEndpoint,
@@ -357,6 +429,7 @@ export function exchangeCode(request: {
       code: request.code,
       redirect_uri: request.redirectUri,
       code_verifier: request.verifier,
+      resource: request.resource,
     },
     true,
   );
@@ -408,13 +481,14 @@ export function isFresh(login: StoredLogin, now = Date.now()): boolean {
 export function loginOf(
   endpoints: Pick<
     Discovery,
-    'issuer' | 'clientId' | 'tokenEndpoint' | 'revocationEndpoint'
+    'issuer' | 'resource' | 'clientId' | 'tokenEndpoint' | 'revocationEndpoint'
   >,
   tokens: TokenSet,
   now = Date.now(),
 ): StoredLogin {
   return {
     issuer: endpoints.issuer,
+    resource: endpoints.resource,
     client_id: endpoints.clientId,
     token_endpoint: endpoints.tokenEndpoint,
     revocation_endpoint: endpoints.revocationEndpoint,
@@ -525,6 +599,7 @@ export async function refreshStoredLogin(
           grant_type: 'refresh_token',
           client_id: login.client_id,
           refresh_token: login.refresh_token,
+          resource: login.resource,
         },
         true,
       );
@@ -533,6 +608,7 @@ export async function refreshStoredLogin(
         const refreshed = loginOf(
           {
             issuer: login.issuer,
+            resource: login.resource,
             clientId: login.client_id,
             tokenEndpoint: login.token_endpoint,
             revocationEndpoint: login.revocation_endpoint,

@@ -32,7 +32,7 @@ Server-side event streaming to [Apache Kafka](https://kafka.apache.org/) via the
 
 <Configuration type="destination" data={data} />
 
-The destination creates a single long-lived `kafkajs` producer and connects it at the first push, so a flow starts without a reachable broker. kafkajs retries a failed connect or send as `settings.kafka.retry` allows. When a send still fails, the event fails with a `transport` error, marked `retryable` unless no retry can fix it (such as `MESSAGE_TOO_LARGE`), and goes to the dead-letter queue ([when delivery fails](/docs/destinations#when-delivery-fails)). A topic that does not exist fails every event ([below](#runtime-error-when-the-topic-is-missing)). On flow hot-swap or server shutdown, `destroy()` calls `producer.disconnect()` to close the connections.
+The destination creates a single long-lived `kafkajs` producer and connects it at the first push, so a flow starts without a reachable broker. kafkajs retries a failed connect or send as `settings.kafka.retry` allows. When a send still fails, the event fails with a `transport` error, marked `retryable` unless no retry can fix it (such as `MESSAGE_TOO_LARGE`), and goes to the dead-letter queue ([when delivery fails](/docs/destinations#when-delivery-fails)). A topic that does not exist fails every event ([below](#runtime-error-when-the-topic-is-missing)). On server shutdown, `destroy()` calls `producer.disconnect()` to close the connections. It runs inside the collector's 8 second shutdown deadline; one that does not close in time is reported by name ([`walker shutdown`](/docs/collector/commands#shutdown)).
 
 ## Message format
 

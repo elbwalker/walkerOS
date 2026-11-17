@@ -146,8 +146,11 @@ export interface Observe {
 export interface Reporter {
   /** Sends what waits now; `keepalive` lets the request outlive a page leave. */
   flush(keepalive?: boolean): Promise<void>;
-  /** Stops the timers and sends the last report. */
-  stop(): Promise<void>;
+  /**
+   * Stops the timers and sends the last report. A `deadlineAt` (epoch ms)
+   * ends the stop then at the latest, even before its own 3 s are up.
+   */
+  stop(deadlineAt?: number): Promise<void>;
 }
 
 /**

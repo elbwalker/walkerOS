@@ -8,9 +8,11 @@ import {
   getPlatform,
   packageNameToVariable,
   getStepRuntimeProps,
+  DECLARED_ENV_EXPORT,
   ENV_MARKER_PREFIX,
   SECRET_MARKER_PREFIX,
   STEP_FUNCTION_KEYS,
+  declaredEnvOf,
   isPathStepEntry,
   isObject,
 } from '@walkeros/core';
@@ -679,9 +681,9 @@ export async function bundleCore(
     );
 
     // The skeleton is the build-once, introspectable currency every downstream
-    // consumer shares: it exports wireConfig/startFlow/__configData (+__devExports)
-    // so simulate and preview can introspect and re-wire it, while web/server
-    // deploy wrap or run it. One artifact, many targets, so do NOT collapse it into
+    // consumer shares: it exports wireConfig/startFlow/__configData (+__devExports,
+    // and __walkerosEnv for node) so simulate and preview can introspect and
+    // re-wire it, while web/server deploy wrap or run it. One artifact, many targets, so do NOT collapse it into
     // a finished bundle here. For node, step packages stay EXTERNAL on purpose so
     // nft materializes them into a sibling node_modules/ the host resolves on disk
     // (the only way native addons like sqlite .node files can ship); inlining here
@@ -1594,8 +1596,17 @@ export async function createEntryPoint(
       : '\nexport const __packageExports = {};'
     : '';
 
+  // The names a server flow reads from its environment, for the runner to
+  // read after importing the artifact and before starting the flow. A
+  // browser flow reads none at runtime: its `$env` values are baked.
+  const declaredEnvBlock =
+    buildOptions.platform === 'node'
+      ? `\nexport const ${DECLARED_ENV_EXPORT} = ${JSON.stringify(declaredEnvOf(flowSettings))};`
+      : '';
+
   // Return ESM module (imports + wireConfig + startFlow re-export + optional devExports)
-  const fullModule = wireConfigModule + devExportsBlock + packageExportsBlock;
+  const fullModule =
+    wireConfigModule + devExportsBlock + packageExportsBlock + declaredEnvBlock;
   const codeEntry = importsCode
     ? `${importsCode}\n\n${fullModule}`
     : fullModule;
@@ -1971,6 +1982,7 @@ export function generateServerEntry(
 ): string {
   const stage1Specifier = toFileImportSpecifier(stage1Path);
   return `import { startFlow, wireConfig } from '${stage1Specifier}';
+export { ${DECLARED_ENV_EXPORT} } from '${stage1Specifier}';
 
 const __configData = ${dataPayload};
 
@@ -2252,7 +2264,11 @@ export function generateWrapEntry(
  */
 export function generateWrapEntryServer(stage1Path: string): string {
   const stage1Specifier = toFileImportSpecifier(stage1Path);
+  // The declared env is read through the namespace: a skeleton built by an
+  // earlier CLI has no such export, and its wrap exports undefined.
   return `import { startFlow, wireConfig, __configData } from '${stage1Specifier}';
+import * as stage1 from '${stage1Specifier}';
+export const ${DECLARED_ENV_EXPORT} = stage1.${DECLARED_ENV_EXPORT};
 
 export default async function(context = {}) {
   const config = wireConfig(__configData);

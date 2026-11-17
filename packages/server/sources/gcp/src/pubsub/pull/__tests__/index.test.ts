@@ -1,6 +1,6 @@
 jest.mock('@google-cloud/pubsub');
 
-import { PubSub } from '@google-cloud/pubsub';
+import { Duration, PubSub } from '@google-cloud/pubsub';
 import {
   __getMockCalls,
   __resetMockCalls,
@@ -140,21 +140,93 @@ describe('Pub/Sub pull source', () => {
     expect(methods).toContain('PubSub.close');
   });
 
-  it('destroy honors shutdownTimeoutMs when close hangs', async () => {
-    __setSubscriptionHarness({ closeHangs: true });
-    const ctx = buildContext({ shutdownTimeoutMs: 50 });
-    const instance = await sourcePubSubPull(ctx);
-    if (!instance.destroy) throw new Error('destroy not defined');
-    const start = Date.now();
-    await instance.destroy({
-      id: 'pubsub',
-      config: instance.config,
-      env: pushEnv,
-      logger: ctx.logger,
+  describe('close', () => {
+    const closeTimeouts: Array<{
+      when: string;
+      settings: Partial<Settings>;
+      ms: number;
+    }> = [
+      { when: 'by default', settings: {}, ms: 5000 },
+      {
+        when: 'with shutdownTimeoutMs set',
+        settings: { shutdownTimeoutMs: 2000 },
+        ms: 2000,
+      },
+    ];
+
+    beforeEach(() => {
+      jest.useFakeTimers();
     });
-    const elapsed = Date.now() - start;
-    expect(elapsed).toBeGreaterThanOrEqual(40);
-    expect(elapsed).toBeLessThan(500);
+
+    afterEach(() => {
+      jest.useRealTimers();
+    });
+
+    it.each(closeTimeouts)(
+      'lets messages in flight finish on close, for up to $ms ms $when',
+      async ({ settings, ms }) => {
+        await sourcePubSubPull(buildContext(settings));
+        const subscription = __getMockCalls().find(
+          (c) => c.method === 'subscription',
+        );
+        expect(subscription?.args[1]).toMatchObject({
+          closeOptions: {
+            behavior: 'WAIT',
+            timeout: Duration.from({ milliseconds: ms }),
+          },
+        });
+      },
+    );
+
+    it.each(closeTimeouts)(
+      'stops waiting for a hung close after $ms ms $when and still closes the client',
+      async ({ settings, ms }) => {
+        __setSubscriptionHarness({ closeHangs: true });
+        const ctx = buildContext(settings);
+        const warnSpy = jest.spyOn(ctx.logger, 'warn');
+        const instance = await sourcePubSubPull(ctx);
+        if (!instance.destroy) throw new Error('destroy not defined');
+        let settled = false;
+        const destroyed = Promise.resolve(
+          instance.destroy({
+            id: 'pubsub',
+            config: instance.config,
+            env: pushEnv,
+            logger: ctx.logger,
+          }),
+        ).then(() => {
+          settled = true;
+        });
+
+        await jest.advanceTimersByTimeAsync(ms - 1);
+        expect(settled).toBe(false);
+        await jest.advanceTimersByTimeAsync(1);
+        expect(settled).toBe(true);
+        await destroyed;
+
+        expect(warnSpy).toHaveBeenCalledWith(
+          `Pub/Sub subscriber close timed out after ${ms}ms; forcing close.`,
+        );
+        expect(__getMockCalls().map((c) => c.method)).toContain('PubSub.close');
+      },
+    );
+
+    it('leaves no timer and logs no timeout when the close settles in time', async () => {
+      const ctx = buildContext({});
+      const warnSpy = jest.spyOn(ctx.logger, 'warn');
+      const instance = await sourcePubSubPull(ctx);
+      if (!instance.destroy) throw new Error('destroy not defined');
+      await instance.destroy({
+        id: 'pubsub',
+        config: instance.config,
+        env: pushEnv,
+        logger: ctx.logger,
+      });
+
+      expect(jest.getTimerCount()).toBe(0);
+      await jest.advanceTimersByTimeAsync(5000);
+      expect(warnSpy).not.toHaveBeenCalled();
+    });
   });
 
   it('logs canonical hint on PERMISSION_DENIED stream error', async () => {

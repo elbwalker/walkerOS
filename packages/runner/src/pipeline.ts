@@ -10,7 +10,14 @@
  * artifact the container must run; any other artifact fails the boot.
  */
 
-import type { Logger } from '@walkeros/core';
+import {
+  isObject,
+  SHUTDOWN_DEADLINE_MS,
+  type DeclaredEnv,
+  type Destination,
+  type Logger,
+} from '@walkeros/core';
+import type { KnownValues } from '@walkeros/core/node';
 import { createHealthServer, type HealthServer } from './health-server.js';
 import { loadFlow, type RuntimeConfig, type FlowHandle } from './runner.js';
 import {
@@ -20,6 +27,11 @@ import {
 } from './heartbeat.js';
 import { fetchSecrets } from './secrets-fetcher.js';
 import { RunnerAuthError } from './runner-auth-error.js';
+import {
+  knownValuesOf,
+  planSecretInjection,
+  refusalMessage,
+} from './secret-injection.js';
 import type { ErrorRing, LogRing } from './log-ring.js';
 import type { FlowLogger } from './runtime-logging.js';
 import { VERSION } from './version.js';
@@ -47,11 +59,11 @@ export interface PipelineOptions {
   errorRing?: ErrorRing;
   logRing?: LogRing;
   /**
-   * Called with every fetched secret value once the secrets are injected, so
-   * the caller's loggers mask them from then on (their `knownSecrets` reads
-   * the list per line).
+   * The values the caller's loggers and the heartbeat mask. Every fetched
+   * secret value and the value of every name the flow declares join it before
+   * the flow starts, so each line read from then on masks them.
    */
-  onSecrets?: (values: string[]) => void;
+  knownValues: KnownValues;
   api?: {
     appUrl: string;
     token: string;
@@ -81,11 +93,6 @@ export async function runPipeline(options: PipelineOptions): Promise<void> {
   // The artifact this container was deployed to run. Read before the secrets
   // are injected into the environment, so a secret cannot replace it.
   const expected = readExpectedArtifact();
-
-  // Inject secrets before loading flow
-  if (api) {
-    await injectSecrets(api, logger, options.onSecrets);
-  }
 
   logger.info(`walkeros/flow v${VERSION}`);
   logger.info(`Instance: ${getInstanceId()}`);
@@ -125,13 +132,15 @@ export async function runPipeline(options: PipelineOptions): Promise<void> {
       logger,
       loggerConfig,
       healthServer,
+      (declared) => injectSecrets(declared, api, logger, options.knownValues),
     );
     const loaded = showIdentity(handle.collector);
     logger.info(`Flow: ${loaded.name} release ${loaded.release}`);
     assertExpectedArtifact(expected, handle.collector);
   } catch (error) {
-    // Collector construction failed, or the artifact is not the one this
-    // container was deployed to run: keep /ready non-200 so an orchestrator
+    // Collector construction failed, a delivered secret was refused, or the
+    // artifact is not the one this container was deployed to run: keep
+    // /ready non-200 so an orchestrator
     // (Scaleway) does not shift traffic to this revision before we exit.
     healthServer.setFailed(
       error instanceof Error ? error.message : String(error),
@@ -161,6 +170,8 @@ export async function runPipeline(options: PipelineOptions): Promise<void> {
         getCounters: () => handle.collector.status,
         getErrors: () => options.errorRing?.snapshot() ?? [],
         getLogs: () => options.logRing?.snapshot() ?? [],
+        knownValues: options.knownValues,
+        release: handle.collector.release,
       },
       logger,
     );
@@ -187,7 +198,8 @@ export async function runPipeline(options: PipelineOptions): Promise<void> {
       healthServer,
       logger,
       exit: (code) => process.exit(code),
-      forceTimeoutMs: 15000,
+      // A second past the collector's own deadline, under Cloud Run's 10 s.
+      forceTimeoutMs: SHUTDOWN_DEADLINE_MS + 1000,
     });
 
   process.on('SIGTERM', () => shutdown('SIGTERM'));
@@ -215,28 +227,38 @@ export interface ShutdownDeps {
   forceTimeoutMs: number;
 }
 
+/** Collectors whose drain has begun: a later signal only says so. */
+const draining = new WeakSet<ShutdownDeps['collector']>();
+
 /**
  * Orchestrate a graceful shutdown. Order:
- *   /ready drops to 503 → final heartbeat sendOnce (await, best-effort) →
- *   heartbeat.stop → collector shutdown → healthServer.close → exit(0).
+ *   /ready drops to 503 → final heartbeat started → heartbeat.stop →
+ *   collector drain → the final beat awaited until the drain deadline →
+ *   healthServer.close → exit 1 when the drain names a destination, else 0.
  *
  * Readiness drops FIRST so a load balancer stops routing new traffic to a
  * container that is draining.
  *
- * The final `sendOnce` runs BEFORE collector drain so the last beat reflects the
- * pre-drain counters/DLQ depth (what the operator wants at the moment of
- * failure) and carries the final ring contents (incl. the error that may have
- * triggered the shutdown). It is wrapped so a slow/rejecting POST cannot block
- * shutdown; the whole sequence sits inside a force-timer so a hung step still
- * exits at `forceTimeoutMs` (`sendOnce` has its own ~10s AbortSignal, under the
- * 15s deadline).
+ * The final beat builds its body at once, so it carries the pre-drain
+ * counters and the last ring contents (incl. the error that may have
+ * triggered the shutdown); its POST runs beside the drain, so an
+ * unreachable app never takes the drain's time. The collector bounds its
+ * drain by `SHUTDOWN_DEADLINE_MS`; the force timer exits 1 at
+ * `forceTimeoutMs` if anything still hangs. A second signal during the
+ * drain writes one line, and the first decides the exit code.
  */
 export async function runShutdown(
   signal: string,
   deps: ShutdownDeps,
 ): Promise<void> {
+  if (draining.has(deps.collector)) {
+    deps.logger.info(`Received ${signal} during shutdown, the drain goes on`);
+    return;
+  }
+  draining.add(deps.collector);
   deps.logger.info(`Received ${signal}, shutting down...`);
   deps.healthServer.setReady(false);
+  const deadlineAt = Date.now() + SHUTDOWN_DEADLINE_MS;
 
   const forceTimer = setTimeout(() => {
     deps.logger.error('Shutdown timed out, forcing exit');
@@ -244,20 +266,27 @@ export async function runShutdown(
   }, deps.forceTimeoutMs);
 
   try {
-    // Final out-of-band beat: egress the last ring contents (incl. the failure
-    // that may have triggered this shutdown) before stopping/draining. Best-
-    // effort: a slow or rejecting POST must not wedge shutdown.
-    if (deps.heartbeat) await deps.heartbeat.sendOnce().catch(() => {});
-    if (deps.heartbeat) deps.heartbeat.stop();
+    // Best-effort: a slow or rejecting POST must not wedge shutdown.
+    const beat = deps.heartbeat?.sendOnce().catch(() => {});
+    deps.heartbeat?.stop();
 
-    if (deps.collector.command) {
-      await deps.collector.command('shutdown');
-    }
+    const result = deps.collector.command
+      ? await deps.collector.command('shutdown')
+      : undefined;
+    if (beat) await settledBy(beat, deadlineAt);
     await deps.healthServer.close();
+
+    const lost = lostDestinationsOf(result);
+    for (const { id, code, phase } of lost)
+      deps.logger.error(
+        phase === 'destroy'
+          ? `Shutdown: destination '${id}' did not close cleanly (${code}); events it buffered may be lost`
+          : `Shutdown lost events: destination '${id}' did not flush its batch (${code})`,
+      );
 
     deps.logger.info('Shutdown complete');
     clearTimeout(forceTimer);
-    deps.exit(0);
+    deps.exit(lost.length ? 1 : 0);
   } catch (error) {
     clearTimeout(forceTimer);
     deps.logger.error(
@@ -265,6 +294,43 @@ export async function runShutdown(
     );
     deps.exit(1);
   }
+}
+
+/** Resolves when `work` settles or at `deadlineAt`, whichever comes first. */
+function settledBy(work: Promise<void>, deadlineAt: number): Promise<void> {
+  return new Promise<void>((resolve) => {
+    const timer = setTimeout(resolve, Math.max(0, deadlineAt - Date.now()));
+    void work.finally(() => {
+      clearTimeout(timer);
+      resolve();
+    });
+  });
+}
+
+/**
+ * The destinations a collector's shutdown answer names under `failed`, each
+ * with its reason code and the phase that failed; none unless `ok` is false.
+ * A failed destination is lost (`flush`) unless the answer marks it as one
+ * that did not close cleanly (`destroy`). A collector of an earlier version
+ * answers nothing.
+ */
+export function lostDestinationsOf(result: unknown): Array<{
+  id: string;
+  code: string;
+  phase: NonNullable<Destination.Ref['phase']>;
+}> {
+  if (!isObject(result) || result.ok !== false || !isObject(result.failed))
+    return [];
+  return Object.entries(result.failed).map(([id, ref]) => ({
+    id,
+    code:
+      isObject(ref) &&
+      isObject(ref.reason) &&
+      typeof ref.reason.code === 'string'
+        ? ref.reason.code
+        : 'unknown',
+    phase: isObject(ref) && ref.phase === 'destroy' ? 'destroy' : 'flush',
+  }));
 }
 
 /**
@@ -577,26 +643,46 @@ export function shouldStartHeartbeat(
   return Boolean(api);
 }
 
+/**
+ * Prepare the environment of a loaded artifact before its flow starts: fetch
+ * the app's secrets (when connected), mask every fetched value and every value
+ * of a name the flow declares, refuse the boot on a reserved or already set
+ * name, then set what the plan allows. A fetch that fails for another reason
+ * than auth boots on without the app's secrets.
+ */
 async function injectSecrets(
+  declared: DeclaredEnv | undefined,
+  api: PipelineOptions['api'],
+  logger: Logger.Instance,
+  knownValues: KnownValues,
+): Promise<void> {
+  const fetched = api ? await fetchAppSecrets(api, logger) : {};
+  knownValues.add(knownValuesOf(fetched, declared, process.env));
+
+  const plan = planSecretInjection(fetched, declared, process.env);
+  if (plan.refused.length > 0) throw new Error(refusalMessage(plan.refused));
+
+  const set = Object.entries(plan.set);
+  for (const [name, value] of set) process.env[name] = value;
+  if (set.length > 0)
+    logger.info(`Injected ${set.length} secret(s) into environment`);
+  if (plan.notDeclared.length > 0)
+    logger.info(
+      `Not injected, the flow does not read them: ${plan.notDeclared.join(', ')}`,
+    );
+}
+
+async function fetchAppSecrets(
   api: NonNullable<PipelineOptions['api']>,
   logger: Logger.Instance,
-  onSecrets?: (values: string[]) => void,
-): Promise<void> {
+): Promise<Record<string, string>> {
   try {
-    const secrets = await fetchSecrets({
+    return await fetchSecrets({
       appUrl: api.appUrl,
       token: api.token,
       projectId: api.projectId,
       flowId: api.flowId,
     });
-    const count = Object.keys(secrets).length;
-    if (count > 0) {
-      for (const [name, value] of Object.entries(secrets)) {
-        process.env[name] = value;
-      }
-      onSecrets?.(Object.values(secrets));
-      logger.info(`Injected ${count} secret(s) into environment`);
-    }
   } catch (error) {
     // Fatal: a 401/403 means the token is missing, revoked or not bound to
     // this flow. fetchSecrets classifies it as RunnerAuthError before any
@@ -606,5 +692,6 @@ async function injectSecrets(
       `Could not fetch secrets: ${error instanceof Error ? error.message : error}`,
     );
     logger.info('Continuing without secrets (flow may not require them)');
+    return {};
   }
 }

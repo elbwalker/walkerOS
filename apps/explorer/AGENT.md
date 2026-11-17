@@ -192,8 +192,9 @@ design tokens; walkeros.io's home page is built from it.
   typing times, the card's parts, the events, an optional click) at a time `t`,
   through the pure `taggingFrame()`, so the caller owns time and every frame can
   be rendered on its own. `htmlTokens()` turns a markup line into its tokens.
-  `HeroTaggingViz` is one use: its clock runs `heroLoopScript()`, one article
-  per loop.
+  `panes` shows some of its panes (code, page, events), filling the frame the
+  caller sizes. `HeroTaggingViz` is one use: its clock runs `heroLoopScript()`,
+  one article per loop, with every pane.
 - A fidelity test holds what each demo shows to what walkerOS does: the hero and
   teaser markup runs through the real browser source and collector, the mapping
   demo's rules through the real destinations

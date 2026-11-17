@@ -134,7 +134,7 @@ beforeEach(async () => {
   process.env = {
     ...env,
     XDG_CONFIG_HOME: configHome,
-    WALKEROS_APP_URL: app.issuer,
+    WALKEROS_APP_URL: app.appUrl,
   };
   delete process.env.WALKEROS_TOKEN;
   delete process.env.WALKEROS_LOGIN_PORT;
@@ -168,12 +168,15 @@ describe('walkeros login in a browser on this machine', () => {
       'code_verifier',
       'grant_type',
       'redirect_uri',
+      'resource',
     ]);
     expect(exchange?.form.redirect_uri).toBe(redirectUri);
+    expect(exchange?.form.resource).toBe(`${app.appUrl}/api`);
 
     const login = fileLogins()[app.issuer];
     expect(login).toMatchObject({
       issuer: app.issuer,
+      resource: `${app.appUrl}/api`,
       client_id: `${app.issuer}/oauth/walkeros-cli`,
       token_endpoint: `${app.issuer}/api/oauth/token`,
       revocation_endpoint: `${app.issuer}/api/oauth/revoke`,
@@ -235,47 +238,9 @@ describe('walkeros login in a browser on this machine', () => {
 
   it.each([
     [
-      'another issuer',
-      () => (app.metadata.issuer = 'http://127.0.0.1:1'),
+      'refused sign-in settings',
+      () => (app.metadata.issuer = app.appUrl),
       'name another issuer',
-    ],
-    [
-      'an authorization endpoint on another origin',
-      () =>
-        (app.metadata.authorization_endpoint =
-          'https://evil.example/a?x=1&calc'),
-      'authorization_endpoint https://evil.example/a?x=1&calc is not on',
-    ],
-    [
-      'an authorization endpoint that is a file',
-      () => (app.metadata.authorization_endpoint = 'file:///etc/passwd'),
-      'authorization_endpoint file:///etc/passwd is neither https nor http on this machine',
-    ],
-    [
-      'a token endpoint on another origin',
-      () => (app.metadata.token_endpoint = 'https://evil.example/token'),
-      'token_endpoint https://evil.example/token is not on',
-    ],
-    [
-      'a revocation endpoint over plain http to another host',
-      () => (app.metadata.revocation_endpoint = 'http://evil.example/revoke'),
-      'revocation_endpoint http://evil.example/revoke is neither https nor http on this machine',
-    ],
-    [
-      'another client id',
-      () =>
-        (app.clientDocument.client_id =
-          'https://app.walkeros.io/oauth/walkeros-cli'),
-      'does not serve the walkerOS CLI client',
-    ],
-    [
-      'no code page on the issuer',
-      () =>
-        (app.clientDocument.redirect_uris = [
-          'http://127.0.0.1/callback',
-          'https://evil.example/oauth/cli-code',
-        ]),
-      'does not register the loopback and a code page',
     ],
     [
       'an app URL over plain http to another host',
@@ -383,6 +348,7 @@ describe('walkeros login --no-browser', () => {
         'created_at',
         'issuer',
         'redirect_uri',
+        'resource',
         'state',
         'token_endpoint',
       ],
@@ -395,6 +361,7 @@ describe('walkeros login --no-browser', () => {
       state: 'oldstate',
       redirect_uri: `${app.issuer}/oauth/cli-code`,
       issuer: app.issuer,
+      resource: `${app.appUrl}/api`,
       client_id: `${app.issuer}/oauth/walkeros-cli`,
       token_endpoint: `${app.issuer}/api/oauth/token`,
       created_at: Date.now() - 16 * 60 * 1000,
@@ -438,13 +405,17 @@ describe('walkeros login --code', () => {
     );
   });
 
-  it('finishes the pending sign-in once; the second use is refused before any request', async () => {
+  it('finishes the pending sign-in once, naming its resource; the second use is refused before any request', async () => {
     const pasted = await started();
     const first = person();
     expect(await runLogin({ browser: true, code: pasted }, first.io)).toBe(0);
     expect(first.out.text()).toContain(`Signed in to ${app.issuer}.`);
     expect(pendingFiles()).toEqual([]);
     expect(tokenRequests()).toBe(1);
+    expect(
+      app.requests.find((r) => r.path === '/api/oauth/token')?.form.resource,
+    ).toBe(`${app.appUrl}/api`);
+    expect(fileLogins()[app.issuer].resource).toBe(`${app.appUrl}/api`);
     printsNoSecret(first);
 
     const second = person();
@@ -567,7 +538,7 @@ describe('walkeros logout', () => {
     const run = person();
     expect(await runLogout(run.io)).toBe(0);
     expect(run.out.text()).toBe(
-      `Not signed in to ${app.issuer}.\nWALKEROS_TOKEN is set and stays in use until it is unset.\n`,
+      `Not signed in to ${app.appUrl}.\nWALKEROS_TOKEN is set and stays in use until it is unset.\n`,
     );
   });
 });

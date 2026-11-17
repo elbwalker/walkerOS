@@ -5,10 +5,13 @@
  * snapshot before the POST). A pattern added here covers all of them.
  *
  * Two entry points:
- * - `scrubSecrets(line, { known })`: mask secrets (and the exact known values), keep the message length intact (for
- *   console/stderr legibility).
- * - `redactLine(line)`: `scrubSecrets` plus truncation to the 256-char
- *   heartbeat wire contract.
+ * - `scrubSecrets(line, { known })`: mask secrets (and the exact known
+ *   values), keep the message length intact (for console/stderr legibility).
+ * - `redactLine(line, { known })`: `scrubSecrets`, then `cutLine` to the
+ *   256-char heartbeat wire contract.
+ *
+ * Known values are compiled once per set (`compileKnown`); a set that grows
+ * while a process runs is a `KnownValues`, recompiled only when it changes.
  *
  * All regex are linear (single unambiguous quantifiers, no nested quantifiers),
  * so there is no catastrophic backtracking even on a BEGIN-marker-with-no-END
@@ -401,29 +404,33 @@ function maskLine(line: string): string {
 // Shorter values are too likely to occur in ordinary text to mask on sight.
 export const MIN_KNOWN_LEN = 6;
 
+/**
+ * Every form a set of known values takes in a line, longest first, so a value
+ * containing another is masked whole. Built once per set and reused for every
+ * line masked with it.
+ */
+export interface CompiledKnown {
+  readonly forms: readonly string[];
+}
+
 export interface ScrubOptions {
   /**
    * Exact secret values to mask wherever they occur (e.g. the resolved
-   * `$secret.NAME` values of a flow). Values under 6 characters are ignored.
+   * `$secret.NAME` values of a flow), or their compiled forms. Values under
+   * 6 characters are ignored.
    */
-  known?: readonly string[];
+  known?: readonly string[] | CompiledKnown;
 }
 
 /**
- * Mask every exact occurrence of each known value, raw, JSON-escaped (the
- * form it takes inside serialized JSON), escaped twice (a JSON string
- * serialized again, e.g. a request body inside JSON output) and URL-encoded
- * (a URL, or a form body where a space is `+`), longest first so
- * a value containing another is masked whole. Literal split/join, never a regex built from the
- * value.
+ * Build the forms of each known value of 6 or more characters: raw,
+ * JSON-escaped (the form it takes inside serialized JSON), escaped twice (a
+ * JSON string serialized again, e.g. a request body inside JSON output) and
+ * URL-encoded (a URL, or a form body where a space is `+`).
  */
-export function maskKnownValues(
-  line: string,
-  known?: readonly string[],
-): string {
-  if (!known || known.length === 0) return line;
+export function compileKnown(values: readonly string[]): CompiledKnown {
   const forms = new Set<string>();
-  for (const value of known) {
+  for (const value of values) {
     if (value.length < MIN_KNOWN_LEN) continue;
     const escaped = JSON.stringify(value).slice(1, -1);
     forms.add(value);
@@ -441,8 +448,66 @@ export function maskKnownValues(
     if (uri) forms.add(uri);
     forms.add(new URLSearchParams({ v: value }).toString().slice(2));
   }
+  return { forms: [...forms].sort((a, b) => b.length - a.length) };
+}
+
+const NONE_KNOWN: CompiledKnown = { forms: [] };
+
+/** The compiled forms of `known`, compiling an array once. */
+export function asCompiled(
+  known: readonly string[] | CompiledKnown | undefined,
+): CompiledKnown {
+  if (!known) return NONE_KNOWN;
+  return 'forms' in known ? known : compileKnown(known);
+}
+
+/**
+ * A set of known values that grows while a process runs (secrets fetched at
+ * startup). `compiled()` returns the same object until `add` brings a new
+ * value, so a reader can tell whether a line was masked with the current set.
+ */
+export interface KnownValues {
+  add(values: readonly string[]): void;
+  /** The values held, each of 6 or more characters. */
+  values(): readonly string[];
+  compiled(): CompiledKnown;
+}
+
+export function createKnownValues(
+  initial: readonly string[] = [],
+): KnownValues {
+  const held = new Set<string>();
+  let compiled: CompiledKnown | undefined;
+  const add = (values: readonly string[]): void => {
+    for (const value of values) {
+      if (value.length < MIN_KNOWN_LEN || held.has(value)) continue;
+      held.add(value);
+      compiled = undefined;
+    }
+  };
+  add(initial);
+  return {
+    add,
+    values: () => [...held],
+    compiled: () => {
+      if (!compiled) compiled = compileKnown([...held]);
+      return compiled;
+    },
+  };
+}
+
+/**
+ * Mask every exact occurrence of each form of the known values (see
+ * `compileKnown`), longest first. An array is compiled for this call only.
+ * Literal search, never a regex built from the value.
+ */
+export function maskKnownValues(
+  line: string,
+  known?: readonly string[] | CompiledKnown,
+): string {
+  const { forms } = asCompiled(known);
   let s = line;
-  for (const form of [...forms].sort((a, b) => b.length - a.length)) {
+  for (const form of forms) {
     if (s.includes(form)) s = replaceKnown(s, form);
   }
   return s;
@@ -493,8 +558,8 @@ function replaceKnown(line: string, form: string): string {
  * passes through it.
  *
  * Algorithm:
- * 0. Mask each `options.known` value exactly, raw, JSON-escaped and escaped
- *    twice, longest first.
+ * 0. Mask each form of the `options.known` values exactly (see
+ *    `compileKnown`), longest first.
  * 1. Mask JSON service-account fields (private_key, client_email,
  *    private_key_id, client_id, client_x509_cert_url) and credential-named
  *    JSON fields (password, token, authorization, ...) BEFORE splitting
@@ -537,20 +602,21 @@ export function scrubSecrets(line: string, options: ScrubOptions = {}): string {
 }
 
 /**
- * Redact a log line and truncate to the heartbeat wire contract (256 chars).
- * This is the heartbeat-egress variant: scrub secrets, then truncate AFTER
- * masking so a token straddling char 256 is masked, not left partially visible.
- *
+ * Cut a line to the heartbeat wire contract: at most 256 characters in total.
  * The app's heartbeat schema enforces message .max(256); a 257-char string
- * would fail zod .parse and drop the whole heartbeat. Reserve one char for the
- * ellipsis so the TOTAL length is at most MAX_LENGTH (256).
+ * would fail zod .parse and drop the whole heartbeat. One character is kept
+ * for the ellipsis. It only cuts: a line it is given is masked already.
  */
-export function redactLine(line: string): string {
-  const scrubbed = scrubSecrets(line);
+export function cutLine(line: string): string {
+  if (line.length > MAX_LENGTH) return line.slice(0, MAX_LENGTH - 1) + '…';
+  return line;
+}
 
-  if (scrubbed.length > MAX_LENGTH) {
-    return scrubbed.slice(0, MAX_LENGTH - 1) + '…';
-  }
-
-  return scrubbed;
+/**
+ * Redact a log line and cut it to the heartbeat wire contract (256 chars):
+ * `scrubSecrets`, then `cutLine`, so a token straddling char 256 is masked,
+ * not left partly visible.
+ */
+export function redactLine(line: string, options: ScrubOptions = {}): string {
+  return cutLine(scrubSecrets(line, options));
 }

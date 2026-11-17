@@ -217,26 +217,35 @@ the missing value.
 
 When connected, the runtime:
 
-- **Fetches secrets once at boot** and injects them into the environment before
-  the flow loads, so `$env.NAME` references in a server flow resolve to them.
-  From then on every log line masks the fetched values (6 characters or
-  longer) as `***`: the runtime's own lines, the flow's lines, the recent
-  errors and log lines a heartbeat carries, and the `--json` error output.
+- **Fetches secrets once at boot** and sets them in the environment after the
+  artifact is imported and before the flow starts, so `$env.NAME` references in
+  a server flow resolve to them. It sets only the names the artifact reads
+  through `$secret` or `$env`; other names are not set, and one INFO line names
+  them. A reserved name (such as `PATH`, `NODE_OPTIONS`, `PORT` or any name
+  starting with `WALKEROS_`, `NODE_`, `NPM_`, `LD_` or `DYLD_`) stops the boot
+  with `secret-reserved`, and a name that is already in the environment stops
+  it with `secret-in-env`. Each refusal is named in the error. A fetch that
+  fails for a reason other than authentication logs a warning and the flow
+  starts. A name the flow reads only from code is not set.
 - **Sends a heartbeat** to `POST /api/projects/:projectId/runners/heartbeat`
   every `WALKEROS_HEARTBEAT_INTERVAL` seconds with its instance ID, flow and
   deployment IDs, version, uptime, event counters, and recent errors and log
-  lines (secrets are redacted before they leave the process). A failed
-  heartbeat is logged and never stops the flow.
+  lines (secrets are redacted before they leave the process), and the release
+  it runs. A failed heartbeat is logged and never stops the flow.
 
 The artifact itself never changes while the runtime runs. To ship a new
 version, bundle again and redeploy.
 
-Values from `--env-file`, or already set in the container's environment, are
-not known to the runtime as secrets. The pattern rules still catch them where
-they have a recognizable shape (known token prefixes, private keys,
-credential-named fields, long high-entropy strings), but they are not masked
-by exact value. Prefer app-managed secrets for anything that must never reach
-a log.
+Every value the flow reads through `$secret` or `$env` is masked by exact
+value (6 characters or longer) as `***`, whatever its source: the app, an
+`--env-file` or the container's environment. This covers the runtime's own
+lines, the flow's lines, the recent errors and log lines a heartbeat carries,
+and the `--json` error output. The runtime cannot tell a credential from
+config, so a config value of 6 or more characters set in the environment for an
+`$env` name (a region, a host, a table name such as `events`) shows as `***`
+too. Defaults and shorter values are not masked. The pattern rules also catch
+values with a recognizable shape (known token prefixes, private keys,
+credential-named fields, long high-entropy strings).
 
 The runtime prints text lines by default. A flow that sets
 `collector.logger.format` to `json` prints one JSON object per line instead,
@@ -382,8 +391,10 @@ does not find there gets the express source's default answer, `200` with a
   Without a writable cache directory, recent errors are not persisted across
   restarts, and the flow still runs.
 - **Architecture.** The image is `linux/amd64` only.
-- **Signals.** The image runs under tini and shuts the flow down gracefully on
-  SIGTERM.
+- **Signals.** The image runs under tini and shuts the flow down on SIGTERM. The
+  shutdown drains within 8 seconds and exits 1 when events were lost or a
+  destination did not close cleanly. Set the platform's grace period to at
+  least 10 seconds.
 - **In-memory default store.** A `state` operation that names no `store` uses
   the collector's in-memory `__cache` store, which lives inside one process.
   Anything relying on it across events (state, deduplication, a rate limiter

@@ -1752,3 +1752,93 @@ describe('declared package exports', () => {
     expect(codeEntry).not.toContain('__packageExports');
   });
 });
+
+describe('the declared env export', () => {
+  const packagePaths = new Map([
+    [
+      '@walkeros/destination-demo',
+      localPackageDir('@walkeros/destination-demo'),
+    ],
+  ]);
+
+  function flowWith(
+    platform: 'server' | 'web',
+    settings: Record<string, unknown>,
+  ): Flow {
+    return {
+      config: { platform },
+      sources: {},
+      destinations: {
+        demo: { package: '@walkeros/destination-demo', config: { settings } },
+      },
+    };
+  }
+
+  function options(platform: 'node' | 'browser'): BuildOptions {
+    return {
+      platform,
+      format: 'esm',
+      packages: { '@walkeros/destination-demo': {} },
+      output: './dist/bundle.mjs',
+      code: '',
+    };
+  }
+
+  it.each<[string, Record<string, unknown>, string]>([
+    [
+      'one $secret and one $env',
+      {
+        apiKey: '__WALKEROS_SECRET:API_KEY',
+        url: 'https://__WALKEROS_ENV:HOST:localhost/x',
+      },
+      '{"secrets":["API_KEY"],"env":["HOST"]}',
+    ],
+    ['none', { name: 'Demo' }, '{"secrets":[],"env":[]}'],
+  ])(
+    'writes the names a server flow with %s reads into its stage 1 module',
+    async (_case, settings, declared) => {
+      const { codeEntry } = await createEntryPoint(
+        flowWith('server', settings),
+        options('node'),
+        packagePaths,
+      );
+
+      expect(codeEntry).toContain(`export const __walkerosEnv = ${declared};`);
+    },
+  );
+
+  it('writes no declared env export into a browser stage 1 module', async () => {
+    const { codeEntry } = await createEntryPoint(
+      flowWith('web', { name: 'Demo' }),
+      options('browser'),
+      packagePaths,
+    );
+
+    expect(codeEntry).not.toContain('__walkerosEnv');
+  });
+
+  it('generateServerEntry re-exports the stage 1 declared env', async () => {
+    const dir = await fs.mkdtemp(path.join(os.tmpdir(), 'declared-env-'));
+    try {
+      const stage1 = path.join(dir, 'stage1.mjs');
+      await fs.writeFile(
+        stage1,
+        `export function wireConfig(data) { return data; }
+export async function startFlow() { return { collector: { sources: {} } }; }
+export const __walkerosEnv = { secrets: ['API_KEY'], env: ['HOST'] };
+`,
+      );
+      const entry = path.join(dir, 'entry.mjs');
+      await fs.writeFile(entry, generateServerEntry(stage1, '{}'));
+
+      const module: unknown = await import(entry);
+
+      expect(module).toHaveProperty('__walkerosEnv', {
+        secrets: ['API_KEY'],
+        env: ['HOST'],
+      });
+    } finally {
+      await fs.remove(dir);
+    }
+  });
+});

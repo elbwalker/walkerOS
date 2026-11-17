@@ -1,10 +1,41 @@
 import {
+  HEARTBEAT_RELEASE_MAX,
   createHeartbeat,
   computeCounterDelta,
   type CounterSnapshot,
 } from '../heartbeat.js';
+import { Level } from '@walkeros/core';
 import type { Collector, Logger } from '@walkeros/core';
+import {
+  createCLILogger,
+  createKnownValues,
+  type KnownValues,
+} from '@walkeros/core/node';
 import type { DedupedError, RingEntry } from '../log-ring.js';
+
+const RING_LEVEL = {
+  [Level.ERROR]: 'error',
+  [Level.WARN]: 'warn',
+  [Level.INFO]: 'info',
+  [Level.DEBUG]: 'debug',
+} as const;
+
+/** Ring entries as the runner's tap stores them, from a real silent logger. */
+function ringLines(
+  knownSecrets: KnownValues,
+  log: (logger: Logger.Instance) => void,
+): RingEntry[] {
+  const entries: RingEntry[] = [];
+  log(
+    createCLILogger({
+      silent: true,
+      knownSecrets,
+      onLine: (level, line) =>
+        entries.push({ time: line.time, level: RING_LEVEL[level], line }),
+    }),
+  );
+  return entries;
+}
 
 /**
  * A `Logger.Instance` whose methods are jest spies, so tests can both pass it to
@@ -55,6 +86,8 @@ interface SerializedDestination {
 /** The shape of the JSON body the heartbeat POSTs (fields under test). */
 interface HeartbeatBody {
   instanceId?: string;
+  /** The release the runner reports it runs. */
+  release?: string;
   /** Configured heartbeat cadence in milliseconds. */
   intervalMs?: number;
   uptime?: number;
@@ -241,13 +274,10 @@ describe('heartbeat snapshot suppliers', () => {
       },
     ];
 
-    const logs: RingEntry[] = [
-      {
-        time: now - 1000,
-        level: 'warn',
-        message: `Warning: secret=${secret} detected`,
-      },
-    ];
+    const knownValues = createKnownValues([secret]);
+    const logs = ringLines(knownValues, (logger) =>
+      logger.warn(`Warning: secret=${secret} detected`),
+    );
 
     const heartbeat = createHeartbeat(
       {
@@ -257,6 +287,7 @@ describe('heartbeat snapshot suppliers', () => {
         intervalMs: 60000,
         getErrors: () => errors,
         getLogs: () => logs,
+        knownValues,
       },
       typedLogger,
     );
@@ -286,6 +317,32 @@ describe('heartbeat snapshot suppliers', () => {
     expect(recentLogs).toHaveLength(1);
     expect(recentLogs[0]?.level).toBe('warn');
     expect(typeof recentLogs[0]?.time).toBe('string'); // ISO string
+  });
+
+  it('sends a ringed INFO line masked when read, cut at 256, with a value learned after it was ringed', async () => {
+    const fetchMock = createFetchMock();
+    globalThis.fetch = fetchMock;
+    const knownValues = createKnownValues();
+    const logs = ringLines(knownValues, (logger) =>
+      logger.info(`export with late-salt-value ${'x'.repeat(300)}`),
+    );
+    knownValues.add(['late-salt-value']);
+
+    await createHeartbeat(
+      {
+        appUrl: 'http://localhost:3000',
+        token: 'bearer-test',
+        projectId: 'proj_1',
+        intervalMs: 60000,
+        getLogs: () => logs,
+        knownValues,
+      },
+      typedLogger,
+    ).sendOnce();
+
+    const message = readHeartbeatBody(fetchMock).recentLogs?.[0]?.message;
+    expect(message).toBe(`export with *** ${'x'.repeat(239)}…`);
+    expect(message).toHaveLength(256);
   });
 
   it('always sends recentErrors (empty array) so the snapshot can clear, but omits empty recentLogs', async () => {
@@ -420,6 +477,31 @@ describe('heartbeat per-destination breakdown (dlqSize + dropped)', () => {
     expect(dest?.dlqSize).toBe(3);
     // dropped sums queue + dlq drops for the destination step (delta from 0).
     expect(dest?.dropped).toBe(3);
+  });
+
+  // The runner drains right after it starts the final beat, without
+  // awaiting it: the beat must carry the counters from before the drain.
+  it('takes its counters when sendOnce is called, not when its POST settles', async () => {
+    const fetchMock = createFetchMock();
+    globalThis.fetch = fetchMock;
+    const status = statusWith({}, {});
+    status.in = 5;
+    const heartbeat = createHeartbeat(
+      {
+        appUrl: 'http://localhost:3000',
+        token: 'bearer-test',
+        projectId: 'proj_1',
+        intervalMs: 60000,
+        getCounters: () => status,
+      },
+      typedLogger(),
+    );
+
+    const sent = heartbeat.sendOnce();
+    status.in = 9;
+    await sent;
+
+    expect(readHeartbeatBody(fetchMock).counters?.eventsIn).toBe(5);
   });
 });
 
@@ -557,6 +639,48 @@ describe('heartbeat intervalMs (advertised cadence)', () => {
 
     const body = readHeartbeatBody(fetchMock);
     expect(body.intervalMs).toBe(60000);
+  });
+});
+
+describe('heartbeat release', () => {
+  const originalFetch = globalThis.fetch;
+
+  afterEach(() => {
+    globalThis.fetch = originalFetch;
+  });
+
+  it.each<[string, string | undefined, string | undefined]>([
+    ['carries a release', '41', '41'],
+    [
+      'carries a release of the maximum length',
+      'r'.repeat(HEARTBEAT_RELEASE_MAX),
+      'r'.repeat(HEARTBEAT_RELEASE_MAX),
+    ],
+    [
+      'omits a release over the maximum length',
+      'r'.repeat(HEARTBEAT_RELEASE_MAX + 1),
+      undefined,
+    ],
+    ['omits an empty release', '', undefined],
+    ['omits an unknown release', undefined, undefined],
+  ])('%s and still sends the beat', async (_case, release, sent) => {
+    const fetchMock = createFetchMock();
+    globalThis.fetch = fetchMock;
+
+    const heartbeat = createHeartbeat(
+      {
+        appUrl: 'http://localhost:3000',
+        token: 'bearer-test',
+        projectId: 'proj_1',
+        intervalMs: 60000,
+        release,
+      },
+      makeSpyLogger(),
+    );
+    await heartbeat.sendOnce();
+
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+    expect(readHeartbeatBody(fetchMock).release).toBe(sent);
   });
 });
 

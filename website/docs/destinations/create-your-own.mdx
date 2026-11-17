@@ -270,8 +270,8 @@ server source acknowledges it when it is queued. A batch flushes after the
 destination's `failed` counter, the dead-letter queue and one ERROR line, but
 the producer's message is not redelivered. A `walker flush` command flushes
 all pending batches at once.
-Pending batches are flushed at shutdown: the collector waits up to 5 seconds
-per flush and logs one that takes longer as failed.
+Pending batches are flushed at shutdown within the collector's 8 second
+deadline, and a flush that does not finish is reported as failed.
 
 ## Schemas {#schema-validation-optional}
 

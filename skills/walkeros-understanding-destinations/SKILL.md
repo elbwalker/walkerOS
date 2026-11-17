@@ -159,9 +159,10 @@ are both counted lost and actually written. Derive the client's per-attempt
 timeout from `config.timeout` minus what the retry delays can take, split across
 the attempts, so the last attempt finishes before the race does.
 
-The same bound applies at shutdown, where the collector races each pending batch
-flush against a fixed 5000 ms step timeout before destroying the destination. A
-destination whose retries need longer than that loses them on shutdown.
+The same bound applies at shutdown, where the whole shutdown has one 8 second
+deadline and each pending batch flush and each destination's `destroy` takes
+what is left of it. A destination whose retries need longer than that loses them
+on shutdown, and the shutdown result names it.
 
 ## Outcomes and failure reasons
 

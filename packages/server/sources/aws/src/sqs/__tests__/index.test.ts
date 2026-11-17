@@ -11,10 +11,17 @@ import {
   __getDeletedReceiptHandles,
 } from '@aws-sdk/client-sqs';
 import { __resetSnsMockCalls } from '@aws-sdk/client-sns';
+import type {
+  CreateQueueCommandOutput,
+  DeleteMessageCommandOutput,
+  GetQueueAttributesCommandOutput,
+  GetQueueUrlCommandOutput,
+  ReceiveMessageCommandOutput,
+} from '@aws-sdk/client-sqs';
 import { sourceSqs } from '../index';
 import { createIngest, createMockContext } from '@walkeros/core';
-import type { Ingest, Source } from '@walkeros/core';
-import type { Settings, SyntheticMessage, Types } from '../types';
+import type { Collector, Ingest, Source } from '@walkeros/core';
+import type { Settings, SqsClient, SyntheticMessage, Types } from '../types';
 import { moduleMockEnv as pushEnv } from '../examples/env';
 
 function buildContext(
@@ -561,5 +568,111 @@ describe('SQS source', () => {
 
     await sleep(200);
     expect(receives()).toBe(callsAfterDestroy);
+  });
+});
+
+/** One response that satisfies every command the source sends. */
+type SqsResponse = GetQueueUrlCommandOutput &
+  GetQueueAttributesCommandOutput &
+  ReceiveMessageCommandOutput &
+  DeleteMessageCommandOutput &
+  CreateQueueCommandOutput;
+
+/**
+ * A client that hands out `messages` once, then long-polls until its request
+ * is aborted, as the SDK's does. It records the abort and its destroy.
+ */
+class LongPollClient implements SqsClient {
+  aborted = false;
+  destroyed = false;
+
+  constructor(private messages: ReceiveMessageCommandOutput['Messages'] = []) {}
+
+  async send(
+    _command: object,
+    options?: { abortSignal?: AbortSignal },
+  ): Promise<SqsResponse> {
+    const messages = this.messages ?? [];
+    this.messages = [];
+    if (messages.length) return { $metadata: {}, Messages: messages };
+    return new Promise<SqsResponse>((_resolve, reject) => {
+      options?.abortSignal?.addEventListener('abort', () => {
+        this.aborted = true;
+        reject(new Error('Request aborted'));
+      });
+    });
+  }
+
+  destroy(): void {
+    this.destroyed = true;
+  }
+}
+
+describe('SQS source close', () => {
+  const never: Collector.PushFn = () => new Promise(() => {});
+
+  beforeEach(() => {
+    __resetMockCalls();
+    jest.useFakeTimers();
+  });
+
+  afterEach(() => {
+    jest.useRealTimers();
+  });
+
+  function closing(
+    client: SqsClient,
+    push: Collector.PushFn,
+  ): Source.Context<Types> {
+    const base = buildContext({
+      client,
+      queueUrl:
+        'https://sqs.eu-central-1.amazonaws.com/000000000000/walkeros-events',
+      queueArn: 'arn:aws:sqs:eu-central-1:000000000000:walkeros-events',
+    });
+    return { ...base, env: { ...base.env, push } };
+  }
+
+  it('waits at most 5000 ms by default for a message in flight, then destroys the client', async () => {
+    const client = new LongPollClient([
+      { MessageId: 'm1', ReceiptHandle: 'r1', Body: '{"name":"page view"}' },
+    ]);
+    const ctx = closing(client, never);
+    const instance = await bootSqs(ctx);
+    await jest.advanceTimersByTimeAsync(0);
+
+    let settled = false;
+    const destroyed = destroyInstance(instance, ctx).then(() => {
+      settled = true;
+    });
+    await jest.advanceTimersByTimeAsync(4999);
+    expect(settled).toBe(false);
+    await jest.advanceTimersByTimeAsync(1);
+    expect(settled).toBe(true);
+    await destroyed;
+
+    expect(ctx.logger.warn).toHaveBeenCalledWith(
+      'SQS source close timed out after 5000ms; forcing close.',
+    );
+    expect(client.destroyed).toBe(true);
+  });
+
+  it('ends a waiting long poll at once on close', async () => {
+    const client = new LongPollClient();
+    const ctx = closing(client, pushEnv.push);
+    const instance = await bootSqs(ctx);
+    await jest.advanceTimersByTimeAsync(0);
+
+    let settled = false;
+    const destroyed = destroyInstance(instance, ctx).then(() => {
+      settled = true;
+    });
+    await jest.advanceTimersByTimeAsync(0);
+    expect(settled).toBe(true);
+    await destroyed;
+
+    expect(client.aborted).toBe(true);
+    expect(client.destroyed).toBe(true);
+    expect(ctx.logger.warn).not.toHaveBeenCalled();
   });
 });

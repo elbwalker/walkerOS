@@ -68,7 +68,7 @@ The SQS source follows the long-running listener pattern, same shape as the [Pub
 
 1. `init()` resolves the queue URL via `GetQueueUrl` and captures the queue ARN. When the collector runs, the source starts the long-poll loop as a background task.
 2. The instance's `push()` called without arguments does nothing; called with a synthetic message it runs the same handler as the loop (tests, simulation).
-3. `destroy()` stops the loop, drains in-flight ack/nacks, and force-closes after `shutdownTimeoutMs` (default 30000).
+3. `destroy()` stops the loop and ends a waiting long poll at once, then lets the messages in flight finish. After `shutdownTimeoutMs` (default 5000) it closes, and a message not yet deleted redelivers after its visibility timeout. The collector's whole shutdown has 8 seconds, so a value above 5000 takes time from the batch flush.
 
 ## Authentication
 

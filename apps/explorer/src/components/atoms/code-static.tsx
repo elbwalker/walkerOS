@@ -37,6 +37,19 @@ export interface CodeStaticProps {
    * colour while it is typed.
    */
   reveal?: number;
+  /**
+   * Types one line: `line` (counted from 1) shows its first `chars`
+   * characters with a caret after them, every other line shows in full. A
+   * line beyond the last is ignored. `reveal` wins when both are set.
+   */
+  typing?: CodeStaticTyping;
+}
+
+/** The line being typed and how many of its characters show. */
+export interface CodeStaticTyping {
+  /** The line, counted from 1. */
+  line: number;
+  chars: number;
 }
 
 // Pinned language set. Extend here (and the imports above) when docs need a new
@@ -143,6 +156,29 @@ function revealTokens(code: string, reveal: number): ShikiTransformer {
   };
 }
 
+// Cuts the highlighted tokens of one line after `chars` characters; the
+// other lines stay whole.
+function typeLine(code: string, typing: CodeStaticTyping): ShikiTransformer {
+  const start = lineStarts(code)[typing.line - 1] ?? 0;
+  const end = start + Math.max(0, typing.chars);
+  return {
+    name: 'elb-type-line',
+    tokens(lines) {
+      return lines.map((line, index) =>
+        index !== typing.line - 1
+          ? line
+          : line.flatMap((token) => {
+              const left = end - token.offset;
+              if (left <= 0) return [];
+              return left >= token.content.length
+                ? [token]
+                : [{ ...token, content: token.content.slice(0, left) }];
+            }),
+      );
+    },
+  };
+}
+
 // The gutter (numbers, mark glyphs with their words) and the caret. The gutter
 // is aria-hidden glyphs plus a word for assistive technology, so a mark never
 // reads by colour alone.
@@ -192,16 +228,26 @@ export function CodeStatic({
   marks = [],
   lineNumbers = false,
   reveal,
+  typing,
 }: CodeStaticProps): React.ReactElement {
   const lang = language || 'json';
+  const starts = lineStarts(code);
   const typed =
     reveal !== undefined && reveal < code.length ? Math.max(0, reveal) : null;
+  const typedLine =
+    reveal === undefined &&
+    typing !== undefined &&
+    typing.line >= 1 &&
+    typing.line <= starts.length
+      ? typing
+      : null;
   const caretLine =
-    typed === null
-      ? null
-      : lineStarts(code).filter((start) => start <= typed).length;
+    typed !== null
+      ? starts.filter((start) => start <= typed).length
+      : (typedLine?.line ?? null);
   const transformers: ShikiTransformer[] = [languageClass(lang)];
   if (typed !== null) transformers.push(revealTokens(code, typed));
+  if (typedLine !== null) transformers.push(typeLine(code, typedLine));
   if (marks.length > 0 || lineNumbers || caretLine !== null)
     transformers.push(lineDecor(marks, lineNumbers, caretLine));
   const rendered = getHighlighterSync().codeToHtml(code, {

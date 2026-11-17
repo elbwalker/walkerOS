@@ -6,7 +6,7 @@
  */
 
 import { resolve, dirname } from 'path';
-import type { Collector, Logger } from '@walkeros/core';
+import type { Collector, DeclaredEnv, Logger } from '@walkeros/core';
 import type { HealthServer } from './health-server.js';
 import { loadBundle } from './load-bundle.js';
 import type { FlowLogger } from './runtime-logging.js';
@@ -51,7 +51,9 @@ function isCollectorStatus(value: unknown): value is Collector.Status {
 
 /**
  * Load a pre-built flow bundle, mount its HTTP handler onto the health server,
- * and return a handle for managing it.
+ * and return a handle for managing it. `beforeStart` runs after the import and
+ * before the flow starts, with the names the artifact declares (see
+ * {@link loadBundle}).
  */
 export async function loadFlow(
   file: string,
@@ -59,6 +61,7 @@ export async function loadFlow(
   logger: Logger.Instance,
   loggerConfig?: Logger.Config,
   healthServer?: HealthServer,
+  beforeStart?: (declared: DeclaredEnv | undefined) => Promise<void>,
 ): Promise<FlowHandle> {
   const absolutePath = resolve(file);
   const flowDir = dirname(absolutePath);
@@ -70,7 +73,12 @@ export async function loadFlow(
     ...(healthServer ? { sourceSettings: { port: undefined } } : {}),
   };
 
-  const result = await loadBundle(absolutePath, flowContext, logger);
+  const result = await loadBundle(
+    absolutePath,
+    flowContext,
+    logger,
+    beforeStart,
+  );
   const { status, name, release } = result.collector;
 
   const handle: FlowHandle = {

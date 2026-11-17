@@ -1,5 +1,14 @@
 import { generateKeyPairSync, sign } from 'crypto';
-import { scrubSecrets, redactLine } from '../redactLine';
+import {
+  compileKnown,
+  createKnownValues,
+  cutLine,
+  redactLine,
+  scrubSecrets,
+  type CompiledKnown,
+} from '../redactLine';
+
+type KnownInput = readonly string[] | CompiledKnown;
 
 describe('scrubSecrets', () => {
   it('masks a high-entropy token', () => {
@@ -462,19 +471,27 @@ describe('scrubSecrets doubly escaped credential fields', () => {
   });
 });
 
-describe('scrubSecrets known values', () => {
+describe.each([
+  ['an array', (values: readonly string[]): KnownInput => values],
+  [
+    'a compiled set',
+    (values: readonly string[]): KnownInput => compileKnown(values),
+  ],
+])('scrubSecrets known values as %s', (_form, as) => {
   it('masks known values raw and JSON-escaped, longest first, before patterns', () => {
     const sa =
       '{"private_key":"-----BEGIN PRIVATE KEY-----\\nabc\\n","client_email":"a@p"}';
     const escaped = JSON.stringify(sa).slice(1, -1);
     expect(
-      scrubSecrets(`raw ${sa} esc ${escaped}`, { known: [sa] }),
+      scrubSecrets(`raw ${sa} esc ${escaped}`, { known: as([sa]) }),
     ).not.toMatch(/abc|a@p/);
-    expect(scrubSecrets('abcdefgh', { known: ['abcdef', 'abcdefgh'] })).toBe(
-      '***',
+    expect(
+      scrubSecrets('abcdefgh', { known: as(['abcdef', 'abcdefgh']) }),
+    ).toBe('***');
+    expect(scrubSecrets('x analyt y', { known: as(['analyt']) })).toBe(
+      'x *** y',
     );
-    expect(scrubSecrets('x analyt y', { known: ['analyt'] })).toBe('x *** y');
-    expect(scrubSecrets('short abc', { known: ['abc'] })).toBe('short abc');
+    expect(scrubSecrets('short abc', { known: as(['abc']) })).toBe('short abc');
   });
 
   it('masks a multi-line service account inside JSON output and a log line', () => {
@@ -490,13 +507,13 @@ describe('scrubSecrets known values', () => {
     const jsonOutput = JSON.stringify({ calls: [{ args: [sa] }] }, null, 2);
     const logLine = `[flow] push failed ${JSON.stringify({ credentials: sa })}`;
     for (const line of [jsonOutput, logLine]) {
-      const out = scrubSecrets(line, { known: [sa] });
+      const out = scrubSecrets(line, { known: as([sa]) });
       expect(out).not.toContain('plainkeybody');
       expect(out).not.toContain('svc@proj');
       expect(out).not.toContain('service_account');
     }
     expect(() =>
-      JSON.parse(scrubSecrets(jsonOutput, { known: [sa] })),
+      JSON.parse(scrubSecrets(jsonOutput, { known: as([sa]) })),
     ).not.toThrow();
   });
 
@@ -508,7 +525,7 @@ describe('scrubSecrets known values', () => {
     );
     const body = JSON.stringify({ credentials: sa });
     const jsonOutput = JSON.stringify({ calls: [{ args: [body] }] });
-    const out = scrubSecrets(jsonOutput, { known: [sa] });
+    const out = scrubSecrets(jsonOutput, { known: as([sa]) });
     expect(out).not.toContain('plainkeybody');
     expect(out).not.toContain('svc@proj');
     expect(() => JSON.parse(out)).not.toThrow();
@@ -520,7 +537,7 @@ describe('scrubSecrets known values', () => {
   ])(
     'keeps JSON valid when a known value starts inside %s',
     (_label, value, known) => {
-      const out = scrubSecrets(JSON.stringify(value), { known: [known] });
+      const out = scrubSecrets(JSON.stringify(value), { known: as([known]) });
       expect(() => JSON.parse(out)).not.toThrow();
       expect(out).not.toContain('abcdefgh');
     },
@@ -545,7 +562,7 @@ describe('scrubSecrets known values', () => {
         ],
         ['a form body', `body a=1&v=${form}&b=2`, 'body a=1&v=***&b=2'],
       ])('in %s', (_label, line, masked) => {
-        expect(scrubSecrets(line, { known: [secret] })).toBe(masked);
+        expect(scrubSecrets(line, { known: as([secret]) })).toBe(masked);
       });
     },
   );
@@ -556,10 +573,10 @@ describe('scrubSecrets known values', () => {
       const body = new URLSearchParams({ v: secret, w: '1' }).toString();
       const url = encodeURI(`https://vendor.test/${secret}/collect`);
 
-      expect(scrubSecrets(`body ${body}`, { known: [secret] })).toBe(
+      expect(scrubSecrets(`body ${body}`, { known: as([secret]) })).toBe(
         'body v=***&w=1',
       );
-      expect(scrubSecrets(`GET ${url}`, { known: [secret] })).toBe(
+      expect(scrubSecrets(`GET ${url}`, { known: as([secret]) })).toBe(
         'GET https://vendor.test/***/collect',
       );
     },
@@ -567,19 +584,58 @@ describe('scrubSecrets known values', () => {
 
   it('masks a value URL encoding cannot encode as it is', () => {
     const secret = 'abcdef\ud800';
-    expect(scrubSecrets(`x ${secret} y`, { known: [secret] })).toBe('x *** y');
+    expect(scrubSecrets(`x ${secret} y`, { known: as([secret]) })).toBe(
+      'x *** y',
+    );
   });
 
   it('keeps the length rule for an encoded short value', () => {
-    expect(scrubSecrets('x a%2Bb%2F y', { known: ['a+b/'] })).toBe(
+    expect(scrubSecrets('x a%2Bb%2F y', { known: as(['a+b/']) })).toBe(
       'x a%2Bb%2F y',
     );
   });
 
   it('treats regex characters in a known value literally', () => {
-    expect(scrubSecrets('a (x+y)*[z] b', { known: ['(x+y)*[z]'] })).toBe(
+    expect(scrubSecrets('a (x+y)*[z] b', { known: as(['(x+y)*[z]']) })).toBe(
       'a *** b',
     );
+  });
+});
+
+describe('createKnownValues', () => {
+  it('hands out the same compiled set until the values change', () => {
+    const known = createKnownValues(['first-value']);
+    expect(known.compiled()).toBe(known.compiled());
+  });
+
+  it.each([
+    ['a new value', 'second-value', true],
+    ['a value already held', 'first-value', false],
+    ['a value under 6 characters', 'short', false],
+  ])('after adding %s, compiles anew: %s', (_label, value, changes) => {
+    const known = createKnownValues(['first-value']);
+    const before = known.compiled();
+    known.add([value]);
+    expect(known.compiled() !== before).toBe(changes);
+  });
+
+  it('masks a value added after the set was first compiled', () => {
+    const known = createKnownValues();
+    known.compiled();
+    known.add(['late-value-42']);
+    expect(scrubSecrets('x late-value-42', { known: known.compiled() })).toBe(
+      'x ***',
+    );
+    expect(known.values()).toEqual(['late-value-42']);
+  });
+});
+
+describe('cutLine', () => {
+  it.each([
+    ['a line over 256', 'Z'.repeat(300), 'Z'.repeat(255) + '…'],
+    ['a line of 256', 'Z'.repeat(256), 'Z'.repeat(256)],
+  ])('keeps a 256-character total for %s', (_label, line, cut) => {
+    expect(cutLine(line)).toBe(cut);
   });
 });
 
@@ -594,6 +650,12 @@ describe('redactLine (truncating wire variant)', () => {
   it('scrubs secrets as well', () => {
     const token = 'AKIAIOSFODNN7EXAMPLEKEY1234ABCD';
     expect(redactLine(`token is ${token} here`)).toBe('token is *** here');
+  });
+
+  it('masks a known value', () => {
+    expect(redactLine('auth plainword', { known: ['plainword'] })).toBe(
+      'auth ***',
+    );
   });
 });
 

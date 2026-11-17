@@ -417,11 +417,11 @@ cases.
 The hosted server is one HTTPS endpoint: `https://app.walkeros.io/api/mcp`. It is
 the only value a client needs: no token, header or advanced field.
 
-The endpoint runs an OAuth 2.1 authorization server, and a standard MCP client
-finds it on its own. You paste the URL and the client discovers who authorizes
-it. It registers itself or presents its published client identity, a browser
-opens on a consent screen, you press Allow, and the client holds a token it
-refreshes on its own.
+The endpoint names its OAuth 2.1 authorization server, `https://auth.walkeros.io`,
+and a standard MCP client finds it on its own. You paste the URL and the client
+discovers who authorizes it. It registers itself or presents its published
+client identity, a browser opens on the consent screen on `auth.walkeros.io`,
+you press Allow, and the client holds a token it refreshes on its own.
 
 ### Claude Desktop and claude.ai
 
@@ -432,7 +432,8 @@ refreshes on its own.
 4. Keep the detected authentication settings and Continue. Under
    Authentication pick a sign-in option other than No sign in, keep the
    recommended OAuth client, then Add.
-5. When you sign in, the walkerOS consent screen opens: press Allow.
+5. When you sign in, the walkerOS consent screen opens on `auth.walkeros.io`:
+   press Allow.
 6. In a conversation, turn the connector on under +, then Connectors.
 
 On Team and Enterprise plans an owner adds the connector first (Organization
@@ -538,8 +539,8 @@ Consent is per person, once, and it applies to every project that person belongs
 to. Which project a given action touches stays a choice made in the
 conversation, not at connect time.
 
-If you are not signed in to walkerOS in that browser, the magic-link login runs
-first and hands back to the consent screen afterwards.
+If you are not signed in to walkerOS in that browser, the sign-in on
+`auth.walkeros.io` runs first and hands back to the consent screen afterwards.
 
 ### Disconnecting
 
@@ -570,9 +571,13 @@ that needs a feature the project does not include answers
 | The browser opens on the login page instead of the consent screen | Not signed in to walkerOS in that browser | Sign in; the consent screen follows on its own |
 | The app suddenly asks to reconnect | It was disconnected under Account, Connected apps | Reconnect it, or leave it disconnected |
 | After Allow, the browser shows a connection error on `127.0.0.1` | The client runs in a container or on another machine, and its callback port is not forwarded | In a VS Code dev container, fix and forward the callback port; elsewhere, connect with a token for AI apps only typed in a terminal, see [Claude Code in a container](#claude-code-in-a-container) |
+| A connector that worked before no longer signs in | The client keeps the sign-in address it found when the connector was added | Remove the connector and add it again with the same URL |
+| The client finds no authorization server, or its sign-in opens a page that is not found on `app.walkeros.io` | The client does not follow the authorization server the endpoint names | Connect with a token for AI apps only, see [Claude Code in a container](#claude-code-in-a-container) |
 
-Against stage, substitute `https://stage.app.walkeros.io/api/mcp`; against a
-local app, `http://localhost:3000/api/mcp`.
+Against stage, substitute `https://stage.app.walkeros.io/api/mcp`, and the
+sign-in opens on `auth.stage.walkeros.io`; against a local app,
+`http://localhost:3000/api/mcp`, and the sign-in opens on
+`auth.localhost:3000`.
 
 ---
 

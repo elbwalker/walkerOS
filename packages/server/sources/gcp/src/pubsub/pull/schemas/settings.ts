@@ -67,7 +67,7 @@ export const SettingsSchema = z.object({
   shutdownTimeoutMs: z
     .number()
     .describe(
-      'Graceful shutdown timeout in milliseconds. Default: 30000. After this window, destroy() force-closes the subscriber.',
+      'Graceful shutdown timeout in milliseconds. Default: 5000. On shutdown the subscriber stops pulling and lets messages in flight finish; after this window it nacks the rest, so Pub/Sub redelivers them, and closes.',
     )
     .optional(),
   onPushError: z

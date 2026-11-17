@@ -12,7 +12,8 @@ const CODE = `<head>
  * CodeStatic - read-only code highlighted by Shiki, without an editor.
  *
  * Lines can be marked (`add` for a new line, `focus` for the one a step is
- * about), numbered, and revealed character by character with a caret.
+ * about), numbered, and revealed character by character with a caret, the
+ * whole code or one line inside it.
  */
 const meta: Meta<typeof CodeStatic> = {
   component: CodeStatic,
@@ -43,4 +44,9 @@ export const Reveal: Story = {
   argTypes: {
     reveal: { control: { type: 'range', min: 0, max: CODE.length, step: 1 } },
   },
+};
+
+/** Line 2 typed to its 20th character, the caret after it, the rest in full. */
+export const Typing: Story = {
+  args: { lineNumbers: true, typing: { line: 2, chars: 20 } },
 };

@@ -11,6 +11,7 @@ import type {
   Transformer,
   WalkerOS,
 } from '@walkeros/core';
+import { SHUTDOWN_DEADLINE_MS } from '@walkeros/core';
 import { createCLILoggerConfig } from '@walkeros/core/node';
 import { startFlow } from '..';
 
@@ -672,6 +673,57 @@ describe('usage', () => {
     });
     await jest.advanceTimersByTimeAsync(2_999);
     expect(flushed).toEqual([2]);
+    expect(done).toBe(false);
+    await jest.advanceTimersByTimeAsync(1);
+    expect(done).toBe(true);
+  });
+
+  it('ends a stop at its deadline when less than its 3 s are left', async () => {
+    installFetch(hang);
+    const { collector } = await startFlow({
+      observe: { usage: { url: usageUrl, token } },
+    });
+    await jest.advanceTimersByTimeAsync(0);
+    const reporter = collector.reporter;
+    if (!reporter) throw new Error('no reporter');
+
+    let done = false;
+    void reporter.stop(Date.now() + 1_000).then(() => {
+      done = true;
+    });
+    await jest.advanceTimersByTimeAsync(999);
+    expect(done).toBe(false);
+    await jest.advanceTimersByTimeAsync(1);
+    expect(done).toBe(true);
+  });
+
+  it('leaves the last report only what a 7 s drain leaves of the shutdown deadline', async () => {
+    installFetch(hang);
+    const { collector } = await startFlow({
+      observe: { usage: { url: usageUrl, token } },
+    });
+    const wait = (ms: number) =>
+      new Promise<void>((resolve) => setTimeout(resolve, ms));
+    const http: Source.Instance = {
+      type: 'express',
+      config: {},
+      push: jest.fn(),
+      destroy: () => wait(4_000),
+    };
+    collector.sources['http'] = http;
+    collector.destinations['slow'] = {
+      type: 'slow',
+      config: {},
+      push: () => undefined,
+      destroy: () => wait(3_000),
+    };
+    await jest.advanceTimersByTimeAsync(0);
+
+    let done = false;
+    void collector.command('shutdown').then(() => {
+      done = true;
+    });
+    await jest.advanceTimersByTimeAsync(SHUTDOWN_DEADLINE_MS - 1);
     expect(done).toBe(false);
     await jest.advanceTimersByTimeAsync(1);
     expect(done).toBe(true);

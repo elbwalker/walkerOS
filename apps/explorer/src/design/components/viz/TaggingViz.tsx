@@ -15,10 +15,18 @@ import { vizStyle } from './parts/style';
 import { Thumb } from './parts/Thumb';
 import { VizFrame } from './parts/VizFrame';
 
+/** A pane of the demo: the markup being typed, the page with the card, the events table. */
+export type TaggingPane = 'code' | 'page' | 'events';
+
 export interface TaggingVizProps extends HTMLAttributes<HTMLDivElement> {
   script: TaggingScript;
   /** The time shown, in ms from the script's start. */
   t: number;
+  /**
+   * The panes shown, filling the frame. Absent: all three, the code and the
+   * page beside the events table.
+   */
+  panes?: readonly TaggingPane[];
 }
 
 const reported = new Set<string>();
@@ -95,7 +103,7 @@ function Part({
  * a table. Shows `script` at `t`; it keeps no clock, so the caller owns time.
  */
 export const TaggingViz = forwardRef<HTMLDivElement, TaggingVizProps>(
-  function TaggingViz({ script, t, ...rest }, ref) {
+  function TaggingViz({ script, t, panes, className, ...rest }, ref) {
     reportUnknownParts(script);
     const { lines, fade, caretOn, card, cursor, rows } = taggingFrame(
       script,
@@ -115,88 +123,104 @@ export const TaggingViz = forwardRef<HTMLDivElement, TaggingVizProps>(
       />
     );
     const actions = script.card.parts.filter((part) => part.role === 'action');
-    return (
-      <VizFrame {...rest} ref={ref} variant="tagging">
-        <div className="elb-viz-tagging">
-          <div className="elb-viz-tagging__pane">
-            <div className="elb-viz-tagging__bar">
-              <span className="elb-viz-tagging__dots" aria-hidden="true">
-                <span />
-                <span />
-                <span />
-              </span>
-              {script.file !== undefined && (
-                <span className="elb-viz-tagging__file">{script.file}</span>
+    const shows = (pane: TaggingPane) => !panes || panes.includes(pane);
+    const code = shows('code') && (
+      <>
+        <div className="elb-viz-tagging__bar">
+          <span className="elb-viz-tagging__dots" aria-hidden="true">
+            <span />
+            <span />
+            <span />
+          </span>
+          {script.file !== undefined && (
+            <span className="elb-viz-tagging__file">{script.file}</span>
+          )}
+        </div>
+        <div
+          className="elb-viz-tagging__code"
+          style={vizStyle({ '--elb-viz-fade': fade })}
+        >
+          {lines.map((line) => (
+            <CodeLine
+              key={line.id}
+              number={line.n}
+              bar={line.on ? 'entity' : undefined}
+              className={cx(
+                'elb-viz-tagging__line',
+                line.on && 'elb-viz-tagging__line--on',
               )}
-            </div>
-            <div
-              className="elb-viz-tagging__code"
-              style={vizStyle({ '--elb-viz-fade': fade })}
             >
-              {lines.map((line) => (
-                <CodeLine
-                  key={line.id}
-                  number={line.n}
-                  bar={line.on ? 'entity' : undefined}
-                  className={cx(
-                    'elb-viz-tagging__line',
-                    line.on && 'elb-viz-tagging__line--on',
-                  )}
-                >
-                  {line.caret === null ? (
-                    <CodeTokens tokens={line.tokens} />
-                  ) : (
-                    <>
-                      <CodeTokens tokens={line.tokens.slice(0, line.caret)} />
-                      <span
-                        className="elb-viz-caret"
-                        style={vizStyle({
-                          '--elb-viz-caret': caretOn ? 1 : 0,
-                        })}
-                      />
-                      <CodeTokens tokens={line.tokens.slice(line.caret)} />
-                    </>
-                  )}
-                </CodeLine>
-              ))}
-            </div>
-            <div className="elb-viz-tagging__stage">
-              <div
-                className={cx(
-                  'elb-viz-tagging__card',
-                  card.tagged && 'elb-viz-tagging__card--tagged',
-                )}
-                style={vizStyle({
-                  '--elb-viz-card-opacity': card.opacity,
-                  '--elb-viz-card-offset': card.offset,
-                })}
-              >
-                <div className="elb-viz-tagging__pills">
-                  {card.pills.map((pill) => (
-                    <Pill key={`${pill.part}-${pill.text}`} part={pill.part}>
-                      {pill.text}
-                    </Pill>
-                  ))}
-                </div>
-                {script.card.thumb !== undefined && (
-                  <div className="elb-viz-tagging__thumb">
-                    <Thumb kind={script.card.thumb} />
-                  </div>
-                )}
-                <div className="elb-viz-tagging__text">
-                  {script.card.parts
-                    .filter((part) => part.role !== 'action')
-                    .map(render)}
-                  {actions.length > 0 && (
-                    <div className="elb-viz-tagging__foot">
-                      {actions.map(render)}
-                    </div>
-                  )}
-                </div>
-              </div>
-            </div>
+              {line.caret === null ? (
+                <CodeTokens tokens={line.tokens} />
+              ) : (
+                <>
+                  <CodeTokens tokens={line.tokens.slice(0, line.caret)} />
+                  <span
+                    className="elb-viz-caret"
+                    style={vizStyle({
+                      '--elb-viz-caret': caretOn ? 1 : 0,
+                    })}
+                  />
+                  <CodeTokens tokens={line.tokens.slice(line.caret)} />
+                </>
+              )}
+            </CodeLine>
+          ))}
+        </div>
+      </>
+    );
+    const page = shows('page') && (
+      <div className="elb-viz-tagging__stage">
+        <div
+          className={cx(
+            'elb-viz-tagging__card',
+            card.tagged && 'elb-viz-tagging__card--tagged',
+          )}
+          style={vizStyle({
+            '--elb-viz-card-opacity': card.opacity,
+            '--elb-viz-card-offset': card.offset,
+          })}
+        >
+          <div className="elb-viz-tagging__pills">
+            {card.pills.map((pill) => (
+              <Pill key={`${pill.part}-${pill.text}`} part={pill.part}>
+                {pill.text}
+              </Pill>
+            ))}
           </div>
-          <EventsTable rows={rows} />
+          {script.card.thumb !== undefined && (
+            <div className="elb-viz-tagging__thumb">
+              <Thumb kind={script.card.thumb} />
+            </div>
+          )}
+          <div className="elb-viz-tagging__text">
+            {script.card.parts
+              .filter((part) => part.role !== 'action')
+              .map(render)}
+            {actions.length > 0 && (
+              <div className="elb-viz-tagging__foot">{actions.map(render)}</div>
+            )}
+          </div>
+        </div>
+      </div>
+    );
+    return (
+      <VizFrame
+        {...rest}
+        ref={ref}
+        variant="tagging"
+        className={cx(panes && 'elb-viz--fill', className)}
+      >
+        <div
+          className={cx('elb-viz-tagging', panes && 'elb-viz-tagging--panes')}
+        >
+          {(code || page) && (
+            <div className="elb-viz-tagging__pane">
+              {code}
+              {page}
+            </div>
+          )}
+          {shows('events') && <EventsTable rows={rows} />}
         </div>
       </VizFrame>
     );

@@ -4,6 +4,7 @@ import { mergeAuthHeaders } from './auth-headers.js';
 import { heartbeatUrl } from './api-paths.js';
 import { stepId } from '@walkeros/core';
 import type { Collector, Logger } from '@walkeros/core';
+import type { KnownValues } from '@walkeros/core/node';
 import type { DedupedError, RingEntry } from './log-ring.js';
 import { redactErrors, redactLogs } from './redact.js';
 
@@ -96,6 +97,18 @@ function snapshotDestinations(
 
 const instanceId = randomBytes(8).toString('hex');
 
+/** The longest release a beat carries; the app refuses a longer one. */
+export const HEARTBEAT_RELEASE_MAX = 128;
+
+/** The release a beat carries: 1 to {@link HEARTBEAT_RELEASE_MAX} characters. */
+function sendableRelease(release: string | undefined): string | undefined {
+  return release !== undefined &&
+    release.length >= 1 &&
+    release.length <= HEARTBEAT_RELEASE_MAX
+    ? release
+    : undefined;
+}
+
 export function getInstanceId(): string {
   return instanceId;
 }
@@ -116,6 +129,10 @@ export interface HeartbeatConfig {
   getCounters?: () => Collector.Status | undefined;
   getErrors?: () => DedupedError[];
   getLogs?: () => RingEntry[];
+  /** The values masked in the errors and lines this heartbeat sends. */
+  knownValues?: KnownValues;
+  /** The release the loaded artifact baked onto its collector. */
+  release?: string;
 }
 
 export interface HeartbeatHandle {
@@ -146,6 +163,8 @@ export function createHeartbeat(
   let timer: ReturnType<typeof setInterval> | null = null;
   const startTime = Date.now();
 
+  const release = sendableRelease(config.release);
+
   let lastReported: CounterSnapshot = {
     in: 0,
     out: 0,
@@ -169,7 +188,10 @@ export function createHeartbeat(
         counters = computeCounterDelta(current, lastReported);
       }
 
-      const errors = config.getErrors ? redactErrors(config.getErrors()) : [];
+      const known = config.knownValues?.compiled();
+      const errors = config.getErrors
+        ? redactErrors(config.getErrors(), known)
+        : [];
       const logs = config.getLogs
         ? redactLogs(config.getLogs().slice(-50))
         : [];
@@ -188,6 +210,7 @@ export function createHeartbeat(
               deploymentId: config.deploymentId,
             }),
             cliVersion: VERSION,
+            ...(release !== undefined && { release }),
             // Advertise the configured heartbeat cadence (milliseconds) so the
             // app reads the real interval instead of hard-coding a default for
             // staleness detection.

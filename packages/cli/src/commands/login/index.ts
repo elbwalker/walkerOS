@@ -18,8 +18,8 @@ import {
   createPkce,
   createState,
   discover,
+  discoverAuthorizationServer,
   exchangeCode,
-  issuerOf,
   LoginError,
   loginOf,
   logoutStoredLogin,
@@ -194,6 +194,7 @@ async function loginWithBrowser(
       code,
       redirectUri: listener.redirectUri,
       verifier: pkce.verifier,
+      resource: discovery.resource,
     });
     const exit = await finishWith(io, discovery, answer, 'walkeros login');
     listener.finish(exit === LOGIN_EXIT.ok);
@@ -242,6 +243,7 @@ async function loginWithCodePage(
       state,
       redirect_uri: discovery.codePage,
       issuer: discovery.issuer,
+      resource: discovery.resource,
       client_id: discovery.clientId,
       token_endpoint: discovery.tokenEndpoint,
       created_at: Date.now(),
@@ -280,6 +282,7 @@ async function loginWithCodePage(
     code: match[1],
     redirectUri: discovery.codePage,
     verifier: pkce.verifier,
+    resource: discovery.resource,
   });
   return finishWith(io, discovery, answer, 'walkeros login --no-browser');
 }
@@ -327,11 +330,16 @@ async function loginWithCode(io: LoginIO, pasted: string): Promise<LoginExit> {
   }
 
   // The revocation endpoint a login keeps comes from the same issuer's
-  // documents; the exchange itself goes to the pending file's token endpoint.
-  // Nothing was exchanged yet, so the pending sign-in stays for a retry.
+  // documents; the exchange itself goes to the pending file's token endpoint
+  // and names its resource, both checked when the sign-in started, so the app
+  // URL set now plays no part. Nothing was exchanged yet, so the pending
+  // sign-in stays for a retry.
   let discovery: Discovery;
   try {
-    discovery = await discover(waiting.issuer);
+    discovery = {
+      ...(await discoverAuthorizationServer(waiting.issuer)),
+      resource: waiting.resource,
+    };
   } catch (error) {
     if (!(error instanceof LoginError)) throw error;
     warn(
@@ -366,6 +374,7 @@ async function loginWithCode(io: LoginIO, pasted: string): Promise<LoginExit> {
       code,
       redirectUri: pending.redirect_uri,
       verifier: pending.code_verifier,
+      resource: pending.resource,
     });
     if (answer.kind === 'unreachable')
       return { kind: 'unreachable', reason: answer.reason };
@@ -460,7 +469,7 @@ export async function runLogout(
         ? { kind: 'none' }
         : await logoutStoredLogin(login.issuer);
     if (outcome.kind === 'none') {
-      out(`Not signed in to ${issuerOf(appUrl)}.`);
+      out(`Not signed in to ${appUrl.replace(/\/+$/, '')}.`);
     } else if (outcome.kind === 'revoked') {
       out(`Signed out of ${outcome.issuer}.`);
     } else {

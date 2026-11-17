@@ -92,4 +92,30 @@ describe('prebuilt artifact', () => {
       body: 'collected /collect',
     });
   });
+
+  it('hands the declared env export to beforeStart before the flow starts', async () => {
+    const artifact = path.join(dir, 'flow.mjs');
+    fs.writeFileSync(
+      artifact,
+      `export const __walkerosEnv = { secrets: ['FIXTURE_SECRET'], env: ['FIXTURE_HOST'] };
+export default async function() {
+  return { collector: { push: async () => {}, command: async () => {} } };
+}`,
+    );
+    const beforeStart = jest.fn(async () => {});
+
+    await loadFlow(
+      artifact,
+      { port: 0 },
+      createMockLogger(),
+      undefined,
+      undefined,
+      beforeStart,
+    );
+
+    expect(beforeStart).toHaveBeenCalledWith({
+      secrets: ['FIXTURE_SECRET'],
+      env: ['FIXTURE_HOST'],
+    });
+  });
 });

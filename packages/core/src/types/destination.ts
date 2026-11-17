@@ -434,6 +434,13 @@ export interface Ref {
    * `failed`, a `QueuedReason` under `queued`.
    */
   reason?: FailureReason | QueuedReason;
+  /**
+   * Which part of a shutdown failed, set only in the `shutdown` command's
+   * answer: `flush`, a pending batch failed or timed out and its events are
+   * lost; `destroy`, the destination did not close cleanly, so events it
+   * buffered may be lost.
+   */
+  phase?: 'flush' | 'destroy';
 }
 
 export type DLQ = Array<[WalkerOS.Event, unknown]>;

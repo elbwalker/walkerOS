@@ -32,7 +32,7 @@ Server-side event streaming to [Redis Streams](https://redis.io/docs/latest/deve
 
 <Configuration type="destination" data={data} />
 
-The destination creates a single long-lived `ioredis` client during `init()`. With `url` set, `options` is ignored; with neither, ioredis connects to `localhost:6379`. On flow hot-swap or server shutdown, `destroy()` calls `client.quit()` to flush in-flight commands and close the TCP connection gracefully. User-provided clients (wired in via `_client`) are left untouched.
+The destination creates a single long-lived `ioredis` client during `init()`. With `url` set, `options` is ignored; with neither, ioredis connects to `localhost:6379`. On server shutdown, `destroy()` calls `client.quit()` to flush in-flight commands and close the TCP connection gracefully. User-provided clients (wired in via `_client`) are left untouched. It runs inside the collector's 8 second shutdown deadline; one that does not close in time is reported by name ([`walker shutdown`](/docs/collector/commands#shutdown)).
 
 A failed `XADD` fails the push with a `transport` error: the event reaches the dead-letter queue and the collector logs one ERROR line per cause and minute. A lost connection is logged at WARN and counted in `status.connectionErrors`, and shutdown does not wait on a disconnected client. A rule with `silent: true` appends nothing.
 

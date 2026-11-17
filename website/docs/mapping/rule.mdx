@@ -179,7 +179,7 @@ the `batch` when the destination registers (on inline `code` without
 `pushBatch`, `walkeros validate` and the bundle reject it). Pending batches are
 flushed when the collector shuts down
 ([`walker shutdown`](/docs/collector/commands#shutdown), which the runner sends
-on exit), waiting up to 5 seconds per batch. In the browser nothing sends
+on exit), within the collector's 8 second shutdown deadline. In the browser nothing sends
 `walker shutdown`; the browser source sends
 [`walker flush`](/docs/collector/commands#walker-flush) when the page goes away,
 so pending batches are sent then. The

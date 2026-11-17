@@ -22,7 +22,9 @@ const DEFAULT_DECODER = 'json' as const;
 const DEFAULT_FLOW_CONTROL_MAX_MESSAGES = 100;
 const DEFAULT_FLOW_CONTROL_MAX_BYTES = 10 * 1024 * 1024;
 const DEFAULT_ACK_DEADLINE_SECONDS = 60;
-const DEFAULT_SHUTDOWN_TIMEOUT_MS = 30000;
+// How long a close waits for messages in flight. It fits inside the
+// collector's 8 s shutdown deadline, which also covers the batch flush.
+export const DEFAULT_SHUTDOWN_TIMEOUT_MS = 5000;
 const DEFAULT_ON_PUSH_ERROR = 'nack' as const;
 
 /**

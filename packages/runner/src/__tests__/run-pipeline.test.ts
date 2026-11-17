@@ -1,4 +1,6 @@
 import http from 'http';
+import type { DeclaredEnv } from '@walkeros/core';
+import { createKnownValues } from '@walkeros/core/node';
 import type { PipelineOptions } from '../pipeline.js';
 import type { HealthServer } from '../health-server.js';
 import type { FlowHandle } from '../runner.js';
@@ -53,6 +55,44 @@ import { RunnerAuthError } from '../runner-auth-error.js';
 
 const mockLogger = createMockLogger();
 
+const API: NonNullable<PipelineOptions['api']> = {
+  appUrl: 'https://app.walkeros.io',
+  token: 'test-token',
+  projectId: 'proj_123',
+  flowId: 'flow_456',
+  heartbeatIntervalMs: 60000,
+  cacheDir: '/tmp/cache',
+};
+
+/**
+ * A loadFlow stand-in that does what loadBundle does around the factory: it
+ * hands the artifact's declaration to the pipeline's beforeStart, and starts
+ * the flow (calls `started`) only when beforeStart resolves.
+ */
+function loading(
+  declared: DeclaredEnv | undefined,
+  collector: FlowHandle['collector'] = { command: jest.fn() },
+  started: () => void = () => {},
+): typeof loadFlow {
+  return async (
+    _file,
+    _config,
+    _logger,
+    _loggerConfig,
+    _healthServer,
+    beforeStart,
+  ) => {
+    await beforeStart?.(declared);
+    started();
+    return { collector, file: '/tmp/bundle.mjs' };
+  };
+}
+
+/** Restore process.env names a test set. */
+function unset(names: readonly string[]): void {
+  for (const name of names) delete process.env[name];
+}
+
 /** A typed HealthServer fake: spies for every method, a real (unbound) server. */
 function fakeHealthServer(overrides: Partial<HealthServer> = {}): HealthServer {
   return {
@@ -83,6 +123,9 @@ describe('runPipeline', () => {
     // The guard latch is module-global and survives across tests in this file;
     // reset it so each runPipeline registers its guards fresh.
     resetProcessGuardsForTest();
+    // Reset, not only clear: a queued once-value must not reach the next test.
+    jest.mocked(loadFlow).mockReset().mockImplementation(loading(undefined));
+    jest.mocked(fetchSecrets).mockReset().mockResolvedValue({});
   });
 
   afterEach(() => {
@@ -93,6 +136,7 @@ describe('runPipeline', () => {
     bundlePath: '/tmp/test-bundle.mjs',
     port: 8080,
     logger: mockLogger,
+    knownValues: createKnownValues(),
   };
 
   it('creates health server and loads flow in standalone mode', async () => {
@@ -108,6 +152,7 @@ describe('runPipeline', () => {
       mockLogger,
       undefined,
       expect.any(Object), // healthServer
+      expect.any(Function), // beforeStart
     );
     expect(createHeartbeat).not.toHaveBeenCalled();
     expect(fetchSecrets).not.toHaveBeenCalled();
@@ -115,6 +160,39 @@ describe('runPipeline', () => {
     // Registers signal handlers
     expect(process.on).toHaveBeenCalledWith('SIGTERM', expect.any(Function));
     expect(process.on).toHaveBeenCalledWith('SIGINT', expect.any(Function));
+  });
+
+  it('forces exit 1 nine seconds after SIGTERM when the drain hangs', async () => {
+    jest
+      .mocked(loadFlow)
+      .mockImplementation(
+        loading(undefined, { command: () => new Promise<unknown>(() => {}) }),
+      );
+    void runPipeline(baseOptions);
+    await new Promise((r) => setTimeout(r, 50));
+    const sigterm = processOnMock.mock.calls.find(
+      ([event]) => event === 'SIGTERM',
+    )?.[1];
+    if (typeof sigterm !== 'function') throw new Error('no SIGTERM handler');
+    const exits: unknown[] = [];
+    const exitSpy = jest.spyOn(process, 'exit').mockImplementation((code) => {
+      exits.push(code);
+      throw new Error(`__exit__:${code}`);
+    });
+    jest.useFakeTimers();
+    try {
+      sigterm();
+      await jest.advanceTimersByTimeAsync(8999);
+      expect(exits).toEqual([]);
+
+      await expect(jest.advanceTimersByTimeAsync(1)).rejects.toThrow(
+        '__exit__:1',
+      );
+      expect(exits).toEqual([1]);
+    } finally {
+      jest.useRealTimers();
+      exitSpy.mockRestore();
+    }
   });
 
   it('registers the process error guards BEFORE the health server and flow load', async () => {
@@ -175,17 +253,7 @@ describe('runPipeline', () => {
   });
 
   it('enables heartbeat and secrets when api config provided', async () => {
-    const apiOptions: PipelineOptions = {
-      ...baseOptions,
-      api: {
-        appUrl: 'https://app.walkeros.io',
-        token: 'test-token',
-        projectId: 'proj_123',
-        flowId: 'flow_456',
-        heartbeatIntervalMs: 60000,
-        cacheDir: '/tmp/cache',
-      },
-    };
+    const apiOptions: PipelineOptions = { ...baseOptions, api: API };
 
     const promise = runPipeline(apiOptions);
     await new Promise((r) => setTimeout(r, 50));
@@ -203,57 +271,186 @@ describe('runPipeline', () => {
         projectId: 'proj_123',
         flowId: 'flow_456',
         intervalMs: 60000,
+        knownValues: apiOptions.knownValues,
       }),
       mockLogger,
     );
   });
 
-  it('hands every fetched secret value to onSecrets after injecting it', async () => {
-    jest
-      .mocked(fetchSecrets)
-      .mockResolvedValueOnce({ API_KEY: 'value-abc123' });
-    const seen: Array<{ values: string[]; env: string | undefined }> = [];
-
-    void runPipeline({
-      ...baseOptions,
-      onSecrets: (values) => seen.push({ values, env: process.env.API_KEY }),
-      api: {
-        appUrl: 'https://app.walkeros.io',
-        token: 'test-token',
-        projectId: 'proj_123',
-        flowId: 'flow_456',
-        heartbeatIntervalMs: 60000,
-        cacheDir: '/tmp/cache',
-      },
-    });
+  it('fetches the secrets once the health server is up, so /ready answers 503 meanwhile', async () => {
+    void runPipeline({ ...baseOptions, api: API });
     await new Promise((r) => setTimeout(r, 50));
-    delete process.env.API_KEY;
 
-    expect(seen).toEqual([{ values: ['value-abc123'], env: 'value-abc123' }]);
+    const healthOrder =
+      jest.mocked(createHealthServer).mock.invocationCallOrder[0];
+    const fetchOrder = jest.mocked(fetchSecrets).mock.invocationCallOrder[0];
+    expect(healthOrder).toBeLessThan(fetchOrder);
   });
 
-  it('does not call onSecrets when the secrets fetch fails', async () => {
-    jest.mocked(fetchSecrets).mockRejectedValueOnce(new Error('network down'));
-    const onSecrets = jest.fn();
+  it('hands the heartbeat the release the loaded artifact baked', async () => {
+    jest
+      .mocked(loadFlow)
+      .mockImplementationOnce(
+        loading(undefined, { command: jest.fn(), release: '41' }),
+      );
 
-    void runPipeline({
-      ...baseOptions,
-      onSecrets,
-      api: {
-        appUrl: 'https://app.walkeros.io',
-        token: 'test-token',
-        projectId: 'proj_123',
-        flowId: 'flow_456',
-        heartbeatIntervalMs: 60000,
-        cacheDir: '/tmp/cache',
-      },
-    });
+    void runPipeline({ ...baseOptions, api: API });
     await new Promise((r) => setTimeout(r, 50));
 
-    expect(onSecrets).not.toHaveBeenCalled();
-    expect(mockLogger.warn).toHaveBeenCalledWith(
-      'Could not fetch secrets: network down',
+    expect(createHeartbeat).toHaveBeenCalledWith(
+      expect.objectContaining({ release: '41' }),
+      mockLogger,
     );
+  });
+
+  describe('secret injection', () => {
+    const NAMES = ['API_KEY', 'OLD_KEY', 'DB_HOST'];
+
+    afterEach(() => unset(NAMES));
+
+    /**
+     * Boot until the flow is ready or the boot fails. `started` reports
+     * whether the flow's factory ran, and the known values as they stood then.
+     */
+    async function boot(
+      declared: DeclaredEnv | undefined,
+      options: PipelineOptions,
+    ) {
+      let reportReady = () => {};
+      const ready = new Promise<string>((resolve) => {
+        reportReady = () => resolve('ready');
+      });
+      const setReady = jest.fn((value: boolean) => {
+        if (value) reportReady();
+      });
+      const setFailed = jest.fn();
+      jest
+        .mocked(createHealthServer)
+        .mockResolvedValueOnce(fakeHealthServer({ setReady, setFailed }));
+      const started: { known?: readonly string[] } = {};
+      jest.mocked(loadFlow).mockImplementationOnce(
+        loading(declared, { command: jest.fn() }, () => {
+          started.known = [...options.knownValues.values()];
+        }),
+      );
+
+      const failed = runPipeline(options).catch((error: unknown) => error);
+      const outcome = await Promise.race([ready, failed]);
+      return { outcome, setReady, setFailed, started };
+    }
+
+    it('refuses the boot when a delivered name is already set in the environment', async () => {
+      process.env.API_KEY = 'value-from-host';
+      jest
+        .mocked(fetchSecrets)
+        .mockResolvedValueOnce({ API_KEY: 'value-abc123' });
+
+      const { outcome, setReady, setFailed, started } = await boot(
+        { secrets: ['API_KEY'], env: [] },
+        { ...baseOptions, knownValues: createKnownValues(), api: API },
+      );
+
+      const message = 'Secrets refused: API_KEY (secret-in-env)';
+      expect(outcome).toEqual(new Error(message));
+      expect(setFailed).toHaveBeenCalledWith(message);
+      expect(setReady).not.toHaveBeenCalledWith(true);
+      expect(started.known).toBeUndefined();
+      expect(process.env.API_KEY).toBe('value-from-host');
+    });
+
+    it.each<[string, DeclaredEnv | undefined, string[], string[]]>([
+      [
+        'every delivered name for an artifact without the export',
+        undefined,
+        ['API_KEY', 'OLD_KEY'],
+        ['Injected 2 secret(s) into environment'],
+      ],
+      [
+        'only the names the artifact declares',
+        { secrets: ['API_KEY'], env: [] },
+        ['API_KEY'],
+        [
+          'Injected 1 secret(s) into environment',
+          'Not injected, the flow does not read them: OLD_KEY',
+        ],
+      ],
+    ])('sets %s', async (_case, declared, set, lines) => {
+      jest.mocked(fetchSecrets).mockResolvedValueOnce({
+        API_KEY: 'value-abc123',
+        OLD_KEY: 'value-old123',
+      });
+
+      const { outcome } = await boot(declared, {
+        ...baseOptions,
+        knownValues: createKnownValues(),
+        api: API,
+      });
+
+      expect(outcome).toBe('ready');
+      expect(NAMES.filter((name) => process.env[name] !== undefined)).toEqual(
+        set,
+      );
+      for (const line of lines)
+        expect(mockLogger.info).toHaveBeenCalledWith(line);
+    });
+
+    it.each<[string, PipelineOptions['api'], string[]]>([
+      ['with the app', API, ['value-abc123', 'value-old123', 'db.internal']],
+      ['without the app', undefined, ['db.internal']],
+    ])(
+      'knows every delivered value and every declared value before the flow starts, %s',
+      async (_case, api, known) => {
+        process.env.DB_HOST = 'db.internal';
+        jest.mocked(fetchSecrets).mockResolvedValueOnce({
+          API_KEY: 'value-abc123',
+          OLD_KEY: 'value-old123',
+        });
+
+        const { outcome, started } = await boot(
+          { secrets: ['API_KEY'], env: ['DB_HOST'] },
+          { ...baseOptions, knownValues: createKnownValues(), api },
+        );
+
+        expect(outcome).toBe('ready');
+        expect(started.known).toEqual(known);
+      },
+    );
+
+    it('boots on without the app secrets when the fetch fails for another reason than auth', async () => {
+      jest
+        .mocked(fetchSecrets)
+        .mockRejectedValueOnce(new Error('network down'));
+      const knownValues = createKnownValues();
+
+      const { outcome } = await boot(
+        { secrets: ['API_KEY'], env: [] },
+        { ...baseOptions, knownValues, api: API },
+      );
+
+      expect(outcome).toBe('ready');
+      expect(knownValues.values()).toEqual([]);
+      expect(mockLogger.warn).toHaveBeenCalledWith(
+        'Could not fetch secrets: network down',
+      );
+    });
+
+    it('stops the boot before the flow starts when the secrets fetch reports a revoked token', async () => {
+      jest
+        .mocked(fetchSecrets)
+        .mockRejectedValueOnce(
+          new RunnerAuthError(401, 'unauthorised', null, 'token revoked'),
+        );
+
+      const { outcome, setReady, started } = await boot(
+        { secrets: ['API_KEY'], env: [] },
+        { ...baseOptions, api: { ...API, token: 'revoked-token' } },
+      );
+
+      expect(outcome).toBeInstanceOf(RunnerAuthError);
+      expect(setReady).not.toHaveBeenCalledWith(true);
+      expect(started.known).toBeUndefined();
+      expect(createHeartbeat).not.toHaveBeenCalled();
+    });
   });
 
   it('marks readiness failed and closes health server if loadFlow fails', async () => {
@@ -267,37 +464,13 @@ describe('runPipeline', () => {
         close: mockClose,
       }),
     );
-    jest.mocked(loadFlow).mockRejectedValue(new Error('bad bundle'));
+    jest.mocked(loadFlow).mockRejectedValueOnce(new Error('bad bundle'));
 
     await expect(runPipeline(baseOptions)).rejects.toThrow('bad bundle');
     // Fail-fast: /ready must not flip to 200 when construction fails.
     expect(mockSetFailed).toHaveBeenCalledWith('bad bundle');
     expect(mockSetReady).not.toHaveBeenCalledWith(true);
     expect(mockClose).toHaveBeenCalled();
-  });
-
-  it('stops startup when the secrets fetch reports a revoked token', async () => {
-    jest
-      .mocked(fetchSecrets)
-      .mockRejectedValueOnce(
-        new RunnerAuthError(401, 'unauthorised', null, 'token revoked'),
-      );
-
-    await expect(
-      runPipeline({
-        ...baseOptions,
-        api: {
-          appUrl: 'https://app.walkeros.io',
-          token: 'revoked-token',
-          projectId: 'proj_123',
-          flowId: 'flow_456',
-          heartbeatIntervalMs: 60000,
-          cacheDir: '/tmp/cache',
-        },
-      }),
-    ).rejects.toBeInstanceOf(RunnerAuthError);
-    expect(loadFlow).not.toHaveBeenCalled();
-    expect(createHeartbeat).not.toHaveBeenCalled();
   });
 
   describe('artifact release check', () => {
@@ -333,10 +506,11 @@ describe('runPipeline', () => {
         .mockResolvedValueOnce(
           fakeHealthServer({ setReady, setFailed, close }),
         );
-      jest.mocked(loadFlow).mockResolvedValueOnce({
-        collector: { command: jest.fn(), ...identity },
-        file: '/tmp/bundle.mjs',
-      });
+      jest
+        .mocked(loadFlow)
+        .mockImplementationOnce(
+          loading(undefined, { command: jest.fn(), ...identity }),
+        );
 
       const failed = runPipeline(options).catch((error: unknown) => error);
       const outcome = await Promise.race([ready, failed]);
@@ -400,30 +574,22 @@ describe('runPipeline', () => {
       expect(setFailed).not.toHaveBeenCalled();
     });
 
-    it('keeps the deployed release when a secret of the same name is injected', async () => {
+    it('refuses a delivered secret named like the deployed release as reserved', async () => {
       jest
         .mocked(fetchSecrets)
         .mockResolvedValueOnce({ WALKEROS_FLOW_RELEASE: '41' });
 
-      const { outcome } = await boot(
+      const { outcome, setReady } = await boot(
         { WALKEROS_FLOW_RELEASE: '42' },
         { name: 'default', release: '41' },
-        {
-          ...baseOptions,
-          api: {
-            appUrl: 'https://app.walkeros.io',
-            token: 'test-token',
-            projectId: 'proj_123',
-            flowId: 'flow_456',
-            heartbeatIntervalMs: 60000,
-            cacheDir: '/tmp/cache',
-          },
-        },
+        { ...baseOptions, api: API },
       );
 
       expect(outcome).toEqual(
-        new Error('Artifact mismatch: expected default@42, loaded default@41'),
+        new Error('Secrets refused: WALKEROS_FLOW_RELEASE (secret-reserved)'),
       );
+      expect(setReady).not.toHaveBeenCalledWith(true);
+      expect(process.env.WALKEROS_FLOW_RELEASE).toBe('42');
     });
 
     it.each<[Record<string, string>, Identity, string]>([

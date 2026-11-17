@@ -148,6 +148,24 @@ describe('CodeStatic line marks, line numbers and reveal', () => {
     );
   });
 
+  it.each([
+    [
+      'line 2 to 5 characters: the rest in full, one caret',
+      { line: 2, chars: 5 },
+      'const a = 1;\nconst\nconst c = 3;',
+      1,
+    ],
+    ['a line beyond the last: ignored', { line: 9, chars: 3 }, CODE, 0],
+  ])('typing: %s', (_name, typing, text, carets) => {
+    const { container } = render(
+      <CodeStatic code={CODE} language="javascript" typing={typing} />,
+    );
+    expect(shown(container)).toBe(text);
+    expect(container.querySelectorAll('.elb-code-static__caret')).toHaveLength(
+      carets,
+    );
+  });
+
   it('keeps the colours of the whole code while revealing', () => {
     const color = (container: HTMLElement) =>
       container.querySelector('.line span')?.getAttribute('style');

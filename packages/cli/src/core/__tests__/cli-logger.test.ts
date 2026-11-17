@@ -19,8 +19,8 @@ describe('createCLILogger onLine hook', () => {
     const captured: Array<{ level: Level; message: string }> = [];
 
     const logger = createCLILogger({
-      onLine: (level, message) => {
-        captured.push({ level, message });
+      onLine: (level, line) => {
+        captured.push({ level, message: line.masked() });
       },
     });
 
@@ -74,8 +74,8 @@ describe('handler context serialization', () => {
   it('appends serialized context to the line, on console and the onLine tap', () => {
     const captured: string[] = [];
     const logger = createCLILogger({
-      onLine: (_level, message) => {
-        captured.push(message);
+      onLine: (_level, line) => {
+        captured.push(line.masked());
       },
     });
 
@@ -95,8 +95,8 @@ describe('handler context serialization', () => {
   it('leaves lines without context untouched (no trailing braces)', () => {
     const captured: string[] = [];
     const logger = createCLILogger({
-      onLine: (_level, message) => {
-        captured.push(message);
+      onLine: (_level, line) => {
+        captured.push(line.masked());
       },
     });
 
@@ -108,8 +108,8 @@ describe('handler context serialization', () => {
   it('redacts secret-shaped values inside the serialized context', () => {
     const captured: string[] = [];
     const logger = createCLILogger({
-      onLine: (_level, message) => {
-        captured.push(message);
+      onLine: (_level, line) => {
+        captured.push(line.masked());
       },
     });
 
@@ -124,8 +124,8 @@ describe('handler context serialization', () => {
   it('does not throw on circular context and emits a fallback marker', () => {
     const captured: string[] = [];
     const logger = createCLILogger({
-      onLine: (_level, message) => {
-        captured.push(message);
+      onLine: (_level, line) => {
+        captured.push(line.masked());
       },
     });
 
@@ -139,8 +139,8 @@ describe('handler context serialization', () => {
   it('pins the serialization contract: primitive-valued context round-trips, raw Error is documented-unsupported', () => {
     const captured: string[] = [];
     const logger = createCLILogger({
-      onLine: (_level, message) => {
-        captured.push(message);
+      onLine: (_level, line) => {
+        captured.push(line.masked());
       },
     });
 

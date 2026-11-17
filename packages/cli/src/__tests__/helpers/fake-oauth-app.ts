@@ -1,15 +1,24 @@
-import { createServer, type IncomingMessage, type ServerResponse } from 'http';
+import {
+  createServer,
+  type IncomingMessage,
+  type Server,
+  type ServerResponse,
+} from 'http';
 import { createHash, randomBytes } from 'crypto';
 
 /**
- * A stand-in for the walkerOS app's sign-in side on 127.0.0.1, over real
- * HTTP: the two discovery documents, the authorization endpoint (it allows at
- * once and redirects with `code`, `state` and `iss`), the token endpoint
- * (codes work once and need the PKCE verifier; refresh tokens rotate) and the
- * revocation endpoint. Each handler can be replaced by a test.
+ * A stand-in for the walkerOS app and its authorization server on 127.0.0.1,
+ * two origins over real HTTP. The app serves its protected resource document
+ * (RFC 9728) and `/api/auth/whoami`. The authorization server, on another
+ * port, serves its two discovery documents, the authorization endpoint (it
+ * allows at once and redirects with `code`, `state` and `iss`), the token
+ * endpoint (codes work once and need the PKCE verifier; refresh tokens
+ * rotate) and the revocation endpoint. Each handler can be replaced by a test.
  */
 
 export interface SeenRequest {
+  /** The origin the request reached: `appUrl` or `issuer`. */
+  origin: string;
   method: string;
   path: string;
   form: Record<string, string>;
@@ -30,8 +39,12 @@ type Handler = (
 ) => Answer | Promise<Answer>;
 
 export interface FakeApp {
+  /** The app: its protected resource document and its API. */
+  appUrl: string;
+  /** The authorization server, on an origin of its own. */
   issuer: string;
   requests: SeenRequest[];
+  resourceDocument: Record<string, unknown>;
   metadata: Record<string, unknown>;
   clientDocument: Record<string, unknown>;
   token: Handler;
@@ -74,15 +87,36 @@ export async function startFakeApp(): Promise<FakeApp> {
   const refreshTokens = new Set<string>();
   let serial = 0;
 
-  const server = createServer(async (req, res) => {
-    const url = new URL(req.url ?? '/', 'http://127.0.0.1');
+  async function seen(
+    req: IncomingMessage,
+    origin: string,
+  ): Promise<{ url: URL; form: Record<string, string> }> {
+    const url = new URL(req.url ?? '/', origin);
     const form = req.method === 'POST' ? await readForm(req) : {};
     app.requests.push({
+      origin,
       method: req.method ?? 'GET',
       path: url.pathname,
       form,
       authorization: req.headers.authorization ?? null,
     });
+    return { url, form };
+  }
+
+  const appServer = createServer(async (req, res) => {
+    const { url } = await seen(req, app.appUrl);
+    if (
+      req.method === 'GET' &&
+      url.pathname === '/.well-known/oauth-protected-resource/api'
+    )
+      return send(res, { status: 200, body: app.resourceDocument });
+    if (req.method === 'GET' && url.pathname === '/api/auth/whoami')
+      return send(res, app.whoami(req.headers.authorization ?? null));
+    send(res, { status: 404, body: { error: 'not_found' } });
+  });
+
+  const authServer = createServer(async (req, res) => {
+    const { url, form } = await seen(req, app.issuer);
     if (
       req.method === 'GET' &&
       url.pathname === '/.well-known/oauth-authorization-server'
@@ -116,16 +150,20 @@ export async function startFakeApp(): Promise<FakeApp> {
         url.pathname === '/custom/revoke')
     )
       return send(res, await app.revoke(form, req));
-    if (req.method === 'GET' && url.pathname === '/api/auth/whoami')
-      return send(res, app.whoami(req.headers.authorization ?? null));
     send(res, { status: 404, body: { error: 'not_found' } });
   });
 
-  await new Promise<void>((resolve) => server.listen(0, '127.0.0.1', resolve));
-  const address = server.address();
-  const port =
-    address !== null && typeof address === 'object' ? address.port : 0;
-  const issuer = `http://127.0.0.1:${port}`;
+  const listen = async (server: Server): Promise<string> => {
+    await new Promise<void>((resolve) =>
+      server.listen(0, '127.0.0.1', resolve),
+    );
+    const address = server.address();
+    const port =
+      address !== null && typeof address === 'object' ? address.port : 0;
+    return `http://127.0.0.1:${port}`;
+  };
+  const appUrl = await listen(appServer);
+  const issuer = await listen(authServer);
 
   const pair = () => {
     serial += 1;
@@ -143,9 +181,16 @@ export async function startFakeApp(): Promise<FakeApp> {
   };
 
   const app: FakeApp = {
+    appUrl,
     issuer,
     requests: [],
     liveAccess: new Set(),
+    resourceDocument: {
+      resource: `${appUrl}/api`,
+      authorization_servers: [issuer],
+      scopes_supported: ['read', 'write'],
+      bearer_methods_supported: ['header'],
+    },
     metadata: {
       issuer,
       authorization_endpoint: `${issuer}/oauth/authorize`,
@@ -202,9 +247,11 @@ export async function startFakeApp(): Promise<FakeApp> {
       return app.requests.filter((r) => r.method === method && r.path === path)
         .length;
     },
-    close() {
-      server.closeAllConnections();
-      return new Promise((resolve) => server.close(() => resolve()));
+    async close() {
+      for (const server of [appServer, authServer]) {
+        server.closeAllConnections();
+        await new Promise<void>((resolve) => server.close(() => resolve()));
+      }
     },
   };
   return app;

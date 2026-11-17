@@ -1,6 +1,5 @@
 import http from 'http';
 import type { Logger } from '@walkeros/core';
-import { redactLine } from '@walkeros/core/node';
 
 export interface HealthServer {
   server: http.Server;
@@ -13,9 +12,9 @@ export interface HealthServer {
   setReady(ready: boolean): void;
   /**
    * Mark readiness as failed with a short reason (e.g. a construction error).
-   * `/ready` returns 503 with a generic reason; the detail is redacted and
-   * written to the log (and so the log ring), never echoed on the endpoint,
-   * which is internet-reachable. Clearing it requires a subsequent successful
+   * `/ready` returns 503 with a generic reason; the detail is written to the
+   * log, whose handler masks it, never echoed on the endpoint, which is
+   * internet-reachable. Clearing it requires a subsequent successful
    * `setReady(true)`.
    */
   setFailed(reason: string): void;
@@ -37,7 +36,7 @@ export interface HealthServer {
 /**
  * The generic reasons `/ready` answers with. The endpoint is internet-reachable,
  * so it never echoes a raw error message (which can carry a secret or an
- * internal path); the redacted detail is in the log.
+ * internal path); the masked detail is in the log.
  */
 const READY_REASON = {
   failed: 'flow failed to start, see the runtime log',
@@ -120,13 +119,15 @@ export function createHealthServer(
           ready = false;
           degraded = false;
           failed = true;
-          logger.error(`Readiness failed: ${redactLine(reason)}`);
+          // Logged uncut: the handler masks the line, and a cut here could
+          // split a known value so that the mask no longer finds it.
+          logger.error(`Readiness failed: ${reason}`);
         },
         setDegraded(reason) {
           ready = false;
           degraded = true;
           failed = false;
-          logger.error(`Readiness degraded: ${redactLine(reason)}`);
+          logger.error(`Readiness degraded: ${reason}`);
         },
         close: () =>
           new Promise<void>((res, rej) => {

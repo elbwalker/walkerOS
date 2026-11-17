@@ -21,9 +21,10 @@ import {
  *
  * - `credentials.json`, one login per issuer (`{ "<issuer>": {...} }`), so a
  *   person can stay signed in to stage and prod at once. Each login keeps the
- *   endpoints discovered when it was made, and a refresh or a revocation goes
- *   only to those, never to endpoints discovered again from whatever app URL
- *   is set later.
+ *   resource its tokens are for and the endpoints discovered when it was
+ *   made: its tokens go only to the resource's origin, and a refresh or a
+ *   revocation goes only to those endpoints, never to endpoints discovered
+ *   again from whatever app URL is set later.
  * - `pending-<state>.json`, one per `walkeros login --no-browser` run without
  *   a terminal, waiting for `walkeros login --code`.
  * - `credentials.lock`, held around every read-refresh-write and every write
@@ -35,6 +36,8 @@ import {
 
 export const LoginSchema = z.object({
   issuer: z.string(),
+  /** The app's REST API, the one resource the login's tokens are for. */
+  resource: z.string(),
   client_id: z.string(),
   token_endpoint: z.string(),
   revocation_endpoint: z.string(),
@@ -95,8 +98,9 @@ function originOf(url: string): string | null {
 }
 
 /**
- * The stored login an app URL may use: the one whose issuer has the app URL's
- * origin. A login is never attached to a request for another origin.
+ * The stored login an app URL may use: the one whose resource has the app
+ * URL's origin. A login is never attached to a request for another origin,
+ * its issuer's included.
  */
 export function loginForAppUrl(
   logins: Credentials,
@@ -104,10 +108,8 @@ export function loginForAppUrl(
 ): StoredLogin | undefined {
   const origin = originOf(appUrl);
   if (origin === null) return undefined;
-  const exact = logins[appUrl.replace(/\/+$/, '')];
-  if (exact) return exact;
   return Object.values(logins).find(
-    (login) => originOf(login.issuer) === origin,
+    (login) => originOf(login.resource) === origin,
   );
 }
 
@@ -233,6 +235,7 @@ export const PendingSchema = z.object({
   state: z.string().regex(STATE_SHAPE),
   redirect_uri: z.string(),
   issuer: z.string(),
+  resource: z.string(),
   client_id: z.string(),
   token_endpoint: z.string(),
   /** Epoch milliseconds. */

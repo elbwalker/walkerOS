@@ -21,7 +21,8 @@ import type { SNSClient, SubscribeCommand } from '@aws-sdk/client-sns';
 
 /**
  * The part of an AWS SDK v3 SQS client this source calls: `send` with the
- * commands it builds, and an optional `destroy`. `SQSClient` satisfies it, and
+ * commands it builds (a receive with the signal that ends its long poll),
+ * and an optional `destroy`. `SQSClient` satisfies it, and
  * so does an injected mock (tests, simulate) without a cast.
  */
 export interface SqsClient {
@@ -29,7 +30,10 @@ export interface SqsClient {
   send(
     command: GetQueueAttributesCommand,
   ): Promise<GetQueueAttributesCommandOutput>;
-  send(command: ReceiveMessageCommand): Promise<ReceiveMessageCommandOutput>;
+  send(
+    command: ReceiveMessageCommand,
+    options?: { abortSignal?: AbortSignal },
+  ): Promise<ReceiveMessageCommandOutput>;
   send(command: DeleteMessageCommand): Promise<DeleteMessageCommandOutput>;
   send(command: CreateQueueCommand): Promise<CreateQueueCommandOutput>;
   destroy?(): void;
@@ -62,7 +66,8 @@ export interface Settings {
   waitTimeSeconds?: number;
   // Per-receive visibility timeout override. Default: queue's configured value.
   visibilityTimeout?: number;
-  // Graceful shutdown timeout in ms. Default: 30000.
+  // How long a close waits for messages in flight, in milliseconds; the rest
+  // are not deleted and redeliver after their visibility timeout. Default: 5000.
   shutdownTimeoutMs?: number;
   // Error policy: 'ack' (DeleteMessage to drop) or 'nack' (no DeleteMessage, redeliver). Default: 'nack'.
   onPushError?: 'nack' | 'ack';

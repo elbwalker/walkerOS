@@ -24,7 +24,10 @@ describe('wrapSkeleton', () => {
     await fs.remove(tmpDir).catch(() => {});
   });
 
-  async function writeFakeSkeleton(filename = 'skeleton.mjs'): Promise<string> {
+  async function writeFakeSkeleton(
+    filename = 'skeleton.mjs',
+    extra = '',
+  ): Promise<string> {
     const skeletonPath = path.join(tmpDir, filename);
     const contents = `
 export function wireConfig(d) { return d; }
@@ -35,7 +38,7 @@ export function startFlow(c) {
   });
 }
 export const __configData = { test: true };
-`;
+${extra}`;
     await fs.writeFile(skeletonPath, contents);
     return skeletonPath;
   }
@@ -111,6 +114,32 @@ export const __configData = { test: true };
     expect(output).toContain('sourceSettings');
     expect(output).toContain('httpHandler');
   });
+
+  it.each<[string, string, { secrets: string[]; env: string[] } | undefined]>([
+    [
+      'with the declared env export',
+      `export const __walkerosEnv = { secrets: ['API_KEY'], env: ['HOST'] };`,
+      { secrets: ['API_KEY'], env: ['HOST'] },
+    ],
+    ['of an earlier CLI, without it', '', undefined],
+  ])(
+    'wraps a node skeleton %s into a module exporting what the skeleton declares',
+    async (_case, extra, declared) => {
+      const skeletonPath = await writeFakeSkeleton('skeleton.mjs', extra);
+      const outputPath = path.join(tmpDir, 'bundle.mjs');
+
+      await wrapSkeleton({
+        skeletonPath,
+        platform: 'node',
+        outputPath,
+        minify: false,
+      });
+
+      const module: unknown = await import(outputPath);
+      expect(module).toHaveProperty('default');
+      expect(module).toHaveProperty('__walkerosEnv', declared);
+    },
+  );
 
   it('a plain browser wrap merges no hooks into its config', async () => {
     const skeletonPath = await writeFakeSkeleton();

@@ -14,8 +14,10 @@ import { Level, createTimer, getErrorMessage } from '@walkeros/core';
 import type { Logger } from '@walkeros/core';
 import {
   createCLILogger,
+  createKnownValues,
   scrubSecrets,
   type CLILoggerColors,
+  type TappedLine,
 } from '@walkeros/core/node';
 import {
   ensureSinkDir,
@@ -115,14 +117,27 @@ export function assertPrebuiltArtifact(resolved: ResolvedBundle): void {
 }
 
 /**
+ * The rings the heartbeat reads. The heartbeat and the error sink run only
+ * with --flow-id, so without it no ring is built: it would only hold lines
+ * nobody reads.
+ */
+function heartbeatRings(flowId: string | undefined): {
+  errorRing?: ErrorRing;
+  logRing?: LogRing;
+} {
+  if (!flowId) return {};
+  const errorRing = new ErrorRing(20);
+  return { errorRing, logRing: new LogRing(100) };
+}
+
+/**
  * CLI command function for `runneros start`
  */
 export async function runCommand(options: RunCommandOptions): Promise<void> {
   const timer = createTimer();
   timer.start();
 
-  const errorRing = new ErrorRing(20);
-  const logRing = new LogRing(100);
+  const { errorRing, logRing } = heartbeatRings(options.flowId);
 
   const LEVEL_NAME = {
     [Level.ERROR]: 'error',
@@ -133,19 +148,21 @@ export async function runCommand(options: RunCommandOptions): Promise<void> {
 
   // The runner's and the collector's lines are tapped here: every ERROR, WARN
   // and INFO line, and a DEBUG line only with --verbose or a flow at DEBUG.
-  // The text line feeds the rings (heartbeat, error sink); the tap also
-  // receives the line as a structured entry (scope, and the context with code,
-  // status, retryable, suppressed) for a forwarder.
-  const onLine = (level: Level, message: string) => {
-    if (level === Level.ERROR) errorRing.add(message);
-    logRing.add({ time: Date.now(), level: LEVEL_NAME[level], message });
+  // With a ring, an ERROR line is masked now: the error ring keeps its text
+  // and writes a first-seen error to the sink file. The log ring keeps the
+  // line itself, masked when the heartbeat reads it. Without rings no line
+  // is masked here.
+  const onLine = (level: Level, line: TappedLine) => {
+    if (level === Level.ERROR) errorRing?.add(line.masked());
+    logRing?.add({ time: line.time, level: LEVEL_NAME[level], line });
   };
 
-  // Secret values fetched at startup, filled by the pipeline once injected.
-  // Both loggers read the list per line, so every line after the fetch masks
-  // them, in the console and in both rings.
-  const knownSecrets: string[] = [];
-  const readKnownSecrets = (): readonly string[] => knownSecrets;
+  // The values the runner masks: the pipeline adds every fetched secret value
+  // and the value of every name the artifact declares, before the flow
+  // starts, with or without the app. Both loggers and the heartbeat read the
+  // set when they mask, so every line read from then on masks them, in the
+  // console and in both rings.
+  const knownValues = createKnownValues();
 
   // The runner's logger and the config the deployed bundle's collector builds
   // its own logger from (`context.logger`), so its destination errors flow
@@ -156,7 +173,7 @@ export async function runCommand(options: RunCommandOptions): Promise<void> {
   // despite failed deliveries). Both use the flow's own `logger.format` once
   // the bundle reports it.
   const logging = createRuntimeLogging(
-    { ...options, onLine, knownSecrets: readKnownSecrets },
+    { ...options, onLine, knownSecrets: knownValues },
     RUNTIME_COLORS,
   );
   const { logger } = logging;
@@ -219,10 +236,12 @@ export async function runCommand(options: RunCommandOptions): Promise<void> {
       //
       // Ensure the cache dir exists BEFORE wiring the sink, so the synchronous
       // jsonl append can succeed on a fresh container.
-      ensureSinkDir(apiConfig.cacheDir);
-      const sinkPath = errorSinkPath(apiConfig.cacheDir);
-      seedErrorRingFromJsonl(errorRing, sinkPath);
-      errorRing.setSink(sinkPath);
+      if (errorRing) {
+        ensureSinkDir(apiConfig.cacheDir);
+        const sinkPath = errorSinkPath(apiConfig.cacheDir);
+        seedErrorRingFromJsonl(errorRing, sinkPath);
+        errorRing.setSink(sinkPath);
+      }
     }
 
     const bundlePath = await resolveBundlePath(options.config, logger);
@@ -239,9 +258,7 @@ export async function runCommand(options: RunCommandOptions): Promise<void> {
       api: apiConfig,
       errorRing,
       logRing,
-      onSecrets: (values) => {
-        knownSecrets.push(...values);
-      },
+      knownValues,
     });
   } catch (error) {
     const duration = timer.getElapsed() / 1000;
@@ -253,7 +270,7 @@ export async function runCommand(options: RunCommandOptions): Promise<void> {
       // scrub here. A failed fetch message can carry a presigned URL.
       logger.json({
         success: false,
-        error: scrubSecrets(errorMessage, { known: knownSecrets }),
+        error: scrubSecrets(errorMessage, { known: knownValues.compiled() }),
         duration,
       });
     } else {

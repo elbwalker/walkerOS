@@ -1,9 +1,14 @@
 import { appendFileSync } from 'fs';
+import type { TappedLine } from '@walkeros/core/node';
 
+/**
+ * One ringed log line. It holds the tapped line, masked only when the
+ * heartbeat reads it, so a line no heartbeat sends is never masked.
+ */
 export interface RingEntry {
   time: number;
   level: 'error' | 'warn' | 'info' | 'debug';
-  message: string;
+  line: TappedLine;
 }
 
 export interface DedupedError {

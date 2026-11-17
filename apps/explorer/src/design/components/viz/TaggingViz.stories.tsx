@@ -77,3 +77,13 @@ export const Default: StoryObj<typeof TaggingViz> = {};
 
 /** Halfway through typing the price. */
 export const Typing: StoryObj<typeof TaggingViz> = { args: { t: 2500 } };
+
+/** The page alone, filling the frame: the card a click lands on. */
+export const PageOnly: StoryObj<typeof TaggingViz> = {
+  args: { panes: ['page'] },
+};
+
+/** The code and the page, no events table: the markup while it is typed. */
+export const CodeAndPage: StoryObj<typeof TaggingViz> = {
+  args: { panes: ['code', 'page'], t: 2500 },
+};

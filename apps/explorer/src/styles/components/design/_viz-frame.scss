@@ -27,6 +27,19 @@
     border: 1px solid var(--border);
   }
 
+  // A demo filling the height its caller gives the frame.
+  .elb-viz--fill {
+    display: flex;
+    flex-direction: column;
+
+    > .elb-viz__body {
+      display: flex;
+      flex: 1 1 auto;
+      flex-direction: column;
+      min-height: 0;
+    }
+  }
+
   .elb-viz--mapping {
     overflow: hidden;
     border: 1px solid var(--viz-border);

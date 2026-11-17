@@ -63,6 +63,18 @@
     opacity: var(--elb-viz-fade);
   }
 
+  // A long line wraps at a space, between attributes or inside a value at
+  // its space; inside a word only when the word alone is wider than the pane.
+  .elb-viz-tagging__line .elb-viz-line__code {
+    word-break: normal;
+    overflow-wrap: anywhere;
+  }
+
+  // Tag and attribute names hold no space: never split at their hyphens.
+  .elb-viz-tagging__line :is(.elb-viz-tok--tag, .elb-viz-tok--attr) {
+    white-space: nowrap;
+  }
+
   .elb-viz-tagging__line--on {
     background: color-mix(in srgb, var(--event-entity) 7%, transparent);
   }
@@ -81,6 +93,28 @@
       var(--viz-bg) 8px 16px
     );
     border-top: 1px solid var(--viz-surface);
+  }
+
+  // The page without the code above it.
+  .elb-viz-tagging__stage:first-child {
+    border-top: 0;
+  }
+
+  // Panes chosen by the caller fill the frame the caller sizes.
+  .elb-viz-tagging--panes {
+    flex: 1 1 auto;
+    flex-wrap: nowrap;
+    min-height: 0;
+
+    > .elb-viz-tagging__pane,
+    > .elb-viz-table {
+      flex: 1 1 0;
+    }
+
+    // Every line is there from the start, so the code takes its own height.
+    .elb-viz-tagging__code {
+      min-height: 0;
+    }
   }
 
   .elb-viz-tagging__card {

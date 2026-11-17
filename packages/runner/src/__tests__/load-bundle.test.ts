@@ -100,6 +100,54 @@ describe('loadBundle', () => {
     expect(pushed).toEqual({});
   });
 
+  it.each<[string, string, unknown]>([
+    [
+      'the declared env export',
+      `export const __walkerosEnv = { secrets: ['API_KEY'], env: ['HOST'] };`,
+      { secrets: ['API_KEY'], env: ['HOST'] },
+    ],
+    ['undefined for an artifact without it', '', undefined],
+  ])(
+    'calls beforeStart once with %s before the factory runs',
+    async (_case, declaration, declared) => {
+      const order: string[] = [];
+      const file = createTempBundle(`
+      ${declaration}
+      export default function(context) {
+        context.order.push('factory');
+        return { collector: { push: async () => ({}), command: async () => {} } };
+      }
+    `);
+      const beforeStart = jest.fn(async () => {
+        order.push('beforeStart');
+      });
+
+      await loadBundle(file, { order }, mockLogger, beforeStart);
+
+      expect(beforeStart).toHaveBeenCalledTimes(1);
+      expect(beforeStart).toHaveBeenCalledWith(declared);
+      expect(order).toEqual(['beforeStart', 'factory']);
+    },
+  );
+
+  it('rejects without calling the factory when beforeStart rejects', async () => {
+    const order: string[] = [];
+    const file = createTempBundle(`
+      export const __walkerosEnv = { secrets: ['API_KEY'], env: [] };
+      export default function(context) {
+        context.order.push('factory');
+        return { collector: { push: async () => ({}), command: async () => {} } };
+      }
+    `);
+
+    await expect(
+      loadBundle(file, { order }, mockLogger, async () => {
+        throw new Error('Secrets refused: API_KEY (secret-in-env)');
+      }),
+    ).rejects.toThrow('Secrets refused: API_KEY (secret-in-env)');
+    expect(order).toEqual([]);
+  });
+
   it('throws when bundle has no default export', async () => {
     const file = createTempBundle(`
       export function notDefault() { return {}; }

@@ -3,7 +3,11 @@ import { tmpdir } from 'os';
 import { join } from 'path';
 import { Level } from '@walkeros/core';
 import type { Logger } from '@walkeros/core';
-import { createCLILogger } from '@walkeros/core/node';
+import {
+  createCLILogger,
+  createKnownValues,
+  type TappedLine,
+} from '@walkeros/core/node';
 import { ErrorRing } from '../log-ring.js';
 import { createHeartbeat } from '../heartbeat.js';
 import { errorSinkPath } from '../error-sink.js';
@@ -67,8 +71,8 @@ describe('error redaction end-to-end (logger → ring → jsonl + heartbeat)', (
     ring.setSink(sink);
 
     // Build the runner logger with the SAME onLine ring tap the run command uses.
-    const onLine = (level: Level, message: string) => {
-      if (level === Level.ERROR) ring.add(message);
+    const onLine = (level: Level, line: TappedLine) => {
+      if (level === Level.ERROR) ring.add(line.masked());
     };
     const logger = createCLILogger({ silent: true, onLine });
 
@@ -129,5 +133,29 @@ describe('error redaction end-to-end (logger → ring → jsonl + heartbeat)', (
     expect(parsed.recentErrors && parsed.recentErrors.length).toBeGreaterThan(
       0,
     );
+  });
+
+  it('masks a known value and a pattern secret in the first-seen error the sink file keeps', () => {
+    const sink = errorSinkPath(tempDir());
+    const ring = new ErrorRing(20);
+    ring.setSink(sink);
+    const known = createKnownValues();
+    const logger = createCLILogger({
+      silent: true,
+      knownSecrets: known,
+      onLine: (level, line) => {
+        if (level === Level.ERROR) ring.add(line.masked());
+      },
+    });
+
+    known.add(['fetched-salt-value']);
+    logger.error(
+      'export failed with fetched-salt-value and Bearer abcdefghijklmnop1234',
+    );
+
+    const jsonl = readFileSync(sink, 'utf-8');
+    expect(jsonl).toContain('export failed with *** and Bearer ***');
+    expect(jsonl).not.toContain('fetched-salt-value');
+    expect(jsonl).not.toContain('abcdefghijklmnop1234');
   });
 });

@@ -81,9 +81,9 @@ export default async function(context = {}) {
     const collectorLoggerConfig: Logger.Config = createCLILoggerConfig({
       verbose: false,
       silent: true,
-      onLine: (level, message) => {
-        if (level === Level.ERROR) errorRing.add(message);
-        logRing.add({ time: Date.now(), level: 'error', message });
+      onLine: (level, line) => {
+        if (level === Level.ERROR) errorRing.add(line.masked());
+        logRing.add({ time: line.time, level: 'error', line });
       },
     });
 

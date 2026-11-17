@@ -264,9 +264,9 @@ success: true
   number whose printed form contains a known value becomes `"***"`, so the JSON
   still parses. Simulate and a real push of a flow config route the flow's own
   logs through the masking CLI logger, so flow DEBUG lines need `--verbose`; the
-  run's own CLI lines mask the known values too. The runner masks the secret
-  values it fetches; values from `--env-file` or the container env get the
-  pattern rules only.
+  run's own CLI lines mask the known values too. The runner masks every value
+  the flow declares through `$secret` or `$env` (6+ chars), whether the app, an
+  `--env-file` or the container env supplied it.
 - **Only the target starts.** Destination simulate keeps only the target
   destination (no source, no other destination initializes); the flow's
   transformers still start, and a store without a mock env runs for real. Source
