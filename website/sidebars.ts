@@ -431,6 +431,11 @@ const sidebars: SidebarsConfig = {
                 },
                 {
                   type: 'doc',
+                  id: 'destinations/server/gravity',
+                  className: 'sidebar-badge-server',
+                },
+                {
+                  type: 'doc',
                   id: 'destinations/server/hubspot',
                   className: 'sidebar-badge-server',
                 },

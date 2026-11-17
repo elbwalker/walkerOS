@@ -36,6 +36,7 @@
     "@walkeros/server-destination-datamanager": "^4.9.0",
     "@walkeros/server-destination-file": "^4.9.0",
     "@walkeros/server-destination-gcp": "^4.9.0",
+    "@walkeros/server-destination-gravity": "^4.9.0",
     "@walkeros/server-destination-hubspot": "^4.9.0",
     "@walkeros/server-destination-kafka": "^4.9.0",
     "@walkeros/server-destination-klaviyo": "^4.9.0",
