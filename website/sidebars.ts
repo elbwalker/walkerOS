@@ -548,6 +548,11 @@ const sidebars: SidebarsConfig = {
                 },
                 {
                   type: 'doc',
+                  id: 'destinations/server/ga4',
+                  className: 'sidebar-badge-server',
+                },
+                {
+                  type: 'doc',
                   id: 'destinations/server/gcp',
                   className: 'sidebar-badge-server',
                 },
