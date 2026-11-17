@@ -139,7 +139,7 @@ describe('Server Destination TikTok', () => {
     );
   });
 
-  test('body includes pixel_code, partner_name, data', async () => {
+  test('body is the Events API 2.0 format', async () => {
     const event = getEvent();
     const config: Config = {
       settings: { accessToken, pixelCode, partner_name: 'walkerOS' },
@@ -155,12 +155,14 @@ describe('Server Destination TikTok', () => {
     );
 
     const requestBody = JSON.parse(mockSendServer.mock.calls[0][1]);
-    expect(requestBody.pixel_code).toBe(pixelCode);
+    expect(requestBody.event_source).toBe('web');
+    expect(requestBody.event_source_id).toBe(pixelCode);
+    expect(requestBody).not.toHaveProperty('pixel_code');
     expect(requestBody.partner_name).toBe('walkerOS');
     expect(requestBody.data).toHaveLength(1);
   });
 
-  test('event data has event, event_id, timestamp', async () => {
+  test('event data has event, event_id, event_time in seconds', async () => {
     const event = getEvent('page view', { timestamp: 1700000900000 });
     const config: Config = {
       settings: { accessToken, pixelCode },
@@ -179,7 +181,8 @@ describe('Server Destination TikTok', () => {
     const eventData = requestBody.data[0];
     expect(eventData.event).toBe('page view');
     expect(eventData.event_id).toBe(event.id);
-    expect(eventData.timestamp).toBe('2023-11-14T22:28:20.000Z');
+    expect(eventData.event_time).toBe(1700000900);
+    expect(eventData).not.toHaveProperty('context');
   });
 
   test('test_event_code included when set', async () => {
@@ -201,7 +204,7 @@ describe('Server Destination TikTok', () => {
     expect(requestBody.test_event_code).toBe('TEST12345');
   });
 
-  test('context.page.url from event.source.url', async () => {
+  test('page.url from event.source.url', async () => {
     const event = getEvent('page view', {
       source: {
         type: 'browser',
@@ -223,9 +226,7 @@ describe('Server Destination TikTok', () => {
     );
 
     const requestBody = JSON.parse(mockSendServer.mock.calls[0][1]);
-    expect(requestBody.data[0].context.page.url).toBe(
-      'https://example.com/page',
-    );
+    expect(requestBody.data[0].page.url).toBe('https://example.com/page');
   });
 
   test('user data is hashed', async () => {
@@ -251,7 +252,7 @@ describe('Server Destination TikTok', () => {
     );
 
     const requestBody = JSON.parse(mockSendServer.mock.calls[0][1]);
-    const userData = requestBody.data[0].context.user;
+    const userData = requestBody.data[0].user;
     expect(userData.email).toBeDefined();
     // Should be hashed (64 hex chars)
     expect(userData.email).toMatch(/^[a-f0-9]{64}$/);
@@ -272,7 +273,7 @@ describe('Server Destination TikTok', () => {
       ['email'],
     );
     expect(result2.email).toBe('m@i.l');
-    expect(result2.phone_number).toMatch(/^[a-f0-9]{64}$/);
+    expect(result2.phone).toMatch(/^[a-f0-9]{64}$/);
   });
 
   test('environment customization', async () => {
@@ -339,8 +340,8 @@ describe('Server Destination TikTok', () => {
           ingest,
         }),
       );
-      expect(sent().data[0].context.ip).toBe('203.0.113.7');
-      expect(sent().data[0].context.user_agent).toBeDefined();
+      expect(sent().data[0].user?.ip).toBe('203.0.113.7');
+      expect(sent().data[0].user?.user_agent).toBeDefined();
     });
 
     test('falls back to event.user.ip and userAgent', async () => {
@@ -353,8 +354,8 @@ describe('Server Destination TikTok', () => {
           env: testEnv,
         }),
       );
-      expect(sent().data[0].context.ip).toBe('198.51.100.2');
-      expect(sent().data[0].context.user_agent).toBeDefined();
+      expect(sent().data[0].user?.ip).toBe('198.51.100.2');
+      expect(sent().data[0].user?.user_agent).toBeDefined();
     });
 
     test('sends neither when disabled with false', async () => {
@@ -368,8 +369,8 @@ describe('Server Destination TikTok', () => {
           ingest,
         }),
       );
-      expect(sent().data[0].context.ip).toBeUndefined();
-      expect(sent().data[0].context.user_agent).toBeUndefined();
+      expect(sent().data[0].user?.ip).toBeUndefined();
+      expect(sent().data[0].user?.user_agent).toBeUndefined();
     });
 
     test('lets an explicit ip setting win over the default', async () => {
@@ -383,7 +384,7 @@ describe('Server Destination TikTok', () => {
           ingest,
         }),
       );
-      expect(sent().data[0].context.ip).toBe('10.0.0.1');
+      expect(sent().data[0].user?.ip).toBe('10.0.0.1');
     });
   });
 });
