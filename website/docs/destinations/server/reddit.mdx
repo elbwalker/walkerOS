@@ -22,7 +22,7 @@ Server-side event delivery to Reddit's Conversions API v2.0 for enhanced convers
   flowMap={{
     destinations: { default: { label: 'Destination', text: 'Reddit CAPI', highlight: true } },
   }}
-  post={<>Sends events server-side to Reddit's Conversions API using raw HTTP (no SDK). Identity fields (`email`, `external_id`, `ip_address`, `user_agent`, `idfa`, `aaid`) are SHA-256 hashed, as mapped, before sending. Events include a stable `event_metadata.conversion_id`, the walkerOS event id.</>}
+  post={<>Sends events server-side to Reddit's Conversions API using raw HTTP (no SDK). Identity fields (`email`, `external_id`, `ip_address`, `idfa`, `aaid`) are trimmed, lowercased and SHA-256 hashed before sending; `user_agent` is sent as is. Events include a stable `event_metadata.conversion_id`, the walkerOS event id.</>}
 />
 
 ## Installation
@@ -37,7 +37,7 @@ A response outside the 2xx range, a network error, or no answer within 5 seconds
 
 ## Client IP and user agent
 
-The destination sends the client IP as `user.ip_address` and the user agent as `user.user_agent` by default. The `ip` and `userAgent` settings resolve against `{ ingest, event }` and default to `["ingest.ip", "event.user.ip"]` and `["ingest.userAgent", "event.user.userAgent"]`, so they fill in whenever the source provides them (see the `config.ingest` recipe on the [Express source](/docs/sources/server/express#ingest-metadata)). Both are SHA-256 hashed like the other identity fields. A value your mapping sets for `user.ip_address` or `user.user_agent` wins. A value that resolves to nothing is not sent. Set either setting to `false` to turn it off, or to another mapping value to read it elsewhere.
+The destination sends the client IP as `user.ip_address` and the user agent as `user.user_agent` by default. The `ip` and `userAgent` settings resolve against `{ ingest, event }` and default to `["ingest.ip", "event.user.ip"]` and `["ingest.userAgent", "event.user.userAgent"]`, so they fill in whenever the source provides them (see the `config.ingest` recipe on the [Express source](/docs/sources/server/express#ingest-metadata)). The IP is SHA-256 hashed like the other identity fields; the user agent is sent in clear, as Reddit matches it. A value your mapping sets for `user.ip_address` or `user.user_agent` wins. A value that resolves to nothing is not sent. Set either setting to `false` to turn it off, or to another mapping value to read it elsewhere.
 
 ## Consent
 
@@ -88,14 +88,14 @@ Reddit takes conversion details under `event_metadata`: map them into `event_met
 
 ## Hashing
 
-The destination SHA-256 hashes these keys of the user object before sending: `email`, `external_id`, `ip_address`, `user_agent`, `idfa`, `aaid`. In a rule's `data` or the destination's `config.data`, map them under `user`; the setting that applies to every event is `settings.user_data`. Map personal data only to these keys.
+The destination SHA-256 hashes these keys of the user object before sending: `email`, `external_id`, `ip_address`, `idfa`, `aaid`. In a rule's `data` or the destination's `config.data`, map them under `user`; the setting that applies to every event is `settings.user_data`. Map personal data only to these keys.
 
 - **Every other key is sent in clear text.** `uuid`, `opt_out`, `screen_dimensions` and `data_processing_options` are sent as mapped, and so is any other key under `user`: nothing checks the names, so `phone_number` or `em` reaches Reddit unhashed.
 - **`user_data` in `data` (a rule's or `config.data`) is not the user object.** Other conversion API destinations use that name; this one sends it unhashed at the top level of the event, like any other key mapped outside `user`.
-- **Values are hashed exactly as mapped**, without normalization. Normalize them upstream in the format Reddit expects, for example the email trimmed and lowercased.
+- **Values are trimmed and lowercased before hashing.** A value that already is a SHA-256 hex digest is sent as it is, never hashed twice.
 
 :::note Different from Meta/Pinterest
-Reddit hashes `ip_address` and `user_agent`, which Meta CAPI and Pinterest CAPI pass through as plaintext. Be sure to pass the raw values, not pre-hashed ones, unless you use `doNotHash`.
+Reddit hashes `ip_address`, which Meta CAPI and Pinterest CAPI pass through as plaintext; `user_agent` stays in clear.
 :::
 
 If a value is already hashed or you want to skip hashing for a specific field, use `doNotHash`:

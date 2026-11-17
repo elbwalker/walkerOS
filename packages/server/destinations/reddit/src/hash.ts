@@ -2,14 +2,16 @@ import { WalkerOS } from '@walkeros/core';
 import { isArray, isObject, isString } from '@walkeros/core';
 import { getHashServer } from '@walkeros/server-core';
 
-const keysToHash = [
-  'email',
-  'external_id',
-  'ip_address',
-  'user_agent',
-  'idfa',
-  'aaid',
-];
+// user_agent is matched in clear by Reddit: never hashed.
+const keysToHash = ['email', 'external_id', 'ip_address', 'idfa', 'aaid'];
+
+const SHA256_HEX = /^[a-f0-9]{64}$/;
+
+// Trimmed and lowercased before hashing; an existing SHA-256 digest is kept.
+async function hashOne(item: unknown): Promise<string> {
+  const normalized = String(item).trim().toLowerCase();
+  return SHA256_HEX.test(normalized) ? normalized : getHashServer(normalized);
+}
 
 function shouldBeHashed(key: string, doNotHash: string[] = []): boolean {
   return keysToHash.includes(key) && !doNotHash.includes(key);
@@ -23,9 +25,9 @@ async function processValue(
 ): Promise<unknown> {
   if (!shouldHash) return value;
   if (isArray(value)) {
-    return Promise.all(value.map((item) => getHashServer(String(item))));
+    return Promise.all(value.map(hashOne));
   }
-  return getHashServer(String(value));
+  return hashOne(value);
 }
 
 export async function hashEvent<T extends HashableValue>(
