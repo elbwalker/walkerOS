@@ -91,7 +91,7 @@ For collection in the EU, use `https://region1.google-analytics.com/mp/collect`.
 
 ## Failures
 
-- A response outside the 2xx range, a network error or no answer within 5 seconds fails with `transport` (with the HTTP status) or `timeout`; 429 and 5xx are retried.
+- A response outside the 2xx range, a network error or no answer within 5 seconds fails with `transport` (with the HTTP status) or `timeout`, and the event goes to the dead-letter queue. 429 and 5xx are marked retryable, other 4xx not; nothing resends the event by itself.
 - Without `measurementId` or `apiSecret`, or with a measurement id that is not `G-...`, the destination does not start: every push answers `failed` with the code `config`.
 - A rule with `silent: true` sends nothing.
 
