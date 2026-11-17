@@ -184,6 +184,51 @@ describe('Server Destination Gravity', () => {
     });
   });
 
+  test('a phone without digits is dropped', async () => {
+    await push(event(), { phone: '()' });
+    expect(conversion().user_data).toEqual({});
+  });
+
+  test('client fields follow the event consent, not the collector one', async () => {
+    const ingest = { ...createIngest('test'), ip: '203.0.113.7' };
+    const consented = { key: 'ingest.ip', consent: { marketing: true } };
+    await push(
+      event({ consent: {} }),
+      {},
+      { ip: consented, userAgent: false },
+      { ingest, collector: { consent: { marketing: true } } },
+    );
+    expect(conversion().user_data).toEqual({});
+
+    mockSendServer.mockClear();
+    await push(
+      event({ consent: { marketing: true } }),
+      {},
+      { ip: consented, userAgent: false },
+      { ingest },
+    );
+    expect(conversion().user_data).toEqual({
+      client_ip_address: '203.0.113.7',
+    });
+  });
+
+  test('client field callbacks receive the event', async () => {
+    await push(
+      event({ user: { id: 'u1', userAgent: 'Mozilla/5.0 from event' } }),
+      {},
+      {
+        ip: false,
+        userAgent: {
+          fn: (_: unknown, context: { event?: WalkerOS.DeepPartialEvent }) =>
+            context.event?.user?.userAgent,
+        },
+      },
+    );
+    expect(conversion().user_data).toEqual({
+      client_user_agent: 'Mozilla/5.0 from event',
+    });
+  });
+
   test('silent rule sends nothing', async () => {
     await push(event(), {}, {}, { rule: { silent: true } });
     expect(mockSendServer).not.toHaveBeenCalled();

@@ -72,9 +72,9 @@ The quickstart sets no `config.consent`, so Gravity receives every event, whatev
 
 ## Failures
 
-- Gravity answers HTTP 200 with a status per event: an `error` status fails the push, not retried.
-- A negative or non-numeric `value`, or a `currency` that is not a 3-letter code, fails with the code `mapping`, not retried, and nothing is sent.
-- A response outside the 2xx range, a network error or no answer within 5 seconds fails with `transport` (with the HTTP status) or `timeout`; 429 and 5xx are retried.
+- Gravity answers HTTP 200 with a status per event: an `error` status fails the push, marked not retryable.
+- A negative or non-numeric `value`, or a `currency` that is not a 3-letter code, fails with the code `mapping`, marked not retryable, and nothing is sent.
+- A response outside the 2xx range, a network error or no answer within 5 seconds fails with `transport` (with the HTTP status) or `timeout`, and the event goes to the dead-letter queue. 429 and 5xx are marked retryable, other 4xx not; nothing resends the event by itself.
 - Without `apiKey` the destination does not start: every push answers `failed` with the code `config`.
 - A rule with `silent: true` sends nothing.
 

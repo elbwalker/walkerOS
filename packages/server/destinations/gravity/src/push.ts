@@ -48,10 +48,13 @@ async function hashList(
   const hashed = await Promise.all(
     toList(value).map(async (item) => {
       const digest = item.toLowerCase();
-      return SHA256_HEX.test(digest) ? digest : getHashServer(normalize(item));
+      if (SHA256_HEX.test(digest)) return digest;
+      const normalized = normalize(item);
+      return normalized ? getHashServer(normalized) : undefined;
     }),
   );
-  const unique = [...new Set(hashed)];
+  // Values that normalise to nothing (a phone without digits) are dropped.
+  const unique = [...new Set(hashed.filter((item): item is string => !!item))];
   return unique.length ? unique : undefined;
 }
 
@@ -147,12 +150,13 @@ const send: PushFn = async function (
 
   const root = createMappingRoot(ingest, event);
   const client = {
-    ip: await resolveClient(ip, DEFAULT_IP, root, collector),
+    ip: await resolveClient(ip, DEFAULT_IP, root, collector, event),
     userAgent: await resolveClient(
       userAgent,
       DEFAULT_USER_AGENT,
       root,
       collector,
+      event,
     ),
   };
 
@@ -196,8 +200,15 @@ async function resolveClient(
   fallback: WalkerOSMapping.Value,
   root: WalkerOSMapping.Root,
   collector: Collector.Instance,
+  event: WalkerOS.Event,
 ): Promise<string | undefined> {
   if (setting === false) return undefined;
-  const value = await getMappingValue(root, setting ?? fallback, { collector });
+  // Callbacks get the event, and the event's own consent (not the
+  // collector's) gates a consent-scoped mapping.
+  const value = await getMappingValue(root, setting ?? fallback, {
+    collector,
+    event,
+    consent: event.consent ?? {},
+  });
   return typeof value === 'string' && value !== '' ? value : undefined;
 }
