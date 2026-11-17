@@ -1,0 +1,79 @@
+---
+title: Reditus
+description: "Server-side referral conversions and payments to the Reditus affiliate platform"
+path: /docs/destinations/server/reditus
+sidebar_position: 19
+package: '@walkeros/server-destination-reditus'
+---
+import data from '@walkeros/server-destination-reditus/walkerOS.json';
+import Configuration from '@site/src/components/snippets/_configuration.mdx';
+import Quickstart from '@site/src/components/snippets/_quickstart.mdx';
+
+import WhereThisFits from '@site/src/components/snippets/_where-this-fits.mdx';
+
+# Reditus
+
+<PackageLink env="server" github="packages/server/destinations/reditus" npm="@walkeros/server-destination-reditus" status="beta" />
+
+Server-side delivery to [Reditus](https://www.getreditus.com), the affiliate and referral platform: a sign-up or demo of a referred visitor becomes a referral conversion, and a referred customer's payment is credited to the partner.
+
+<WhereThisFits
+  pre={<>Reditus is a <strong>server destination</strong> in the walkerOS flow:</>}
+  flowMap={{
+    destinations: { default: { label: 'Destination', text: 'Reditus', highlight: true } },
+  }}
+  post={<>Sends one request per event to the Reditus API with the API token as Bearer token, using raw HTTP (no SDK): a conversion or a payment, chosen per rule.</>}
+/>
+
+## Installation
+
+<Quickstart data={data} />
+
+<Configuration type="destination" data={data} />
+
+## Calls
+
+Each rule picks its call with `settings.type`; without it, `settings.type` of the destination applies, else `conversion`.
+
+| Type | Reditus call | Mapped `data` |
+|---|---|---|
+| `conversion` | `POST /v2/tracking/conversion` | `email` or `uid`, plus at least one of `gr_id` (the Reditus script's cookie), `affiliate_slug`, `advocate_slug` |
+| `payment` | `POST /v1/payments` | `uid` or `email` (sent as `referral_uid`, `referral_email`), `amount` in currency units (sent in cents), `currency` (default `eur`, lowercased), optional `subscription_id`, `interval` (`month` or `year`), `interval_count`, `idempotency_key` (default: the walkerOS event id) |
+
+<CodeSnippet
+  code={`"mapping": {
+  "user": { "register": { "data": { "map": {
+    "uid": "data.id",
+    "email": "user.email",
+    "gr_id": "globals.gr_id"
+  } } } },
+  "subscription": { "start": {
+    "settings": { "type": "payment" },
+    "data": { "map": {
+      "uid": "data.customer",
+      "amount": "data.total",
+      "currency": "data.currency",
+      "subscription_id": "data.id"
+    } }
+  } }
+}`}
+  language="json"
+/>
+
+The `gr_id` cookie and the affiliate slug from the landing URL live in the browser: carry them to the server event (as `globals`, or from your app) so the conversion can be attributed. A visitor who came without a Reditus link has none of them: filter such events with a mapping `condition` instead of letting them fail.
+
+## Consent
+
+The quickstart sets no `config.consent`, so Reditus receives every event, whatever consent the event carries. Add `consent: { marketing: true }` to `config`, next to `settings`, to send only events with marketing consent (see [Gate a destination with consent](/docs/guides/consent#gate-a-destination-with-consent)).
+
+## Failures
+
+- Reditus answers `409` to a conversion whose referral already exists and `404` to a payment of a customer who was never referred: both count as delivered, with one DEBUG line.
+- A conversion without `email`/`uid` or without a referral identifier, and a payment without a positive `amount` or without `uid`/`email`, fail with the code `mapping`, not retried, and nothing is sent.
+- Any other response outside the 2xx range, a network error or no answer within 5 seconds fails with `transport` (with the HTTP status) or `timeout`; 429 and 5xx are retried.
+- Without `apiKey`, or with a `type` other than `conversion` or `payment`, the destination does not start: every push answers `failed` with the code `config`.
+- A rule with `silent: true` sends nothing.
+
+## Links
+
+- [Reditus API documentation](https://docs.getreditus.com)
