@@ -536,7 +536,14 @@ flushed and destinations, transformers and stores are destroyed, in that order.
 The whole shutdown has one deadline of 8 seconds. The command answers
 `ok: false` and names each destination whose batch failed to flush (its events
 are lost) or whose `destroy` did not close cleanly (events it buffered may be
-lost). A second `walker shutdown` does nothing. The runner
+lost). The shutdown waits for pushes in flight within the same 8 seconds.
+Pushes still running at the deadline make the command answer `ok: false` with
+the reason `timeout`, naming their number; their events may be lost.
+A push that enters after the shutdown began answers `ok: false` with the
+retryable reason `shutting-down`, so a pull source nacks it and a synchronous
+HTTP source answers 500. A respond-first POST was already answered before its
+push was refused. An event a source admitted before the shutdown began is
+delivered. A second `walker shutdown` does nothing. The runner
 sends it on `SIGTERM` and `SIGINT`; in the browser nothing sends it. Outside the
 runner, send it with `collector.command` and await it before the process exits,
 for example from a signal handler. Node's `exit` event cannot wait for the

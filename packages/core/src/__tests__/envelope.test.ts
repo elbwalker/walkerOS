@@ -216,6 +216,14 @@ describe('acknowledge', () => {
       'retry',
     ],
     [
+      'a push refused while the collector shuts down',
+      {
+        ok: false,
+        reason: { code: 'shutting-down', message: 'x', retryable: true },
+      },
+      'retry',
+    ],
+    [
       'a deterministic reason without a failed entry',
       {
         ok: false,

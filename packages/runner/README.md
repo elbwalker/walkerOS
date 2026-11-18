@@ -34,11 +34,12 @@ argument it uses `BUNDLE`; without either it uses `flow.mjs` in the working
 directory. Anything else, a `.json` flow config above all, is refused.
 
 Stdin is read only when the given path (argument or `BUNDLE`) does not exist:
-piped content is then written to `/app/flow/flow.mjs` (or
-`/tmp/walkeros-flow.mjs` outside a container) and started. An empty stdin is
-ignored, so a missing file is reported as missing. Stdin carries no
-`node_modules/`, so a server flow built by `walkeros bundle` fails there with
-`Cannot find package`: start its directory or its archive instead.
+piped content is then written to `/app/flow/flow.mjs` (or, outside a container,
+to `flow/flow.mjs` in a private folder of the process under the temp directory,
+removed when the process exits; a killed process leaves it behind) and started.
+An empty stdin is ignored, so a missing file is reported as missing. Stdin
+carries no `node_modules/`, so a server flow built by `walkeros bundle` fails
+there with `Cannot find package`: start its directory or its archive instead.
 
 Credentials come from the environment only: `WALKEROS_DEPLOY_TOKEN` (or
 `WALKEROS_TOKEN`) and `WALKEROS_APP_URL`, used with `--flow-id` and `--project`

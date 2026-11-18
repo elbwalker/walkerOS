@@ -15,6 +15,11 @@ import {
   useHooks,
 } from '@walkeros/core';
 import { pushBounded, seededQueueMax } from './buffers';
+import {
+  refuseWhileShuttingDown,
+  setAdmittedPush,
+  trackPush,
+} from './in-flight';
 import { createEvent, enrichEvent } from './handle';
 import {
   chainFailureResult,
@@ -473,5 +478,17 @@ export function createPush<T extends Collector.Instance>(
     }
   };
 
-  return wrapped;
+  // An event a source push admitted goes on through `wrapped` itself, so it
+  // keeps its span id and its records and is never refused on its way in.
+  setAdmittedPush(collector, wrapped);
+
+  // A push that enters after the shutdown began is refused before any chain
+  // work; one admitted before is counted, so the shutdown waits for it.
+  const guarded: Collector.PushFn = (event, options) => {
+    if (collector.hasShutdown)
+      return Promise.resolve(refuseWhileShuttingDown(collector, event.name));
+    return trackPush(collector, () => wrapped(event, options));
+  };
+
+  return guarded;
 }

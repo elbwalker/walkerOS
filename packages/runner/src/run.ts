@@ -9,22 +9,17 @@
 import { existsSync } from 'fs';
 import { homedir } from 'os';
 import path from 'path';
-import chalk from 'chalk';
-import { Level, createTimer, getErrorMessage } from '@walkeros/core';
+import { createTimer, getErrorMessage } from '@walkeros/core';
 import type { Logger } from '@walkeros/core';
 import {
   createCLILogger,
   createKnownValues,
   scrubSecrets,
-  type CLILoggerColors,
-  type TappedLine,
 } from '@walkeros/core/node';
-import {
-  ensureSinkDir,
-  errorSinkPath,
-  seedErrorRingFromJsonl,
-} from './error-sink.js';
-import { ErrorRing, LogRing } from './log-ring.js';
+import { errorSinkPath, wireErrorSink } from './error-sink.js';
+import { ErrorRing, LogRing, ringTap } from './log-ring.js';
+import { newInstanceId } from './heartbeat.js';
+import { removeInstanceFolder } from './instance-folder.js';
 import { resolveAppUrl, resolveRunToken } from './credentials.js';
 import {
   isPrebuiltArtifact,
@@ -33,11 +28,8 @@ import {
 } from './resolve-bundle.js';
 import { validatePort } from './validators.js';
 import { runPipeline, type PipelineOptions } from './pipeline.js';
-import { createRuntimeLogging } from './runtime-logging.js';
+import { createRuntimeLogging, RUNTIME_COLORS } from './runtime-logging.js';
 import type { RunCommandOptions } from './types.js';
-
-/** The runtime's terminal colours, injected into the shared logger factory. */
-const RUNTIME_COLORS: CLILoggerColors = { error: chalk.red };
 
 /** Artifact looked up in the working directory when none is given. */
 const DEFAULT_ARTIFACT = 'flow.mjs';
@@ -139,23 +131,13 @@ export async function runCommand(options: RunCommandOptions): Promise<void> {
 
   const { errorRing, logRing } = heartbeatRings(options.flowId);
 
-  const LEVEL_NAME = {
-    [Level.ERROR]: 'error',
-    [Level.WARN]: 'warn',
-    [Level.INFO]: 'info',
-    [Level.DEBUG]: 'debug',
-  } as const;
-
   // The runner's and the collector's lines are tapped here: every ERROR, WARN
   // and INFO line, and a DEBUG line only with --verbose or a flow at DEBUG.
-  // With a ring, an ERROR line is masked now: the error ring keeps its text
-  // and writes a first-seen error to the sink file. The log ring keeps the
-  // line itself, masked when the heartbeat reads it. Without rings no line
-  // is masked here.
-  const onLine = (level: Level, line: TappedLine) => {
-    if (level === Level.ERROR) errorRing?.add(line.masked());
-    logRing?.add({ time: line.time, level: LEVEL_NAME[level], line });
-  };
+  // Without rings no line is masked here.
+  const onLine = ringTap({ errorRing, logRing });
+
+  // One id for this process: the start line prints it, each beat carries it.
+  const instanceId = newInstanceId();
 
   // The values the runner masks: the pipeline adds every fetched secret value
   // and the value of every name the artifact declares, before the flow
@@ -230,17 +212,11 @@ export async function runCommand(options: RunCommandOptions): Promise<void> {
       };
 
       // Durable error persistence: only when a cacheDir exists (managed/API
-      // run). Wire the synchronous jsonl sink, then read-and-ship any errors
-      // that a prior boot persisted before a crash (seed into the ring so the
-      // first heartbeat re-reports them, then truncate). Best-effort throughout.
-      //
-      // Ensure the cache dir exists BEFORE wiring the sink, so the synchronous
-      // jsonl append can succeed on a fresh container.
+      // run). Read-and-ship any errors that a prior boot on this port
+      // persisted before a crash, then persist each new one. Best-effort
+      // throughout.
       if (errorRing) {
-        ensureSinkDir(apiConfig.cacheDir);
-        const sinkPath = errorSinkPath(apiConfig.cacheDir);
-        seedErrorRingFromJsonl(errorRing, sinkPath);
-        errorRing.setSink(sinkPath);
+        wireErrorSink(errorRing, errorSinkPath(apiConfig.cacheDir, port));
       }
     }
 
@@ -259,6 +235,7 @@ export async function runCommand(options: RunCommandOptions): Promise<void> {
       errorRing,
       logRing,
       knownValues,
+      instanceId,
     });
   } catch (error) {
     const duration = timer.getElapsed() / 1000;
@@ -294,6 +271,11 @@ async function resolveBundlePath(
   const resolved: ResolvedBundle = artifactInput
     ? await resolveBundle(artifactInput)
     : { path: DEFAULT_ARTIFACT, source: 'file' };
+
+  // A bundle in a private folder (outside the image) is this process's
+  // alone: the folder goes when the process exits, a refusal included.
+  const { folder } = resolved;
+  if (folder) process.on('exit', () => removeInstanceFolder(folder));
 
   assertPrebuiltArtifact(resolved);
 

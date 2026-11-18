@@ -1,9 +1,12 @@
 import http from 'http';
 import type { DeclaredEnv } from '@walkeros/core';
-import { createKnownValues } from '@walkeros/core/node';
+import { createCLILogger, createKnownValues } from '@walkeros/core/node';
 import type { PipelineOptions } from '../pipeline.js';
 import type { HealthServer } from '../health-server.js';
 import type { FlowHandle } from '../runner.js';
+import type { HeartbeatHandle } from '../heartbeat.js';
+import { ErrorRing } from '../log-ring.js';
+import { SecretRefusalError } from '../secret-injection.js';
 
 // Mock all runtime modules
 jest.mock('../health-server.js', () => ({
@@ -30,7 +33,6 @@ jest.mock('../heartbeat.js', () => ({
     stop: jest.fn(),
     sendOnce: jest.fn(),
   }),
-  getInstanceId: jest.fn().mockReturnValue('test-instance'),
 }));
 
 jest.mock('../secrets-fetcher.js', () => ({
@@ -132,12 +134,41 @@ describe('runPipeline', () => {
     processOnMock.mockRestore();
   });
 
+  const INSTANCE_ID = '3f9a2b7c1d4e5f60';
+
   const baseOptions: PipelineOptions = {
     bundlePath: '/tmp/test-bundle.mjs',
     port: 8080,
     logger: mockLogger,
     knownValues: createKnownValues(),
+    instanceId: INSTANCE_ID,
   };
+
+  it.each([
+    ['text', `Instance ${INSTANCE_ID}`],
+    ['json', `"message":"Instance ${INSTANCE_ID}"`],
+  ] as const)(
+    'prints the instance line with the id unmasked in %s format',
+    async (format, shown) => {
+      const printed: string[] = [];
+      const logSpy = jest
+        .spyOn(console, 'log')
+        .mockImplementation((line: unknown) => {
+          printed.push(String(line));
+        });
+      try {
+        void runPipeline({
+          ...baseOptions,
+          logger: createCLILogger({ format }),
+        });
+        await new Promise((r) => setTimeout(r, 50));
+      } finally {
+        logSpy.mockRestore();
+      }
+
+      expect(printed.filter((line) => line.includes(shown))).toHaveLength(1);
+    },
+  );
 
   it('creates health server and loads flow in standalone mode', async () => {
     const promise = runPipeline(baseOptions);
@@ -270,6 +301,7 @@ describe('runPipeline', () => {
         token: 'test-token',
         projectId: 'proj_123',
         flowId: 'flow_456',
+        instanceId: INSTANCE_ID,
         intervalMs: 60000,
         knownValues: apiOptions.knownValues,
       }),
@@ -301,6 +333,64 @@ describe('runPipeline', () => {
       expect.objectContaining({ release: '41' }),
       mockLogger,
     );
+  });
+
+  it('calls onReady once, after /ready is set', async () => {
+    const order: string[] = [];
+    jest.mocked(createHealthServer).mockResolvedValueOnce(
+      fakeHealthServer({
+        setReady: jest.fn((ready: boolean) => {
+          order.push(`setReady(${ready})`);
+        }),
+      }),
+    );
+
+    void runPipeline({
+      ...baseOptions,
+      onReady: () => {
+        order.push('onReady');
+      },
+    });
+    await new Promise((r) => setTimeout(r, 50));
+
+    expect(order).toEqual(['setReady(true)', 'onReady']);
+  });
+
+  describe('the report hook', () => {
+    function reportHandle(): HeartbeatHandle {
+      return {
+        start: jest.fn(),
+        stop: jest.fn(),
+        sendOnce: jest.fn(() => Promise.resolve()),
+        flushSoon: jest.fn(),
+      };
+    }
+
+    it('replaces the app heartbeat and gets the loaded collector', async () => {
+      const collector = { command: jest.fn(), release: 'dv_r17' };
+      jest
+        .mocked(loadFlow)
+        .mockImplementationOnce(loading(undefined, collector));
+      const report = jest.fn(reportHandle);
+
+      void runPipeline({ ...baseOptions, api: API, report });
+      await new Promise((r) => setTimeout(r, 50));
+
+      expect(createHeartbeat).not.toHaveBeenCalled();
+      expect(report).toHaveBeenCalledWith(collector);
+    });
+
+    it('flushes the report once for a new distinct error, not for a repeat', async () => {
+      const handle = reportHandle();
+      const errorRing = new ErrorRing(20);
+
+      void runPipeline({ ...baseOptions, errorRing, report: () => handle });
+      await new Promise((r) => setTimeout(r, 50));
+      errorRing.add('Push failed');
+      errorRing.add('Push failed');
+
+      expect(handle.flushSoon).toHaveBeenCalledTimes(1);
+    });
   });
 
   describe('secret injection', () => {
@@ -354,6 +444,44 @@ describe('runPipeline', () => {
       expect(outcome).toEqual(new Error(message));
       expect(setFailed).toHaveBeenCalledWith(message);
       expect(setReady).not.toHaveBeenCalledWith(true);
+      expect(started.known).toBeUndefined();
+      expect(process.env.API_KEY).toBe('value-from-host');
+    });
+
+    it('sets the delivered names the artifact declares, knows every delivered value and fetches nothing', async () => {
+      const { outcome, started } = await boot(
+        { secrets: ['API_KEY'], env: [] },
+        {
+          ...baseOptions,
+          knownValues: createKnownValues(),
+          delivered: { API_KEY: 'value-abc123', OLD_KEY: 'value-old123' },
+        },
+      );
+
+      expect(outcome).toBe('ready');
+      expect(fetchSecrets).not.toHaveBeenCalled();
+      expect(NAMES.filter((name) => process.env[name] !== undefined)).toEqual([
+        'API_KEY',
+      ]);
+      expect(started.known).toEqual(['value-abc123', 'value-old123']);
+    });
+
+    it('refuses a delivered name already set in the environment, naming it', async () => {
+      process.env.API_KEY = 'value-from-host';
+
+      const { outcome, started } = await boot(
+        { secrets: ['API_KEY'], env: [] },
+        {
+          ...baseOptions,
+          knownValues: createKnownValues(),
+          delivered: { API_KEY: 'value-abc123' },
+        },
+      );
+
+      expect(outcome).toBeInstanceOf(SecretRefusalError);
+      expect(outcome instanceof SecretRefusalError && outcome.refused).toEqual([
+        { name: 'API_KEY', reason: 'secret-in-env' },
+      ]);
       expect(started.known).toBeUndefined();
       expect(process.env.API_KEY).toBe('value-from-host');
     });

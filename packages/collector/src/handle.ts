@@ -197,9 +197,11 @@ export async function commonHandleCommand(
         break;
 
       case Const.Commands.Shutdown:
-        // Idempotency guard: re-entrancy must not re-run destroyAllSteps and
-        // double-close writers, destinations, or stores. The first shutdown
-        // sets the flag and runs the full sequence; a second command no-ops.
+        // The flag guards re-entry: a second command must not re-run
+        // destroyAllSteps and double-close writers, destinations, or stores.
+        // It also makes every push that enters after the shutdown began
+        // answer shutting-down. The first shutdown sets it and runs the full
+        // sequence; a second command no-ops.
         // One deadline for the whole sequence, the last report included, so
         // a host's grace period bounds it. The answer names the destinations
         // that lost or may have lost events.

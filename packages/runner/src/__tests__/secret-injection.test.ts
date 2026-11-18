@@ -1,8 +1,11 @@
 import type { DeclaredEnv } from '@walkeros/core';
 import {
+  SecretRefusalError,
+  checkReleaseSecrets,
   knownValuesOf,
   planSecretInjection,
   refusalMessage,
+  serverSecretValues,
   type InjectionPlan,
 } from '../secret-injection.js';
 
@@ -163,5 +166,142 @@ describe('refusalMessage', () => {
     ).toBe(
       'Secrets refused: API_KEY (secret-in-env), NODE_OPTIONS (secret-reserved)',
     );
+  });
+});
+
+describe('checkReleaseSecrets', () => {
+  it.each<
+    [
+      string,
+      { app: string[]; server: string[] },
+      NodeJS.ProcessEnv,
+      InjectionPlan['refused'],
+    ]
+  >([
+    [
+      'refuses an app name already set in the environment',
+      { app: ['API_KEY'], server: [] },
+      { API_KEY: 'value-from-host' },
+      [{ name: 'API_KEY', reason: 'secret-in-env' }],
+    ],
+    [
+      'refuses an app name set to the empty string',
+      { app: ['API_KEY'], server: [] },
+      { API_KEY: '' },
+      [{ name: 'API_KEY', reason: 'secret-in-env' }],
+    ],
+    [
+      'refuses reserved app names',
+      { app: ['NODE_OPTIONS', 'WALKEROS_X'], server: [] },
+      {},
+      [
+        { name: 'NODE_OPTIONS', reason: 'secret-reserved' },
+        { name: 'WALKEROS_X', reason: 'secret-reserved' },
+      ],
+    ],
+    [
+      'refuses a reserved server name, set or not',
+      { app: [], server: ['WALKEROS_X', 'NODE_EXTRA_CA_CERTS'] },
+      { WALKEROS_X: 'value-abc123' },
+      [
+        { name: 'WALKEROS_X', reason: 'secret-reserved' },
+        { name: 'NODE_EXTRA_CA_CERTS', reason: 'secret-reserved' },
+      ],
+    ],
+    [
+      'refuses a server name that is not set',
+      { app: [], server: ['SALT', 'API_SECRET'] },
+      { API_SECRET: 'value-abc123' },
+      [{ name: 'SALT', reason: 'secret-missing' }],
+    ],
+    [
+      'counts a server name set to the empty string as set',
+      { app: [], server: ['SALT'] },
+      { SALT: '' },
+      [],
+    ],
+    [
+      'refuses nothing when every app name is free and every server name set',
+      { app: ['API_KEY'], server: ['SALT'] },
+      { SALT: 'value-salt123' },
+      [],
+    ],
+  ])('%s', (_case, secrets, env, refused) => {
+    expect(checkReleaseSecrets(secrets, env)).toEqual(refused);
+  });
+});
+
+describe('serverSecretValues', () => {
+  it('gives the set values of the named server names', () => {
+    expect(
+      serverSecretValues(['SALT', 'PEPPER', 'EMPTY'], {
+        SALT: 'value-salt123',
+        EMPTY: '',
+        OTHER: 'value-other123',
+      }),
+    ).toEqual(['value-salt123', '']);
+  });
+});
+
+describe('a name every object inherits', () => {
+  // Read as set, `__proto__` and `constructor` would give a known value that
+  // is no string (Object.prototype) and wedge the masking.
+  const env: NodeJS.ProcessEnv = {};
+
+  it.each<[string, () => unknown, unknown]>([
+    [
+      'checkReleaseSecrets refuses a server one as missing',
+      () =>
+        checkReleaseSecrets(
+          { app: [], server: ['__proto__', 'constructor'] },
+          env,
+        ),
+      [
+        { name: '__proto__', reason: 'secret-missing' },
+        { name: 'constructor', reason: 'secret-missing' },
+      ],
+    ],
+    [
+      'checkReleaseSecrets takes an app one as free',
+      () => checkReleaseSecrets({ app: ['constructor'], server: [] }, env),
+      [],
+    ],
+    [
+      'serverSecretValues gives no value for them',
+      () => serverSecretValues(['__proto__', 'constructor'], env),
+      [],
+    ],
+    [
+      'knownValuesOf gives no value for a declared one',
+      () =>
+        knownValuesOf(
+          {},
+          { secrets: ['__proto__'], env: ['constructor'] },
+          env,
+        ),
+      [],
+    ],
+    [
+      'planSecretInjection sets a delivered one as not set here',
+      () =>
+        planSecretInjection({ constructor: 'value-ctor123' }, undefined, env),
+      { set: { constructor: 'value-ctor123' }, notDeclared: [], refused: [] },
+    ],
+  ])('%s', (_case, run, expected) => {
+    expect(run()).toEqual(expected);
+  });
+});
+
+describe('SecretRefusalError', () => {
+  it('carries the refused names and their message', () => {
+    const refused: InjectionPlan['refused'] = [
+      { name: 'SALT', reason: 'secret-missing' },
+      { name: 'NODE_OPTIONS', reason: 'secret-reserved' },
+    ];
+    const error = new SecretRefusalError(refused);
+
+    expect(error).toBeInstanceOf(Error);
+    expect(error.refused).toEqual(refused);
+    expect(error.message).toBe(refusalMessage(refused));
   });
 });

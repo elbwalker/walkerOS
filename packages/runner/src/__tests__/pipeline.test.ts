@@ -1,6 +1,7 @@
 import {
   createLogger,
   Level,
+  redactLine,
   SHUTDOWN_DEADLINE_MS,
   type Logger,
 } from '@walkeros/core';
@@ -275,6 +276,34 @@ describe('runShutdown (extracted orchestrator)', () => {
     expect(exit).toHaveBeenCalledWith(1);
     expect(logger.error).toHaveBeenCalledTimes(1);
     expect(logger.error).toHaveBeenCalledWith(line);
+  });
+
+  it('exits 1 with one ERROR for pushes the drain deadline cut', async () => {
+    const exit = jest.fn();
+    const logger = makeLogger();
+    const command = jest.fn(() =>
+      Promise.resolve({
+        ok: false,
+        reason: {
+          code: 'timeout',
+          message: '1 push still running at the shutdown deadline',
+          retryable: true,
+        },
+        error: '1 push still running at the shutdown deadline',
+      }),
+    );
+
+    await runShutdown(
+      'SIGTERM',
+      baseDeps({ collector: { command }, exit, logger }),
+    );
+
+    const line =
+      'Shutdown lost events: 1 push still running at the shutdown deadline (timeout)';
+    expect(exit).toHaveBeenCalledWith(1);
+    expect(logger.error).toHaveBeenCalledTimes(1);
+    expect(logger.error).toHaveBeenCalledWith(line);
+    expect(redactLine(line)).toBe(line);
   });
 
   it('logs one line for a second signal during the drain and lets the first decide', async () => {

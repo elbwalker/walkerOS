@@ -5,7 +5,12 @@ import { heartbeatUrl } from './api-paths.js';
 import { stepId } from '@walkeros/core';
 import type { Collector, Logger } from '@walkeros/core';
 import type { KnownValues } from '@walkeros/core/node';
-import type { DedupedError, RingEntry } from './log-ring.js';
+import type {
+  DedupedError,
+  RecentError,
+  RecentLogEntry,
+  RingEntry,
+} from './log-ring.js';
 import { redactErrors, redactLogs } from './redact.js';
 
 /**
@@ -95,7 +100,27 @@ function snapshotDestinations(
   return result;
 }
 
-const instanceId = randomBytes(8).toString('hex');
+/**
+ * The collector's raw counters as one snapshot, with copies of the scalar
+ * counters, so a later delta is not taken against the live status.
+ */
+export function counterSnapshot(status: Collector.Status): CounterSnapshot {
+  return {
+    in: status.in,
+    out: status.out,
+    failed: status.failed,
+    destinations: snapshotDestinations(status),
+  };
+}
+
+/**
+ * A runner process's id: 16 lowercase hex characters, made once per process.
+ * Its start line and every beat carry the same one, so a log line can be
+ * matched to the instance the app shows.
+ */
+export function newInstanceId(): string {
+  return randomBytes(8).toString('hex');
+}
 
 /** The longest release a beat carries; the app refuses a longer one. */
 export const HEARTBEAT_RELEASE_MAX = 128;
@@ -109,8 +134,43 @@ function sendableRelease(release: string | undefined): string | undefined {
     : undefined;
 }
 
-export function getInstanceId(): string {
-  return instanceId;
+export interface HeartbeatBodyInput {
+  instanceId: string;
+  /**
+   * The release the loaded artifact baked onto its collector; sent only
+   * with 1 to {@link HEARTBEAT_RELEASE_MAX} characters.
+   */
+  release?: string;
+  intervalMs: number;
+  uptimeS: number;
+  counters?: CounterPayload;
+  /** The errors and lines as they go on the wire, already masked and cut. */
+  errors: RecentError[];
+  logs: RecentLogEntry[];
+}
+
+/** The part of a beat's body every runner mode sends the same way. */
+export function heartbeatBody(
+  input: HeartbeatBodyInput,
+): Record<string, unknown> {
+  const release = sendableRelease(input.release);
+  const { counters, errors, logs } = input;
+  return {
+    instanceId: input.instanceId,
+    cliVersion: VERSION,
+    ...(release !== undefined && { release }),
+    // Advertise the configured heartbeat cadence (milliseconds) so the app
+    // reads the real interval instead of hard-coding a default for staleness
+    // detection.
+    intervalMs: input.intervalMs,
+    uptime: input.uptimeS,
+    ...(counters && { counters }),
+    // Always send recentErrors (even []) so a heartbeat that no longer
+    // carries any errors clears a stale snapshot on the app side. logs have
+    // no clear semantics, so they stay omit-when-empty.
+    recentErrors: errors,
+    ...(logs.length && { recentLogs: logs }),
+  };
 }
 
 export interface HeartbeatConfig {
@@ -119,6 +179,8 @@ export interface HeartbeatConfig {
   projectId: string;
   flowId?: string;
   deploymentId?: string;
+  /** This runner process's id ({@link newInstanceId}). */
+  instanceId: string;
   intervalMs: number;
   /**
    * Debounce window (ms) for {@link HeartbeatHandle.flushSoon}. A burst of new
@@ -154,7 +216,7 @@ export interface HeartbeatHandle {
 }
 
 /** Default debounce window for {@link HeartbeatHandle.flushSoon}. */
-const DEFAULT_FLUSH_DEBOUNCE_MS = 1500;
+export const DEFAULT_FLUSH_DEBOUNCE_MS = 1500;
 
 export function createHeartbeat(
   config: HeartbeatConfig,
@@ -162,8 +224,6 @@ export function createHeartbeat(
 ): HeartbeatHandle {
   let timer: ReturnType<typeof setInterval> | null = null;
   const startTime = Date.now();
-
-  const release = sendableRelease(config.release);
 
   let lastReported: CounterSnapshot = {
     in: 0,
@@ -179,12 +239,7 @@ export function createHeartbeat(
       let current: CounterSnapshot | undefined;
       const status = config.getCounters?.();
       if (status) {
-        current = {
-          in: status.in,
-          out: status.out,
-          failed: status.failed,
-          destinations: snapshotDestinations(status),
-        };
+        current = counterSnapshot(status);
         counters = computeCounterDelta(current, lastReported);
       }
 
@@ -204,24 +259,19 @@ export function createHeartbeat(
             'Content-Type': 'application/json',
           }),
           body: JSON.stringify({
-            instanceId,
+            ...heartbeatBody({
+              instanceId: config.instanceId,
+              release: config.release,
+              intervalMs: config.intervalMs,
+              uptimeS: Math.floor((Date.now() - startTime) / 1000),
+              counters,
+              errors,
+              logs,
+            }),
             flowId: config.flowId,
             ...(config.deploymentId && {
               deploymentId: config.deploymentId,
             }),
-            cliVersion: VERSION,
-            ...(release !== undefined && { release }),
-            // Advertise the configured heartbeat cadence (milliseconds) so the
-            // app reads the real interval instead of hard-coding a default for
-            // staleness detection.
-            intervalMs: config.intervalMs,
-            uptime: Math.floor((Date.now() - startTime) / 1000),
-            ...(counters && { counters }),
-            // Always send recentErrors (even []) so a heartbeat that no longer
-            // carries any errors clears a stale snapshot on the app side. logs
-            // have no clear semantics, so they stay omit-when-empty.
-            recentErrors: errors,
-            ...(logs.length && { recentLogs: logs }),
           }),
           signal: AbortSignal.timeout(10_000),
         },

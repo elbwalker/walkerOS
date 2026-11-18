@@ -83,6 +83,7 @@ describe('StepError', () => {
     'queue-full',
     'vendor-not-ready',
     'vendor-timeout',
+    'shutting-down',
   ])('%s defaults to retryable', (code) => {
     expect(new StepError('x', { code }).retryable).toBe(true);
   });

@@ -12,6 +12,7 @@ import {
   toFailureReason,
 } from '@walkeros/core';
 import { createPushResult, mergePushResults } from './destination';
+import { pushesSettled } from './in-flight';
 
 /** The longest one batch of a `walker flush` may take. */
 const FLUSH_TIMEOUT = 5000;
@@ -51,10 +52,15 @@ async function raceTimeout<T>(
  * → stores, each phase within what is left of `deadlineAt` (epoch ms).
  * Called by the collector's `shutdown` command handler.
  *
+ * Between the sources and the destinations it waits for the pushes that
+ * entered before the shutdown began, so their events reach the destinations
+ * before batches flush and destinations close.
+ *
  * Answers `ok: false` naming each destination under `failed` whose pending
  * batch failed or timed out (`phase: 'flush'`, its events are lost), or
  * whose `destroy` timed out or threw (`phase: 'destroy'`, it did not close
- * cleanly, so events it buffered may be lost). A source, transformer or
+ * cleanly, so events it buffered may be lost), and with a `timeout` reason
+ * naming the pushes still running at the deadline. A source, transformer or
  * store whose destroy fails is logged and not named.
  */
 export async function destroyAllSteps(
@@ -65,6 +71,11 @@ export async function destroyAllSteps(
 
   // Phase 1: Sources (stop intake)
   await destroyStepGroup(collector.sources, 'source', logger, deadlineAt);
+
+  // The pushes admitted before the shutdown began, within the deadline.
+  const running = await pushesSettled(collector, deadlineAt);
+  const unfinished =
+    running > 0 ? [pushesStillRunning(collector, running)] : [];
 
   // Phase 2: Destinations, flush pending batches first, then close connections.
   const flushed = await flushDestinationBatches(collector, deadlineAt);
@@ -92,7 +103,32 @@ export async function destroyAllSteps(
   // A lost batch outranks an unclean close of the same destination.
   return mergePushResults(createPushResult(withPhase(unclosed, 'destroy')), [
     { ...flushed, ...withPhase(flushed.failed ?? {}, 'flush') },
+    ...unfinished,
   ]);
+}
+
+/**
+ * The pushes the deadline cut: `ok: false` with a `timeout` reason naming
+ * their number, and one cause line. Their events may be lost.
+ */
+function pushesStillRunning(
+  collector: Collector.Instance,
+  count: number,
+): Elb.PushResult {
+  const reason = toFailureReason(
+    new StepError(
+      `${count} ${count === 1 ? 'push' : 'pushes'} still running at the shutdown deadline`,
+      { code: 'timeout' },
+    ),
+  );
+  reportCause(
+    collector,
+    collector.logger,
+    { step: 'collector', code: reason.code },
+    'shutdown deadline passed',
+    { retryable: reason.retryable, error: reason.message },
+  );
+  return createPushResult({ ok: false, reason, error: reason.message });
 }
 
 /** The failed refs of one shutdown phase, marked with it; none, no key. */

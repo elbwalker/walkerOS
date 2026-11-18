@@ -106,6 +106,7 @@ describe('error redaction end-to-end (logger → ring → jsonl + heartbeat)', (
     const heartbeat = createHeartbeat(
       {
         appUrl: 'http://localhost:3000',
+        instanceId: '3f9a2b7c1d4e5f60',
         token: 'bearer-test',
         projectId: 'proj_1',
         intervalMs: 60000,

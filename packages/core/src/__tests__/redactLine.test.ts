@@ -3,6 +3,7 @@ import {
   compileKnown,
   createKnownValues,
   cutLine,
+  maskKnownValues,
   redactLine,
   scrubSecrets,
   type CompiledKnown,
@@ -627,6 +628,45 @@ describe('createKnownValues', () => {
       'x ***',
     );
     expect(known.values()).toEqual(['late-value-42']);
+  });
+});
+
+describe('known values that are not masking text', () => {
+  const line = 'x [object Object] {} 1234567 undefined real-secret-1';
+
+  it.each<[string, unknown]>([
+    ['Object.prototype', Object.prototype],
+    ['an empty object', {}],
+    ['a number', 1234567],
+    ['undefined', undefined],
+    ['the empty string', ''],
+  ])(
+    '%s compiles to no form and masks only the other values',
+    (_label, value) => {
+      // Checked before masking: a set with an empty form never finishes.
+      expect(compileKnown([value]).forms).toEqual([]);
+      expect(
+        maskKnownValues(line, compileKnown([value, 'real-secret-1'])),
+      ).toBe('x [object Object] {} 1234567 undefined ***');
+    },
+  );
+
+  it('masks only the other values when a compiled set holds an empty form', () => {
+    expect(
+      maskKnownValues('x real-secret-1 y', { forms: ['real-secret-1', ''] }),
+    ).toBe('x *** y');
+  });
+
+  it('masks in bounded time after a value read through an inherited name', () => {
+    // A server secret named `__proto__` reads Object.prototype from an
+    // environment record, which inherits from it.
+    const env: Record<string, string> = {};
+    const known = createKnownValues();
+    known.add([env['__proto__'] ?? '', 'real-secret-1']);
+    expect(known.compiled().forms).not.toContain('');
+    expect(
+      maskKnownValues('x [object Object] real-secret-1', known.compiled()),
+    ).toBe('x [object Object] ***');
   });
 });
 

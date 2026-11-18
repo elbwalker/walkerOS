@@ -29,7 +29,6 @@ jest.mock('../heartbeat.js', () => ({
     stop: jest.fn(),
     sendOnce: jest.fn(),
   }),
-  getInstanceId: jest.fn().mockReturnValue('test-instance'),
 }));
 
 jest.mock('../secrets-fetcher.js', () => ({
@@ -97,6 +96,7 @@ describe('runPipeline with WALKEROS_CONFIG_FROZEN set', () => {
       port: 8080,
       logger,
       knownValues: createKnownValues(),
+      instanceId: '3f9a2b7c1d4e5f60',
       api: {
         appUrl: 'https://app.walkeros.io',
         token: 'test-token',

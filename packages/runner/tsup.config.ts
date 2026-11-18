@@ -1,11 +1,13 @@
 import { defineConfig, baseConfig } from '@walkeros/config/tsup';
 
 export default defineConfig([
-  // runneros binary (with shebang). @walkeros/* is inlined so the binary is
-  // self-contained and its whole closure is greppable in one file.
+  // runneros binary (with shebang), and the flow child `runneros remote`
+  // forks (dist/remote-child.js, no package entry). @walkeros/* is inlined
+  // so each file is self-contained and its whole closure is greppable in one
+  // file.
   {
     ...baseConfig,
-    entry: ['src/bin.ts'],
+    entry: { bin: 'src/bin.ts', 'remote-child': 'src/remote/child-entry.ts' },
     format: ['esm'],
     dts: false,
     sourcemap: false,

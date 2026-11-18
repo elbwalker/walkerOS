@@ -8,9 +8,10 @@
  */
 
 import { Level } from '@walkeros/core';
-import { mkdtempSync, rmSync, writeFileSync } from 'fs';
-import { tmpdir } from 'os';
-import { join } from 'path';
+import { existsSync, mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'fs';
+import os, { tmpdir } from 'os';
+import { dirname, join } from 'path';
+import { c as tarCreate } from 'tar';
 
 const runPipeline = jest.fn();
 
@@ -126,6 +127,40 @@ describe('runCommand refuses anything but a prebuilt artifact', () => {
     expect(runPipeline).toHaveBeenCalledWith(
       expect.objectContaining({ bundlePath: artifact }),
     );
+  });
+
+  it('removes the private folder of an extracted archive when the process exits', async () => {
+    jest.spyOn(os, 'tmpdir').mockReturnValue(dir);
+    const stage = join(dir, 'stage');
+    mkdirSync(stage);
+    writeFileSync(join(stage, 'flow.mjs'), 'export default async () => ({});');
+    const archive = join(dir, 'flow.tgz');
+    tarCreate({ gzip: true, sync: true, file: archive, cwd: stage }, [
+      'flow.mjs',
+    ]);
+    const onSpy = jest.spyOn(process, 'on').mockReturnValue(process);
+
+    try {
+      await runCommand({ config: archive });
+      const options: unknown = runPipeline.mock.calls[0]?.[0];
+      if (
+        typeof options !== 'object' ||
+        options === null ||
+        !('bundlePath' in options) ||
+        typeof options.bundlePath !== 'string'
+      )
+        throw new Error('runPipeline got no bundlePath');
+      const folder = dirname(dirname(options.bundlePath));
+      const onExit = onSpy.mock.calls.find(([event]) => event === 'exit')?.[1];
+      if (typeof onExit !== 'function') throw new Error('no exit listener');
+
+      expect(dirname(folder)).toBe(dir);
+      expect(existsSync(options.bundlePath)).toBe(true);
+      onExit();
+      expect(existsSync(folder)).toBe(false);
+    } finally {
+      onSpy.mockRestore();
+    }
   });
 
   it('scrubs a presigned URL signature from --json error output', async () => {

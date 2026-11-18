@@ -1,7 +1,15 @@
 import {
+  ARCHIVE_OPERATION,
+  CHECK_IN_OPERATION,
   HEARTBEAT_OPERATION,
+  RELEASE_OPERATION,
+  RELEASE_SECRETS_OPERATION,
   SECRET_VALUES_OPERATION,
+  archiveUrl,
+  checkInUrl,
   heartbeatUrl,
+  releaseSecretsUrl,
+  releaseUrl,
   secretValuesUrl,
 } from '../api-paths.js';
 
@@ -32,4 +40,37 @@ describe('api-paths', () => {
       'https://app.test/api/projects/proj%2F1/flows/flow%2520a/secrets/values',
     );
   });
+
+  it.each([
+    [
+      CHECK_IN_OPERATION,
+      'POST /api/runner/check-in',
+      checkInUrl('https://app.example'),
+      'https://app.example/api/runner/check-in',
+    ],
+    [
+      RELEASE_OPERATION,
+      'GET /api/runner/release',
+      releaseUrl('https://app.example'),
+      'https://app.example/api/runner/release',
+    ],
+    [
+      ARCHIVE_OPERATION,
+      'GET /api/runner/versions/{versionId}/bundle-archive',
+      archiveUrl('https://app.example', 'dv_a/b'),
+      'https://app.example/api/runner/versions/dv_a%2Fb/bundle-archive',
+    ],
+    [
+      RELEASE_SECRETS_OPERATION,
+      'GET /api/runner/versions/{versionId}/secrets',
+      releaseSecretsUrl('https://app.example', 'dv_a/b'),
+      'https://app.example/api/runner/versions/dv_a%2Fb/secrets',
+    ],
+  ])(
+    'pins the remote operation %s and its URL',
+    (operation, pinned, url, expected) => {
+      expect(operation).toBe(pinned);
+      expect(url).toBe(expected);
+    },
+  );
 });

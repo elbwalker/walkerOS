@@ -7,14 +7,15 @@ import {
 import {
   unlinkSync,
   readFileSync,
+  readdirSync,
   writeFileSync,
   existsSync,
   rmSync,
   mkdtempSync,
   mkdirSync,
 } from 'fs';
-import { join } from 'path';
-import { tmpdir } from 'os';
+import { dirname, join } from 'path';
+import os, { tmpdir } from 'os';
 import { ReadableStream } from 'stream/web';
 import { c as tarCreate } from 'tar';
 
@@ -34,12 +35,28 @@ beforeEach(() => {
 
 const { isStdinPiped, readStdin } = require('../stdin.js');
 
-const DEFAULT_WRITE_PATH = '/tmp/walkeros-flow.mjs';
-// Archives extract to dirname(DEFAULT_WRITE_PATH); /app/flow does not exist in
-// the test environment, so getDefaultWritePath() resolves to /tmp.
-const ARCHIVE_DEST_DIR = '/tmp';
-const EXTRACTED_FLOW = join(ARCHIVE_DEST_DIR, 'flow.mjs');
-const EXTRACTED_MARKER = join(ARCHIVE_DEST_DIR, 'node_modules', 'marker');
+// /app/flow does not exist in the test environment, so every fetched, piped
+// or extracted bundle lands in a private folder under os.tmpdir(). Each test
+// gets a temp directory of its own (restoreMocks undoes the spy).
+let root: string;
+
+beforeEach(() => {
+  root = mkdtempSync(join(tmpdir(), 'runner-resolve-root-'));
+  jest.spyOn(os, 'tmpdir').mockReturnValue(root);
+});
+
+afterEach(() => {
+  rmSync(root, { recursive: true, force: true });
+});
+
+/** The private folder a resolve made: directly under the temp root, holding flow/flow.mjs. */
+function privateFolder(result: { path: string; folder?: string }): string {
+  const folder = result.folder;
+  if (folder === undefined) throw new Error('resolveBundle made no folder');
+  expect(dirname(folder)).toBe(root);
+  expect(result.path).toBe(join(folder, 'flow', 'flow.mjs'));
+  return folder;
+}
 
 /**
  * Build a gzip tarball on disk containing the given relative files (typed),
@@ -133,14 +150,6 @@ function textResponse(
   };
 }
 
-function cleanupExtracted(): void {
-  rmSync(EXTRACTED_FLOW, { force: true });
-  rmSync(join(ARCHIVE_DEST_DIR, 'node_modules'), {
-    recursive: true,
-    force: true,
-  });
-}
-
 describe('isPrebuiltArtifact', () => {
   it.each(['flow.mjs', 'flow.js', 'flow.cjs', 'bundle.tar.gz', 'bundle.tgz'])(
     'accepts %s',
@@ -206,11 +215,6 @@ describe('isArchive', () => {
 describe('resolveBundle', () => {
   afterEach(() => {
     jest.resetAllMocks();
-    try {
-      unlinkSync(DEFAULT_WRITE_PATH);
-    } catch {
-      // ignore if not exists
-    }
   });
 
   describe('file path (default)', () => {
@@ -238,7 +242,7 @@ describe('resolveBundle', () => {
   });
 
   describe('URL input', () => {
-    it('should fetch bundle from https URL and write to default path', async () => {
+    it('writes a fetched text bundle as flow.mjs into a private folder', async () => {
       isStdinPiped.mockReturnValue(false);
       mockFetch.mockResolvedValue(
         textResponse('export default function() {}', true, 200, 'OK'),
@@ -247,13 +251,13 @@ describe('resolveBundle', () => {
       const result = await resolveBundle('https://s3.example.com/bundle.mjs');
 
       expect(result.source).toBe('url');
-      expect(result.path).toBe(DEFAULT_WRITE_PATH);
+      privateFolder(result);
       expect(mockFetch).toHaveBeenCalledWith(
         'https://s3.example.com/bundle.mjs',
         { signal: expect.any(AbortSignal) },
       );
 
-      const content = readFileSync(DEFAULT_WRITE_PATH, 'utf-8');
+      const content = readFileSync(result.path, 'utf-8');
       expect(content).toBe('export default function() {}');
     });
 
@@ -340,9 +344,8 @@ describe('resolveBundle', () => {
         const result = await pending;
 
         expect(result.source).toBe('url');
-        expect(result.path).toBe(DEFAULT_WRITE_PATH);
         expect(mockFetch).toHaveBeenCalledTimes(2);
-        expect(readFileSync(DEFAULT_WRITE_PATH, 'utf-8')).toBe(
+        expect(readFileSync(result.path, 'utf-8')).toBe(
           'export default function() {}',
         );
       } finally {
@@ -352,17 +355,17 @@ describe('resolveBundle', () => {
   });
 
   describe('stdin input', () => {
-    it('should read bundle from stdin and write to default path', async () => {
+    it('writes a piped bundle as flow.mjs into a private folder', async () => {
       isStdinPiped.mockReturnValue(true);
       readStdin.mockResolvedValue('export default function() {}');
 
       const result = await resolveBundle('/nonexistent/bundle.mjs');
 
       expect(result.source).toBe('stdin');
-      expect(result.path).toBe(DEFAULT_WRITE_PATH);
+      privateFolder(result);
       expect(readStdin).toHaveBeenCalled();
 
-      const content = readFileSync(DEFAULT_WRITE_PATH, 'utf-8');
+      const content = readFileSync(result.path, 'utf-8');
       expect(content).toBe('export default function() {}');
     });
 
@@ -381,7 +384,7 @@ describe('resolveBundle', () => {
 
   describe('priority order', () => {
     it('existing file wins over everything (Docker detached mode fix)', async () => {
-      const tmpFile = '/tmp/walkeros-resolve-test-bundle.mjs';
+      const tmpFile = join(root, 'walkeros-resolve-test-bundle.mjs');
       writeFileSync(tmpFile, 'export default function() {}');
 
       isStdinPiped.mockReturnValue(true);
@@ -427,11 +430,7 @@ describe('resolveBundle', () => {
   });
 
   describe('archive input', () => {
-    afterEach(() => {
-      cleanupExtracted();
-    });
-
-    it('extracts a .tar.gz URL bundle and returns the flow.mjs path', async () => {
+    it('extracts a .tar.gz URL bundle into a private folder and returns the flow.mjs path', async () => {
       isStdinPiped.mockReturnValue(false);
       const tarball = buildTarballBuffer([
         { name: 'flow.mjs', content: 'export default function() {}' },
@@ -444,10 +443,11 @@ describe('resolveBundle', () => {
       );
 
       expect(result.source).toBe('archive');
-      expect(result.path).toBe(EXTRACTED_FLOW);
-      expect(existsSync(EXTRACTED_FLOW)).toBe(true);
-      expect(existsSync(EXTRACTED_MARKER)).toBe(true);
-      expect(readFileSync(EXTRACTED_FLOW, 'utf-8')).toBe(
+      const folder = privateFolder(result);
+      expect(existsSync(join(folder, 'flow', 'node_modules', 'marker'))).toBe(
+        true,
+      );
+      expect(readFileSync(result.path, 'utf-8')).toBe(
         'export default function() {}',
       );
     });
@@ -464,8 +464,8 @@ describe('resolveBundle', () => {
       const result = await resolveBundle('https://s3.example.com/download');
 
       expect(result.source).toBe('archive');
-      expect(result.path).toBe(EXTRACTED_FLOW);
-      expect(existsSync(EXTRACTED_FLOW)).toBe(true);
+      privateFolder(result);
+      expect(existsSync(result.path)).toBe(true);
     });
 
     it('extracts a gzip body at a suffix-less URL served as octet-stream (the body decides)', async () => {
@@ -482,8 +482,8 @@ describe('resolveBundle', () => {
       );
 
       expect(result.source).toBe('archive');
-      expect(result.path).toBe(EXTRACTED_FLOW);
-      expect(readFileSync(EXTRACTED_FLOW, 'utf-8')).toBe(
+      privateFolder(result);
+      expect(readFileSync(result.path, 'utf-8')).toBe(
         'export default function() {}',
       );
     });
@@ -494,23 +494,67 @@ describe('resolveBundle', () => {
         { name: 'flow.mjs', content: 'export default function() {}' },
         { name: 'node_modules/marker', content: 'present' },
       ]);
-      const localTar = join(tmpdir(), 'walkeros-local-bundle.tar.gz');
+      const localTar = join(root, 'walkeros-local-bundle.tar.gz');
       writeFileSync(localTar, tarball);
 
-      try {
-        const result = await resolveBundle(localTar);
+      const result = await resolveBundle(localTar);
 
-        expect(result.source).toBe('archive');
-        expect(result.path).toBe(EXTRACTED_FLOW);
-        expect(existsSync(EXTRACTED_FLOW)).toBe(true);
-        expect(existsSync(EXTRACTED_MARKER)).toBe(true);
-        expect(mockFetch).not.toHaveBeenCalled();
-      } finally {
-        rmSync(localTar, { force: true });
-      }
+      expect(result.source).toBe('archive');
+      const folder = privateFolder(result);
+      expect(existsSync(result.path)).toBe(true);
+      expect(existsSync(join(folder, 'flow', 'node_modules', 'marker'))).toBe(
+        true,
+      );
+      expect(mockFetch).not.toHaveBeenCalled();
     });
 
-    it('throws when the archive has no flow.mjs entry', async () => {
+    it('gives two resolves of the same archive two folders', async () => {
+      isStdinPiped.mockReturnValue(false);
+      const tarball = buildTarballBuffer([
+        { name: 'flow.mjs', content: 'export default function() {}' },
+      ]);
+      const localTar = join(root, 'walkeros-local-bundle.tar.gz');
+      writeFileSync(localTar, tarball);
+
+      const first = await resolveBundle(localTar);
+      const second = await resolveBundle(localTar);
+
+      expect(privateFolder(first)).not.toBe(privateFolder(second));
+      expect(existsSync(first.path)).toBe(true);
+      expect(existsSync(second.path)).toBe(true);
+    });
+
+    it('leaves the files directly under the temp directory as they were', async () => {
+      isStdinPiped.mockReturnValue(false);
+      mkdirSync(join(root, 'node_modules'));
+      writeFileSync(join(root, 'node_modules', 'marker'), 'another tool');
+      writeFileSync(join(root, 'flow.mjs'), 'another flow');
+      writeFileSync(join(root, 'package.json'), '{"name":"another"}');
+      mockFetch.mockResolvedValue(
+        responseFromBuffer(
+          buildTarballBuffer([
+            { name: 'flow.mjs', content: 'export default function() {}' },
+            { name: 'node_modules/marker', content: 'present' },
+            { name: 'package.json', content: '{"type":"module"}' },
+          ]),
+          null,
+        ),
+      );
+
+      await resolveBundle('https://s3.example.com/bundle.tar.gz');
+
+      expect(readFileSync(join(root, 'node_modules', 'marker'), 'utf-8')).toBe(
+        'another tool',
+      );
+      expect(readFileSync(join(root, 'flow.mjs'), 'utf-8')).toBe(
+        'another flow',
+      );
+      expect(readFileSync(join(root, 'package.json'), 'utf-8')).toBe(
+        '{"name":"another"}',
+      );
+    });
+
+    it('throws when the archive has no flow.mjs entry, and leaves no folder behind', async () => {
       isStdinPiped.mockReturnValue(false);
       const tarball = buildTarballBuffer([
         { name: 'other.mjs', content: 'export default function() {}' },
@@ -520,37 +564,7 @@ describe('resolveBundle', () => {
       await expect(
         resolveBundle('https://s3.example.com/bundle.tar.gz'),
       ).rejects.toThrow('flow.mjs');
-    });
-
-    it('does not mask a missing flow.mjs with a stale one from a prior extract', async () => {
-      isStdinPiped.mockReturnValue(false);
-
-      // First archive delivers flow.mjs into the (stable) destDir.
-      mockFetch.mockResolvedValue(
-        responseFromBuffer(
-          buildTarballBuffer([
-            { name: 'flow.mjs', content: 'export default function() {}' },
-          ]),
-          null,
-        ),
-      );
-      const first = await resolveBundle('https://s3.example.com/first.tar.gz');
-      expect(first.source).toBe('archive');
-      expect(existsSync(EXTRACTED_FLOW)).toBe(true);
-
-      // Second archive into the same destDir lacks flow.mjs; it must reject
-      // rather than succeed against the stale file left by the first run.
-      mockFetch.mockResolvedValue(
-        responseFromBuffer(
-          buildTarballBuffer([
-            { name: 'other.mjs', content: 'export default function() {}' },
-          ]),
-          null,
-        ),
-      );
-      await expect(
-        resolveBundle('https://s3.example.com/second.tar.gz'),
-      ).rejects.toThrow('flow.mjs');
+      expect(readdirSync(root)).toEqual([]);
     });
   });
 });

@@ -1,10 +1,12 @@
 /**
  * Unified runtime pipeline for walkerOS flows
  *
- * Used by `runneros start`, locally and in containers. Creates the health
- * server, loads the prebuilt flow, and enables heartbeat and secrets when API
- * config is provided. The served artifact is immutable for the life of the
- * process: there is no config polling and no hot-swap.
+ * Used by `runneros start`, locally and in containers, and by the flow child
+ * of `runneros remote`. Creates the health server, loads the prebuilt flow,
+ * and enables heartbeat and secrets when API config is provided; the remote
+ * child hands in its secret values and its report instead. The served
+ * artifact is immutable for the life of the process: there is no config
+ * polling and no hot-swap.
  *
  * Env surface: `WALKEROS_FLOW_RELEASE` (with `WALKEROS_FLOW_NAME`) names the
  * artifact the container must run; any other artifact fails the boot.
@@ -20,17 +22,13 @@ import {
 import type { KnownValues } from '@walkeros/core/node';
 import { createHealthServer, type HealthServer } from './health-server.js';
 import { loadFlow, type RuntimeConfig, type FlowHandle } from './runner.js';
-import {
-  createHeartbeat,
-  getInstanceId,
-  type HeartbeatHandle,
-} from './heartbeat.js';
+import { createHeartbeat, type HeartbeatHandle } from './heartbeat.js';
 import { fetchSecrets } from './secrets-fetcher.js';
 import { RunnerAuthError } from './runner-auth-error.js';
 import {
   knownValuesOf,
   planSecretInjection,
-  refusalMessage,
+  SecretRefusalError,
 } from './secret-injection.js';
 import type { ErrorRing, LogRing } from './log-ring.js';
 import type { FlowLogger } from './runtime-logging.js';
@@ -64,6 +62,8 @@ export interface PipelineOptions {
    * the flow starts, so each line read from then on masks them.
    */
   knownValues: KnownValues;
+  /** This runner process's id, printed at start and carried by each beat. */
+  instanceId: string;
   api?: {
     appUrl: string;
     token: string;
@@ -73,6 +73,19 @@ export interface PipelineOptions {
     heartbeatIntervalMs: number;
     cacheDir: string;
   };
+  /**
+   * The secret values a supervisor delivered, injected the way fetched ones
+   * are, in place of the app fetch. Read only without `api`.
+   */
+  delivered?: Readonly<Record<string, string>>;
+  /**
+   * Builds the report handle once the flow is ready, in place of the app
+   * heartbeat: it is started, flushed on each new distinct error and sent
+   * once more at the drain, as the heartbeat is.
+   */
+  report?: (collector: FlowHandle['collector']) => HeartbeatHandle;
+  /** Called once the flow is ready and the signal handlers are in place. */
+  onReady?: () => void;
 }
 
 /**
@@ -95,7 +108,9 @@ export async function runPipeline(options: PipelineOptions): Promise<void> {
   const expected = readExpectedArtifact();
 
   logger.info(`walkeros/flow v${VERSION}`);
-  logger.info(`Instance: ${getInstanceId()}`);
+  // No colon after the label: `Instance: <hex>` reads as a key and a token
+  // value to the redactor, which would print the id as ***.
+  logger.info(`Instance ${options.instanceId}`);
 
   // Health server (always on)
   const healthServer = await createHealthServer(port, logger);
@@ -132,7 +147,14 @@ export async function runPipeline(options: PipelineOptions): Promise<void> {
       logger,
       loggerConfig,
       healthServer,
-      (declared) => injectSecrets(declared, api, logger, options.knownValues),
+      (declared) =>
+        injectSecrets(
+          declared,
+          api,
+          options.delivered,
+          logger,
+          options.knownValues,
+        ),
     );
     const loaded = showIdentity(handle.collector);
     logger.info(`Flow: ${loaded.name} release ${loaded.release}`);
@@ -155,10 +177,13 @@ export async function runPipeline(options: PipelineOptions): Promise<void> {
   logger.info('Flow running');
   logger.info(`Port: ${port}`);
 
-  // API features (heartbeat)
+  // The report (remote child) or the app heartbeat, never both.
   let heartbeat: HeartbeatHandle | null = null;
 
-  if (shouldStartHeartbeat(api)) {
+  if (options.report) {
+    heartbeat = options.report(handle.collector);
+    heartbeat.start();
+  } else if (shouldStartHeartbeat(api)) {
     heartbeat = createHeartbeat(
       {
         appUrl: api.appUrl,
@@ -166,6 +191,7 @@ export async function runPipeline(options: PipelineOptions): Promise<void> {
         projectId: api.projectId,
         flowId: api.flowId,
         deploymentId: api.deploymentId,
+        instanceId: options.instanceId,
         intervalMs: api.heartbeatIntervalMs,
         getCounters: () => handle.collector.status,
         getErrors: () => options.errorRing?.snapshot() ?? [],
@@ -177,17 +203,18 @@ export async function runPipeline(options: PipelineOptions): Promise<void> {
     );
     heartbeat.start();
     logger.info(`Heartbeat: active (every ${api.heartbeatIntervalMs / 1000}s)`);
+  }
 
-    // Flush on first new distinct error: a fresh error key triggers a single
-    // debounced out-of-band beat so the failure surfaces well before the next
-    // steady interval (and before a crash can drop the in-memory ring). Repeats
-    // (isNew=false) do not flush, so a hot error loop does not spam POSTs. The
-    // ring↔heartbeat coupling lives here because this file owns both.
-    const beat = heartbeat;
+  // Flush on first new distinct error: a fresh error key triggers a single
+  // debounced out-of-band beat so the failure surfaces well before the next
+  // steady interval (and before a crash can drop the in-memory ring). Repeats
+  // (isNew=false) do not flush, so a hot error loop does not spam POSTs. The
+  // ring↔heartbeat coupling lives here because this file owns both.
+  const beat = heartbeat;
+  if (beat)
     options.errorRing?.setListener((_entry, isNew) => {
       if (isNew) beat.flushSoon();
     });
-  }
 
   // Single shutdown orchestrator, driven through the extracted, dependency-
   // injected `runShutdown` so the final-flush ordering is unit-testable.
@@ -204,6 +231,9 @@ export async function runPipeline(options: PipelineOptions): Promise<void> {
 
   process.on('SIGTERM', () => shutdown('SIGTERM'));
   process.on('SIGINT', () => shutdown('SIGINT'));
+
+  // Last, so a flow its caller sees ready always drains on SIGTERM.
+  options.onReady?.();
 
   // Keep process alive
   await new Promise(() => {});
@@ -234,7 +264,8 @@ const draining = new WeakSet<ShutdownDeps['collector']>();
  * Orchestrate a graceful shutdown. Order:
  *   /ready drops to 503 → final heartbeat started → heartbeat.stop →
  *   collector drain → the final beat awaited until the drain deadline →
- *   healthServer.close → exit 1 when the drain names a destination, else 0.
+ *   healthServer.close → exit 1 when the drain names a destination or
+ *   pushes its deadline cut, else 0.
  *
  * Readiness drops FIRST so a load balancer stops routing new traffic to a
  * container that is draining.
@@ -283,10 +314,13 @@ export async function runShutdown(
           ? `Shutdown: destination '${id}' did not close cleanly (${code}); events it buffered may be lost`
           : `Shutdown lost events: destination '${id}' did not flush its batch (${code})`,
       );
+    const cut = shutdownFailureOf(result);
+    if (cut)
+      deps.logger.error(`Shutdown lost events: ${cut.message} (${cut.code})`);
 
     deps.logger.info('Shutdown complete');
     clearTimeout(forceTimer);
-    deps.exit(lost.length ? 1 : 0);
+    deps.exit(lost.length || cut ? 1 : 0);
   } catch (error) {
     clearTimeout(forceTimer);
     deps.logger.error(
@@ -331,6 +365,22 @@ export function lostDestinationsOf(result: unknown): Array<{
         : 'unknown',
     phase: isObject(ref) && ref.phase === 'destroy' ? 'destroy' : 'flush',
   }));
+}
+
+/**
+ * The failure a collector's shutdown answer names beside its destinations:
+ * `ok` false with a `reason`, as for pushes still running at the drain
+ * deadline, whose events go with the process. None for any other answer.
+ */
+function shutdownFailureOf(
+  result: unknown,
+): { code: string; message: string } | undefined {
+  if (!isObject(result) || result.ok !== false || !isObject(result.reason))
+    return undefined;
+  const { code, message } = result.reason;
+  return typeof code === 'string' && typeof message === 'string'
+    ? { code, message }
+    : undefined;
 }
 
 /**
@@ -645,22 +695,23 @@ export function shouldStartHeartbeat(
 
 /**
  * Prepare the environment of a loaded artifact before its flow starts: fetch
- * the app's secrets (when connected), mask every fetched value and every value
- * of a name the flow declares, refuse the boot on a reserved or already set
- * name, then set what the plan allows. A fetch that fails for another reason
- * than auth boots on without the app's secrets.
+ * the app's secrets (when connected) or take the delivered ones, mask every
+ * such value and every value of a name the flow declares, refuse the boot on
+ * a reserved or already set name, then set what the plan allows. A fetch that
+ * fails for another reason than auth boots on without the app's secrets.
  */
 async function injectSecrets(
   declared: DeclaredEnv | undefined,
   api: PipelineOptions['api'],
+  delivered: PipelineOptions['delivered'],
   logger: Logger.Instance,
   knownValues: KnownValues,
 ): Promise<void> {
-  const fetched = api ? await fetchAppSecrets(api, logger) : {};
+  const fetched = api ? await fetchAppSecrets(api, logger) : (delivered ?? {});
   knownValues.add(knownValuesOf(fetched, declared, process.env));
 
   const plan = planSecretInjection(fetched, declared, process.env);
-  if (plan.refused.length > 0) throw new Error(refusalMessage(plan.refused));
+  if (plan.refused.length > 0) throw new SecretRefusalError(plan.refused);
 
   const set = Object.entries(plan.set);
   for (const [name, value] of set) process.env[name] = value;

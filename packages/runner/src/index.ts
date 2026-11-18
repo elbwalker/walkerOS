@@ -24,7 +24,7 @@ export {
 } from './resolve-bundle.js';
 export {
   createHeartbeat,
-  getInstanceId,
+  newInstanceId,
   type HeartbeatConfig,
   type HeartbeatHandle,
 } from './heartbeat.js';

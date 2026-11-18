@@ -2,39 +2,38 @@ import {
   HEARTBEAT_RELEASE_MAX,
   createHeartbeat,
   computeCounterDelta,
+  newInstanceId,
   type CounterSnapshot,
 } from '../heartbeat.js';
-import { Level } from '@walkeros/core';
 import type { Collector, Logger } from '@walkeros/core';
 import {
   createCLILogger,
   createKnownValues,
   type KnownValues,
 } from '@walkeros/core/node';
-import type { DedupedError, RingEntry } from '../log-ring.js';
+import {
+  LogRing,
+  ringTap,
+  type DedupedError,
+  type RingEntry,
+} from '../log-ring.js';
 
-const RING_LEVEL = {
-  [Level.ERROR]: 'error',
-  [Level.WARN]: 'warn',
-  [Level.INFO]: 'info',
-  [Level.DEBUG]: 'debug',
-} as const;
+const INSTANCE_ID = '3f9a2b7c1d4e5f60';
 
 /** Ring entries as the runner's tap stores them, from a real silent logger. */
 function ringLines(
   knownSecrets: KnownValues,
   log: (logger: Logger.Instance) => void,
 ): RingEntry[] {
-  const entries: RingEntry[] = [];
+  const logRing = new LogRing(100);
   log(
     createCLILogger({
       silent: true,
       knownSecrets,
-      onLine: (level, line) =>
-        entries.push({ time: line.time, level: RING_LEVEL[level], line }),
+      onLine: ringTap({ logRing }),
     }),
   );
-  return entries;
+  return logRing.snapshot();
 }
 
 /**
@@ -148,6 +147,7 @@ describe('heartbeat', () => {
     const heartbeat = createHeartbeat(
       {
         appUrl: 'http://localhost:3000',
+        instanceId: INSTANCE_ID,
         token: 'sk-walkeros-test',
         projectId: 'proj_1',
         intervalMs: 60000,
@@ -171,6 +171,7 @@ describe('heartbeat', () => {
     const heartbeat = createHeartbeat(
       {
         appUrl: 'http://localhost:3000',
+        instanceId: INSTANCE_ID,
         token: 'sk-walkeros-test',
         projectId: 'proj_1',
         intervalMs: 60000,
@@ -193,6 +194,7 @@ describe('heartbeat', () => {
       const heartbeat = createHeartbeat(
         {
           appUrl: 'http://localhost:3000',
+          instanceId: INSTANCE_ID,
           token: 'sk-walkeros-test',
           projectId: 'proj_1',
           intervalMs: 60000,
@@ -215,6 +217,7 @@ describe('heartbeat', () => {
     const heartbeat = createHeartbeat(
       {
         appUrl: 'http://localhost:3000',
+        instanceId: INSTANCE_ID,
         token: 'sk-walkeros-test',
         projectId: 'proj_1',
         intervalMs: 60000,
@@ -282,6 +285,7 @@ describe('heartbeat snapshot suppliers', () => {
     const heartbeat = createHeartbeat(
       {
         appUrl: 'http://localhost:3000',
+        instanceId: INSTANCE_ID,
         token: 'bearer-test',
         projectId: 'proj_1',
         intervalMs: 60000,
@@ -331,6 +335,7 @@ describe('heartbeat snapshot suppliers', () => {
     await createHeartbeat(
       {
         appUrl: 'http://localhost:3000',
+        instanceId: INSTANCE_ID,
         token: 'bearer-test',
         projectId: 'proj_1',
         intervalMs: 60000,
@@ -352,6 +357,7 @@ describe('heartbeat snapshot suppliers', () => {
     const heartbeat = createHeartbeat(
       {
         appUrl: 'http://localhost:3000',
+        instanceId: INSTANCE_ID,
         token: 'bearer-test',
         projectId: 'proj_1',
         intervalMs: 60000,
@@ -378,6 +384,7 @@ describe('heartbeat snapshot suppliers', () => {
     const heartbeat = createHeartbeat(
       {
         appUrl: 'http://localhost:3000',
+        instanceId: INSTANCE_ID,
         token: 'bearer-test',
         projectId: 'proj_1',
         intervalMs: 60000,
@@ -458,6 +465,7 @@ describe('heartbeat per-destination breakdown (dlqSize + dropped)', () => {
     const heartbeat = createHeartbeat(
       {
         appUrl: 'http://localhost:3000',
+        instanceId: INSTANCE_ID,
         token: 'bearer-test',
         projectId: 'proj_1',
         intervalMs: 60000,
@@ -489,6 +497,7 @@ describe('heartbeat per-destination breakdown (dlqSize + dropped)', () => {
     const heartbeat = createHeartbeat(
       {
         appUrl: 'http://localhost:3000',
+        instanceId: INSTANCE_ID,
         token: 'bearer-test',
         projectId: 'proj_1',
         intervalMs: 60000,
@@ -543,6 +552,7 @@ describe('heartbeat flushSoon (debounced out-of-band beat)', () => {
     const heartbeat = createHeartbeat(
       {
         appUrl: 'http://localhost:3000',
+        instanceId: INSTANCE_ID,
         token: 'bearer-test',
         projectId: 'proj_1',
         intervalMs: 60000,
@@ -574,6 +584,7 @@ describe('heartbeat flushSoon (debounced out-of-band beat)', () => {
     const heartbeat = createHeartbeat(
       {
         appUrl: 'http://localhost:3000',
+        instanceId: INSTANCE_ID,
         token: 'bearer-test',
         projectId: 'proj_1',
         intervalMs: 60000,
@@ -628,6 +639,7 @@ describe('heartbeat intervalMs (advertised cadence)', () => {
     const heartbeat = createHeartbeat(
       {
         appUrl: 'http://localhost:3000',
+        instanceId: INSTANCE_ID,
         token: 'bearer-test',
         projectId: 'proj_1',
         intervalMs: 60000,
@@ -670,6 +682,7 @@ describe('heartbeat release', () => {
     const heartbeat = createHeartbeat(
       {
         appUrl: 'http://localhost:3000',
+        instanceId: INSTANCE_ID,
         token: 'bearer-test',
         projectId: 'proj_1',
         intervalMs: 60000,
@@ -722,6 +735,7 @@ describe('heartbeat uptime (restart evidence)', () => {
     const heartbeat = createHeartbeat(
       {
         appUrl: 'http://localhost:3000',
+        instanceId: INSTANCE_ID,
         token: 'bearer-test',
         projectId: 'proj_1',
         intervalMs: 60000,
@@ -750,6 +764,15 @@ describe('heartbeat uptime (restart evidence)', () => {
     expect(firstBody.uptime).toBeDefined();
     expect(secondBody.uptime).toBeDefined();
     expect(secondBody.uptime ?? 0).toBeGreaterThan(firstBody.uptime ?? 0);
+  });
+});
+
+describe('newInstanceId', () => {
+  it('makes 16 lowercase hex characters, a new id per call', () => {
+    const first = newInstanceId();
+
+    expect(first).toMatch(/^[0-9a-f]{16}$/);
+    expect(newInstanceId()).not.toBe(first);
   });
 });
 
@@ -843,6 +866,7 @@ describe('createHeartbeat basics', () => {
   const originalFetch = globalThis.fetch;
   const config = {
     appUrl: 'https://app.example.com',
+    instanceId: INSTANCE_ID,
     token: 'sk-walkeros-abc',
     projectId: 'proj_123',
     flowId: 'flow_456',
@@ -876,8 +900,16 @@ describe('createHeartbeat basics', () => {
       }),
     );
     const body = readHeartbeatBody(fetchMock);
-    expect(body.instanceId).toBeDefined();
     expect(body.uptime).toBeGreaterThanOrEqual(0);
+  });
+
+  it('carries the instance id it was given', async () => {
+    const fetchMock = createFetchMock();
+    globalThis.fetch = fetchMock;
+
+    await createHeartbeat(config, mockLogger).sendOnce();
+
+    expect(readHeartbeatBody(fetchMock).instanceId).toBe(INSTANCE_ID);
   });
 
   it('does not throw on network error', async () => {

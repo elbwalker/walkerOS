@@ -1,21 +1,40 @@
 /**
  * Durable error sink boot helpers.
  *
- * The runner persists each first-seen error to `<cacheDir>/errors.jsonl`
- * synchronously (see `ErrorRing.setSink`) so a crash between heartbeats does not
- * lose the failure. On the next boot, this module reads that file, seeds the
- * messages back into the ring (so the first heartbeat re-reports the pre-crash
- * error), then truncates the file so the same errors are not re-shipped on every
- * subsequent boot.
+ * The runner persists each first-seen error to a jsonl file synchronously
+ * (see `ErrorRing.setSink`) so a crash between heartbeats does not lose the
+ * failure. On the next boot, this module reads that file, seeds the messages
+ * back into the ring (so the first heartbeat re-reports the pre-crash error),
+ * then truncates the file so the same errors are not re-shipped on every
+ * subsequent boot. Each file belongs to one runner: `runneros start` names it
+ * by its port, since another runner on the same host may share the folder.
  */
 
 import { mkdirSync, readFileSync, writeFileSync } from 'fs';
-import { join } from 'path';
+import { dirname, join } from 'path';
 import type { ErrorRing } from './log-ring.js';
 
-/** Resolve the durable jsonl path inside a cache directory. */
-export function errorSinkPath(cacheDir: string): string {
-  return join(cacheDir, 'errors.jsonl');
+/**
+ * The sink file in `dir`: `errors-<port>.jsonl` for a runner on a port, so
+ * two runners sharing one folder keep two files and a restart on the same
+ * port finds its own; `errors.jsonl` when the folder is the runner's alone.
+ */
+export function errorSinkPath(dir: string, port?: number): string {
+  return join(
+    dir,
+    port === undefined ? 'errors.jsonl' : `errors-${port}.jsonl`,
+  );
+}
+
+/**
+ * Wire the ring to its sink file at boot: make the folder, seed the ring from
+ * what a prior boot persisted, truncate the file, then persist each
+ * first-seen error to it.
+ */
+export function wireErrorSink(ring: ErrorRing, path: string): void {
+  ensureSinkDir(dirname(path));
+  seedErrorRingFromJsonl(ring, path);
+  ring.setSink(path);
 }
 
 /**
@@ -29,7 +48,7 @@ export function errorSinkPath(cacheDir: string): string {
  * Best-effort: a failed mkdir leaves persistence disabled (the append swallow
  * keeps the ring working either way).
  */
-export function ensureSinkDir(cacheDir: string): void {
+function ensureSinkDir(cacheDir: string): void {
   try {
     mkdirSync(cacheDir, { recursive: true });
   } catch {
@@ -59,10 +78,7 @@ function isPersistedError(value: unknown): value is PersistedError {
  * ignored, and individual unparseable lines are skipped. Truncation only runs
  * when at least one line was read, so a missing file leaves nothing behind.
  */
-export function seedErrorRingFromJsonl(
-  ring: ErrorRing,
-  sinkPath: string,
-): void {
+function seedErrorRingFromJsonl(ring: ErrorRing, sinkPath: string): void {
   let raw: string;
   try {
     raw = readFileSync(sinkPath, 'utf-8');

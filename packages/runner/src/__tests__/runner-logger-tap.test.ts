@@ -3,7 +3,7 @@ import * as os from 'os';
 import * as path from 'path';
 import { createLogger, Level, type Logger } from '@walkeros/core';
 import { loadFlow } from '../runner.js';
-import { ErrorRing, LogRing } from '../log-ring.js';
+import { ErrorRing, LogRing, ringTap } from '../log-ring.js';
 import { createCLILoggerConfig } from '@walkeros/core/node';
 
 /**
@@ -81,10 +81,7 @@ export default async function(context = {}) {
     const collectorLoggerConfig: Logger.Config = createCLILoggerConfig({
       verbose: false,
       silent: true,
-      onLine: (level, line) => {
-        if (level === Level.ERROR) errorRing.add(line.masked());
-        logRing.add({ time: line.time, level: 'error', line });
-      },
+      onLine: ringTap({ errorRing, logRing }),
     });
 
     const runnerLogger = createLogger({ level: Level.DEBUG });
@@ -102,6 +99,7 @@ export default async function(context = {}) {
     expect(snapshot[0].message).toBe(
       '[bq] Push failed {"event":"order complete"}',
     );
+    expect(logRing.snapshot().map((entry) => entry.level)).toEqual(['error']);
 
     expect(handle.file).toBe(bundle);
   });

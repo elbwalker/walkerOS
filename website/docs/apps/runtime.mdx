@@ -145,13 +145,23 @@ neither.
 | Stdin | `cat flow.mjs \| docker run -i ... walkeros/flow:<version>` | Read only when the given path does not exist. An empty stdin is ignored. Stdin carries one file and no `node_modules/`, so a server flow built by `walkeros bundle` fails to start with `Cannot find package '@walkeros/collector'` |
 
 A fetched, extracted or piped artifact is written to `/app/flow/` when that
-directory exists (in the image it does), otherwise to `/tmp/`. Outside a
-container an archive is extracted into `/tmp/` itself, replacing any
-`flow.mjs`, `package.json` and `node_modules/` there. A local path
+directory exists (in the image it does). Outside a container it goes to a
+private folder under the system temp directory, one per runtime process, and
+nothing is written to the temp directory itself. The folder is removed at a
+clean exit and left behind by a killed process. The archive carries every
+package its flow imports. A package it lacks is resolved from the folder's
+parent folders (Node's module resolution), up to the temp directory's
+`node_modules/`, so on a shared host build complete archives. A local path
 with any other extension, a `.json` flow config above all, is refused before
 anything loads. Content from a URL or stdin is checked only by what it is
 written as: a flow config delivered that way is written as `flow.mjs` and then
 fails to import with a syntax error. Either way nothing is bundled.
+
+At start the runtime prints `Instance <id>`, a random 16-character hex id that
+the heartbeat carries too. Recent errors are persisted to `errors-<port>.jsonl`
+in the cache folder. That folder is the instance's own: do not share it between
+instances, for example on one volume, since instances that listen on the same
+port would write the same file.
 
 ### Options
 

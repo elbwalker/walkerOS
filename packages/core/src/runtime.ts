@@ -133,3 +133,73 @@ export function isReservedEnvName(name: string): boolean {
     RESERVED_ENV_PREFIXES.some((prefix) => name.startsWith(prefix))
   );
 }
+
+/**
+ * The headers one request to the app needs. The runner's channel takes it as
+ * a function, so the way a request is signed stays outside the channel.
+ */
+export type Authorize = (request: {
+  method: string;
+  url: string;
+  body?: Uint8Array;
+}) => Promise<Record<string, string>>;
+
+/** The version of the release document a remote runner reads. */
+export const RELEASE_DOCUMENT_VERSION = 1;
+
+/**
+ * What the app serves a remote runner about one release of its deployment.
+ * The app writes it and the runner reads and checks it before any code of
+ * the release runs.
+ */
+export interface ReleaseDocument {
+  version: 1;
+  deployment: string;
+  sequence: number;
+  release: string;
+  flowName: string;
+  artifact: { sha256: string; bytes: number };
+  secrets: { app: string[]; server: string[] };
+  secretsSince: number;
+  releasedAt: string;
+}
+
+/**
+ * The checks a remote runner refuses a release by. The names travel in the
+ * runner's check-in, so the app reads them as written here.
+ */
+export const REFUSAL_CHECKS = [
+  'document-size',
+  'document-format',
+  'document-version',
+  'deployment',
+  'sequence',
+  'release-id',
+  'artifact-bytes',
+  'artifact-sha256',
+  'archive-entry',
+  'secret-set',
+  'secret-in-env',
+  'secret-reserved',
+  'secret-missing',
+] as const;
+
+export type RefusalCheck = (typeof REFUSAL_CHECKS)[number];
+
+/** The newest release a remote runner tried, and how it went. */
+export type RemoteLast =
+  | { sequence: number; state: 'starting' }
+  | {
+      sequence: number;
+      state: 'refused';
+      check: RefusalCheck;
+      /** Only for the secret checks: the names, never a value. */
+      names?: string[];
+    }
+  | { sequence: number; state: 'failed'; check: 'not-ready' };
+
+/** The `remote` part of a runner's check-in. */
+export interface RemoteState {
+  running: number | null;
+  last: RemoteLast | null;
+}

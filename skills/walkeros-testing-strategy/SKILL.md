@@ -160,6 +160,21 @@ example's `out` is a literal taken from the vendor's documented request, never
 the output of the code under test, otherwise the test passes by construction.
 See [using-step-examples](../walkeros-using-step-examples/SKILL.md).
 
+### Rule 3c: Expected Vendor Values Come From the Vendor
+
+A test whose expected request, response or hash was written from the same notes
+as the code proves only that the two agree. Where a step talks to a vendor (a
+destination's request, a source's webhook payload), its expected values come
+from the vendor's own published examples, recorded with their source in the
+package's `VENDOR.md` (see
+[create-destination, 1.5](../walkeros-create-destination/SKILL.md#15-pin-the-vendors-api-to-its-own-reference)):
+
+- Pin the vendor's example request or payload in the step example, verbatim.
+- Pin the vendor's example hashes, never a hash computed with the code under
+  test.
+- Where the vendor publishes no example, say so in `VENDOR.md`; the test-mode
+  check before release is then the only proof.
+
 ### Rule 4: Test First, Watch It Fail
 
 If you didn't see the test fail, you don't know it tests the right thing.

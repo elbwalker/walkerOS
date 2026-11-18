@@ -426,12 +426,14 @@ export interface ScrubOptions {
  * Build the forms of each known value of 6 or more characters: raw,
  * JSON-escaped (the form it takes inside serialized JSON), escaped twice (a
  * JSON string serialized again, e.g. a request body inside JSON output) and
- * URL-encoded (a URL, or a form body where a space is `+`).
+ * URL-encoded (a URL, or a form body where a space is `+`). A value that is
+ * not a string has no form, and no form is empty: a value read from an
+ * inherited name (`__proto__` of an environment) must not stall masking.
  */
-export function compileKnown(values: readonly string[]): CompiledKnown {
+export function compileKnown(values: readonly unknown[]): CompiledKnown {
   const forms = new Set<string>();
   for (const value of values) {
-    if (value.length < MIN_KNOWN_LEN) continue;
+    if (typeof value !== 'string' || value.length < MIN_KNOWN_LEN) continue;
     const escaped = JSON.stringify(value).slice(1, -1);
     forms.add(value);
     forms.add(escaped);
@@ -448,6 +450,7 @@ export function compileKnown(values: readonly string[]): CompiledKnown {
     if (uri) forms.add(uri);
     forms.add(new URLSearchParams({ v: value }).toString().slice(2));
   }
+  forms.delete('');
   return { forms: [...forms].sort((a, b) => b.length - a.length) };
 }
 
@@ -531,6 +534,8 @@ function uriEncoded(
  * `maskLine` does, so serialized JSON stays valid.
  */
 function replaceKnown(line: string, form: string): string {
+  // An empty form matches everywhere and never advances.
+  if (form === '') return line;
   let out = '';
   let from = 0;
   let at = line.indexOf(form);

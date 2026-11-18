@@ -1,4 +1,9 @@
-import { declaredEnvOf, isDeclaredEnv, isReservedEnvName } from '../runtime';
+import {
+  REFUSAL_CHECKS,
+  declaredEnvOf,
+  isDeclaredEnv,
+  isReservedEnvName,
+} from '../runtime';
 
 describe('declaredEnvOf', () => {
   it.each<[string, unknown, { secrets: string[]; env: string[] }]>([
@@ -127,5 +132,27 @@ describe('isDeclaredEnv', () => {
     ['undefined', undefined, false],
   ])('%s: %s', (_case, value, expected) => {
     expect(isDeclaredEnv(value)).toBe(expected);
+  });
+});
+
+describe('REFUSAL_CHECKS', () => {
+  // Written out, not read from the list: the names are a wire contract the
+  // app reads from a runner's check-in, so a renamed or dropped one is red.
+  it('names each refusal check once', () => {
+    expect(REFUSAL_CHECKS).toEqual([
+      'document-size',
+      'document-format',
+      'document-version',
+      'deployment',
+      'sequence',
+      'release-id',
+      'artifact-bytes',
+      'artifact-sha256',
+      'archive-entry',
+      'secret-set',
+      'secret-in-env',
+      'secret-reserved',
+      'secret-missing',
+    ]);
   });
 });

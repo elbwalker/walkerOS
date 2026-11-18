@@ -2,7 +2,7 @@ import { mkdtempSync, readFileSync, existsSync, writeFileSync } from 'fs';
 import { tmpdir } from 'os';
 import { join } from 'path';
 import { Level } from '@walkeros/core';
-import { LogRing, ErrorRing } from '../log-ring.js';
+import { LogRing, ErrorRing, ringTap } from '../log-ring.js';
 import type { RingEntry, DedupedError } from '../log-ring.js';
 
 function makeEntry(time: number, message: string): RingEntry {
@@ -21,6 +21,27 @@ function makeEntry(time: number, message: string): RingEntry {
     },
   };
 }
+
+describe('ringTap', () => {
+  it.each([
+    [Level.ERROR, 'error', ['boom']],
+    [Level.WARN, 'warn', []],
+    [Level.INFO, 'info', []],
+    [Level.DEBUG, 'debug', []],
+  ] as const)(
+    'rings a line of level %s in the log ring as %s, and in the error ring only at ERROR',
+    (level, name, errors) => {
+      const errorRing = new ErrorRing(10);
+      const logRing = new LogRing(10);
+      const line = { ...makeEntry(5, 'boom').line, level };
+
+      ringTap({ errorRing, logRing })(level, line);
+
+      expect(logRing.snapshot()).toEqual([{ time: 5, level: name, line }]);
+      expect(errorRing.snapshot().map((e) => e.message)).toEqual(errors);
+    },
+  );
+});
 
 describe('LogRing', () => {
   it('starts empty', () => {

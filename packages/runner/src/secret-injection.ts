@@ -5,9 +5,16 @@
  * the process, Node, the network path or the runner itself.
  */
 
-import { isReservedEnvName, type DeclaredEnv } from '@walkeros/core';
+import {
+  isReservedEnvName,
+  type DeclaredEnv,
+  type RefusalCheck,
+} from '@walkeros/core';
 
-export type SecretRefusal = 'secret-in-env' | 'secret-reserved';
+export type SecretRefusal = Extract<
+  RefusalCheck,
+  'secret-in-env' | 'secret-reserved' | 'secret-missing'
+>;
 
 export interface InjectionPlan {
   /** Names to set, with their delivered values. */
@@ -16,6 +23,16 @@ export interface InjectionPlan {
   notDeclared: string[];
   /** Names that refuse the boot, each with its reason. */
   refused: Array<{ name: string; reason: SecretRefusal }>;
+}
+
+/**
+ * The value of `name` in `env`: an own string property only. The
+ * environment inherits from Object.prototype, so `env['__proto__']` and
+ * `env['constructor']` are an object and a function, never a variable.
+ */
+function envValue(env: NodeJS.ProcessEnv, name: string): string | undefined {
+  const value = Object.hasOwn(env, name) ? env[name] : undefined;
+  return typeof value === 'string' ? value : undefined;
 }
 
 function isDeclared(name: string, declared: DeclaredEnv): boolean {
@@ -40,7 +57,7 @@ export function planSecretInjection(
     if (declared && !isDeclared(name, declared)) plan.notDeclared.push(name);
     else if (isReservedEnvName(name))
       plan.refused.push({ name, reason: 'secret-reserved' });
-    else if (env[name] !== undefined)
+    else if (envValue(env, name) !== undefined)
       plan.refused.push({ name, reason: 'secret-in-env' });
     else plan.set[name] = value;
   }
@@ -60,7 +77,7 @@ export function knownValuesOf(
   const values = Object.values(fetched);
   if (!declared) return values;
   for (const name of [...declared.secrets, ...declared.env]) {
-    const value = env[name];
+    const value = envValue(env, name);
     if (value !== undefined) values.push(value);
   }
   return values;
@@ -71,4 +88,55 @@ export function refusalMessage(refused: InjectionPlan['refused']): string {
   return `Secrets refused: ${refused
     .map(({ name, reason }) => `${name} (${reason})`)
     .join(', ')}`;
+}
+
+/** Refused names as an error, so a caller can read them, not only the text. */
+export class SecretRefusalError extends Error {
+  constructor(readonly refused: InjectionPlan['refused']) {
+    super(refusalMessage(refused));
+    this.name = 'SecretRefusalError';
+  }
+}
+
+/**
+ * Check a release's secret names against the environment its flow would
+ * start in, before anything of the release runs: at a swap and on every load
+ * from the cache. Per name: reserved, in either list, `secret-reserved` (the
+ * flow could not read it, and the app must never set it); a walkerOS name
+ * (`app`) already set, the empty string included, `secret-in-env`, since one
+ * name has one source; a server name not set, `secret-missing`. A server name
+ * set to the empty string counts as set, as a set name does for the
+ * injection.
+ */
+export function checkReleaseSecrets(
+  secrets: { app: readonly string[]; server: readonly string[] },
+  env: NodeJS.ProcessEnv,
+): InjectionPlan['refused'] {
+  const refused: InjectionPlan['refused'] = [];
+  for (const name of secrets.app) {
+    if (isReservedEnvName(name))
+      refused.push({ name, reason: 'secret-reserved' });
+    else if (envValue(env, name) !== undefined)
+      refused.push({ name, reason: 'secret-in-env' });
+  }
+  for (const name of secrets.server) {
+    if (isReservedEnvName(name))
+      refused.push({ name, reason: 'secret-reserved' });
+    else if (envValue(env, name) === undefined)
+      refused.push({ name, reason: 'secret-missing' });
+  }
+  return refused;
+}
+
+/** The values of the named server secrets that are set, for masking. */
+export function serverSecretValues(
+  names: readonly string[],
+  env: NodeJS.ProcessEnv,
+): string[] {
+  const values: string[] = [];
+  for (const name of names) {
+    const value = envValue(env, name);
+    if (value !== undefined) values.push(value);
+  }
+  return values;
 }

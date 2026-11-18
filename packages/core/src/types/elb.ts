@@ -74,8 +74,9 @@ export interface PushResult {
   error?: string;
   /**
    * Why the push failed when `ok` is false without a `failed` entry: a full
-   * pre-run queue (`queue-full`), a transformer that threw (`transformer`)
-   * or is not ready, a rule `condition` that threw (`mapping`).
+   * pre-run queue (`queue-full`), a push after the collector's shutdown
+   * began (`shutting-down`), a transformer that threw (`transformer`) or is
+   * not ready, a rule `condition` that threw (`mapping`).
    */
   reason?: FailureReason;
 }
