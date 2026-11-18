@@ -1,17 +1,14 @@
 /**
  * The app operations the runner calls, as `"<METHOD> <path template>"`. They
  * are the runner's fixed interface, on the app's runner door, outside its
- * public API set. `runneros start` calls the first two at its app URL; the
- * remote operations go to the origin the runner's credential names.
+ * public API set, and take no id: the credential names the deployment. Every
+ * one goes to the origin the runner's credential names. `runneros start`
+ * calls the check-in and the secrets read.
  *
  * The only file in the runner that names an app path.
  */
-export const HEARTBEAT_OPERATION =
-  'POST /api/projects/{projectId}/runners/heartbeat';
-export const SECRET_VALUES_OPERATION =
-  'GET /api/projects/{projectId}/flows/{flowId}/secrets/values';
-
 export const CHECK_IN_OPERATION = 'POST /api/runner/check-in';
+export const SECRETS_OPERATION = 'GET /api/runner/secrets';
 export const RELEASE_OPERATION = 'GET /api/runner/release';
 export const ARCHIVE_OPERATION =
   'GET /api/runner/versions/{versionId}/bundle-archive';
@@ -20,7 +17,7 @@ export const RELEASE_SECRETS_OPERATION =
 
 /** The operation's absolute URL, each path parameter encoded once. */
 function operationUrl(
-  appUrl: string,
+  origin: string,
   operation: string,
   params: Readonly<Record<string, string>>,
 ): string {
@@ -32,23 +29,15 @@ function operationUrl(
     }
     return encodeURIComponent(value);
   });
-  return `${appUrl}${path}`;
-}
-
-export function heartbeatUrl(appUrl: string, projectId: string): string {
-  return operationUrl(appUrl, HEARTBEAT_OPERATION, { projectId });
-}
-
-export function secretValuesUrl(
-  appUrl: string,
-  projectId: string,
-  flowId: string,
-): string {
-  return operationUrl(appUrl, SECRET_VALUES_OPERATION, { projectId, flowId });
+  return `${origin}${path}`;
 }
 
 export function checkInUrl(origin: string): string {
   return operationUrl(origin, CHECK_IN_OPERATION, {});
+}
+
+export function secretsUrl(origin: string): string {
+  return operationUrl(origin, SECRETS_OPERATION, {});
 }
 
 export function releaseUrl(origin: string): string {

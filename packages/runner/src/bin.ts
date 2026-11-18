@@ -26,8 +26,6 @@ program
   .description(
     'Start a prebuilt flow artifact (.mjs, .js, .cjs, .tar.gz, .tgz, or an http(s) URL to one)',
   )
-  .option('--flow-id <id>', 'API flow ID (enables heartbeat and secrets)')
-  .option('--project <id>', 'project ID (defaults to WALKEROS_PROJECT_ID)')
   .option('-p, --port <number>', 'port to listen on (default: 8080)', parseInt)
   .option(
     '--env-file <path>',

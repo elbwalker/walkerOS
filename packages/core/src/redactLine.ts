@@ -132,11 +132,12 @@ function querySecret(): RegExp {
 const RE_PEM_INLINE = /-----BEGIN [A-Z ]*PRIVATE KEY-----[^-]*/gi;
 
 // An HTTP auth scheme and its credential: `Bearer <token>`, `Basic <base64>`,
-// in any case, after a word boundary. Linear: a literal scheme, whitespace and
-// one class run. The callback keeps an ordinary word after the scheme
-// (`basic auth`, `Basic Auth failed`), so prose stays as written.
+// `DPoP <token>`, in any case, after a word boundary. Linear: a literal
+// scheme, whitespace and one class run. The callback keeps an ordinary word
+// after the scheme (`basic auth`, `Basic Auth failed`), so prose stays as
+// written.
 const RE_AUTH_SCHEME =
-  /(^|[^A-Za-z0-9_])(bearer|basic)(\s+)([A-Za-z0-9+/._~-]+=*)/gi;
+  /(^|[^A-Za-z0-9_])(bearer|basic|dpop)(\s+)([A-Za-z0-9+/._~-]+=*)/gi;
 const RE_ORDINARY_WORD = /^[A-Za-z][a-z]*$/;
 
 // PEM block boundaries (structural removal, not regex masking).

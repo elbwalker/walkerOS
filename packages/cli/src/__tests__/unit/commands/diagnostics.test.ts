@@ -9,6 +9,10 @@ import {
   formatDiagnostics,
 } from '../../../commands/diagnostics/index.js';
 import { writeCredentials } from '../../../lib/credentials.js';
+import {
+  SERVICE_APP,
+  testCredential,
+} from '../../helpers/service-credential.js';
 
 const APP = 'https://app.example.test';
 const AUTH = 'https://auth.example.test';
@@ -17,7 +21,7 @@ let configHome: string;
 beforeEach(() => {
   configHome = mkdtempSync(join(tmpdir(), 'walkeros-diagnostics-'));
   process.env = { ...env, WALKEROS_APP_URL: APP, XDG_CONFIG_HOME: configHome };
-  delete process.env.WALKEROS_TOKEN;
+  delete process.env.WALKEROS_CREDENTIAL;
 });
 afterEach(() => {
   process.env = env;
@@ -66,7 +70,7 @@ describe('walkeros diagnostics', () => {
       const report = await diagnostics();
       const text =
         JSON.stringify(report) + formatDiagnostics(report).join('\n');
-      expect(text).not.toMatch(/wos_(at|rt|pat)_secret/);
+      expect(text).not.toMatch(/wos_(at|rt)_secret|wos_cred_/);
       return formatDiagnostics(report)[3];
     };
 
@@ -85,8 +89,31 @@ describe('walkeros diagnostics', () => {
     expect(await lines()).toBe(
       `not signed in to ${APP} (signed in to https://auth.stage.example.test)`,
     );
-    process.env.WALKEROS_TOKEN = 'wos_pat_secret';
-    expect(await lines()).toBe('sign-in WALKEROS_TOKEN');
+    let pinged = 0;
+    server.use(
+      http.get(`${SERVICE_APP}/api/health`, () => {
+        pinged += 1;
+        return HttpResponse.json({ status: 'ok' });
+      }),
+    );
+    process.env.WALKEROS_CREDENTIAL = await testCredential();
+    expect(await lines()).toBe(
+      `WALKEROS_CREDENTIAL is for ${SERVICE_APP}, and WALKEROS_APP_URL names ${APP}`,
+    );
+    delete process.env.WALKEROS_APP_URL;
+    expect(await lines()).toBe(
+      `Credential: WALKEROS_CREDENTIAL, for ${SERVICE_APP}`,
+    );
+    // With a credential the report is of the credential's own app.
+    expect((await diagnostics()).appUrl).toEqual({
+      resolved: SERVICE_APP,
+      source: 'credential',
+    });
+    expect(pinged).toBe(3);
+    process.env.WALKEROS_CREDENTIAL = 'wos_cred_not-a-credential';
+    expect(await lines()).toMatch(
+      /^WALKEROS_CREDENTIAL is not a walkerOS credential/,
+    );
   });
 
   it('names an unreachable app', async () => {

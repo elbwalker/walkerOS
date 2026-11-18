@@ -78,6 +78,7 @@ export * from './cdn';
 export * from './contract';
 export * from './recordEnv';
 export * from './runtime';
+export * from './service-auth';
 export * from './mcpHelpers';
 export * from './respond';
 export * from './scope';

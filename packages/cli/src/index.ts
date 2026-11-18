@@ -84,7 +84,7 @@ export type {
   SimulateCollectorOptions,
 } from './commands/push/index.js';
 export { validate } from './commands/validate/index.js';
-export { resolveAccessToken, resolveCredential } from './core/auth.js';
+export { resolveCredential } from './core/auth.js';
 export type { Credential } from './core/auth.js';
 export { ApiError } from './core/api-error.js';
 export type { ApiErrorDetail } from './core/api-error.js';

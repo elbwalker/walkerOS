@@ -105,10 +105,12 @@ describe('error redaction end-to-end (logger → ring → jsonl + heartbeat)', (
 
     const heartbeat = createHeartbeat(
       {
-        appUrl: 'http://localhost:3000',
+        app: {
+          origin: 'http://localhost:3000',
+          authorize: async () => ({}),
+          answered: () => false,
+        },
         instanceId: '3f9a2b7c1d4e5f60',
-        token: 'bearer-test',
-        projectId: 'proj_1',
         intervalMs: 60000,
         getErrors: () => ring.snapshot(),
       },
@@ -118,10 +120,11 @@ describe('error redaction end-to-end (logger → ring → jsonl + heartbeat)', (
     await heartbeat.sendOnce();
 
     const init = fetchMock.mock.calls[0]?.[1];
-    const body = init?.body;
-    if (typeof body !== 'string') {
-      throw new Error('expected a string request body');
+    const bytes = init?.body;
+    if (!(bytes instanceof Uint8Array)) {
+      throw new Error('expected the request body as bytes');
     }
+    const body = new TextDecoder().decode(bytes);
     expect(body).not.toContain('-----BEGIN');
     expect(body).not.toContain('MIIEvQIBAD');
     expect(body).not.toContain('MIIEsecret');

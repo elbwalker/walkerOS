@@ -23,7 +23,7 @@ import {
   refreshStoredLogin,
   SignInError,
 } from '../../../core/oauth-login.js';
-import { resolveAccessToken, resolveCredential } from '../../../core/auth.js';
+import { resolveCredential, type Credential } from '../../../core/auth.js';
 import {
   getCredentialsPath,
   loginForAppUrl,
@@ -75,7 +75,7 @@ beforeEach(async () => {
     XDG_CONFIG_HOME: configHome,
     WALKEROS_APP_URL: app.appUrl,
   };
-  delete process.env.WALKEROS_TOKEN;
+  delete process.env.WALKEROS_CREDENTIAL;
 });
 
 afterEach(async () => {
@@ -308,17 +308,12 @@ describe('loginForAppUrl', () => {
   });
 });
 
-describe('resolveCredential', () => {
-  it('prefers WALKEROS_TOKEN over a stored login, and resolveAccessToken stays env only', async () => {
-    writeCredentials({ [app.issuer]: stored() });
-    expect(resolveAccessToken()).toBeNull();
-    process.env.WALKEROS_TOKEN = 'wos_pat_env';
-    await expect(resolveCredential()).resolves.toEqual({
-      source: 'env',
-      token: 'wos_pat_env',
-    });
-  });
+/** A stored login's access token, as the credential carries it. */
+function loginToken(credential: Credential | null): string | undefined {
+  return credential?.source === 'login' ? credential.token : undefined;
+}
 
+describe('resolveCredential', () => {
   it('attaches the stored login only for its own origin', async () => {
     writeCredentials({ [app.issuer]: stored() });
     await expect(resolveCredential()).resolves.toEqual({
@@ -343,7 +338,7 @@ describe('resolveCredential', () => {
       }),
     });
     const credential = await resolveCredential();
-    expect(credential?.token).toMatch(/^wos_at_/);
+    expect(loginToken(credential)).toMatch(/^wos_at_/);
     expect(app.requests.map((r) => `${r.method} ${r.path}`)).toEqual([
       'POST /custom/token',
     ]);
@@ -362,7 +357,7 @@ describe('resolveCredential', () => {
     });
     const credential = await resolveCredential();
     const login = fileLogins()[app.issuer];
-    expect(login.access_token).toBe(credential?.token);
+    expect(login.access_token).toBe(loginToken(credential));
     expect(login.refresh_token).not.toBe(refresh);
     expect(login.refresh_token).toMatch(/^wos_rt_/);
     expect(statSync(getCredentialsPath()).mode & 0o777).toBe(0o600);
@@ -387,7 +382,7 @@ describe('resolveCredential', () => {
       resolveCredential(),
     ]);
     expect(app.count('POST', '/api/oauth/token')).toBe(1);
-    expect(a?.token).toBe(b?.token);
+    expect(loginToken(a)).toBe(loginToken(b));
   });
 
   it.each([

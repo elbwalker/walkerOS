@@ -57,11 +57,14 @@ import { RunnerAuthError } from '../runner-auth-error.js';
 
 const mockLogger = createMockLogger();
 
+const APP: NonNullable<PipelineOptions['api']>['app'] = {
+  origin: 'https://app.walkeros.io',
+  authorize: async () => ({ Authorization: 'DPoP test-token' }),
+  answered: () => false,
+};
+
 const API: NonNullable<PipelineOptions['api']> = {
-  appUrl: 'https://app.walkeros.io',
-  token: 'test-token',
-  projectId: 'proj_123',
-  flowId: 'flow_456',
+  app: APP,
   heartbeatIntervalMs: 60000,
   cacheDir: '/tmp/cache',
 };
@@ -289,18 +292,10 @@ describe('runPipeline', () => {
     const promise = runPipeline(apiOptions);
     await new Promise((r) => setTimeout(r, 50));
 
-    expect(fetchSecrets).toHaveBeenCalledWith({
-      appUrl: 'https://app.walkeros.io',
-      token: 'test-token',
-      projectId: 'proj_123',
-      flowId: 'flow_456',
-    });
+    expect(fetchSecrets).toHaveBeenCalledWith({ app: APP });
     expect(createHeartbeat).toHaveBeenCalledWith(
       expect.objectContaining({
-        appUrl: 'https://app.walkeros.io',
-        token: 'test-token',
-        projectId: 'proj_123',
-        flowId: 'flow_456',
+        app: APP,
         instanceId: INSTANCE_ID,
         intervalMs: 60000,
         knownValues: apiOptions.knownValues,
@@ -562,16 +557,16 @@ describe('runPipeline', () => {
       );
     });
 
-    it('stops the boot before the flow starts when the secrets fetch reports a revoked token', async () => {
+    it('stops the boot before the flow starts when the secrets fetch reports a refused credential', async () => {
       jest
         .mocked(fetchSecrets)
         .mockRejectedValueOnce(
-          new RunnerAuthError(401, 'unauthorised', null, 'token revoked'),
+          new RunnerAuthError(401, 'unauthorised', null, 'credential revoked'),
         );
 
       const { outcome, setReady, started } = await boot(
         { secrets: ['API_KEY'], env: [] },
-        { ...baseOptions, api: { ...API, token: 'revoked-token' } },
+        { ...baseOptions, api: API },
       );
 
       expect(outcome).toBeInstanceOf(RunnerAuthError);

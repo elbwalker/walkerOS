@@ -501,18 +501,19 @@ computer, pick another for both, or pass `walkeros login --port <n>`.
 
 **Another editor, or SSH.** Some dev containers forward only `appPort`, which
 cannot reach a port on the container's `127.0.0.1` (Zed's, for one). Connect
-with a token for AI apps only instead: under Account, then Automation tokens,
-choose New token for AI apps, keep read unless the agent has to change flows, and
-pick 7 or 30 days. Type it once in a terminal inside the container, at local
-scope, and never into `.mcp.json`, which is shared with the repository:
+with a token for AI apps only instead: under Account, choose New token for AI
+apps, keep read unless the agent has to change flows, pick 7 or 30 days, and
+confirm with your passkey or a code. The auth host shows the token once. Type
+it once in a terminal inside the container, at local scope, and never into
+`.mcp.json`, which is shared with the repository:
 
 <CodeSnippet
   code={`read -rs T; claude mcp add --scope local --transport http walkeros https://app.walkeros.io/api/mcp --header "Authorization: Bearer $T"; unset T`}
   language="bash"
 />
 
-Use one token per container, named after it, and revoke it under Account,
-Automation tokens, when the container goes.
+Use one token per container, named after it, and revoke it under Account when
+the container goes.
 
 **Remote Control from a phone.** Connect walkerOS at the machine before you
 leave: the connection then stays signed in while you use it. Only as a last
@@ -550,11 +551,15 @@ request, and it can be connected again at any time.
 
 ### A credential for a machine
 
-A script or a CI job has nobody to press Allow. Mint an automation token
-instead, under Account, then Automation tokens: pick read or read and write,
-pick 30 or 90 days, and copy the `wos_pat_...` value once. Send it as
-`Authorization: Bearer` to the hosted server, or use it with
-[`walkeros api`](/docs/apps/cli#api-command) from a terminal or a CI job.
+A script or a CI job has nobody to press Allow. Create an automation instead,
+under Account: choose New automation, name it, pick read or read and write, and
+confirm with your passkey or a code. The auth host shows its credential
+(`wos_cred_...`) once. Set it as `WALKEROS_CREDENTIAL` for
+[`walkeros api`](/docs/apps/cli#api-command) from a terminal or a CI job, or
+print a 1-hour bearer token of it with
+[`walkeros auth token`](/docs/apps/cli#a-token-for-curl) for `curl`. It lasts
+until you revoke it under Account. For the hosted server itself, use a token
+for AI apps only, as above.
 
 ### Availability
 

@@ -21,10 +21,11 @@ import {
 import type { HeartbeatHandle } from '../heartbeat.js';
 
 const fakeApi: NonNullable<PipelineOptions['api']> = {
-  appUrl: 'https://app.example',
-  token: 'token',
-  projectId: 'project',
-  flowId: 'flow',
+  app: {
+    origin: 'https://app.example',
+    authorize: async () => ({}),
+    answered: () => false,
+  },
   heartbeatIntervalMs: 30_000,
   cacheDir: '/tmp/cache',
 };

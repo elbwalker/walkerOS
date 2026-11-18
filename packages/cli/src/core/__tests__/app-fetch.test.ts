@@ -35,19 +35,22 @@ describe('appFetch', () => {
     expect(seen[0].headers.get('X-WalkerOS-Client-Version')).toBe('9.9.9');
   });
 
-  it('lets a caller header win and sends the bearer', async () => {
+  it('lets a caller header win and sends the credential header it is given', async () => {
     const { seen, fetchFn } = recorder();
     await appFetch('/api/x', {
       baseUrl: 'https://app.test',
-      token: 'tok',
-      headers: { 'x-walkeros-client': 'custom', 'Idempotency-Key': 'k1' },
+      headers: {
+        'x-walkeros-client': 'custom',
+        'Idempotency-Key': 'k1',
+        Authorization: 'DPoP tok',
+      },
       method: 'POST',
       fetch: fetchFn,
     });
     expect(seen[0].method).toBe('POST');
     expect(seen[0].headers.get('X-WalkerOS-Client')).toBe('custom');
     expect(seen[0].headers.get('Idempotency-Key')).toBe('k1');
-    expect(seen[0].headers.get('Authorization')).toBe('Bearer tok');
+    expect(seen[0].headers.get('Authorization')).toBe('DPoP tok');
   });
 
   it('refuses to send a credential over plain http to a remote host', async () => {
@@ -55,7 +58,7 @@ describe('appFetch', () => {
     await expect(
       appFetch('/api/x', {
         baseUrl: 'http://app.test',
-        token: 'tok',
+        headers: { Authorization: 'Bearer tok' },
         fetch: fetchFn,
       }),
     ).rejects.toThrow(/plain http/);

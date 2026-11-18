@@ -46,7 +46,7 @@ npx walkeros --version`}
 | `setup` | Run the optional `setup()` lifecycle on one component | Provision external resources (BigQuery datasets, Pub/Sub topics, SQLite tables) |
 | `validate` | Validate events, flows, mappings, contracts, or entries | Check configuration before bundling |
 | `cache` | Manage CLI package and build caches | Clear stale caches, view cache statistics |
-| `auth` | Authentication and identity | Check who the token in `WALKEROS_TOKEN` belongs to |
+| `auth` | Authentication and identity | Check who the credential belongs to, or print a token for curl |
 | `api` | Send an authenticated request to the walkerOS app API, or list its operations | Manage projects, flows and deployments from scripts and CI |
 | `diagnostics` | Show the CLI version, the app URL and whether the app answers | See which app you are on and whether it is reachable |
 | `telemetry` | Show, enable or disable anonymous usage telemetry | See [Telemetry](/docs/apps/telemetry) |
@@ -1633,7 +1633,7 @@ The entry validator:
 
 ## Authentication
 
-People sign the CLI in with `walkeros login`; CI and other unattended runs use the `WALKEROS_TOKEN` environment variable. The commands that call the app (`walkeros api`, `walkeros auth whoami`) send whichever credential is in place.
+People sign the CLI in with `walkeros login`; scripts, CI and other unattended runs use an automation's credential in the `WALKEROS_CREDENTIAL` environment variable. The commands that call the app (`walkeros api`, `walkeros auth whoami`) send whichever credential is in place.
 
 ### Sign in with walkeros login
 
@@ -1678,21 +1678,36 @@ What the CLI keeps, and where:
 
 `walkeros logout` revokes the sign-in for the app URL and removes it from this computer. If the app cannot be reached, the CLI removes it anyway and says so: the sign-in then still works until you disconnect walkerOS CLI under Account, Connected apps, which signs the CLI out on every computer.
 
-### Tokens for CI
+### Automation for scripts and CI
 
-Create an automation token in the app under Account > Automation tokens, and set it as `WALKEROS_TOKEN`. While `WALKEROS_TOKEN` is set, it is used instead of a `walkeros login`; `login` and `logout` say so.
+In the app, under Account, click **New automation**, name it and pick its access. Confirm with your passkey or a code, and the auth host shows its credential (`wos_cred_...`) once: set it as `WALKEROS_CREDENTIAL`. While it is set, it is used instead of a `walkeros login`; `login` and `logout` say so.
 
 <CodeSnippet
-  code={`read -rs WALKEROS_TOKEN; export WALKEROS_TOKEN
+  code={`read -rs WALKEROS_CREDENTIAL; export WALKEROS_CREDENTIAL
 walkeros auth whoami`}
   language="bash"
 />
 
-- In a shell, read the token without echoing it, as above. Never type it inline: an inline value lands in your shell history.
-- In CI, set `WALKEROS_TOKEN` to your automation token from the secret store.
-- Set it only for the commands that call the app (`walkeros api`, `walkeros auth whoami`). `push` and `setup` run step package code in the same process.
+- In a shell, read the credential without echoing it, as above. Never type it inline: an inline value lands in your shell history.
+- In CI, set `WALKEROS_CREDENTIAL` from the secret store.
+- Set it only for the commands that call the app (`walkeros api`, `walkeros auth whoami`, `walkeros auth token`). `push` and `setup` run step package code in the same process.
+- The credential names its own app and is sent only there, so `WALKEROS_APP_URL` is not needed. If `WALKEROS_APP_URL` or `appUrl` in the config names another app, a command sends nothing and stops with `WALKEROS_CREDENTIAL is for <its app>, and WALKEROS_APP_URL names <the other>`.
+- The credential itself is never sent: each run buys a short-lived token with it. When no token can be bought, the command stops with the auth server's answer.
+- A credential that is never used lapses after 7 days. Once used, it lasts until you revoke it under Account, where each automation shows when and from where it was last used.
 
-Without either credential, a command that calls the app stops with `not signed in: run walkeros login, or set WALKEROS_TOKEN to a token from Account > Automation tokens in the walkerOS app`.
+Without either credential, a command that calls the app stops with `not signed in: run walkeros login, or set WALKEROS_CREDENTIAL to an automation from Account in the walkerOS app`.
+
+### A token for curl
+
+`walkeros auth token` prints one bearer token of the automation in `WALKEROS_CREDENTIAL` on stdout, and nothing else. It lasts 1 hour.
+
+<CodeSnippet
+  code={`curl -H "Authorization: Bearer $(walkeros auth token)" \\
+  https://app.walkeros.io/api/projects`}
+  language="bash"
+/>
+
+Only an automation's credential buys this token. With no credential set, the command exits 1 with `WALKEROS_CREDENTIAL is not set`; with a runner's credential it exits 1 with the auth server's answer, `This credential buys bound tokens only`.
 
 The CLI reads no credential from its config file, `~/.config/walkeros/config.json`. If that file holds `token`, `accessToken`, `accessTokenExpiresAt`, `refreshToken` or `email` fields, delete them.
 
@@ -1712,7 +1727,7 @@ User: usr_abc123
 Credential: signed in to https://auth.walkeros.io
 ```
 
-With `WALKEROS_TOKEN` set, the last line reads `Credential: WALKEROS_TOKEN`.
+With `WALKEROS_CREDENTIAL` set, the last line reads `Credential: WALKEROS_CREDENTIAL`.
 
 | Option | Description |
 |--------|-------------|
@@ -1735,7 +1750,7 @@ With `WALKEROS_TOKEN` set, the last line reads `Credential: WALKEROS_TOKEN`.
 - Query parameters ride in the path: `'/api/projects/{projectId}/flows?limit=10'`.
 - `{projectId}` is filled from `--project`, else from `WALKEROS_PROJECT_ID`. Any other `{...}` left in the path is a usage error.
 - `DELETE` needs `--yes`, because a command run through a shell skips an agent host's per-tool approval.
-- The request is sent with the token from `WALKEROS_TOKEN` (see [Authentication](#authentication)).
+- The request is sent with the credential in place, `WALKEROS_CREDENTIAL` first, else the `walkeros login` (see [Authentication](#authentication)).
 
 | Option | Description |
 |--------|-------------|
@@ -1749,9 +1764,9 @@ With `WALKEROS_TOKEN` set, the last line reads `Credential: WALKEROS_TOKEN`.
 | Code | Meaning |
 |------|---------|
 | `0` | The app answered with any 2xx status |
-| `1` | The app answered with any other HTTP status. The error body is still printed on stdout, and one line on stderr names the status and the app's message |
+| `1` | The app answered with any other HTTP status. The error body is still printed on stdout, and one line on stderr names the status and the app's message; for a 401 or 403 to `WALKEROS_CREDENTIAL` that one line is the credential's own (`The app refused this automation's credential ...`). Also: `WALKEROS_CREDENTIAL` is for another app than the app URL set, and nothing is sent |
 | `2` | Usage error (unknown method, `DELETE` without `--yes`, an unfilled placeholder, an unreadable `--data` file). Nothing is sent |
-| `3` | No credential, or the app answered 401 |
+| `3` | No usable credential (none, an unreadable `WALKEROS_CREDENTIAL`, or no token for it), or the app answered 401 |
 | `4` | The app could not be reached, or the connection broke while the answer was arriving |
 
 ### List operations
@@ -2087,7 +2102,7 @@ Two options work everywhere:
 
 | Variable | Purpose |
 |----------|---------|
-| `WALKEROS_TOKEN` | The token for `walkeros api` and `walkeros auth whoami` (an automation token, `wos_pat_...`); used instead of a `walkeros login` while set |
+| `WALKEROS_CREDENTIAL` | An automation's credential (`wos_cred_...`) for `walkeros api`, `walkeros auth whoami` and `walkeros auth token`; used instead of a `walkeros login` while set, and sent to the app it names |
 | `WALKEROS_LOGIN_PORT` | The loopback port `walkeros login` listens on, when `--port` is not given |
 | `WALKEROS_PROJECT_ID` | Fills `{projectId}` in a `walkeros api` path |
 | `WALKEROS_APP_URL` | Base URL override (default: `https://app.walkeros.io`) |
@@ -2101,7 +2116,8 @@ The runtime reads its own variables, see the [runtime environment variables](/do
 ## Diagnostics command
 
 `walkeros diagnostics` reports the CLI version, the app URL and where it comes
-from (`env`, `config` or `default`), whether the app answers its public health
+from (`env`, `config` or `default`, or `credential`: with `WALKEROS_CREDENTIAL`
+set it is the credential's own app), whether the app answers its public health
 route, and whether a command would be signed in there. It sends no credential,
 so it works without a token, and it exits 0 whether or not the app answers.
 
@@ -2118,7 +2134,7 @@ health reachable, status ok, app 3f2a91c
 signed in to https://auth.walkeros.io
 ```
 
-When the app cannot be reached, the health line reads `health unreachable (fetch failed (ECONNREFUSED))`. The last line reads `not signed in`, `sign-in WALKEROS_TOKEN`, or names where you are signed in instead; it never shows a token. `--json` prints the same report as one object, `{ cli, appUrl, app, signIn }`.
+When the app cannot be reached, the health line reads `health unreachable (fetch failed (ECONNREFUSED))`. The last line reads `not signed in`, `Credential: WALKEROS_CREDENTIAL, for <app>` (or, when the app URL set names another app, `WALKEROS_CREDENTIAL is for <its app>, and WALKEROS_APP_URL names <the other>`), or names where you are signed in instead; it never shows a token or a credential. `--json` prints the same report as one object, `{ cli, appUrl, app, signIn }`.
 
 ## Minimum client version
 
@@ -2166,12 +2182,12 @@ jobs:
 
 ### Deploy from CI
 
-A CI job deploys a flow saved in the walkerOS app with `walkeros api` and an automation token in `WALKEROS_TOKEN`. The deploy request answers a `deploymentId`; the job then reads the deployment until its status is `published` (a web flow), `active` (a server flow) or `failed`:
+A CI job deploys a flow saved in the walkerOS app with `walkeros api` and an automation's credential in `WALKEROS_CREDENTIAL`. The deploy request answers a `deploymentId`; the job then reads the deployment until its status is `published` (a web flow), `active` (a server flow) or `failed`:
 
 <CodeSnippet
   code={`- name: Deploy the flow
   env:
-    WALKEROS_TOKEN: \${{ secrets.WALKEROS_TOKEN }}
+    WALKEROS_CREDENTIAL: \${{ secrets.WALKEROS_CREDENTIAL }}
     WALKEROS_PROJECT_ID: proj_x7y8z9
     FLOW_ID: flow_a1b2c3d4
   run: |
@@ -2263,7 +2279,7 @@ If `walkeros api` exits 3, it has no credential, the sign-in ended or belongs to
 walkeros auth whoami
 walkeros diagnostics
 
-# Sign in again (or, in CI, set a token from Account > Automation tokens)
+# Sign in again (or, in CI, set WALKEROS_CREDENTIAL to an automation from Account)
 walkeros login`}
   language="bash"
 />

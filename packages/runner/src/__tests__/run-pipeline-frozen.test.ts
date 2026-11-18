@@ -98,10 +98,11 @@ describe('runPipeline with WALKEROS_CONFIG_FROZEN set', () => {
       knownValues: createKnownValues(),
       instanceId: '3f9a2b7c1d4e5f60',
       api: {
-        appUrl: 'https://app.walkeros.io',
-        token: 'test-token',
-        projectId: 'proj_123',
-        flowId: 'flow_456',
+        app: {
+          origin: 'https://app.walkeros.io',
+          authorize: async () => ({}),
+          answered: () => false,
+        },
         heartbeatIntervalMs: 60000,
         cacheDir: '/tmp/cache',
       },

@@ -535,8 +535,6 @@ The CLI has no `run` command. The runtime is a separate package,
 runneros start [artifact] [options]
 
 Options:
-  --flow-id <id>        App flow ID (enables heartbeat and secrets)
-  --project <id>        Project ID (default WALKEROS_PROJECT_ID; required with --flow-id)
   -p, --port <number>   Port (default: 8080)
   --env-file <path>     Load a dotenv file first (existing env wins; a group- or other-readable file is refused)
   --json                JSON output
@@ -756,24 +754,21 @@ flag forbids it. Generate two steps (bundle, then start), never one.
 
 ### Runtime environment
 
-| Variable                                   | Meaning                                                                                                                                                                            |
-| ------------------------------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `BUNDLE`                                   | Artifact path or URL (image default `/app/flow/flow.mjs`)                                                                                                                          |
-| `PORT`                                     | Port (default 8080)                                                                                                                                                                |
-| `WALKEROS_FLOW_ID`, `WALKEROS_PROJECT_ID`  | App flow and project; with a runner token they enable secrets and the heartbeat                                                                                                    |
-| `WALKEROS_DEPLOYMENT_ID`                   | Deployment ID sent with every heartbeat; the app accepts a heartbeat only with the deployment the runner token belongs to, else every beat logs `Heartbeat rejected (404)` at WARN |
-| `WALKEROS_FLOW_RELEASE`                    | Release the loaded flow must carry, or the boot fails                                                                                                                              |
-| `WALKEROS_FLOW_NAME`                       | Flow name it must carry; checked only with `WALKEROS_FLOW_RELEASE`                                                                                                                 |
-| `WALKEROS_DEPLOY_TOKEN` / `WALKEROS_TOKEN` | Runner token (`wos_run_...`), deploy token first; a person's automation token is refused. Env only, never a config file                                                            |
-| `WALKEROS_APP_URL`                         | App base URL (default `https://app.walkeros.io`)                                                                                                                                   |
-| `WALKEROS_HEARTBEAT_INTERVAL`              | Seconds (default 60, minimum 10)                                                                                                                                                   |
-| `WALKEROS_CACHE_DIR`                       | Error cache dir (then `CACHE_DIR`, then XDG `~/.cache/walkeros`)                                                                                                                   |
+| Variable                      | Meaning                                                                                                                                                                                                                                                  |
+| ----------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `BUNDLE`                      | Artifact path or URL (image default `/app/flow/flow.mjs`)                                                                                                                                                                                                |
+| `PORT`                        | Port (default 8080)                                                                                                                                                                                                                                      |
+| `WALKEROS_CREDENTIAL`         | The runner's credential (`wos_cred_...`) from pairing on the Self-hosted tab; it names the app and the deployment. Read once at start and removed from the environment; with it the runner fetches its secrets and checks in, without it it calls no app |
+| `WALKEROS_FLOW_RELEASE`       | Release the loaded flow must carry, or the boot fails                                                                                                                                                                                                    |
+| `WALKEROS_FLOW_NAME`          | Flow name it must carry; checked only with `WALKEROS_FLOW_RELEASE`                                                                                                                                                                                       |
+| `WALKEROS_HEARTBEAT_INTERVAL` | Seconds (default 60, minimum 10)                                                                                                                                                                                                                         |
+| `WALKEROS_CACHE_DIR`          | Error cache dir (then `CACHE_DIR`, then XDG `~/.cache/walkeros`)                                                                                                                                                                                         |
 
-Secrets are fetched ONCE at boot when connected (401/403 is fatal). There is no
-config polling and no hot-swap: a new flow version is a rebuild and a redeploy.
-`/health` is always 200; `/ready` is 200 once the collector is constructed and,
-with `WALKEROS_FLOW_RELEASE` set, the loaded flow matches it; 503 otherwise. A
-mismatch exits with
+Secrets are fetched ONCE at boot with a credential (401/403 is fatal). There is
+no config polling and no hot-swap: a new flow version is a rebuild and a
+redeploy. `/health` is always 200; `/ready` is 200 once the collector is
+constructed and, with `WALKEROS_FLOW_RELEASE` set, the loaded flow matches it;
+503 otherwise. A mismatch exits with
 `Artifact mismatch: expected <name>@<release>, loaded <name>@<release>`.
 
 ### Constraints

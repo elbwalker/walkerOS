@@ -157,8 +157,6 @@ bundle: a local flow config is refused, one fed by URL or stdin fails at import.
 runneros start [artifact] [options]
 
 Options:
-  --flow-id <id>        App flow ID (enables heartbeat and secrets)
-  --project <id>        Project ID (default WALKEROS_PROJECT_ID; required with --flow-id)
   -p, --port <number>   Port (default: 8080)
   --env-file <path>     Load a dotenv file first (existing env wins; a group- or other-readable file is refused)
   --json                JSON output
@@ -263,20 +261,24 @@ says it still works until the CLI is disconnected there.
 
 ## auth
 
-The CLI sends `WALKEROS_TOKEN` when it is set (a token from Account > Automation
-tokens in the app, `wos_pat_...`), else the `walkeros login` for the app URL. In
-CI, set `WALKEROS_TOKEN` from the secret store; in a shell, read it without
-echoing it (`read -rs WALKEROS_TOKEN; export WALKEROS_TOKEN`), never inline; set
-it only for the commands that call the app. Without either, `walkeros api` exits
-3 with
-`not signed in: run walkeros login, or set WALKEROS_TOKEN to a token from Account > Automation tokens in the walkerOS app`.
+The CLI sends `WALKEROS_CREDENTIAL` when it is set (an automation made under
+Account in the app, `wos_cred_...`, shown once on the auth host), else the
+`walkeros login` for the app URL. The credential names its own app and is sent
+only there; an app URL set to another app stops the command with both named. It
+buys a short-lived token for each run and is itself never sent. In CI, set
+`WALKEROS_CREDENTIAL` from the secret store; in a shell, read it without echoing
+it (`read -rs WALKEROS_CREDENTIAL; export WALKEROS_CREDENTIAL`), never inline;
+set it only for the commands that call the app. Without either, `walkeros api`
+exits 3 with
+`not signed in: run walkeros login, or set WALKEROS_CREDENTIAL to an automation from Account in the walkerOS app`.
 The CLI reads no credential from its config file,
 `~/.config/walkeros/config.json`. If that file holds `token`, `accessToken`,
 `accessTokenExpiresAt`, `refreshToken` or `email` fields, delete them.
 
-| Subcommand | Purpose                                                                                       |
-| ---------- | --------------------------------------------------------------------------------------------- |
-| `whoami`   | Show who the credential belongs to, and its source (`WALKEROS_TOKEN` or `signed in to <app>`) |
+| Subcommand | Purpose                                                                                                                                                                                              |
+| ---------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `whoami`   | Show who the credential belongs to, and its source (`WALKEROS_CREDENTIAL` or `signed in to <app>`)                                                                                                   |
+| `token`    | Print one bearer token of the automation in `WALKEROS_CREDENTIAL`, valid 1 hour, for `curl`; exits 1 with the fact without a credential, and with the auth server's answer for a runner's credential |
 
 ---
 

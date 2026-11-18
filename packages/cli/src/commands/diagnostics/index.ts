@@ -8,8 +8,11 @@ import { writeResult } from '../../core/output.js';
 
 // === Programmatic API ===
 
-/** Where the app URL comes from, in `resolveAppUrl()` order. */
-export type AppUrlSource = 'env' | 'config' | 'default';
+/**
+ * Where the app URL comes from: WALKEROS_CREDENTIAL's own app when it is set,
+ * else in `resolveAppUrl()` order.
+ */
+export type AppUrlSource = 'credential' | 'env' | 'config' | 'default';
 
 export interface HealthResult {
   reachable: boolean;
@@ -73,23 +76,33 @@ export async function fetchHealth(baseUrl?: string): Promise<HealthResult> {
 /**
  * This CLI's version, the app it talks to and where that URL comes from,
  * whether the app answers its health route, and whether a command would be
- * signed in there. Sends no credential, so it works logged out.
+ * signed in there. With WALKEROS_CREDENTIAL that app is the credential's own.
+ * Sends no credential, so it works logged out.
  */
 export async function diagnostics(): Promise<Diagnostics> {
-  const resolved = resolveAppUrl().replace(/\/+$/, '');
+  const configured = resolveAppUrl().replace(/\/+$/, '');
+  const signIn = credentialStatus(configured);
+  const appUrl: Diagnostics['appUrl'] =
+    signIn.kind === 'credential'
+      ? { resolved: signIn.app, source: 'credential' }
+      : { resolved: configured, source: appUrlSource() };
   return {
     cli: { version: VERSION },
-    appUrl: { resolved, source: appUrlSource() },
-    app: await fetchHealth(resolved),
-    signIn: credentialStatus(resolved),
+    appUrl,
+    app: await fetchHealth(appUrl.resolved),
+    signIn,
   };
 }
 
 function signInLine(report: Diagnostics): string {
   const { signIn } = report;
   switch (signIn.kind) {
-    case 'env':
-      return 'sign-in WALKEROS_TOKEN';
+    case 'credential':
+      return (
+        signIn.conflict ?? `Credential: WALKEROS_CREDENTIAL, for ${signIn.app}`
+      );
+    case 'unreadable':
+      return signIn.reason;
     case 'login':
       return `signed in to ${signIn.issuer}`;
     case 'elsewhere':

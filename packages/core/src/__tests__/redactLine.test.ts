@@ -171,6 +171,10 @@ describe('scrubSecrets', () => {
         'Basic Auth failed for the basic plan',
       ],
       ['the bearer token was refused', 'the bearer token was refused'],
+      // A JWT whose segments the entropy guess lets pass: only the scheme
+      // rule masks it.
+      ['Authorization: DPoP eyJhbGci.eyJzdWIi.c2ln', 'Authorization: DPoP ***'],
+      ['the dpop proof was refused', 'the dpop proof was refused'],
     ])('masks the credential after an auth scheme in %s', (line, masked) => {
       expect(redactLine(line)).toBe(masked);
     });

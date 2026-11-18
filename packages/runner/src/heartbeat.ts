@@ -1,8 +1,9 @@
 import { randomBytes } from 'crypto';
 import { VERSION } from './version.js';
-import { mergeAuthHeaders } from './auth-headers.js';
-import { heartbeatUrl } from './api-paths.js';
+import { checkInUrl } from './api-paths.js';
+import type { AppAuth } from './credentials.js';
 import { stepId } from '@walkeros/core';
+import { sendWithServiceAuth } from '@walkeros/server-core';
 import type { Collector, Logger } from '@walkeros/core';
 import type { KnownValues } from '@walkeros/core/node';
 import type {
@@ -174,11 +175,11 @@ export function heartbeatBody(
 }
 
 export interface HeartbeatConfig {
-  appUrl: string;
-  token: string;
-  projectId: string;
-  flowId?: string;
-  deploymentId?: string;
+  /**
+   * The app and the runner credential's headers. The check-in goes to its
+   * origin and carries no id: the credential names the deployment.
+   */
+  app: AppAuth;
   /** This runner process's id ({@link newInstanceId}). */
   instanceId: string;
   intervalMs: number;
@@ -251,30 +252,31 @@ export function createHeartbeat(
         ? redactLogs(config.getLogs().slice(-50))
         : [];
 
-      const response = await fetch(
-        heartbeatUrl(config.appUrl, config.projectId),
-        {
-          method: 'POST',
-          headers: mergeAuthHeaders(config.token, {
-            'Content-Type': 'application/json',
+      const url = checkInUrl(config.app.origin);
+      // The bytes sent are the bytes a signature's Content-Digest covers.
+      const body = new TextEncoder().encode(
+        JSON.stringify(
+          heartbeatBody({
+            instanceId: config.instanceId,
+            release: config.release,
+            intervalMs: config.intervalMs,
+            uptimeS: Math.floor((Date.now() - startTime) / 1000),
+            counters,
+            errors,
+            logs,
           }),
-          body: JSON.stringify({
-            ...heartbeatBody({
-              instanceId: config.instanceId,
-              release: config.release,
-              intervalMs: config.intervalMs,
-              uptimeS: Math.floor((Date.now() - startTime) / 1000),
-              counters,
-              errors,
-              logs,
-            }),
-            flowId: config.flowId,
-            ...(config.deploymentId && {
-              deploymentId: config.deploymentId,
-            }),
+        ),
+      );
+      const response = await sendWithServiceAuth(
+        config.app,
+        { method: 'POST', url, body },
+        (headers) =>
+          fetch(url, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', ...headers },
+            body,
+            signal: AbortSignal.timeout(10_000),
           }),
-          signal: AbortSignal.timeout(10_000),
-        },
       );
 
       // Use the same snapshot we computed the delta from, not the live status
@@ -283,11 +285,9 @@ export function createHeartbeat(
         lastReported = current;
       }
 
-      if (response.status === 401 || response.status === 403) {
-        logger.error(
-          `Heartbeat auth failed (${response.status}). Token may have expired, redeploy to rotate.`,
-        );
-      } else if (!response.ok) {
+      // A 401 or 403 is the credential's refusal: the client wrote its line
+      // (replaced, revoked or ended) once, and the runner keeps serving.
+      if (!response.ok && response.status !== 401 && response.status !== 403) {
         // Nothing is lost (the deltas carry over), but the app did not take
         // this beat, so the operator should know.
         logger.warn(

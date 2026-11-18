@@ -33,7 +33,7 @@ import {
 } from '../../core/oauth-login.js';
 import { listenForCallback } from '../../core/login-listener.js';
 import { openSignInPage, type OpenResult } from '../../core/browser-opener.js';
-import { resolveAccessToken } from '../../core/auth.js';
+import { credentialSet } from '../../core/auth.js';
 
 /**
  * `walkeros login` and `walkeros logout`: a person signs the CLI in with the
@@ -46,7 +46,7 @@ import { resolveAccessToken } from '../../core/auth.js';
  *   no terminal to prompt in (Remote Control, an agent), passed later as
  *   `walkeros login --code <code>`.
  *
- * WALKEROS_TOKEN stays the credential for CI, and wins while it is set.
+ * WALKEROS_CREDENTIAL, an automation for scripts and CI, wins while it is set.
  */
 
 export const LOGIN_EXIT = { ok: 0, failed: 1, usage: 2 } as const;
@@ -87,8 +87,8 @@ const say = (io: LoginIO, text: string) => io.stdout.write(`${text}\n`);
 const warn = (io: LoginIO, command: string, text: string) =>
   io.stderr.write(`walkeros ${command}: ${text}\n`);
 
-const ENV_TOKEN_WINS =
-  'WALKEROS_TOKEN is set and is used instead of this sign-in until it is unset';
+const CREDENTIAL_WINS =
+  'WALKEROS_CREDENTIAL is set and is used instead of this sign-in until it is unset';
 
 class UsageError extends Error {}
 
@@ -424,7 +424,7 @@ export async function runLogin(
   io: LoginIO = defaultIO(),
 ): Promise<LoginExit> {
   try {
-    if (resolveAccessToken() !== null) warn(io, 'login', ENV_TOKEN_WINS);
+    if (credentialSet()) warn(io, 'login', CREDENTIAL_WINS);
     removeExpiredPending();
     if (options.code !== undefined)
       return await loginWithCode(io, options.code);
@@ -460,7 +460,7 @@ export async function runLogout(
   const out = (text: string) => io.stdout.write(`${text}\n`);
   const err = (text: string) => io.stderr.write(`walkeros logout: ${text}\n`);
   const appUrl = resolveAppUrl();
-  const envTokenSet = resolveAccessToken() !== null;
+  const credentialWins = credentialSet();
   let exit: LoginExit = LOGIN_EXIT.ok;
   try {
     const login = loginForAppUrl(readCredentials(), appUrl);
@@ -483,7 +483,7 @@ export async function runLogout(
     err(error instanceof Error ? error.message : String(error));
     exit = LOGIN_EXIT.failed;
   }
-  if (envTokenSet)
-    out('WALKEROS_TOKEN is set and stays in use until it is unset.');
+  if (credentialWins)
+    out('WALKEROS_CREDENTIAL is set and stays in use until it is unset.');
   return exit;
 }

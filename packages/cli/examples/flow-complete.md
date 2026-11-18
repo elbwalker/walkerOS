@@ -932,8 +932,8 @@ walkeros cache info
     from the flow variable, so LOG_LEVEL changes it per environment.
 - **CI:** `walkeros validate packages/cli/examples/flow-complete.json --strict`
   plus the step examples as fixtures.
-- **CLI (app-bound, need a login or WALKEROS_TOKEN; listed, not run for this
-  guide):**
+- **CLI (app-bound, need a login or WALKEROS_CREDENTIAL; listed, not run for
+  this guide):**
 
 ```bash
 walkeros api GET /api/projects/{projectId}/flows

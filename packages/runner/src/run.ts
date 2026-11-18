@@ -20,7 +20,7 @@ import { errorSinkPath, wireErrorSink } from './error-sink.js';
 import { ErrorRing, LogRing, ringTap } from './log-ring.js';
 import { newInstanceId } from './heartbeat.js';
 import { removeInstanceFolder } from './instance-folder.js';
-import { resolveAppUrl, resolveRunToken } from './credentials.js';
+import { connectApp, holdsCredential, type AppAuth } from './credentials.js';
 import {
   isPrebuiltArtifact,
   resolveBundle,
@@ -110,14 +110,14 @@ export function assertPrebuiltArtifact(resolved: ResolvedBundle): void {
 
 /**
  * The rings the heartbeat reads. The heartbeat and the error sink run only
- * with --flow-id, so without it no ring is built: it would only hold lines
- * nobody reads.
+ * with a credential, so without one no ring is built: it would only hold
+ * lines nobody reads.
  */
-function heartbeatRings(flowId: string | undefined): {
+function heartbeatRings(connected: boolean): {
   errorRing?: ErrorRing;
   logRing?: LogRing;
 } {
-  if (!flowId) return {};
+  if (!connected) return {};
   const errorRing = new ErrorRing(20);
   return { errorRing, logRing: new LogRing(100) };
 }
@@ -129,7 +129,7 @@ export async function runCommand(options: RunCommandOptions): Promise<void> {
   const timer = createTimer();
   timer.start();
 
-  const { errorRing, logRing } = heartbeatRings(options.flowId);
+  const { errorRing, logRing } = heartbeatRings(holdsCredential(process.env));
 
   // The runner's and the collector's lines are tapped here: every ERROR, WARN
   // and INFO line, and a DEBUG line only with --verbose or a flow at DEBUG.
@@ -161,45 +161,27 @@ export async function runCommand(options: RunCommandOptions): Promise<void> {
   const { logger } = logging;
 
   try {
+    // The credential names the app and the deployment. It is read first,
+    // before any flow code loads, and removed from the environment; an
+    // unreadable one throws its fact and exits 1 below. Without it the
+    // runner runs open source and calls no app.
+    const app = connectApp({
+      env: process.env,
+      logger: logger.scope('runner'),
+      knownValues,
+    });
+
     // Resolve port
     const port = options.port ?? 8080;
     if (options.port !== undefined) {
       validatePort(options.port);
     }
 
-    // Resolve API config
-    const flowId = options.flowId;
-    const projectId = options.project;
-    const token = resolveRunToken();
-    const appUrl = resolveAppUrl();
-
     let apiConfig: PipelineOptions['api'] | undefined;
 
-    if (flowId) {
-      if (!token) {
-        logger.error(
-          `Remote flow requires authentication.\n\n` +
-            `  No token found. Set one in the environment:\n` +
-            `    $ export WALKEROS_DEPLOY_TOKEN=<your-token>`,
-        );
-        process.exit(1);
-      }
-      if (!projectId) {
-        logger.error(
-          `--flow-id requires --project or WALKEROS_PROJECT_ID.\n\n` +
-            `  Set the project:\n` +
-            `    $ runneros start --flow-id ${flowId} --project <your-project-id>\n` +
-            `    $ export WALKEROS_PROJECT_ID=<your-project-id>`,
-        );
-        process.exit(1);
-      }
-
+    if (app) {
       apiConfig = {
-        appUrl,
-        token,
-        projectId,
-        flowId,
-        deploymentId: options.deploymentId,
+        app,
         heartbeatIntervalMs: resolveHeartbeatIntervalMs(
           process.env.WALKEROS_HEARTBEAT_INTERVAL ??
             process.env.HEARTBEAT_INTERVAL,
@@ -220,7 +202,7 @@ export async function runCommand(options: RunCommandOptions): Promise<void> {
       }
     }
 
-    const bundlePath = await resolveBundlePath(options.config, logger);
+    const bundlePath = await resolveBundlePath(options.config, logger, app);
 
     // Run pipeline
     logger.info('Starting flow...');
@@ -267,9 +249,10 @@ export async function runCommand(options: RunCommandOptions): Promise<void> {
 async function resolveBundlePath(
   artifactInput: string | undefined,
   logger: ReturnType<typeof createCLILogger>,
+  app: AppAuth | undefined,
 ): Promise<string> {
   const resolved: ResolvedBundle = artifactInput
-    ? await resolveBundle(artifactInput)
+    ? await resolveBundle(artifactInput, { app })
     : { path: DEFAULT_ARTIFACT, source: 'file' };
 
   // A bundle in a private folder (outside the image) is this process's

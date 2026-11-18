@@ -4,6 +4,10 @@ import { join } from 'path';
 import { NOT_SIGNED_IN } from '../../../commands/api/index.js';
 import type { Credential } from '../../../core/auth.js';
 import { credentialSourceLine, whoami } from '../../../commands/auth/index.js';
+import { writeCredentials } from '../../../lib/credentials.js';
+
+const APP = 'https://app.example.test';
+const AUTH = 'https://auth.example.test';
 
 describe('whoami', () => {
   const originalEnv = process.env;
@@ -15,9 +19,21 @@ describe('whoami', () => {
     process.env = {
       ...originalEnv,
       XDG_CONFIG_HOME: configHome,
-      WALKEROS_TOKEN: 'wos_pat_test',
-      WALKEROS_APP_URL: 'https://app.example.test',
+      WALKEROS_APP_URL: APP,
     };
+    delete process.env.WALKEROS_CREDENTIAL;
+    writeCredentials({
+      [AUTH]: {
+        issuer: AUTH,
+        resource: `${APP}/api`,
+        client_id: `${AUTH}/oauth/walkeros-cli`,
+        token_endpoint: `${AUTH}/api/oauth/token`,
+        revocation_endpoint: `${AUTH}/api/oauth/revoke`,
+        access_token: 'wos_at_test',
+        expires_at: Date.now() + 3_600_000,
+        refresh_token: 'wos_rt_test',
+      },
+    });
   });
   afterEach(() => {
     process.env = originalEnv;
@@ -26,7 +42,23 @@ describe('whoami', () => {
   });
 
   const sources: Array<[Credential, string]> = [
-    [{ source: 'env', token: 't' }, 'Credential: WALKEROS_TOKEN'],
+    [
+      {
+        source: 'credential',
+        auth: {
+          origin: APP,
+          authorize: async () => ({}),
+          token: async () => ({
+            token: 't',
+            type: 'DPoP',
+            expiresAt: new Date(0),
+          }),
+          answered: () => false,
+          close: () => undefined,
+        },
+      },
+      'Credential: WALKEROS_CREDENTIAL',
+    ],
     [
       { source: 'login', token: 't', issuer: 'https://app.walkeros.io' },
       'Credential: signed in to https://app.walkeros.io',
@@ -58,7 +90,7 @@ describe('whoami', () => {
     });
     expect(seen).toEqual({
       url: 'https://app.example.test/api/auth/whoami',
-      auth: 'Bearer wos_pat_test',
+      auth: 'Bearer wos_at_test',
     });
   });
 
@@ -66,15 +98,15 @@ describe('whoami', () => {
     globalThis.fetch = async () =>
       new Response(
         JSON.stringify({
-          error: { code: 'UNAUTHORIZED', message: 'Token expired' },
+          error: { code: 'FORBIDDEN', message: 'No access to this account' },
         }),
-        { status: 401 },
+        { status: 403 },
       );
-    await expect(whoami()).rejects.toThrow('Token expired');
+    await expect(whoami()).rejects.toThrow('No access to this account');
   });
 
-  it('refuses without WALKEROS_TOKEN, with the line the api command prints', async () => {
-    delete process.env.WALKEROS_TOKEN;
+  it('refuses without a credential, with the line the api command prints', async () => {
+    rmSync(configHome, { recursive: true, force: true });
     await expect(whoami()).rejects.toThrow(NOT_SIGNED_IN);
   });
 });

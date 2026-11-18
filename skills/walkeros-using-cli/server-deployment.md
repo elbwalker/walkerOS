@@ -7,8 +7,8 @@ collection flow.
 
 - walkerOS CLI installed: `npm install -g @walkeros/cli`
 - A walkerOS project (create at app.walkeros.io or via API)
-- Authentication: `WALKEROS_TOKEN` set to a token (`wos_pat_...`) from Account >
-  Automation tokens
+- Authentication: `walkeros login`, or `WALKEROS_CREDENTIAL` set to an
+  automation's credential (`wos_cred_...`) made under Account in the app
 - `WALKEROS_PROJECT_ID` set, or `--project` on every `walkeros api` call
 
 ## 1. Create the Flow Config
@@ -148,12 +148,12 @@ an ESM `flow.mjs` plus a `node_modules/` traced by `@vercel/nft`, all inside
 
 ## Troubleshooting
 
-| Symptom                             | Cause                                                                                                                               | Fix                                                                                                        |
-| ----------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------- |
-| Health check fails                  | Runner health server not starting                                                                                                   | Check `PORT` env var is set and not conflicting                                                            |
-| `/health` is 200, events answer 503 | No HTTP source configured: the runtime answers every other path `{"error":"No flow loaded"}`                                        | Add `@walkeros/server-source-express` as source                                                            |
-| Steps missing from the running flow | Steps nested under a key the flow schema does not know, such as a `server` block: validate and the bundle drop it without a message | Put `sources`, `destinations` and the other step maps directly under the flow, next to `config`            |
-| 403 on startup                      | The runtime was started with a person's token, or its deploy token was regenerated or revoked                                       | Use the current deploy token from the flow's self-hosted settings; runner routes accept runner tokens only |
+| Symptom                             | Cause                                                                                                                                   | Fix                                                                                             |
+| ----------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------- |
+| Health check fails                  | Runner health server not starting                                                                                                       | Check `PORT` env var is set and not conflicting                                                 |
+| `/health` is 200, events answer 503 | No HTTP source configured: the runtime answers every other path `{"error":"No flow loaded"}`                                            | Add `@walkeros/server-source-express` as source                                                 |
+| Steps missing from the running flow | Steps nested under a key the flow schema does not know, such as a `server` block: validate and the bundle drop it without a message     | Put `sources`, `destinations` and the other step maps directly under the flow, next to `config` |
+| 401 or 403 on startup               | The runner's `WALKEROS_CREDENTIAL` was replaced by a newer pairing, revoked or its deployment ended, or it is not a runner's credential | Pair the runner again on the flow part's Self-hosted tab and start it with the new credential   |
 
 ## Related
 

@@ -16,7 +16,7 @@ function isLoopback(hostname: string): boolean {
 /**
  * Refuse a URL that would carry a walkerOS credential in the clear.
  *
- * The bearer the CLI sends (`resolveAccessToken` in `core/auth.ts`) goes to
+ * The token the CLI sends (`resolveCredential` in `core/auth.ts`) goes to
  * whatever host the app URL names, and that string is user-settable:
  * `WALKEROS_APP_URL`, the config file, and `--url` all feed it. Over plain
  * http to a remote host, anything on the path reads the token.

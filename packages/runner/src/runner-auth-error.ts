@@ -1,15 +1,15 @@
 /**
- * Classified runner-auth error. Thrown by runtime fetchers on 401/403 so
- * the runner can log `runner_auth_forbidden scope=... flow=... deployment=...`
- * in a structured way and, where appropriate, exit cleanly rather than retry.
+ * Classified runner-auth error. Thrown by runtime fetchers on 401/403, so a
+ * refused credential fails the boot with the app's own message instead of a
+ * retry.
  *
  * `reason`:
- * - `'unauthorised'`, token missing, expired, or revoked (401)
- * - `'flow'`, token is not bound to this flow (403 FORBIDDEN_FLOW)
- * - `'scope'`, token lacks the required scope (403 FORBIDDEN_SCOPE)
- * - `'forbidden'`, 403 with no recognised error code
+ * - `'unauthorised'`, the credential or its token refused: replaced, revoked
+ *   or ended (401)
+ * - `'scope'`, the credential lacks the required scope (403 FORBIDDEN_SCOPE)
+ * - `'forbidden'`, any other 403, such as a credential of another kind
  */
-export type RunnerAuthReason = 'unauthorised' | 'flow' | 'scope' | 'forbidden';
+export type RunnerAuthReason = 'unauthorised' | 'scope' | 'forbidden';
 
 export class RunnerAuthError extends Error {
   constructor(
@@ -60,11 +60,9 @@ export async function throwIfRunnerAuthFailure(res: Response): Promise<void> {
   const reason: RunnerAuthReason =
     res.status === 401
       ? 'unauthorised'
-      : code === 'FORBIDDEN_FLOW'
-        ? 'flow'
-        : code === 'FORBIDDEN_SCOPE'
-          ? 'scope'
-          : 'forbidden';
+      : code === 'FORBIDDEN_SCOPE'
+        ? 'scope'
+        : 'forbidden';
 
   throw new RunnerAuthError(res.status, reason, code, message);
 }

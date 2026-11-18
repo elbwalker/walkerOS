@@ -22,6 +22,7 @@ import {
 import type { KnownValues } from '@walkeros/core/node';
 import { createHealthServer, type HealthServer } from './health-server.js';
 import { loadFlow, type RuntimeConfig, type FlowHandle } from './runner.js';
+import type { AppAuth } from './credentials.js';
 import { createHeartbeat, type HeartbeatHandle } from './heartbeat.js';
 import { fetchSecrets } from './secrets-fetcher.js';
 import { RunnerAuthError } from './runner-auth-error.js';
@@ -64,12 +65,9 @@ export interface PipelineOptions {
   knownValues: KnownValues;
   /** This runner process's id, printed at start and carried by each beat. */
   instanceId: string;
+  /** The app, when the runner holds a credential: the boot's secret read and the check-in. */
   api?: {
-    appUrl: string;
-    token: string;
-    projectId: string;
-    flowId: string;
-    deploymentId?: string;
+    app: AppAuth;
     heartbeatIntervalMs: number;
     cacheDir: string;
   };
@@ -186,11 +184,7 @@ export async function runPipeline(options: PipelineOptions): Promise<void> {
   } else if (shouldStartHeartbeat(api)) {
     heartbeat = createHeartbeat(
       {
-        appUrl: api.appUrl,
-        token: api.token,
-        projectId: api.projectId,
-        flowId: api.flowId,
-        deploymentId: api.deploymentId,
+        app: api.app,
         instanceId: options.instanceId,
         intervalMs: api.heartbeatIntervalMs,
         getCounters: () => handle.collector.status,
@@ -684,7 +678,7 @@ function assertExpectedArtifact(
 }
 
 /**
- * The heartbeat runs whenever the flow has API credentials, so the operator
+ * The heartbeat runs whenever the runner holds a credential, so the operator
  * keeps runner observability (counters, errors, logs).
  */
 export function shouldStartHeartbeat(
@@ -728,16 +722,14 @@ async function fetchAppSecrets(
   logger: Logger.Instance,
 ): Promise<Record<string, string>> {
   try {
-    return await fetchSecrets({
-      appUrl: api.appUrl,
-      token: api.token,
-      projectId: api.projectId,
-      flowId: api.flowId,
-    });
+    // Before the flow serves. Unless the bundle's read bought it already,
+    // this buys the credential's first token (its first connect), bounded by
+    // the token request's own time, and signs when the auth server is down.
+    return await fetchSecrets({ app: api.app });
   } catch (error) {
-    // Fatal: a 401/403 means the token is missing, revoked or not bound to
-    // this flow. fetchSecrets classifies it as RunnerAuthError before any
-    // generic status check, so this is the branch a revoked token reaches.
+    // Fatal: a 401/403 means the app refused the credential: replaced,
+    // revoked or ended, or not a runner's. fetchSecrets classifies it as
+    // RunnerAuthError before any generic status check.
     if (error instanceof RunnerAuthError) throw error;
     logger.warn(
       `Could not fetch secrets: ${error instanceof Error ? error.message : error}`,

@@ -30,7 +30,7 @@ export {
 } from './heartbeat.js';
 export { createHealthServer, type HealthServer } from './health-server.js';
 export { fetchSecrets, SecretsHttpError } from './secrets-fetcher.js';
-export { resolveRunToken, resolveAppUrl } from './credentials.js';
+export type { AppAuth } from './credentials.js';
 export {
   LogRing,
   ErrorRing,

@@ -169,8 +169,6 @@ port would write the same file.
 |---|---|---|
 | `[artifact]` | `BUNDLE` | Artifact path or URL |
 | `-p, --port <number>` | `PORT` | Port to listen on (default `8080`) |
-| `--flow-id <id>` | `WALKEROS_FLOW_ID` | Flow ID in the walkerOS app. Enables the heartbeat and secret injection |
-| `--project <id>` | `WALKEROS_PROJECT_ID` | Project ID, required with `--flow-id` |
 | `--env-file <path>` | none | Load a dotenv file first. Existing variables win; a group- or other-readable file is refused |
 | `--json` | none | JSON output |
 | `-v, --verbose` | none | Verbose output |
@@ -182,14 +180,9 @@ port would write the same file.
 |---|---|---|
 | `BUNDLE` | `/app/flow/flow.mjs` in the image | Artifact path or URL |
 | `PORT` | `8080` | Port for the health server and the flow's HTTP handler. A source's own `port` setting has no effect under the runtime, and nothing logs that |
-| `WALKEROS_FLOW_ID` | none | Flow ID in the walkerOS app (same as `--flow-id`) |
-| `WALKEROS_PROJECT_ID` | none | Project ID (same as `--project`) |
-| `WALKEROS_DEPLOYMENT_ID` | none | Deployment ID, sent with every heartbeat. The app accepts a heartbeat only with the deployment its runner token belongs to; without it, every beat logs `Heartbeat rejected (404)` at WARN. |
+| `WALKEROS_CREDENTIAL` | none | The runner's credential (`wos_cred_...`), shown once when you pair a runner in the app. It names the app and the deployment, so no other variable is needed. Read once at start and removed from the environment. Unset, the runtime calls no app |
 | `WALKEROS_FLOW_RELEASE` | none | Release the loaded flow must carry, or the runtime refuses to start. The walkerOS app sets it when it deploys a flow |
 | `WALKEROS_FLOW_NAME` | none | Flow name the loaded flow must carry, checked only together with `WALKEROS_FLOW_RELEASE`. The walkerOS app sets it |
-| `WALKEROS_DEPLOY_TOKEN` | none | Runner token. Takes precedence over `WALKEROS_TOKEN` |
-| `WALKEROS_TOKEN` | none | Runner token (`wos_run_...`) from the flow's self-hosted settings in the app. A person's automation token is refused by the runner routes |
-| `WALKEROS_APP_URL` | `https://app.walkeros.io` | App API base URL |
 | `WALKEROS_HEARTBEAT_INTERVAL` | `60` | Seconds between heartbeats. Values below `10`, or not a number, are clamped to `10` |
 | `WALKEROS_CACHE_DIR` | `$XDG_CACHE_HOME/walkeros`, else `~/.cache/walkeros` | Where the runtime persists recent errors between restarts. `CACHE_DIR` is read as a fallback |
 | `NODE_OPTIONS` | `--max-old-space-size=384 --no-warnings` in the image | Heap cap sized for a 512 MB container. Raise it with the container's memory, and keep `--no-warnings`: the runtime logs Node's process warnings itself |
@@ -199,49 +192,88 @@ Every start logs the loaded flow as `Flow: <name> release <release>`. With
 without a release, never reports ready: it exits with
 `Artifact mismatch: expected <name>@<release>, loaded <name>@<release>`.
 
-Credentials come from the environment only. The runtime reads no config file
-and no CLI login, so a token in `~/.walkeros/config.json` does not reach it:
-export `WALKEROS_DEPLOY_TOKEN` (or `WALKEROS_TOKEN`) instead.
+The credential comes from the environment only, or from the `--env-file` you
+name. The runtime reads no config file and no CLI login.
 
 ## Connecting to the walkerOS app
 
-A flow runs on its own with no account. Setting a flow ID, a project ID, a
-deployment ID and a runner token connects it to the app:
+A flow runs on its own with no account. One variable connects it to the app:
+the runner's credential. On the flow part's Self-hosted tab in the app, click
+**Pair a runner** and confirm with your passkey or a code. The auth host then
+shows the start config once, with the credential in it. Run it as shown, or
+set `WALKEROS_CREDENTIAL` in your shell and pass it on:
 
 <CodeSnippet
   code={`docker run --rm -p 8080:8080 \\
   -v "$PWD/dist:/app/flow:ro" \\
-  -e WALKEROS_TOKEN="wos_run_xxx" \\
-  -e WALKEROS_PROJECT_ID="proj_xxx" \\
-  -e WALKEROS_FLOW_ID="flow_xxx" \\
-  -e WALKEROS_DEPLOYMENT_ID="dep_xxx" \\
+  -e WALKEROS_CREDENTIAL \\
   walkeros/flow:<version>`}
   language="bash"
 />
 
-The self-hosted tab of a flow in the app prints this command with the values
-filled in, including the deployment ID and, once you generate it there, a
-runner token bound to that deployment. A flow ID without a
-token or without a project ID stops the runtime at boot with an error naming
-the missing value.
+Keep the credential in your platform's secret store and hand it to the
+container as `WALKEROS_CREDENTIAL`, never in the image or a committed file. In
+Docker Compose, from a `.env` file next to the compose file:
+
+<CodeSnippet
+  code={`services:
+  flow:
+    image: walkeros/flow:<version>
+    ports: ['8080:8080']
+    volumes: ['./dist:/app/flow:ro']
+    environment:
+      WALKEROS_CREDENTIAL: \${WALKEROS_CREDENTIAL}`}
+  language="yaml"
+/>
+
+On Cloud Run, from Secret Manager:
+
+<CodeSnippet
+  code={`gcloud run deploy walkeros-flow \\
+  --image registry.example.com/my-flow:1.0.0 \\
+  --set-secrets WALKEROS_CREDENTIAL=walkeros-credential:latest`}
+  language="bash"
+/>
+
+A credential that is never used lapses after 7 days. Once connected it lasts
+until you revoke it on the Self-hosted tab, pair the part again, or the
+deployment ends. Pairing again ends the earlier credential when the new runner
+first connects, so the old runner keeps checking in until then. The tab shows
+when the credential last bought a token and from which address. A managed
+deployment gets its credential from the app, with nothing to paste.
 
 When connected, the runtime:
 
-- **Fetches secrets once at boot** and sets them in the environment after the
-  artifact is imported and before the flow starts, so `$env.NAME` references in
-  a server flow resolve to them. It sets only the names the artifact reads
-  through `$secret` or `$env`; other names are not set, and one INFO line names
-  them. A reserved name (such as `PATH`, `NODE_OPTIONS`, `PORT` or any name
-  starting with `WALKEROS_`, `NODE_`, `NPM_`, `LD_` or `DYLD_`) stops the boot
-  with `secret-reserved`, and a name that is already in the environment stops
-  it with `secret-in-env`. Each refusal is named in the error. A fetch that
-  fails for a reason other than authentication logs a warning and the flow
-  starts. A name the flow reads only from code is not set.
-- **Sends a heartbeat** to `POST /api/projects/:projectId/runners/heartbeat`
-  every `WALKEROS_HEARTBEAT_INTERVAL` seconds with its instance ID, flow and
-  deployment IDs, version, uptime, event counters, and recent errors and log
-  lines (secrets are redacted before they leave the process), and the release
-  it runs. A failed heartbeat is logged and never stops the flow.
+- **Fetches secrets once at boot** from `GET /api/runner/secrets` and sets them
+  in the environment after the artifact is imported and before the flow
+  starts, so `$env.NAME` references in a server flow resolve to them. It sets
+  only the names the artifact reads through `$secret` or `$env`; other names
+  are not set, and one INFO line names them. A reserved name (such as `PATH`,
+  `NODE_OPTIONS`, `PORT` or any name starting with `WALKEROS_`, `NODE_`,
+  `NPM_`, `LD_` or `DYLD_`) stops the boot with `secret-reserved`, and a name
+  that is already in the environment stops it with `secret-in-env`. Each
+  refusal is named in the error. A fetch that fails for a reason other than
+  authentication logs a warning and the flow starts. A name the flow reads
+  only from code is not set.
+- **Checks in** at `POST /api/runner/check-in` every
+  `WALKEROS_HEARTBEAT_INTERVAL` seconds with its instance ID, version, uptime,
+  event counters, recent errors and log lines (secrets are redacted before
+  they leave the process), and the release it runs. A failed check-in is
+  logged and never stops the flow.
+- **Fetches an artifact URL on the app's origin** with its credential. The
+  redirect to the storage carries no credential, and a URL on any other host
+  is fetched without one.
+
+The credential itself is never sent. With it the runtime buys a token that
+lasts 24 hours and works only together with the credential's key, and renews
+it every hour. When the auth server cannot be reached, the runtime signs each
+request with the credential's key instead and keeps serving; one ERROR line
+says so, and one more when a token is bought again. A credential the app
+refuses (replaced by a new pairing, revoked, or its deployment ended) writes
+one ERROR line, `The app refused this runner's credential (replaced, revoked
+or ended); a self-hosted runner is paired again on its Self-hosted tab`, and
+the flow keeps serving. When the auth server refuses a token request, the line
+names how far this machine's clock is off from the server's.
 
 The artifact itself never changes while the runtime runs. To ship a new
 version, bundle again and redeploy.
@@ -274,7 +306,7 @@ directory (usually `/tmp`).
 
 | Response | Behavior |
 |---|---|
-| **401 or 403** | Fatal: the runtime exits. The token is missing, revoked or not bound to this flow |
+| **401 or 403** | Fatal: the runtime exits. The app refused the credential: replaced, revoked or ended |
 | **404** (no secrets configured) | Warning, the runtime continues |
 | **Any other error** | Warning, the runtime continues without secrets |
 
@@ -440,6 +472,9 @@ spec:
           env:
             - name: WALKEROS_CACHE_DIR
               value: /app/cache
+            - name: WALKEROS_CREDENTIAL
+              valueFrom:
+                secretKeyRef: { name: walkeros-credential, key: credential }
           livenessProbe:
             httpGet: { path: /health, port: 8080 }
             periodSeconds: 30
@@ -471,12 +506,13 @@ its archive.
 has no default export (the AWS and GCP sources, for example). Name the export
 in the step's [`import`](/docs/apps/cli#named-export-selection-with-import).
 
-**`--flow-id requires --project or WALKEROS_PROJECT_ID`**, or
-**`Remote flow requires authentication`**: a flow ID was set without its
-project ID or token. Set both, or unset the flow ID to run unconnected.
+**`WALKEROS_CREDENTIAL is not a walkerOS credential`**: the variable holds
+something other than the credential the app showed. Copy it again from the
+start config, or pair the runner again.
 
-**Exits with a 401 or 403 on secrets**: the token is invalid, revoked or bound
-to a different flow. Mint a new one in the app.
+**Exits with a 401 or 403 on secrets**, or **`The app refused this runner's
+credential`**: the credential was replaced by a newer pairing, revoked, or its
+deployment ended. Pair the runner again on its Self-hosted tab.
 
 ## Next steps
 

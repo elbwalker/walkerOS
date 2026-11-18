@@ -13,7 +13,7 @@ import { pushCommand } from './commands/push/index.js';
 import { setupCommand } from './commands/setup/index.js';
 import { validateCommand } from './commands/validate/index.js';
 import { registerCacheCommand } from './commands/cache.js';
-import { whoamiCommand } from './commands/auth/index.js';
+import { runAuthToken, whoamiCommand } from './commands/auth/index.js';
 import { runLogin, runLogout } from './commands/login/index.js';
 import { registerApiCommand } from './commands/api/index.js';
 import { diagnosticsCommand } from './commands/diagnostics/index.js';
@@ -278,11 +278,20 @@ authCmd
     });
   });
 
+authCmd
+  .command('token')
+  .description(
+    'Print one bearer token of WALKEROS_CREDENTIAL, valid for 1 hour, for curl and scripts',
+  )
+  .action(async () => {
+    process.exitCode = await runAuthToken();
+  });
+
 // Sign in with the walkerOS app, and out again
 program
   .command('login')
   .description(
-    'Sign the CLI in with the walkerOS app in a browser (WALKEROS_TOKEN still wins while it is set)',
+    'Sign the CLI in with the walkerOS app in a browser (WALKEROS_CREDENTIAL wins while it is set)',
   )
   .option(
     '--no-browser',

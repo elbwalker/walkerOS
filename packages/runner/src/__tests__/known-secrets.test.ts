@@ -15,6 +15,7 @@ import type { HealthServer } from '../health-server.js';
 import type { PipelineOptions } from '../pipeline.js';
 import type * as Pipeline from '../pipeline.js';
 import type { RunCommandOptions } from '../types.js';
+import { testCredential } from './helpers/credential.js';
 
 const SECRET = 'value-abc123';
 
@@ -51,7 +52,13 @@ function collectorLogger(options: PipelineOptions): Logger.Instance {
 }
 
 describe('runCommand masks secrets fetched after the loggers exist', () => {
+  let credential: string;
   let dir: string;
+
+  beforeAll(async () => {
+    credential = (await testCredential()).raw;
+  });
+
   let artifact: string;
   let errorSpy: jest.SpyInstance;
   let logSpy: jest.SpyInstance;
@@ -82,7 +89,7 @@ describe('runCommand masks secrets fetched after the loggers exist', () => {
       .join('\n');
   }
 
-  it('masks the value in both loggers and the error path, and builds no ring without --flow-id', async () => {
+  it('masks the value in both loggers and the error path, and builds no ring without a credential', async () => {
     let seen: PipelineOptions | undefined;
     runPipeline.mockImplementation(async (options) => {
       seen = options;
@@ -102,12 +109,12 @@ describe('runCommand masks secrets fetched after the loggers exist', () => {
     expect(printed()).not.toContain(SECRET);
   });
 
-  it('fills both rings with --flow-id, masked', async () => {
+  it('fills both rings with a credential, masked', async () => {
     const before = {
-      token: process.env.WALKEROS_DEPLOY_TOKEN,
+      credential: process.env.WALKEROS_CREDENTIAL,
       cache: process.env.WALKEROS_CACHE_DIR,
     };
-    process.env.WALKEROS_DEPLOY_TOKEN = 'test-token';
+    process.env.WALKEROS_CREDENTIAL = credential;
     process.env.WALKEROS_CACHE_DIR = join(dir, 'cache');
     let seen: PipelineOptions | undefined;
     runPipeline.mockImplementation(async (options) => {
@@ -118,9 +125,9 @@ describe('runCommand masks secrets fetched after the loggers exist', () => {
     });
 
     try {
-      await runCommand({ config: artifact, flowId: 'flow_1', project: 'p_1' });
+      await runCommand({ config: artifact });
     } finally {
-      restoreEnv('WALKEROS_DEPLOY_TOKEN', before.token);
+      restoreEnv('WALKEROS_CREDENTIAL', before.credential);
       restoreEnv('WALKEROS_CACHE_DIR', before.cache);
     }
 
@@ -149,7 +156,7 @@ describe('runCommand masks secrets fetched after the loggers exist', () => {
     const VALUE = 'host-xyz789';
     const originalCwd = process.cwd();
     const before = {
-      token: process.env.WALKEROS_DEPLOY_TOKEN,
+      credential: process.env.WALKEROS_CREDENTIAL,
       cache: process.env.WALKEROS_CACHE_DIR,
     };
 
@@ -181,23 +188,19 @@ export default async function() {
     afterEach(() => {
       process.chdir(originalCwd);
       delete process.env.FIXTURE_DB_HOST;
-      restoreEnv('WALKEROS_DEPLOY_TOKEN', before.token);
+      restoreEnv('WALKEROS_CREDENTIAL', before.credential);
       restoreEnv('WALKEROS_CACHE_DIR', before.cache);
     });
 
     it.each<[string, RunCommandOptions, boolean]>([
       ['with no app, in text', {}, false],
       ['with no app, in --json', { json: true }, false],
-      [
-        'with an app that delivers no secret',
-        { flowId: 'flow_1', project: 'p_1' },
-        true,
-      ],
+      ['with an app that delivers no secret', {}, true],
     ])(
       'is masked in both loggers, the rings and the error output, %s',
       async (_case, options, rings) => {
-        if (options.flowId) {
-          process.env.WALKEROS_DEPLOY_TOKEN = 'test-token';
+        if (rings) {
+          process.env.WALKEROS_CREDENTIAL = credential;
           process.env.WALKEROS_CACHE_DIR = join(dir, 'cache');
         }
         const actual = jest.requireActual<typeof Pipeline>('../pipeline.js');

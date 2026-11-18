@@ -136,7 +136,7 @@ beforeEach(async () => {
     XDG_CONFIG_HOME: configHome,
     WALKEROS_APP_URL: app.appUrl,
   };
-  delete process.env.WALKEROS_TOKEN;
+  delete process.env.WALKEROS_CREDENTIAL;
   delete process.env.WALKEROS_LOGIN_PORT;
   delete process.env.BROWSER;
 });
@@ -261,12 +261,12 @@ describe('walkeros login in a browser on this machine', () => {
     },
   );
 
-  it('says WALKEROS_TOKEN keeps winning while it is set', async () => {
-    process.env.WALKEROS_TOKEN = 'wos_pat_env';
+  it('says WALKEROS_CREDENTIAL keeps winning while it is set', async () => {
+    process.env.WALKEROS_CREDENTIAL = 'wos_cred_set';
     const run = person();
     expect(await runLogin(BROWSER, run.io)).toBe(0);
     expect(run.err.text()).toContain(
-      'walkeros login: WALKEROS_TOKEN is set and is used instead of this sign-in until it is unset\n',
+      'walkeros login: WALKEROS_CREDENTIAL is set and is used instead of this sign-in until it is unset\n',
     );
   });
 
@@ -532,13 +532,13 @@ describe('walkeros logout', () => {
     expect(fileLogins()).toEqual({});
   });
 
-  it('says WALKEROS_TOKEN stays in use', async () => {
+  it('says WALKEROS_CREDENTIAL stays in use', async () => {
     writeCredentials({});
-    process.env.WALKEROS_TOKEN = 'wos_pat_env';
+    process.env.WALKEROS_CREDENTIAL = 'wos_cred_set';
     const run = person();
     expect(await runLogout(run.io)).toBe(0);
     expect(run.out.text()).toBe(
-      `Not signed in to ${app.appUrl}.\nWALKEROS_TOKEN is set and stays in use until it is unset.\n`,
+      `Not signed in to ${app.appUrl}.\nWALKEROS_CREDENTIAL is set and stays in use until it is unset.\n`,
     );
   });
 });

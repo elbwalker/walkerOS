@@ -55,6 +55,11 @@ export interface FetchWithRetryOptions {
   maxTotalMs?: number;
   /** Extra fetch init merged into each attempt (signal is supplied here). */
   init?: RequestInit;
+  /**
+   * Headers made anew for each attempt, in place of `init.headers`: a DPoP
+   * proof or a signature is good for one request, so a retry needs its own.
+   */
+  headers?: () => Promise<Record<string, string>>;
 }
 
 /** Read an optional string `code` off an unknown error without casting. */
@@ -169,6 +174,10 @@ export async function fetchWithRetry(
   let made = 0;
 
   for (let attempt = 0; attempt < attempts; attempt++) {
+    // Made before the attempt's time is measured: buying a token has its own
+    // bound, and the budget left after it bounds the request.
+    const headers = options.headers ? await options.headers() : undefined;
+
     // Clamp each attempt's timeout to the budget that remains, so the total
     // wall-clock is genuinely bounded by maxTotalMs (a full per-attempt timeout
     // can no longer overrun the budget). If too little budget remains to make a
@@ -191,6 +200,7 @@ export async function fetchWithRetry(
       try {
         response = await fetch(url, {
           ...init,
+          ...(headers && { headers }),
           signal: controller.signal,
         });
       } finally {
