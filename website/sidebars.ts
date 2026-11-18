@@ -563,6 +563,11 @@ const sidebars: SidebarsConfig = {
                 },
                 {
                   type: 'doc',
+                  id: 'destinations/server/reditus',
+                  className: 'sidebar-badge-server',
+                },
+                {
+                  type: 'doc',
                   id: 'destinations/server/redis',
                   className: 'sidebar-badge-server',
                 },
