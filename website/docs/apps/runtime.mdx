@@ -263,6 +263,15 @@ When connected, the runtime:
 - **Fetches an artifact URL on the app's origin** with its credential. The
   redirect to the storage carries no credential, and a URL on any other host
   is fetched without one.
+- **Signs its flow's ingest writes** when the credential belongs to a
+  deployment. The flow's steps get a signer: the usage report signs each report
+  when it names no token, and the ClickHouse destination signs each insert
+  when its config sets `settings.signed: true` (see
+  [Signed inserts](/docs/destinations/server/clickhouse#signed-inserts-to-walkeros-hosted-ingest)).
+  Each request gets a fresh signature over its exact bytes, with the
+  credential's key, and works without the auth server. The signer never signs
+  a request to the app or its auth server, so no step obtains headers for
+  them, and no step ever sees the credential.
 
 The credential itself is never sent. With it the runtime buys a token that
 lasts 24 hours and works only together with the credential's key, and renews

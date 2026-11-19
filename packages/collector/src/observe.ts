@@ -1,11 +1,13 @@
 /**
  * The Observe reporter: usage reports of this runtime's counters and issues,
  * and preview rows per event and per destination outcome, posted as NDJSON
- * with a Bearer token. It is never awaited on the event path and never
- * throws: a failing report is one ERROR line a minute and changes nothing
- * for delivery. Started by `startFlow` behind `__WALKEROS_OBSERVE__`.
+ * with a Bearer token, or for usage signed by a host's `authorize`. It is
+ * never awaited on the event path and never throws: a failing report is one
+ * ERROR line a minute and changes nothing for delivery. Started by
+ * `startFlow` behind `__WALKEROS_OBSERVE__`.
  */
 import type {
+  Authorize,
   BatchedPoster,
   Collector,
   Destination,
@@ -14,6 +16,7 @@ import type {
   WalkerOS,
 } from '@walkeros/core';
 import {
+  clockOffsetNote,
   createBatchedPoster,
   getErrorMessage,
   getSpanId,
@@ -41,7 +44,7 @@ const PREVIEW_MAX_BUFFERED = 500;
 const PREVIEW_MAX_PENDING = 100;
 
 const OBSERVE_KEYS = ['usage', 'preview'];
-const USAGE_KEYS = ['url', 'token', 'interval'];
+const USAGE_KEYS = ['url', 'token', 'authorize', 'interval'];
 const PREVIEW_KEYS = ['url', 'token'];
 
 /** One row of a usage report: exactly the columns of the `usage` table. */
@@ -94,14 +97,14 @@ interface Outcome {
   ms: number;
 }
 
-interface Part {
-  url: string;
-  token: string;
-}
+/** A part's endpoint and how it signs in: exactly one of the two. */
+type Part =
+  | { url: string; token: string; authorize?: undefined }
+  | { url: string; authorize: Authorize; token?: undefined };
 
 interface Parts {
   usage?: Part & { interval: number };
-  preview?: Part;
+  preview?: { url: string; token: string };
 }
 
 /** Masks a message the reporter posts: known values, then the patterns, then the 256 cut. */
@@ -179,7 +182,7 @@ function checkParts(
 
   const parts: Parts = {};
   if (options.usage !== undefined) {
-    const usage = checkPart(options.usage, 'usage', USAGE_KEYS, mask);
+    const usage = checkUsage(options.usage, mask);
     if (typeof usage === 'string') refuse(...splitProblem(usage), 'usage');
     else {
       const interval = isObject(options.usage)
@@ -209,18 +212,43 @@ function checkParts(
     const preview = checkPart(options.preview, 'preview', PREVIEW_KEYS, mask);
     if (typeof preview === 'string')
       refuse(...splitProblem(preview), 'preview');
-    else parts.preview = preview;
+    else if (typeof preview.token !== 'string')
+      refuse('observe.preview.token', 'not a non-empty string', 'preview');
+    else parts.preview = { url: preview.url, token: preview.token };
   }
   return parts;
 }
 
-/** A part's url and token, or `<path>\u0000<problem>` naming what fails. */
+/**
+ * The usage part: its token when given, else the host's `authorize`, else
+ * a refusal naming the token, so a part that cannot sign in never starts.
+ */
+function checkUsage(value: unknown, mask: Mask): Part | string {
+  const part = checkPart(value, 'usage', USAGE_KEYS, mask);
+  if (typeof part === 'string') return part;
+  if (part.token !== undefined) return { url: part.url, token: part.token };
+  const authorize = isObject(value) ? value.authorize : undefined;
+  if (isAuthorize(authorize)) return { url: part.url, authorize };
+  return authorize === undefined
+    ? 'observe.usage.token\u0000not given, and no host signs the reports'
+    : 'observe.usage.authorize\u0000not a function';
+}
+
+/** A host's signer as the options carry it: a function, called per report. */
+function isAuthorize(value: unknown): value is Authorize {
+  return typeof value === 'function';
+}
+
+/**
+ * A part's url and its token when one is given, or `<path>\u0000<problem>`
+ * naming what fails.
+ */
 function checkPart(
   value: unknown,
   name: string,
   keys: string[],
   mask: Mask,
-): Part | string {
+): { url: string; token?: string } | string {
   const path = `observe.${name}`;
   if (!isObject(value)) return `${path}\u0000not an object`;
   const unknown = Object.keys(value).find((key) => !keys.includes(key));
@@ -229,6 +257,7 @@ function checkPart(
   const { url, token } = value;
   if (typeof url !== 'string' || !isHttpUrl(url))
     return `${path}.url\u0000${show(url, mask)} is not an http or https URL`;
+  if (token === undefined) return { url };
   // The token's value is never shown: it is the one secret of the part.
   if (typeof token !== 'string' || token === '')
     return `${path}.token\u0000not a non-empty string`;
@@ -273,19 +302,39 @@ function startUsage(
   identity: Identity,
   mask: Mask,
 ): { stop(deadline: number): Promise<void> } {
-  const poster: BatchedPoster<UsageRow> = createBatchedPoster<UsageRow>({
-    url: options.url,
-    token: options.token,
-  });
+  const poster: BatchedPoster<UsageRow> = createBatchedPoster<UsageRow>(
+    options.token !== undefined
+      ? { url: options.url, token: options.token }
+      : { url: options.url, authorize: options.authorize },
+  );
   let seq = 0;
   let current: Promise<void> | undefined;
   let lastSuccess: number | undefined;
   let soon: ReturnType<typeof setTimeout> | undefined;
+  let retry: ReturnType<typeof setTimeout> | undefined;
   let stopped = false;
+
+  // A 503 that names a delay (a door that does not know the key yet, or
+  // started after the report was signed) gets one report after that delay,
+  // signed anew; its failure is the line. A report answered so again waits
+  // for the interval, since each report is cumulative.
+  const retryAfter = (seconds: number): boolean => {
+    if (stopped || retry !== undefined) return false;
+    retry = setTimeout(() => {
+      retry = undefined;
+      if (!stopped && !current) void report(false, undefined, true);
+    }, seconds * 1000);
+    unrefTimer(retry);
+    return true;
+  };
 
   // One report at a time: a beat that finds one in flight is skipped, and the
   // next cumulative report covers it.
-  const report = (final: boolean, timeoutMs?: number): Promise<void> => {
+  const report = (
+    final: boolean,
+    timeoutMs?: number,
+    retried = false,
+  ): Promise<void> => {
     const run = (async () => {
       seq += 1;
       let rows: UsageRow[];
@@ -316,7 +365,13 @@ function startUsage(
         timeoutMs === undefined ? undefined : { timeoutMs },
       );
       if (result.ok) lastSuccess = Date.now();
-      else reportFailure(collector, 'usage', result, lastSuccess);
+      else if (
+        retried ||
+        final ||
+        result.retryAfter === undefined ||
+        !retryAfter(result.retryAfter)
+      )
+        reportFailure(collector, 'usage', result, lastSuccess);
     })().catch(noop);
     current = run;
     void run.then(() => {
@@ -359,6 +414,7 @@ function startUsage(
       stopped = true;
       clearInterval(timer);
       if (soon !== undefined) clearTimeout(soon);
+      if (retry !== undefined) clearTimeout(retry);
       collector.causeLog?.setListener(noop);
       if (current) await within(current, deadline - Date.now());
       const left = deadline - Date.now();
@@ -484,12 +540,18 @@ function reportFailure(
 ): void {
   const code = result.code ? `, code ${result.code}` : '';
   const since = lastSuccess ? clickhouseTime(lastSuccess) : 'never';
+  // A refused signature can come from a clock that is off; the answer's Date
+  // says by how much.
+  const what =
+    result.status === 403
+      ? `the data server refused the ${route} report: 403${clockOffsetNote(result.clockOffset)}`
+      : `${result.message}${code}`;
   reportCause(
     collector,
     collector.logger,
     { step: `observe.${route}`, code: 'report-failed', status: result.status },
     `Observe ${route} report failed`,
-    { error: `${result.message}${code}, last success ${since}` },
+    { error: `${what}, last success ${since}` },
   );
 }
 
@@ -497,7 +559,7 @@ function reportFailure(
 
 function startPreview(
   collector: Collector.Instance,
-  options: Part,
+  options: { url: string; token: string },
   identity: Identity,
   mask: Mask,
 ): { flush(keepalive?: boolean): Promise<void>; stop(): Promise<void> } {

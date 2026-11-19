@@ -12,6 +12,7 @@ import type {
 } from '.';
 import type { Ingest } from './ingest';
 import type { ObserverFn } from './observer';
+import type { Authorize } from '../runtime';
 import type { CauseLog } from '../causeLog';
 import type { STEP_TYPES } from '../packageMeta';
 
@@ -126,15 +127,22 @@ export interface Config {
 
 /**
  * The Observe reporter's options: where each part posts and with which token.
- * Each part sends NDJSON rows with its token as `Authorization: Bearer`. A
- * part that fails its check does nothing, and without a part nothing runs: no
+ * Each part sends NDJSON rows with its token as `Authorization: Bearer`; the
+ * usage part may instead sign each report with a host's `authorize`. A part
+ * that fails its check does nothing, and without a part nothing runs: no
  * timer, no buffer, no observer, no request.
  */
 export interface Observe {
   /** Counters and issues of this runtime, every interval. */
   usage?: {
     url: string;
-    token: string;
+    /** Sent as `Authorization: Bearer`; when given, `authorize` is not used. */
+    token?: string;
+    /**
+     * Signs each report when no token is given. A runtime option a host sets
+     * (a paired runner's bundle entry), never written in a flow file.
+     */
+    authorize?: Authorize;
     /** Seconds between reports, a whole number from 10 to 300. Default 60. */
     interval?: number;
   };

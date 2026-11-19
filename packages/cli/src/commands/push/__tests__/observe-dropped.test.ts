@@ -23,7 +23,7 @@ function observedFlow(base: string): Flow.Json {
         config: { platform: 'server' },
         collector: {
           observe: {
-            usage: { url: `${base}/usage`, token: 'wos_usage_t1_secret' },
+            usage: { url: `${base}/usage`, token: 'tok_usage_t1_secret' },
             preview: { url: `${base}/preview`, token: 'wos_preview_t1_secret' },
           },
         },

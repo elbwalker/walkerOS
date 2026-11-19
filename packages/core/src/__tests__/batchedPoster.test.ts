@@ -1,5 +1,7 @@
 import { createBatchedPoster, KEEPALIVE_BODY_BYTES } from '..';
 import type {
+  Authorize,
+  BatchedPosterOptions,
   PosterFetch,
   PosterRequest,
   PosterResponse,
@@ -7,11 +9,12 @@ import type {
 } from '..';
 
 const url = 'https://ingest.example.com/usage';
-const token = 'wos_usage_aaaabbbbccccdddd_secret';
+const token = 'usage-token-example';
 
 interface Call {
   url: string;
   init: PosterRequest;
+  /** The body as text, whichever form it was sent in. */
   body: string;
 }
 
@@ -33,7 +36,12 @@ function recorder(
 ) {
   const calls: Call[] = [];
   const fetch: PosterFetch = async (url, init) => {
-    calls.push({ url, init, body: init.body });
+    // No TextDecoder under jsdom; Buffer reads the bytes as UTF-8.
+    const body =
+      typeof init.body === 'string'
+        ? init.body
+        : Buffer.from(init.body).toString('utf8');
+    calls.push({ url, init, body });
     return respond(calls.length - 1);
   };
   return { calls, fetch };
@@ -442,6 +450,111 @@ describe('createBatchedPoster', () => {
       { ok: false, message: 'no row fits a page-leave body of 16384 bytes' },
     ]);
     expect(poster.dropped()).toBe(1);
+  });
+
+  // A signature covers the exact bytes and one nonce, so each request asks
+  // for its own headers and sends what was signed.
+  it('signs each request with its own authorize call and sends the bytes it signed', async () => {
+    const seen: Array<{ method: string; url: string; body?: Uint8Array }> = [];
+    const authorize: Authorize = async (request) => {
+      seen.push(request);
+      return { Signature: `sig${seen.length}`, 'Signature-Input': 'sig1=()' };
+    };
+    const { calls, fetch } = recorder();
+    const poster = createBatchedPoster({
+      url,
+      authorize,
+      fetch,
+      headers: { signature: 'caller', 'X-Extra': '1' },
+    });
+
+    // Two- and three-byte characters and a surrogate pair: UTF-8 bytes.
+    const text = 'Grüße 漢 😀';
+    await poster.send([{ seq: 1, text }]);
+    await poster.send([{ seq: 2 }]);
+
+    expect(seen.map(({ method, url }) => [method, url])).toEqual([
+      ['POST', url],
+      ['POST', url],
+    ]);
+    expect(calls.map(({ init }) => init.headers)).toEqual([
+      {
+        'X-Extra': '1',
+        Signature: 'sig1',
+        'Signature-Input': 'sig1=()',
+        'Content-Type': 'application/x-ndjson',
+      },
+      {
+        'X-Extra': '1',
+        Signature: 'sig2',
+        'Signature-Input': 'sig1=()',
+        'Content-Type': 'application/x-ndjson',
+      },
+    ]);
+    expect(calls.map(({ init }) => init.body)).toEqual(
+      seen.map(({ body }) => body),
+    );
+    expect(seen[0].body).toEqual(
+      new Uint8Array(Buffer.from(JSON.stringify({ seq: 1, text }), 'utf8')),
+    );
+    expect(calls.map(({ body }) => rowsOf(body))).toEqual([
+      [{ seq: 1, text }],
+      [{ seq: 2 }],
+    ]);
+  });
+
+  it.each<[string, Omit<BatchedPosterOptions, 'url'>]>([
+    ['both token and authorize', { token, authorize: async () => ({}) }],
+    ['neither token nor authorize', {}],
+  ])('refuses %s at creation', (_name, options) => {
+    expect(() => createBatchedPoster({ url, ...options })).toThrow(
+      'createBatchedPoster takes exactly one of token and authorize',
+    );
+  });
+
+  // A door's 503 asks for a retry after a delay; its 403 may come from a
+  // clock that is off, which its Date shows.
+  it.each<[string, PosterResponse, PostResult]>([
+    [
+      'a 503 with Retry-After: 5',
+      answer(503, { 'Retry-After': '5' }),
+      { ok: false, status: 503, message: 'responded 503', retryAfter: 5 },
+    ],
+    [
+      'a 503 with Retry-After: 900, capped at 60',
+      answer(503, { 'Retry-After': '900' }),
+      { ok: false, status: 503, message: 'responded 503', retryAfter: 60 },
+    ],
+    [
+      'a 503 with an HTTP-date Retry-After',
+      answer(503, { 'Retry-After': 'Wed, 18 Nov 2026 12:01:00 GMT' }),
+      { ok: false, status: 503, message: 'responded 503' },
+    ],
+    [
+      'a 503 without Retry-After',
+      answer(503),
+      { ok: false, status: 503, message: 'responded 503' },
+    ],
+    [
+      'a 403 whose Date is 30 seconds ahead',
+      answer(403, { Date: 'Wed, 18 Nov 2026 12:00:30 GMT' }),
+      { ok: false, status: 403, message: 'responded 403', clockOffset: 30 },
+    ],
+    [
+      'a 403 without Date',
+      answer(403),
+      { ok: false, status: 403, message: 'responded 403' },
+    ],
+  ])('resolves %s', async (_name, response, expected) => {
+    jest.useFakeTimers({ now: Date.parse('2026-11-18T12:00:00Z') });
+    const { fetch } = recorder(async () => response);
+    const poster = createBatchedPoster({
+      url,
+      authorize: async () => ({}),
+      fetch,
+    });
+
+    await expect(poster.send([{ seq: 1 }])).resolves.toEqual(expected);
   });
 
   it('lets no caller header replace the token or the content type', async () => {

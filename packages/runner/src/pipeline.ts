@@ -15,6 +15,7 @@
 import {
   isObject,
   SHUTDOWN_DEADLINE_MS,
+  type Authorize,
   type DeclaredEnv,
   type Destination,
   type Logger,
@@ -84,6 +85,12 @@ export interface PipelineOptions {
   report?: (collector: FlowHandle['collector']) => HeartbeatHandle;
   /** Called once the flow is ready and the signal handlers are in place. */
   onReady?: () => void;
+  /**
+   * The signer the flow's steps get as `context.authorize`: start mode's
+   * door signer for a deployment credential, or the one a remote child is
+   * handed. Without it no step can sign.
+   */
+  authorize?: Authorize;
 }
 
 /**
@@ -136,7 +143,11 @@ export async function runPipeline(options: PipelineOptions): Promise<void> {
   guards.setOnOutOfBandError(() => outOfBandTracker.record());
 
   // Load flow
-  const runtimeConfig: RuntimeConfig = { port, ...options.flowLogger };
+  const runtimeConfig: RuntimeConfig = {
+    port,
+    ...options.flowLogger,
+    ...(options.authorize ? { authorize: options.authorize } : {}),
+  };
   let handle: FlowHandle;
   try {
     handle = await loadFlow(

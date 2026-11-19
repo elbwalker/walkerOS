@@ -142,13 +142,13 @@ describe('scrubSecrets', () => {
     // not only when its shape or entropy gives it away.
     it.each([
       [
-        'a usage token of low entropy',
-        `wos_usage_${'a'.repeat(16)}_${'a'.repeat(43)}`,
+        'a preview token of low entropy',
+        `wos_preview_${'a'.repeat(16)}_${'a'.repeat(43)}`,
       ],
       ['a short app token', 'wos_at_shorttoken'],
     ])('masks %s by its prefix', (_name, token) => {
-      expect(redactLine(`report refused for ${token} at /usage`)).toBe(
-        'report refused for *** at /usage',
+      expect(redactLine(`report refused for ${token} at /preview`)).toBe(
+        'report refused for *** at /preview',
       );
     });
 

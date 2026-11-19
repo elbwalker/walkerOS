@@ -6,8 +6,9 @@ sidebar_position: 8
 
 # Observe
 
-Observe is the collector's reporter. Give it an endpoint and a token, and a
-running flow sends what it did: counters and issues of the whole runtime, and
+Observe is the collector's reporter. Give it an endpoint and a token, or run it
+under a paired runner that signs the reports, and a running flow sends what it
+did: counters and issues of the whole runtime, and
 optionally one row for every event and every destination outcome. It adds no
 step to the flow and never holds an event back.
 
@@ -16,7 +17,7 @@ step to the flow and never holds an event back.
   "observe": {
     "usage": {
       "url": "https://ingest.example.com/usage",
-      "token": "$secret.OBSERVE_USAGE"
+      "token": "$secret.USAGE_TOKEN"
     }
   }
 }`}
@@ -53,6 +54,9 @@ parts. Both are optional, and each posts to its own endpoint.
   build needs the literal URL.
 - `token` is sent as `Authorization: Bearer <token>`. In a server flow, back it
   with a managed secret (`$secret.NAME`) instead of writing it into the file.
+  The usage part may leave it out when a paired runner signs its reports (see
+  [Signed by a paired runner](#signed-by-a-paired-runner)); the preview part
+  always needs it.
 - `interval` is a whole number of seconds from 10 to 300, default 60.
 
 Every other key fails `walkeros validate` at its path. Without options, nothing
@@ -74,7 +78,7 @@ const { elb } = await startFlow({
   observe: {
     usage: {
       url: 'https://ingest.example.com/usage',
-      token: process.env.OBSERVE_USAGE,
+      token: process.env.USAGE_TOKEN,
       interval: 30,
     },
   },
@@ -185,7 +189,9 @@ hangs, costs delivery nothing. One ERROR line a minute carries the message
 of `step` (`observe.usage` or `observe.preview`), `code` (`report-failed`),
 `status` when the endpoint answered one, and `error`: the reason, the ClickHouse
 code when the answer has one, and `last success` with the time of the last
-good report or `never`. Repeats within the minute are counted in `suppressed`
+good report or `never`. A `403` reads `the data server refused the usage report:
+403`, plus `clock offset <n> s` when the answer's `Date` is more than 5 seconds
+off this clock, since a signed report from a clock that is off is refused. Repeats within the minute are counted in `suppressed`
 on the next line. How the context prints depends on the logger's format.
 
 A screen that reads the reports shows a missing report as "no report since
@@ -253,7 +259,7 @@ a secret:
   "observe": {
     "usage": {
       "url": "$env.OBSERVE_URL",
-      "token": "$secret.OBSERVE_USAGE",
+      "token": "$secret.USAGE_TOKEN",
       "interval": 60
     }
   }
@@ -266,6 +272,31 @@ URL can differ per environment without a rebuild, and `$var.` references are
 resolved when the CLI bundles. Built with `walkeros bundle`
 and run with `runneros`, it starts with the flow.
 
+### Signed by a paired runner
+
+A runner paired with the walkerOS app holds a credential for its deployment.
+Started with it, `runneros` signs each usage report with the credential's key
+when the usage part names no token, so walkerOS hosted ingest needs no token in
+the flow:
+
+<CodeSnippet
+  code={`"collector": {
+  "observe": {
+    "usage": { "url": "https://ingest.walkeros.io/usage" }
+  }
+}`}
+  language="json"
+/>
+
+Each report carries a fresh signature over its exact bytes. A `token`, when the
+part names one, wins. Without a token and without a runner that signs, the part
+logs one ERROR line naming `observe.usage.token` and does not start. When the
+data server answers `503` with `Retry-After` (a key it does not know yet), the
+next report goes out after that delay, once, then the `interval` holds again; a
+report is cumulative, so nothing is lost meanwhile. The signer is a runtime
+option of the host, never written in a flow file: `startFlow` takes it as
+`observe.usage.authorize`.
+
 ## Self-hosting an endpoint
 
 Any HTTP endpoint that accepts a `POST` of NDJSON rows with a Bearer token can
@@ -277,7 +308,9 @@ when a preview build posts from a page, allow a cross-origin `POST` with the
 The rows are the columns named above, and an endpoint may drop a column it does
 not store. The ClickHouse destination can write to such an endpoint when it
 needs a token: see
-[Credentials](/docs/destinations/server/clickhouse#credentials).
+[Credentials](/docs/destinations/server/clickhouse#credentials). Run by a
+paired runner against walkerOS hosted ingest, it signs instead: see
+[Signed inserts](/docs/destinations/server/clickhouse#signed-inserts-to-walkeros-hosted-ingest).
 
 ## Observers
 

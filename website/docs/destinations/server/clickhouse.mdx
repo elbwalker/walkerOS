@@ -38,7 +38,7 @@ An insert into a table that does not exist fails with `60 UNKNOWN_TABLE`, so rea
 
 `config.credentials` says how the destination signs in: the
 `{ username, password }` of the ClickHouse user it writes as, or a `{ token }`
-for an endpoint that takes one, such as walkerOS hosted ingest. Back the
+for an endpoint that takes one, such as a proxy in front of ClickHouse. Back the
 password or the token with a managed secret (`$secret.NAME`) instead of writing
 it into the flow config. The credentials win over the same keys left in `settings.clickhouse`.
 Without credentials the client signs in as the `default` user with an empty
@@ -61,8 +61,8 @@ is the path every insert is sent to, and the database stays the one
 
 <CodeSnippet
   code={`"config": {
-  "settings": { "url": "https://ingest.walkeros.io/events" },
-  "credentials": { "token": "$secret.OBSERVE_EVENT" }
+  "settings": { "url": "https://clickhouse-proxy.example.com/events" },
+  "credentials": { "token": "$secret.CLICKHOUSE_TOKEN" }
 }`}
   language="json"
 />
@@ -79,6 +79,35 @@ when the answer carries no ClickHouse code and its first line starts with
 200 characters). Any other answer is reported by its ClickHouse code or Node
 error code only, never by its text, since ClickHouse can quote the rows it
 refused. The batch is retried once, as before.
+
+## Signed inserts to walkerOS hosted ingest
+
+Run by a paired runner (`runneros` with its credential) against walkerOS hosted
+ingest, the destination needs no credential. With `settings.signed: true` it
+signs each insert with the runner's own key: every attempt carries a fresh
+signature over the exact bytes it sends, and the data server checks it against
+the keys of the runner's deployment.
+
+<CodeSnippet
+  code={`"config": {
+  "settings": { "url": "https://ingest.walkeros.io/events", "signed": true }
+}`}
+  language="json"
+/>
+
+- Any other ClickHouse keeps its `credentials` and leaves `signed` unset. The
+  destination then never signs, even under a paired runner.
+- `signed: true` where no runner signs (a runner that is not paired), or beside
+  a credential in `credentials`, `settings.clickhouse` or `settings.url`, or
+  beside other `settings.clickhouse` client options than `request_timeout`,
+  fails init with code `config`, naming `settings.signed`. Every event then
+  fails with that reason.
+- A `503` with `Retry-After` (a key the data server does not know yet, or a
+  data server that started after the insert was signed) is retried after that
+  delay, signed anew, while the retry still fits the delivery's `timeout`.
+- A `403` is final: the batch goes to the dead letter queue at once with code
+  `auth` and one ERROR line, which names the clock offset when the answer's
+  `Date` is more than 5 seconds off this runner's clock.
 
 ## Passthrough options
 

@@ -6,19 +6,21 @@
  */
 
 import { resolve, dirname } from 'path';
-import type { Collector, DeclaredEnv, Logger } from '@walkeros/core';
+import type { Authorize, Collector, DeclaredEnv, Logger } from '@walkeros/core';
 import type { HealthServer } from './health-server.js';
 import { loadBundle } from './load-bundle.js';
 import type { FlowLogger } from './runtime-logging.js';
 
 /**
  * What the runner hands the bundle factory as its context, beside the logger
- * config: the server settings and the flow logger contract (`logLevel`,
- * `onLogger`).
+ * config: the server settings, the flow logger contract (`logLevel`,
+ * `onLogger`) and, when the runner signs for its steps, `authorize`.
  */
 export interface RuntimeConfig extends Partial<FlowLogger> {
   port?: number;
   host?: string;
+  /** The steps' signer, handed on by the bundle entry. */
+  authorize?: Authorize;
 }
 
 export interface FlowHandle {

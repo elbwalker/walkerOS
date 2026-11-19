@@ -37,14 +37,21 @@ async function privateKey(use: 'sig' | 'enc'): Promise<PrivateEcJwk> {
   };
 }
 
-/** A `wos_cred_` string with fresh keys, for the stub auth server below. */
+/**
+ * A `wos_cred_` string with fresh keys, for the stub auth server below, or
+ * for the issuer and app origins given.
+ */
 export async function testCredential(
   kind: ServiceTargetKind = 'automation',
+  origins: { issuer: string; app: string } = {
+    issuer: SERVICE_ISSUER,
+    app: SERVICE_APP,
+  },
 ): Promise<string> {
   return encodeServiceCredential({
     v: 1,
-    iss: SERVICE_ISSUER,
-    resource: `${SERVICE_APP}/api`,
+    iss: origins.issuer,
+    resource: `${origins.app}/api`,
     client_id: 'crd_testautomation00000000',
     target: { kind, id: 'acc_test1' },
     sig: await privateKey('sig'),

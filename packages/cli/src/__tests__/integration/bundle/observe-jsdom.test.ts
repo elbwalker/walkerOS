@@ -26,7 +26,7 @@ const OBSERVED_FLOW = withLocalPackages({
       ...MINIMAL_FLOW.flows.default,
       collector: {
         observe: {
-          usage: { url: `${INGEST}/usage`, token: 'wos_usage_t1_flow' },
+          usage: { url: `${INGEST}/usage`, token: 'tok_usage_t1_flow' },
           preview: {
             url: `${INGEST}/flow-preview`,
             token: 'wos_preview_t1_flow',

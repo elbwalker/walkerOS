@@ -160,13 +160,13 @@ describe('the runner with WALKEROS_CREDENTIAL', () => {
   });
 
   function connect() {
-    const app = connectApp({
+    const link = connectApp({
       env: process.env,
       logger: lines.logger,
       knownValues,
     });
-    if (!app) throw new Error('the credential was not read');
-    return app;
+    if (!link) throw new Error('the credential was not read');
+    return link.app;
   }
 
   function heartbeat(

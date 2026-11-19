@@ -116,8 +116,8 @@ export const initPassthrough: Flow.StepExample = {
 };
 
 /**
- * The ingest form: an endpoint whose path names the route, and a token in
- * place of a username and password.
+ * A proxy in front of ClickHouse: an endpoint whose path names the route, and
+ * a token in place of a username and password.
  *
  * The client reads a path in its url as the database, so the destination hands
  * the path over as `pathname` and keeps the url bare: every insert goes to
@@ -126,21 +126,21 @@ export const initPassthrough: Flow.StepExample = {
  * `Authorization: Bearer`.
  */
 export const initIngest: Flow.StepExample = {
-  title: 'Ingest endpoint with a token',
+  title: 'Endpoint path with a token',
   description:
-    'An endpoint with a path, like https://ingest.walkeros.io/events, sends every insert to that path, and the database stays the configured one. A token in credentials replaces the username and password and travels as an Authorization: Bearer header.',
+    'An endpoint with a path, like https://clickhouse-proxy.example.com/events, sends every insert to that path, and the database stays the configured one. A token in credentials replaces the username and password and travels as an Authorization: Bearer header.',
   in: {
-    settings: { url: 'https://ingest.walkeros.io/events' },
-    credentials: { token: '$secret.OBSERVE_EVENT' },
+    settings: { url: 'https://clickhouse-proxy.example.com/events' },
+    credentials: { token: '$secret.CLICKHOUSE_TOKEN' },
   },
   out: [
     [
       'createClient',
       {
-        url: 'https://ingest.walkeros.io',
+        url: 'https://clickhouse-proxy.example.com',
         pathname: '/events',
         database: 'default',
-        access_token: '$secret.OBSERVE_EVENT',
+        access_token: '$secret.CLICKHOUSE_TOKEN',
         request_timeout: 4812,
         compression: { request: true },
         log: { level: ClickHouseLogLevel.OFF },
@@ -166,9 +166,9 @@ export const refusedTokenWithUsername: Flow.StepExample = {
     'Credentials that carry a token and a username or password fail init with code config: ClickHouse signs in with one of them. No client is created, and every event fails with that reason.',
   public: false,
   in: {
-    settings: { url: 'https://ingest.walkeros.io/events' },
+    settings: { url: 'https://clickhouse-proxy.example.com/events' },
     credentials: {
-      token: '$secret.OBSERVE_EVENT',
+      token: '$secret.CLICKHOUSE_TOKEN',
       username: 'walkeros_writer',
     },
   },
@@ -183,10 +183,10 @@ export const refusedTokenWithPassthroughPassword: Flow.StepExample = {
   public: false,
   in: {
     settings: {
-      url: 'https://ingest.walkeros.io/events',
+      url: 'https://clickhouse-proxy.example.com/events',
       clickhouse: { password: '$secret.CLICKHOUSE_PASSWORD' },
     },
-    credentials: { token: '$secret.OBSERVE_EVENT' },
+    credentials: { token: '$secret.CLICKHOUSE_TOKEN' },
   },
   out: [],
   outcome: refusedOutcome,
@@ -198,8 +198,10 @@ export const refusedTokenWithUrlUserinfo: Flow.StepExample = {
     'A token in credentials beside a username or password in the settings url fails init with code config: ClickHouse signs in with one of them. No client is created, and every event fails with that reason.',
   public: false,
   in: {
-    settings: { url: 'https://walkeros_writer@ingest.walkeros.io/events' },
-    credentials: { token: '$secret.OBSERVE_EVENT' },
+    settings: {
+      url: 'https://walkeros_writer@clickhouse-proxy.example.com/events',
+    },
+    credentials: { token: '$secret.CLICKHOUSE_TOKEN' },
   },
   out: [],
   outcome: refusedOutcome,
@@ -211,7 +213,7 @@ export const refusedEmptyToken: Flow.StepExample = {
     'An empty credentials.token, such as a secret that resolved to nothing, fails init with code config instead of going out as an empty Bearer header. No client is created, and every event fails with that reason.',
   public: false,
   in: {
-    settings: { url: 'https://ingest.walkeros.io/events' },
+    settings: { url: 'https://clickhouse-proxy.example.com/events' },
     credentials: { token: '' },
   },
   out: [],
@@ -225,8 +227,25 @@ export const refusedTokenInUrl: Flow.StepExample = {
   public: false,
   in: {
     settings: {
-      url: 'https://ingest.walkeros.io/events?access_token=wos_in_the_url',
+      url: 'https://clickhouse-proxy.example.com/events?access_token=in_the_url',
     },
+  },
+  out: [],
+  outcome: refusedOutcome,
+};
+
+/**
+ * `settings.signed` signs each insert with the host instead of a credential,
+ * so it needs a host that signs: a paired runner hands its signer to the
+ * destination's env. Without one, init refuses rather than send unsigned.
+ */
+export const refusedSignedWithoutHost: Flow.StepExample = {
+  title: 'Signed without a host that signs',
+  description:
+    'settings.signed: true where no host hands the destination its signer (a runner that is not paired) fails init with code config, naming settings.signed. No client is created, and every event fails with that reason.',
+  public: false,
+  in: {
+    settings: { url: 'https://ingest.walkeros.io/events', signed: true },
   },
   out: [],
   outcome: refusedOutcome,

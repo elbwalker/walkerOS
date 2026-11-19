@@ -5,6 +5,7 @@ import type {
 import type { Logger } from '@walkeros/core';
 import { StepError } from '@walkeros/core';
 import { ClickHouseLogLevel, createClient } from '@clickhouse/client';
+import { createSignedClient } from './signed-insert';
 import type {
   ClickHouseClientFactory,
   Config,
@@ -243,7 +244,45 @@ function withDefaults(settings: InitSettings | undefined): ResolvedSettings {
     maxRetries: settings.maxRetries ?? DEFAULT_MAX_RETRIES,
     ...(clickhouse && { clickhouse }),
     clickhouseSettings: resolveInsertSettings(settings.clickhouseSettings),
+    ...(settings.signed === true && { signed: true }),
   };
+}
+
+/** The one client option a signed insert reads: its per-attempt time limit. */
+const SIGNED_CLIENT_OPTIONS = ['request_timeout'];
+
+/**
+ * Why `settings.signed` cannot hold, or undefined when it can: a signed
+ * insert needs the host's signer, carries no credential, and uses no client,
+ * so a credential or a client option beside it would be dropped in silence.
+ */
+function signedRefusal(
+  settings: ResolvedSettings,
+  credentials: Credentials | undefined,
+  env: Env | undefined,
+): string | undefined {
+  if (typeof env?.authorize !== 'function')
+    return 'no host signs the inserts (a paired runner hands its signer to the destination)';
+  const { clickhouse } = settings;
+  const endpoint = splitEndpoint(settings.url);
+  const credentialAt =
+    credentials !== undefined
+      ? 'credentials'
+      : clickhouse?.username !== undefined ||
+          clickhouse?.password !== undefined ||
+          clickhouse?.access_token !== undefined
+        ? 'settings.clickhouse'
+        : endpoint.userinfo || endpoint.queryToken
+          ? 'settings.url'
+          : undefined;
+  if (credentialAt)
+    return `a credential is configured in ${credentialAt}; a signed insert carries none`;
+  const clientOptions = Object.keys(clickhouse ?? {}).filter(
+    (key) => !SIGNED_CLIENT_OPTIONS.includes(key),
+  );
+  if (clientOptions.length)
+    return `settings.clickhouse sets client options (${clientOptions.join(', ')}); a signed insert uses no client and reads only request_timeout`;
+  return undefined;
 }
 
 /**
@@ -346,6 +385,11 @@ export function resolveClientOptions(
  * Resolves the config init hands forward, and creates the one client every
  * insert reuses. Nothing is queried: a missing table surfaces at the first
  * insert, as a loud, attributable failure.
+ *
+ * The mode is chosen here, once: with `settings.signed: true` the client is
+ * the signed one, built on the host's `authorize` from `env`; otherwise the
+ * SDK's client, and `env.authorize` is not read. A `signed` that cannot hold
+ * is refused with a StepError, code `config`, naming `settings.signed`.
  */
 export function getConfig(
   config: PartialConfig,
@@ -353,6 +397,15 @@ export function getConfig(
   logger: Logger.Instance,
 ): Config {
   const resolved = withDefaults(config.settings);
+  const refusal = resolved.signed
+    ? signedRefusal(resolved, config.credentials, env)
+    : undefined;
+  if (refusal)
+    throw new StepError(`Config settings.signed is set, but ${refusal}`, {
+      code: 'config',
+      retryable: false,
+    });
+
   const options = resolveClientOptions(
     resolved,
     config.credentials,
@@ -361,7 +414,11 @@ export function getConfig(
 
   const factory: ClickHouseClientFactory =
     env?.ClickHouseClient || createClient;
-  const client = factory(options);
+  const authorize = env?.authorize;
+  const client =
+    resolved.signed && authorize
+      ? createSignedClient(options, authorize)
+      : factory(options);
 
   // Every credential stays out of this line deliberately, the url included:
   // init is the one place that holds them, and a debug log is the easiest way
@@ -370,6 +427,7 @@ export function getConfig(
     host: endpointHost(resolved.url),
     database: resolved.database,
     table: resolved.table,
+    signed: resolved.signed === true,
   });
 
   return { ...config, settings: { ...resolved, client } };

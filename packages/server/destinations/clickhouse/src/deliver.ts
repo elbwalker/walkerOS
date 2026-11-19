@@ -1,6 +1,12 @@
 import type { Destination, Logger } from '@walkeros/core';
-import { isObject, StepError } from '@walkeros/core';
-import { adviceFor, classify, errnoOf, errorCode } from './classify';
+import { clockOffsetNote, isObject, StepError } from '@walkeros/core';
+import {
+  AnswerError,
+  adviceFor,
+  classify,
+  errnoOf,
+  errorCode,
+} from './classify';
 import { resolveSettings } from './config';
 import { eventToRow } from './eventToRow';
 import type { InsertEntry } from './insert';
@@ -57,7 +63,12 @@ export async function deliver(
   const settings = resolveSettings(config);
 
   try {
-    await insertRows(entries.map(toInsertEntry), settings, logger);
+    await insertRows(
+      entries.map(toInsertEntry),
+      settings,
+      logger,
+      config.timeout,
+    );
   } catch (error) {
     throw insertError(error);
   }
@@ -102,8 +113,19 @@ function proxyLine(error: unknown): string | undefined {
  * for the terminal codes that need one, or else the walkerOS data proxy's
  * reason. Never the server's own text: it can quote the rows it could not
  * parse. The original error stays the cause.
+ *
+ * A signed insert the data server refused (403) is code `auth`, terminal,
+ * and names the clock offset when it is more than 5 s either way, since a
+ * clock that is off is the one cause the runner's own host can fix. A
+ * StepError the insert threw (a signature that was not made) passes as it is.
  */
 function insertError(error: unknown): StepError {
+  if (error instanceof StepError) return error;
+  if (error instanceof AnswerError && error.status === 403)
+    return new StepError(
+      `The data server refused the insert: 403${clockOffsetNote(error.clockOffset)}`,
+      { code: 'auth', status: 403, retryable: false, cause: error },
+    );
   const code = errorCode(error);
   const reason = code ? `code ${code}` : errnoOf(error);
   const line = reason ? undefined : proxyLine(error);

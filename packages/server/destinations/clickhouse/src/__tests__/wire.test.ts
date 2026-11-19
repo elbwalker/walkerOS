@@ -12,7 +12,7 @@ import { deduplicationToken } from '../insert';
 // no request leaves the machine.
 jest.unmock('@clickhouse/client');
 
-const token = 'wos_events_aaaabbbbccccdddd_secret';
+const token = 'proxy-token-example';
 
 interface Received {
   method?: string;

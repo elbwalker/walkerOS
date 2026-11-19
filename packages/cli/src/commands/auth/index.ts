@@ -43,7 +43,8 @@ async function identify(): Promise<{ body: unknown; credential: Credential }> {
   const response = await sendWithCredential(
     credential,
     { method: 'GET', url: appRequestUrl(APP_PATHS.whoami, baseUrl) },
-    (headers) => appFetch(APP_PATHS.whoami, { baseUrl, headers }),
+    (headers, redirect) =>
+      appFetch(APP_PATHS.whoami, { baseUrl, headers, redirect }),
   );
   const body = await readJson(response);
   if (!response.ok) {

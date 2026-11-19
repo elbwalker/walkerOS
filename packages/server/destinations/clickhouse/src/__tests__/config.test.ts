@@ -408,11 +408,11 @@ describe('client options', () => {
   it('hands a token to the client as access_token, with no username or password', () => {
     const options = resolveClientOptions(
       base,
-      { token: 'wos_events_token' },
+      { token: 'proxy-token-example' },
       DEFAULT_TIMEOUT_MS,
     );
 
-    expect(options.access_token).toBe('wos_events_token');
+    expect(options.access_token).toBe('proxy-token-example');
     expect(options).not.toHaveProperty('username');
     expect(options).not.toHaveProperty('password');
   });

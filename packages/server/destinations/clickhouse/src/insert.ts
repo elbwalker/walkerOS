@@ -2,11 +2,12 @@ import type { Readable } from 'stream';
 import type { ClickHouseSettings, InsertParams } from '@clickhouse/client';
 import type { Logger } from '@walkeros/core';
 import { createHash } from 'node:crypto';
-import { classify, errorCode } from './classify';
+import { classify, errorCode, retryAfterMs } from './classify';
 import {
   RETRY_JITTER_MAX,
   normalizeMaxRetries,
   resolveInsertSettings,
+  resolveTimeout,
   retryDelay,
 } from './config';
 import type { InsertRow } from './eventToRow';
@@ -91,6 +92,12 @@ function wait(ms: number): Promise<void> {
  * derived from, so what the loop waits and what the client was configured for
  * cannot drift apart and leave an attempt running past the collector's race.
  *
+ * A failed answer that names its own delay (a signed insert's 503 with
+ * `Retry-After`) waits that delay instead, but only while the next attempt
+ * still starts inside the collector's race (`timeout`, the collector's
+ * per-delivery limit); past it the failure is rethrown, since the collector
+ * has stopped waiting by then.
+ *
  * A failure that survives the retries is rethrown as it arrived, ClickHouse
  * code included: the collector dead-letters the whole batch on a throw and
  * keeps the error beside it, and the code is what makes that entry readable.
@@ -99,8 +106,10 @@ export async function insertRows(
   entries: readonly InsertEntry[],
   settings: Settings,
   logger: Logger.Instance,
+  timeout?: number,
 ): Promise<void> {
   const { client, table } = settings;
+  const raceEndsAt = Date.now() + resolveTimeout(timeout);
 
   // What counts as a usable retry count is decided in one place for both halves
   // of the mechanism, the loop here and the budget the request timeout was
@@ -139,7 +148,10 @@ export async function insertRows(
 
       if (!retryable || attempt >= retries) throw error;
 
-      const delay = retryDelay(attempt, drawJitter());
+      const asked = retryAfterMs(error);
+      if (asked !== undefined && Date.now() + asked >= raceEndsAt) throw error;
+
+      const delay = asked ?? retryDelay(attempt, drawJitter());
 
       // A finite but absurd retry count passes the clamp above and would spend
       // it on insert attempts against a live server. The delays double, so they

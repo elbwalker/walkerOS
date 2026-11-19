@@ -155,7 +155,9 @@ declarations and `.json` leaves of `exports` do not trigger it.
 each `{ url, token }` with `usage` also `interval` (10 to 300 seconds, default
 60). `url` is an absolute http or https URL, or a `$env.` or `$var.` reference;
 the token is sent as a Bearer header, so back it with `$secret.NAME`. Any other
-key fails validate at its path.
+key fails validate at its path. The usage part may leave `token` out under a
+paired `runneros`, which signs each report with its credential's key; without
+either, the part logs one ERROR line naming `observe.usage.token`.
 
 ```json
 {
@@ -163,7 +165,7 @@ key fails validate at its path.
     "observe": {
       "usage": {
         "url": "https://ingest.example.com/usage",
-        "token": "$secret.OBSERVE_USAGE"
+        "token": "$secret.USAGE_TOKEN"
       }
     }
   }

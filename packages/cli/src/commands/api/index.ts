@@ -300,12 +300,13 @@ export async function runApi(
             ? undefined
             : new TextEncoder().encode(request.body),
       },
-      (headers) =>
+      (headers, redirect) =>
         appFetch(request.path, {
           method: request.method,
           baseUrl: appUrl,
           headers: { ...headers, ...request.headers },
           body: request.body,
+          redirect,
         }),
     );
   } catch (error) {

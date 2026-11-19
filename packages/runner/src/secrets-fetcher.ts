@@ -40,6 +40,9 @@ export async function fetchSecrets(
     fetchWithRetry(url, {
       maxTotalMs: 20_000,
       headers: attemptHeaders(app, request, headers),
+      // The family never redirects: a redirect is a failed read, not
+      // followed, so no proof or signature leaves the app's origin.
+      init: { redirect: 'manual' },
     }),
   );
 

@@ -285,6 +285,43 @@ describe('the service credential client', () => {
       },
     ],
     [
+      'names a refused signed request by what it can mean and the clock offset, never pairing again',
+      async () => {
+        const s = stub('deployment', ['down']);
+        expect(await s.auth.authorize(get)).toHaveProperty('Signature-Input');
+        s.auth.answered({
+          status: 401,
+          headers: new Headers({
+            'WWW-Authenticate': 'DPoP algs="ES256"',
+            Date: new Date(s.now() - 90_000).toUTCString(),
+          }),
+        });
+        expect(s.lines).toEqual([
+          'The token request failed: fetch failed',
+          'No live token: requests to https://app.walkeros.io are signed until a token is bought',
+          "The app refused this runner's signed request (HTTP 401): its credential is not connected yet or has ended, or this clock is off; this clock is +90 s off the app's",
+        ]);
+      },
+    ],
+    [
+      'drops a refused token again once another answer came between',
+      async () => {
+        const s = stub();
+        await s.auth.authorize(get);
+        const refused = {
+          status: 401,
+          headers: new Headers({
+            'WWW-Authenticate': 'DPoP error="invalid_token"',
+          }),
+        };
+        expect(s.auth.answered(refused)).toBe(true);
+        expect((await s.auth.authorize(get)).Authorization).toBe('DPoP tok-2');
+        expect(s.auth.answered({ status: 503 })).toBe(false);
+        expect(s.auth.answered(refused)).toBe(true);
+        expect((await s.auth.authorize(get)).Authorization).toBe('DPoP tok-3');
+      },
+    ],
+    [
       'names a 403 as the route refusing the credential, never as an end',
       async () => {
         const s = stub();

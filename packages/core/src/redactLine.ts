@@ -42,7 +42,7 @@ const FORCE_MASK_PREFIXES = [
   'xoxb-',
   'xoxp-',
   'AKIA',
-  // Every walkerOS token begins with it, an ingest token (wos_usage_...)
+  // Every walkerOS token begins with it, a preview token (wos_preview_...)
   // as much as any other.
   'wos_',
 ];

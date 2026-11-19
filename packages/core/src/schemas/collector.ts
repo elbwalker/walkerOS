@@ -212,7 +212,10 @@ const ObservePartSchema = z
 
 export const ObserveSchema = z
   .object({
+    // `token` is optional here: a paired runner's host signs each report
+    // with its own `authorize`, a runtime option no flow file carries.
     usage: ObservePartSchema.extend({
+      token: ObservePartSchema.shape.token.optional(),
       interval: z
         .number()
         .int()

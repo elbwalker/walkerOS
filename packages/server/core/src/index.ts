@@ -40,6 +40,22 @@ export type {
   ServiceAuthOptions,
   ServiceToken,
 } from './service-auth/client';
+// The data plane's doors: the signer a runner hands its steps, and the check
+// a door runs on each signed request.
+export {
+  SIGNATURE_TAGS,
+  createDoorAuthorize,
+  signDoorRequest,
+} from './service-auth/door-sign';
+export type { DoorTag } from './service-auth/door-sign';
+export { createDoorCheck } from './service-auth/door-check';
+export type {
+  DoorCheck,
+  DoorCheckOptions,
+  DoorDecision,
+  DoorRefusal,
+  DoorRequest,
+} from './service-auth/door-check';
 
 // Export server-specific types
 export * from './types';

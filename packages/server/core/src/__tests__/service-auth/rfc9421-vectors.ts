@@ -86,3 +86,39 @@ export function testCredential(
     enc: { ...key, use: 'enc', alg: 'ECDH-ES' },
   };
 }
+
+/** RFC 9421 Appendix B.2: test-request, its target split from its origin as a door gets them. */
+export const B2_TEST_REQUEST = {
+  method: 'POST',
+  origin: 'https://example.com',
+  target: '/foo?param=Value&Pet=dog',
+  headers: {
+    Host: 'example.com',
+    Date: 'Tue, 20 Apr 2021 02:07:55 GMT',
+    'Content-Type': 'application/json',
+    'Content-Digest':
+      'sha-512=:WZDPaVn/7XgHaAy8pmojAkGWoRx2UFChF41A2svX+TaPm+AbwAgBWnrIiYllu7BNNyealdVLvRwEmTHWXvJwew==:',
+    'Content-Length': '18',
+  },
+  body: '{"hello": "world"}',
+  /** B.2's `created`, in ms. */
+  at: 1618884473000,
+} as const;
+
+/** RFC 9421 Appendix B.2.6: test-request signed with test-key-ed25519. */
+export const B26_SIGNATURE_INPUT =
+  'sig-b26=("date" "@method" "@path" "@authority" "content-type" "content-length");created=1618884473;keyid="test-key-ed25519"';
+export const B26_SIGNATURE =
+  'sig-b26=:wqcAqbmYJ2ji2glfAMaRy4gruYYnx2nEFN2HN6jrnDnQCK1u02Gb04v9EDgwUPiu4A0w6vuQv5lIp5WPpBKRCw==:';
+
+/** RFC 9421 Appendix B.2.2: the covered components and parameters, as `@signature-params` holds them. */
+export const B22_SIGNATURE_PARAMS =
+  '("@authority" "content-digest" "@query-param";name="Pet");created=1618884473;keyid="test-key-rsa-pss";tag="header-example"';
+
+/** RFC 9421 Appendix B.2.2: the signature base. */
+export const B22_SIGNATURE_BASE = [
+  '"@authority": example.com',
+  `"content-digest": ${B2_TEST_REQUEST.headers['Content-Digest']}`,
+  '"@query-param";name="Pet": dog',
+  `"@signature-params": ${B22_SIGNATURE_PARAMS}`,
+].join('\n');

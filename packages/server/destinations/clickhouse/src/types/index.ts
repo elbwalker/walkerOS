@@ -1,4 +1,4 @@
-import type { Destination as CoreDestination } from '@walkeros/core';
+import type { Authorize, Destination as CoreDestination } from '@walkeros/core';
 import type { DestinationServer } from '@walkeros/server-core';
 import type {
   ClickHouseClient,
@@ -43,10 +43,13 @@ export interface Settings {
   clickhouse?: ClickHouseClientConfigOptions;
   /** ClickHouse settings applied to every insert. */
   clickhouseSettings?: ClickHouseSettings;
+  /** Present and true when each insert is signed by the host (`InitSettings.signed`). */
+  signed?: true;
   /**
-   * The live client created by init(). Carried on the resolved config so the
-   * insert path receives it as part of its settings argument. Runtime-only,
-   * not user-facing.
+   * The live client created by init(): the SDK's, or with `signed` the one
+   * that signs each insert. Carried on the resolved config so the insert path
+   * receives it as part of its settings argument. Runtime-only, not
+   * user-facing.
    */
   client: ClickHouseClientSurface;
 }
@@ -74,6 +77,14 @@ export interface InitSettings {
   clickhouse?: ClickHouseClientConfigOptions;
   /** ClickHouse settings applied to every insert. */
   clickhouseSettings?: ClickHouseSettings;
+  /**
+   * Sign each insert with the host's `authorize` instead of a credential: for
+   * a paired runner writing to walkerOS hosted ingest, which hands its signer
+   * to the destination's env. Without a host that signs, or beside a
+   * credential, init refuses. Unset, the destination ignores `authorize` and
+   * sends through the client with its credential, or none. Default false.
+   */
+  signed?: boolean;
   /**
    * The live client, populated by init(). Runtime-only, not user-facing.
    *
@@ -105,9 +116,13 @@ export type Credentials =
  * Env carries the client factory so tests and simulations inject a recording
  * stand-in instead of opening a socket. Production leaves it undefined and the
  * destination uses the SDK's own `createClient`.
+ *
+ * `authorize` is the host's signer, set by a paired runner's bundle entry. It
+ * is used only with `settings.signed: true`.
  */
 export interface Env extends DestinationServer.Env {
   ClickHouseClient?: ClickHouseClientFactory;
+  authorize?: Authorize;
 }
 
 /**

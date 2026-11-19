@@ -38,6 +38,12 @@ export const SettingsSchema = z
       .describe(
         'ClickHouse settings applied to every insert (like { async_insert: 1 })',
       ),
+    signed: z
+      .boolean()
+      .optional()
+      .describe(
+        'Sign each insert with the host instead of a credential: true for a paired runner writing to walkerOS hosted ingest (like https://ingest.walkeros.io/events); leave unset for any other ClickHouse',
+      ),
   })
   .strict();
 

@@ -120,7 +120,7 @@ function isTargetKind(value: unknown): value is ServiceTargetKind {
  * Plain http is taken only where no other host reads the traffic: a loopback
  * host, or a private RFC 1918 address such as a local Docker bridge.
  */
-function isLocalHost(hostname: string): boolean {
+export function isLocalHost(hostname: string): boolean {
   if (hostname === 'localhost' || hostname.endsWith('.localhost')) return true;
   if (hostname === '[::1]') return true;
   const ipv4 = IPV4.exec(hostname);

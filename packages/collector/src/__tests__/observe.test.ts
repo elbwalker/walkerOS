@@ -4,6 +4,7 @@
  * destination outcome, the failure matrix, masking and the shutdown bound.
  */
 import type {
+  Authorize,
   Collector,
   Destination,
   Logger,
@@ -17,7 +18,7 @@ import { startFlow } from '..';
 
 const usageUrl = 'https://ingest.example.com/usage';
 const previewUrl = 'https://ingest.example.com/preview';
-const token = 'wos_usage_aaaabbbbccccdddd_secret';
+const token = 'usage-token-example';
 const event = { name: 'page view', data: {} };
 
 const USAGE_COLUMNS = [
@@ -68,7 +69,8 @@ interface Request {
   url: string;
   init: {
     headers: Record<string, string>;
-    body: string;
+    /** Text with a token; the signed bytes with a host's `authorize`. */
+    body: string | Uint8Array;
     keepalive?: boolean;
     signal?: AbortSignal;
   };
@@ -92,8 +94,11 @@ function hang(request: Request): Promise<Answer> {
   });
 }
 
-function rowsOf(body: string): Row[] {
-  return body.split('\n').map((line): Row => JSON.parse(line));
+function rowsOf(body: string | Uint8Array): Row[] {
+  // No TextDecoder under jsdom; Buffer reads the bytes as UTF-8.
+  const text =
+    typeof body === 'string' ? body : Buffer.from(body).toString('utf8');
+  return text.split('\n').map((line): Row => JSON.parse(line));
 }
 
 /** The global fetch of one test: records every request, answers with `respond`. */
@@ -202,6 +207,16 @@ describe('no options, no work', () => {
       'a v1-shaped block',
       { level: 'trace', url: usageUrl, binding: 'b1' },
       'observe.level',
+    ],
+    [
+      'a usage part with neither a token nor a host that signs',
+      { usage: { url: usageUrl } },
+      'observe.usage.token',
+    ],
+    [
+      'a preview part without a token',
+      { preview: { url: previewUrl } },
+      'observe.preview.token',
     ],
   ])(
     'refuses %s with one ERROR line and does no work',
@@ -440,6 +455,110 @@ describe('usage', () => {
       if (status !== undefined)
         expect(lines[0].text).toContain(`"status":${status}`);
       if (code !== undefined) expect(lines[0].text).toContain(`code ${code}`);
+    },
+  );
+
+  // A paired runner's host signs each report with its credential's key; a
+  // token in the flow file still wins.
+  it.each<[string, { token?: string }, 'signed' | 'token']>([
+    ['no token and a host that signs', {}, 'signed'],
+    ['a token beside a host that signs', { token }, 'token'],
+  ])('sends a report with %s', async (_name, own, sent) => {
+    const { requests } = installFetch();
+    const signed: Array<Uint8Array | undefined> = [];
+    const authorize: Authorize = async ({ body }) => {
+      signed.push(body);
+      return { Signature: `sig${signed.length}` };
+    };
+    await startFlow({
+      observe: { usage: { url: usageUrl, ...own, authorize, interval: 10 } },
+    });
+    await jest.advanceTimersByTimeAsync(10_000);
+
+    expect(requests).toHaveLength(2);
+    if (sent === 'signed') {
+      expect(requests.map(({ init }) => init.headers)).toEqual([
+        { Signature: 'sig1', 'Content-Type': 'application/x-ndjson' },
+        { Signature: 'sig2', 'Content-Type': 'application/x-ndjson' },
+      ]);
+      expect(requests.map(({ init }) => init.body)).toEqual(signed);
+    } else {
+      expect(requests.map(({ init }) => init.headers.Authorization)).toEqual([
+        `Bearer ${token}`,
+        `Bearer ${token}`,
+      ]);
+      expect(signed).toEqual([]);
+    }
+    expect(requests[1].rows[0]).toMatchObject({ seq: 2 });
+  });
+
+  // A door that does not know the key yet answers 503 with a delay: the next
+  // report comes after it, signed anew, once, and without a line until it
+  // fails too.
+  it('sends the next report after a 503 Retry-After delay, once', async () => {
+    const { requests } = installFetch(async () =>
+      answer(503, { 'Retry-After': '5' }),
+    );
+    const { lines, logger } = errorLines();
+    let calls = 0;
+    await startFlow({
+      logger,
+      observe: {
+        usage: {
+          url: usageUrl,
+          authorize: async () => ({ Signature: `sig${++calls}` }),
+          interval: 60,
+        },
+      },
+    });
+
+    await jest.advanceTimersByTimeAsync(4_999);
+    expect(requests).toHaveLength(1);
+    expect(lines).toEqual([]);
+    await jest.advanceTimersByTimeAsync(1);
+    expect(requests).toHaveLength(2);
+    expect(requests[1].init.headers.Signature).toBe('sig2');
+    expect(lines).toEqual([
+      {
+        at: expect.any(Number),
+        text: expect.stringContaining('responded 503'),
+      },
+    ]);
+    await jest.advanceTimersByTimeAsync(54_999);
+    expect(requests).toHaveLength(2);
+    await jest.advanceTimersByTimeAsync(1);
+    expect(requests).toHaveLength(3);
+  });
+
+  // A refused signature can come from a clock that is off; the answer's Date
+  // names it beyond 5 s. Each report is cumulative, so the interval holds.
+  it.each([
+    ['30 seconds ahead', 30, ', clock offset 30 s'],
+    ['5 seconds ahead', 5, ''],
+  ])(
+    'reports a 403 whose Date is %s as one ERROR line and keeps the interval',
+    async (_name, ahead, note) => {
+      const date = new Date(Date.now() + ahead * 1000).toUTCString();
+      const { requests } = installFetch(async () =>
+        answer(403, { Date: date }),
+      );
+      const { lines, logger } = errorLines();
+      await startFlow({
+        logger,
+        observe: {
+          usage: { url: usageUrl, authorize: async () => ({}), interval: 10 },
+        },
+      });
+
+      await jest.advanceTimersByTimeAsync(9_999);
+      expect(requests).toHaveLength(1);
+      expect(lines.map(({ text }) => text)).toEqual([
+        expect.stringContaining(
+          `the data server refused the usage report: 403${note}, last success never`,
+        ),
+      ]);
+      await jest.advanceTimersByTimeAsync(1);
+      expect(requests).toHaveLength(2);
     },
   );
 

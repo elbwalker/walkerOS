@@ -1972,6 +1972,29 @@ const HOST_LOGGER_MERGE = `  // The host's logger (masking, its error ring) join
   }`;
 
 /**
+ * The runner contract's signer, emitted into every server factory entry: a
+ * host that holds a deployment credential (`runneros` start mode) passes
+ * `context.authorize`, the door signer of its credential. The entry hands it
+ * to the usage part when the flow names no token there, and to every
+ * destination entry's env that names no `authorize` of its own. Only a step
+ * whose own config asks for it signs (the ClickHouse destination with
+ * `settings.signed: true`); the others never read it. The function travels
+ * in the context the host passes, never through a global.
+ */
+const HOST_AUTHORIZE = `  // A paired runner hands its signer to the steps: the usage part takes it
+  // when the flow names no token, and each destination env that names no
+  // authorize of its own gets it. A step signs only when its config says so.
+  if (typeof context.authorize === 'function') {
+    const usage = config.observe && config.observe.usage;
+    if (usage && usage.token === undefined) usage.authorize = context.authorize;
+    for (const destination of Object.values(config.destinations || {})) {
+      if (!destination) continue;
+      const env = destination.env || (destination.env = {});
+      if (env.authorize === undefined) env.authorize = context.authorize;
+    }
+  }`;
+
+/**
  * Generate a stage 2 entry file for server bundles.
  * Imports startFlow and wireConfig from the stage 1 .mjs file,
  * embeds the data payload, and exports a factory function.
@@ -1998,6 +2021,8 @@ ${HOST_LOGGER_MERGE}
       }
     }
   }
+
+${HOST_AUTHORIZE}
 
   const result = await startFlow(config);
 
@@ -2282,6 +2307,8 @@ ${HOST_LOGGER_MERGE}
       }
     }
   }
+
+${HOST_AUTHORIZE}
 
   const result = await startFlow(config);
 

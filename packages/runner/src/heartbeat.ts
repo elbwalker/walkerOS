@@ -275,6 +275,9 @@ export function createHeartbeat(
             method: 'POST',
             headers: { 'Content-Type': 'application/json', ...headers },
             body,
+            // The family never redirects: a redirect is a rejected beat, not
+            // followed, so no proof, signature or body leaves the app's origin.
+            redirect: 'manual',
             signal: AbortSignal.timeout(10_000),
           }),
       );

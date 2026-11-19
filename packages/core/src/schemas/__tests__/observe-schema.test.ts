@@ -15,16 +15,24 @@ function file(observe: unknown): Flow.Json {
 }
 
 const usage = {
-  url: 'https://ingest.walkeros.io/usage',
-  token: '$secret.OBSERVE_USAGE',
+  url: 'https://ingest.example.com/usage',
+  token: '$secret.USAGE_TOKEN',
 };
 
 describe('collector.observe', () => {
   it('accepts a usage and a preview block', () => {
     const json = file({
       usage: { ...usage, interval: 300 },
-      preview: { url: 'https://ingest.walkeros.io/preview', token: 'wos' },
+      preview: { url: 'https://ingest.example.com/preview', token: 'wos' },
     });
+
+    expect(validateFlowConfig(JSON.stringify(json)).errors).toEqual([]);
+    expect(validateFlowStructure(json).errors).toEqual([]);
+  });
+
+  // A paired runner's host signs each report, so the file names no token.
+  it('accepts a usage block without a token', () => {
+    const json = file({ usage: { url: usage.url } });
 
     expect(validateFlowConfig(JSON.stringify(json)).errors).toEqual([]);
     expect(validateFlowStructure(json).errors).toEqual([]);

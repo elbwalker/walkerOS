@@ -116,11 +116,11 @@ describe('types', () => {
   it('takes a token in place of a username and password', () => {
     const config: Config = {
       settings,
-      credentials: { token: 'wos_events_token' },
+      credentials: { token: 'proxy-token-example' },
       env,
     };
 
-    expect(config.credentials).toEqual({ token: 'wos_events_token' });
+    expect(config.credentials).toEqual({ token: 'proxy-token-example' });
   });
 
   it('hands the resolved settings from init through to the push path', async () => {

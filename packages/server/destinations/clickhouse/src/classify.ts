@@ -1,5 +1,45 @@
+import { StepError } from '@walkeros/core';
+
 /** Whether another attempt at the same insert can plausibly succeed. */
 export type Classification = 'retryable' | 'terminal';
+
+/**
+ * A failed answer to a signed insert, which the destination sends itself
+ * (`signed-insert.ts`): the status, the ClickHouse code from
+ * `X-ClickHouse-Exception-Code`, a 503's `Retry-After` in seconds and a 403's
+ * clock offset (its `Date` minus this clock, in seconds). The message is the
+ * answer's body, which `deliver` never quotes but for a walkerOS proxy line.
+ */
+export class AnswerError extends Error {
+  readonly status: number;
+  readonly code?: string;
+  readonly retryAfter?: number;
+  readonly clockOffset?: number;
+
+  constructor(
+    message: string,
+    answer: {
+      status: number;
+      code?: string;
+      retryAfter?: number;
+      clockOffset?: number;
+    },
+  ) {
+    super(message);
+    this.name = 'AnswerError';
+    this.status = answer.status;
+    if (answer.code !== undefined) this.code = answer.code;
+    if (answer.retryAfter !== undefined) this.retryAfter = answer.retryAfter;
+    if (answer.clockOffset !== undefined) this.clockOffset = answer.clockOffset;
+  }
+}
+
+/** The delay a failed answer asked for before the next attempt, in ms. */
+export function retryAfterMs(error: unknown): number | undefined {
+  return error instanceof AnswerError && error.retryAfter !== undefined
+    ? error.retryAfter * 1000
+    : undefined;
+}
 
 /**
  * The codes worth another attempt: server-side timeouts, a saturated query or
@@ -93,8 +133,21 @@ export function errorCode(error: unknown): string | undefined {
  * An unreadable code errs the same way on purpose: one wasted attempt costs a
  * second, while a batch wrongly called terminal is lost for good, the collector
  * having no retry of its own and never draining its dead letter queue.
+ *
+ * A signed insert's answer is read first: a 403 is terminal, a 503 with
+ * `Retry-After` retryable; every other answer goes by its code as above.
  */
 export function classify(error: unknown): Classification {
+  // The data server's door refuses a signature it cannot accept with 403,
+  // and the same signature fails again; its 503 with a delay asks for a
+  // retry. A step's own refusal says itself whether a retry helps.
+  if (error instanceof AnswerError) {
+    if (error.status === 403) return 'terminal';
+    if (error.retryAfter !== undefined) return 'retryable';
+  }
+  if (error instanceof StepError)
+    return error.retryable ? 'retryable' : 'terminal';
+
   const code = errorCode(error);
 
   return code === undefined || RETRYABLE.has(code) ? 'retryable' : 'terminal';

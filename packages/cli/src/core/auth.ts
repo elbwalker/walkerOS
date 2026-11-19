@@ -198,28 +198,34 @@ function headersOf(auth: ServiceAuth): Authorize {
 }
 
 /**
- * Send one request with a credential; `send` puts the headers on it. The
- * address is checked first, so nothing is bought for a URL that would carry
- * the credential's token in the clear. WALKEROS_CREDENTIAL goes through the
- * client's one way to send (`sendWithServiceAuth`: fresh headers per attempt,
- * every answer reported, at most one retry). A stored login's 401 renews the
- * login once and sends once more. Never in a loop.
+ * Send one request with a credential; `send` puts the headers and the
+ * redirect mode on it. The address is checked first, so nothing is bought
+ * for a URL that would carry the credential's token in the clear.
+ * WALKEROS_CREDENTIAL goes through the client's one way to send
+ * (`sendWithServiceAuth`: fresh headers per attempt, every answer reported,
+ * at most one retry) and follows no redirect: a 3xx is the answer. A stored
+ * login's 401 renews the login once and sends once more. Never in a loop.
  */
 export async function sendWithCredential(
   credential: Credential,
   request: CredentialRequest,
-  send: (headers: Record<string, string>) => Promise<Response>,
+  send: (
+    headers: Record<string, string>,
+    redirect?: RequestRedirect,
+  ) => Promise<Response>,
 ): Promise<Response> {
   requireSecureUrl(request.url);
   if (credential.source === 'credential') {
     const { auth } = credential;
+    // A redirect is not followed but answered: fetch would carry the DPoP
+    // proof, a signature and a 307's body to its target.
     return sendWithServiceAuth(
       {
         authorize: headersOf(auth),
         answered: (answer) => auth.answered(answer),
       },
       request,
-      send,
+      (headers) => send(headers, 'manual'),
     );
   }
   const response = await send({ Authorization: `Bearer ${credential.token}` });

@@ -1,7 +1,8 @@
 /**
  * Batched NDJSON poster: rows of any shape, posted to one endpoint with a
- * Bearer token. `send` posts rows now and resolves with their outcome (a report
- * that reads its own result); `push` and `flush` collect rows into batches.
+ * Bearer token, or signed per request by a host's `authorize`. `send` posts
+ * rows now and resolves with their outcome (a report that reads its own
+ * result); `push` and `flush` collect rows into batches.
  *
  * It never throws and never rejects. A failed request, a request with no
  * answer within the timeout and a row that cannot serialize each end as a
@@ -12,6 +13,7 @@
  * sent. Tests inject a stub through `options.fetch`.
  */
 import { getErrorMessage } from './getErrorMessage';
+import type { Authorize } from './runtime';
 
 /** The part of a fetch response the poster reads. */
 export interface PosterResponse {
@@ -24,7 +26,8 @@ export interface PosterResponse {
 export interface PosterRequest {
   method: 'POST';
   headers: Record<string, string>;
-  body: string;
+  /** Text with a token; with `authorize`, the exact bytes it signed. */
+  body: string | Uint8Array;
   keepalive: boolean;
   credentials: 'omit';
   referrerPolicy: 'no-referrer';
@@ -40,16 +43,79 @@ export type PosterFetch = (
   init: PosterRequest,
 ) => Promise<PosterResponse>;
 
-/** The outcome of one request, or of the first failed one of several. */
+/**
+ * The outcome of one request, or of the first failed one of several.
+ * `retryAfter` is a 503's `Retry-After` in seconds; `clockOffset` is a 403's
+ * `Date` minus this clock, in seconds, so a refused signature can name a
+ * clock that is off.
+ */
 export type PostResult =
   | { ok: true }
-  | { ok: false; status?: number; code?: string; message: string };
+  | {
+      ok: false;
+      status?: number;
+      code?: string;
+      message: string;
+      retryAfter?: number;
+      clockOffset?: number;
+    };
+
+/** The longest `Retry-After` a result reports, in seconds. */
+export const RETRY_AFTER_MAX_S = 60;
+
+/** A clock offset beyond this many seconds either way is named in a line. */
+export const CLOCK_OFFSET_NOTE_S = 5;
+
+/** Delay-seconds (RFC 9110 10.2.3): digits only. */
+const DELAY_SECONDS = /^\d+$/;
+
+/**
+ * A `Retry-After` of delay-seconds, at most `RETRY_AFTER_MAX_S`; undefined
+ * for none, an HTTP date or anything unreadable, so a far date or a huge
+ * value never parks a sender.
+ */
+export function retryAfterSeconds(header: string | null): number | undefined {
+  if (header === null) return undefined;
+  const value = header.trim();
+  if (!DELAY_SECONDS.test(value)) return undefined;
+  return Math.min(Number(value), RETRY_AFTER_MAX_S);
+}
+
+/**
+ * An answer's `Date` minus `now` (epoch ms), in whole seconds; undefined
+ * without a readable date.
+ */
+export function clockOffsetSeconds(
+  date: string | null,
+  now: number,
+): number | undefined {
+  if (date === null) return undefined;
+  const at = Date.parse(date);
+  if (Number.isNaN(at)) return undefined;
+  return Math.round((at - now) / 1000);
+}
+
+/**
+ * The part of a refusal line that names the clock offset: empty within
+ * `CLOCK_OFFSET_NOTE_S` either way or without one.
+ */
+export function clockOffsetNote(offset: number | undefined): string {
+  return offset !== undefined && Math.abs(offset) > CLOCK_OFFSET_NOTE_S
+    ? `, clock offset ${offset} s`
+    : '';
+}
 
 export interface BatchedPosterOptions {
   /** Endpoint every request is posted to. */
   url: string;
-  /** Sent as `Authorization: Bearer <token>`. */
-  token: string;
+  /** Sent as `Authorization: Bearer <token>`. Exactly one of it and `authorize`. */
+  token?: string;
+  /**
+   * The headers of one request, asked for every request with its exact body
+   * bytes (a signature); no `Authorization` is sent. Exactly one of it and
+   * `token`.
+   */
+  authorize?: Authorize;
   /** Longest a pushed row waits for its batch, in ms. Default 50. */
   batchMs?: number;
   /** Rows that send a batch at once. Default 50. */
@@ -70,7 +136,8 @@ export interface BatchedPosterOptions {
   /**
    * Extra headers on every request. `Authorization` and `Content-Type` are
    * the poster's own and win in any casing, since a header name is
-   * case-insensitive on the wire.
+   * case-insensitive on the wire, and so does every header `authorize`
+   * answers.
    */
   headers?: Record<string, string>;
   /**
@@ -154,6 +221,44 @@ function utf8ByteLength(str: string): number {
   return bytes;
 }
 
+/**
+ * A string as UTF-8 bytes, exactly what `TextEncoder` gives (an unpaired
+ * surrogate becomes U+FFFD), written out because core ships without that
+ * global (see `utf8ByteLength`). A signed body is these bytes.
+ */
+function utf8Bytes(str: string): Uint8Array {
+  const bytes = new Uint8Array(utf8ByteLength(str));
+  let at = 0;
+  for (let i = 0; i < str.length; i++) {
+    let code = str.charCodeAt(i);
+    if (code >= 0xd800 && code <= 0xdfff) {
+      const next = i + 1 < str.length ? str.charCodeAt(i + 1) : 0;
+      if (code <= 0xdbff && next >= 0xdc00 && next <= 0xdfff) {
+        code = 0x10000 + ((code - 0xd800) << 10) + (next - 0xdc00);
+        i++;
+      } else {
+        code = 0xfffd;
+      }
+    }
+    if (code < 0x80) {
+      bytes[at++] = code;
+    } else if (code < 0x800) {
+      bytes[at++] = 0xc0 | (code >> 6);
+      bytes[at++] = 0x80 | (code & 0x3f);
+    } else if (code < 0x10000) {
+      bytes[at++] = 0xe0 | (code >> 12);
+      bytes[at++] = 0x80 | ((code >> 6) & 0x3f);
+      bytes[at++] = 0x80 | (code & 0x3f);
+    } else {
+      bytes[at++] = 0xf0 | (code >> 18);
+      bytes[at++] = 0x80 | ((code >> 12) & 0x3f);
+      bytes[at++] = 0x80 | ((code >> 6) & 0x3f);
+      bytes[at++] = 0x80 | (code & 0x3f);
+    }
+  }
+  return bytes;
+}
+
 const noop = (): void => {};
 
 /** One request's body and the rows it carries. */
@@ -173,6 +278,13 @@ function repeats(result: PostResult): boolean {
 export function createBatchedPoster<Row>(
   options: BatchedPosterOptions,
 ): BatchedPoster<Row> {
+  const { token, authorize } = options;
+  // A caller that means to sign must not fall back to a token, nor send
+  // without either; the caller checks its options and logs its own line.
+  if ((token === undefined) === (authorize === undefined))
+    throw new Error(
+      'createBatchedPoster takes exactly one of token and authorize',
+    );
   const batchMs = positiveInt(options.batchMs, 50);
   const batchSize = positiveInt(options.batchSize, 50);
   const maxBodyBytes = Math.min(
@@ -197,11 +309,30 @@ export function createBatchedPoster<Row>(
     if (lower === 'authorization' || lower === 'content-type') continue;
     callerHeaders[name] = value;
   }
-  const headers = {
+  const contentType = { 'Content-Type': 'application/x-ndjson' };
+  const tokenHeaders: Record<string, string> = {
     ...callerHeaders,
-    'Content-Type': 'application/x-ndjson',
-    Authorization: `Bearer ${options.token}`,
+    ...contentType,
+    ...(token !== undefined ? { Authorization: `Bearer ${token}` } : {}),
   };
+  /**
+   * The headers and the body of one request. A signed request encodes the
+   * text once and sends exactly the bytes `authorize` saw.
+   */
+  async function prepare(
+    text: string,
+  ): Promise<{ headers: Record<string, string>; body: string | Uint8Array }> {
+    if (!authorize) return { headers: tokenHeaders, body: text };
+    const body = utf8Bytes(text);
+    const signed = await authorize({ method: 'POST', url: options.url, body });
+    const signedNames = new Set(
+      Object.keys(signed).map((name) => name.toLowerCase()),
+    );
+    const headers: Record<string, string> = {};
+    for (const [name, value] of Object.entries(callerHeaders))
+      if (!signedNames.has(name.toLowerCase())) headers[name] = value;
+    return { headers: { ...headers, ...signed, ...contentType }, body };
+  }
 
   let buffer: Row[] = [];
   let timer: ReturnType<typeof setTimeout> | undefined;
@@ -278,11 +409,12 @@ export function createBatchedPoster<Row>(
   }
 
   async function request(
-    body: string,
+    text: string,
     keepalive: boolean,
     signal: AbortSignal | undefined,
   ): Promise<PostResult> {
     try {
+      const { headers, body } = await prepare(text);
       const response = await fetchImpl(options.url, {
         method: 'POST',
         headers,
@@ -293,12 +425,23 @@ export function createBatchedPoster<Row>(
         signal,
       });
       if (response.ok) return { ok: true };
+      const { status } = response;
       const code = response.headers.get('X-ClickHouse-Exception-Code');
+      const retryAfter =
+        status === 503
+          ? retryAfterSeconds(response.headers.get('Retry-After'))
+          : undefined;
+      const clockOffset =
+        status === 403
+          ? clockOffsetSeconds(response.headers.get('Date'), Date.now())
+          : undefined;
       return {
         ok: false,
-        status: response.status,
+        status,
         ...(code ? { code } : {}),
-        message: `responded ${response.status}`,
+        message: `responded ${status}`,
+        ...(retryAfter !== undefined ? { retryAfter } : {}),
+        ...(clockOffset !== undefined ? { clockOffset } : {}),
       };
     } catch (error) {
       return { ok: false, message: getErrorMessage(error) };

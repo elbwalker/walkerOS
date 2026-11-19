@@ -244,7 +244,7 @@ describe('insert settings', () => {
 
 describe('credentials', () => {
   const { username, password } = credentials;
-  const token = 'wos_events_aaaabbbbccccdddd_secret';
+  const token = 'proxy-token-example';
 
   // Every place a credential can legitimately sit. The url row is the one that
   // bites: the client accepts userinfo, so a partner can put a password in the

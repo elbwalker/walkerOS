@@ -50,14 +50,24 @@ npm install @walkeros/server-destination-clickhouse
 }
 ```
 
-An endpoint that takes a token, such as walkerOS hosted ingest, gets the token
-in `credentials` instead of a username and password. A path in `url` is the path
-every insert is sent to. The destination's `config` then reads:
+An endpoint that takes a token, such as a proxy in front of ClickHouse, gets the
+token in `credentials` instead of a username and password. A path in `url` is
+the path every insert is sent to. The destination's `config` then reads:
 
 ```json
 {
-  "settings": { "url": "https://ingest.walkeros.io/events" },
-  "credentials": { "token": "$secret.OBSERVE_EVENT" }
+  "settings": { "url": "https://clickhouse-proxy.example.com/events" },
+  "credentials": { "token": "$secret.CLICKHOUSE_TOKEN" }
+}
+```
+
+Run by a paired runner against walkerOS hosted ingest, the destination needs no
+credential: `settings.signed: true` signs each insert with the runner's own key.
+Any other ClickHouse keeps its `credentials` and leaves `signed` unset.
+
+```json
+{
+  "settings": { "url": "https://ingest.walkeros.io/events", "signed": true }
 }
 ```
 

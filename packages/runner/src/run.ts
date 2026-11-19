@@ -165,11 +165,12 @@ export async function runCommand(options: RunCommandOptions): Promise<void> {
     // before any flow code loads, and removed from the environment; an
     // unreadable one throws its fact and exits 1 below. Without it the
     // runner runs open source and calls no app.
-    const app = connectApp({
+    const link = connectApp({
       env: process.env,
       logger: logger.scope('runner'),
       knownValues,
     });
+    const app = link?.app;
 
     // Resolve port
     const port = options.port ?? 8080;
@@ -214,6 +215,8 @@ export async function runCommand(options: RunCommandOptions): Promise<void> {
       flowLogger: logging.flowLogger,
       format: logging.format,
       api: apiConfig,
+      // A deployment's door signer, for its steps' ingest writes.
+      ...(link?.steps ? { authorize: link.steps } : {}),
       errorRing,
       logRing,
       knownValues,

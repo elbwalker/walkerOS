@@ -74,7 +74,7 @@ const OBSERVED_FLOW = withLocalPackages({
         observe: {
           usage: {
             url: 'https://ingest.example.com/usage',
-            token: 'wos_usage_t1_flow',
+            token: 'tok_usage_t1_flow',
           },
           preview: {
             url: 'https://ingest.example.com/preview',

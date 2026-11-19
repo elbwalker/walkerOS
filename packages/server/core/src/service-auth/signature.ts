@@ -18,6 +18,10 @@ export const SIGNED_COMPONENTS = [
 ] as const;
 const SIGNATURE_PARAMS = ['created', 'nonce', 'keyid', 'alg', 'tag'] as const;
 const DEFAULT_MAX_AGE_SECONDS = 60;
+/** No signer of ours sends a longer nonce; a bound keeps every store keyed on it small. */
+const MAX_NONCE_LENGTH = 64;
+/** A keyid is an RFC 7638 SHA-256 thumbprint: 32 bytes in base64url. */
+const KEYID = /^[A-Za-z0-9_-]{43}$/;
 
 /** Why a signed request was refused; `unknown-key` is a keyid the caller has no key for. */
 export type SignatureRefusal =
@@ -26,6 +30,8 @@ export type SignatureRefusal =
   | 'label'
   | 'components'
   | 'params'
+  | 'nonce-too-long'
+  | 'keyid-shape'
   | 'tag'
   | 'created'
   | 'unknown-key'
@@ -116,6 +122,40 @@ export function verifySignatureBase(
   return es256Verify(key, ascii(base), signature);
 }
 
+/**
+ * Signs one request whose body is named by its `Content-Digest` (RFC 9530):
+ * the one signing step every signer here builds on.
+ */
+export async function signContentDigest(input: {
+  method: string;
+  url: string;
+  contentDigest: string;
+  key: PrivateEcJwk;
+  tag: string;
+  /** UNIX seconds; now when left out. */
+  created?: number;
+  nonce?: string;
+}): Promise<{ 'Signature-Input': string; Signature: string }> {
+  const params = signatureParams(SIGNED_COMPONENTS, [
+    ['created', input.created ?? Math.floor(Date.now() / 1000)],
+    ['nonce', input.nonce ?? randomId()],
+    ['keyid', input.key.kid],
+    ['alg', SIGNATURE_ALG],
+    ['tag', input.tag],
+  ]);
+  const base = signatureBase({
+    method: input.method,
+    url: input.url,
+    contentDigest: input.contentDigest,
+    params,
+  });
+  const signature = await es256Sign(input.key, ascii(base));
+  return {
+    'Signature-Input': `${SIGNATURE_LABEL}=${params}`,
+    Signature: `${SIGNATURE_LABEL}=:${Buffer.from(signature).toString('base64')}:`,
+  };
+}
+
 /** The three headers that sign one request with the credential's signing key. */
 export async function signRequest(input: {
   method: string;
@@ -132,25 +172,16 @@ export async function signRequest(input: {
   'Content-Digest': string;
 }> {
   const digest = contentDigest(input.body || new Uint8Array(0));
-  const params = signatureParams(SIGNED_COMPONENTS, [
-    ['created', input.created ?? Math.floor(Date.now() / 1000)],
-    ['nonce', input.nonce ?? randomId()],
-    ['keyid', input.key.kid],
-    ['alg', SIGNATURE_ALG],
-    ['tag', input.tag],
-  ]);
-  const base = signatureBase({
+  const signed = await signContentDigest({
     method: input.method,
     url: input.url,
     contentDigest: digest,
-    params,
+    key: input.key,
+    tag: input.tag,
+    created: input.created,
+    nonce: input.nonce,
   });
-  const signature = await es256Sign(input.key, ascii(base));
-  return {
-    'Signature-Input': `${SIGNATURE_LABEL}=${params}`,
-    Signature: `${SIGNATURE_LABEL}=:${Buffer.from(signature).toString('base64')}:`,
-    'Content-Digest': digest,
-  };
+  return { ...signed, 'Content-Digest': digest };
 }
 
 type Refused = { ok: false; reason: SignatureRefusal };
@@ -158,11 +189,14 @@ const refuse = (reason: SignatureRefusal): Refused => ({ ok: false, reason });
 
 /**
  * Checks a signed request: one signature `sig1` over exactly the fixed
- * components, every parameter present, the `tag` asked for, `created` within
- * `maxAgeSeconds` either way, the key's thumbprint as `keyid`, `alg` from the
- * key, `Content-Digest` of the body, then the signature. `key` may be a lookup
- * by keyid, called once the header is parsed; a keyid it has no key for is
- * `unknown-key`.
+ * components, every parameter present, a `nonce` of at most 64 characters, a
+ * `keyid` of a thumbprint's shape, `alg` ours, the `tag` asked for, `created`
+ * within `maxAgeSeconds` either way, the key's thumbprint as `keyid`, `alg`
+ * from the key, `Content-Digest` of the body, then the signature. The
+ * header's own rules are checked before the key is asked for (RFC 9421
+ * section 3.2.1), so a malformed signature never reaches a lookup. `key` may
+ * be a lookup by keyid, called once the header is parsed; a keyid it has no
+ * key for is `unknown-key`.
  */
 export async function verifyRequestSignature(input: {
   method: string;
@@ -209,6 +243,9 @@ export async function verifyRequestSignature(input: {
   const read = readParams(member.params);
   if (!read) return refuse('params');
   const { params, ordered } = read;
+  if (params.nonce.length > MAX_NONCE_LENGTH) return refuse('nonce-too-long');
+  if (!KEYID.test(params.keyid)) return refuse('keyid-shape');
+  if (params.alg !== SIGNATURE_ALG) return refuse('alg');
   if (params.tag !== input.tag) return refuse('tag');
   const now = Math.floor((input.now ?? Date.now()) / 1000);
   const maxAge = input.maxAgeSeconds ?? DEFAULT_MAX_AGE_SECONDS;

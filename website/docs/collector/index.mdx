@@ -248,7 +248,9 @@ valid inbound `traceparent`, so the receiving flow's records share the caller's
 `traceId` and name it in `parentEventId`.
 
 The `observe` option goes one step further than observers: it reports a
-runtime's counters, issues and events to an endpoint. See
+runtime's counters, issues and events to an endpoint. Each part posts with its
+`token`; the usage part may instead take a host's `authorize`, the signer a
+paired runner passes, which signs each report when no token is given. See
 [Observe](/docs/getting-started/observe).
 
 ## Status

@@ -5,9 +5,10 @@
  * is read. Without it the runner runs open source and calls no app.
  */
 
-import type { Logger } from '@walkeros/core';
+import type { Authorize, Logger } from '@walkeros/core';
 import type { KnownValues } from '@walkeros/core/node';
 import {
+  createDoorAuthorize,
   createServiceAuth,
   readServiceCredential,
   SERVICE_CREDENTIAL_ENV,
@@ -20,6 +21,16 @@ import {
  */
 export type AppAuth = Pick<ServiceAuth, 'origin' | 'authorize' | 'answered'>;
 
+/**
+ * What the runner makes of its credential: the client of its app calls, and
+ * for a deployment's runner the door signer its flow's steps get, which signs
+ * the steps' ingest writes and never a request to the app or its auth server.
+ */
+export interface RunnerLink {
+  app: ServiceAuth;
+  steps?: Authorize;
+}
+
 /** Whether `env` names a credential, checked without reading it. */
 export function holdsCredential(env: NodeJS.ProcessEnv): boolean {
   return env[SERVICE_CREDENTIAL_ENV] !== undefined;
@@ -30,15 +41,21 @@ export function holdsCredential(env: NodeJS.ProcessEnv): boolean {
  * `env`, so no step and no child reads it. Its value joins the masked values,
  * so no line shows it. Undefined without the variable; a value that is no
  * walkerOS credential throws the fact, naming the variable, never the value.
+ * Only a deployment's credential writes ingest, so only it gets `steps`.
  */
 export function connectApp(options: {
   env: NodeJS.ProcessEnv;
   logger: Logger.Instance;
   knownValues: KnownValues;
-}): ServiceAuth | undefined {
+}): RunnerLink | undefined {
   const raw = options.env[SERVICE_CREDENTIAL_ENV];
   if (raw) options.knownValues.add([raw]);
   const credential = readServiceCredential(options.env);
   if (!credential) return undefined;
-  return createServiceAuth(credential, { logger: options.logger });
+  return {
+    app: createServiceAuth(credential, { logger: options.logger }),
+    ...(credential.target.kind === 'deployment'
+      ? { steps: createDoorAuthorize(credential) }
+      : {}),
+  };
 }

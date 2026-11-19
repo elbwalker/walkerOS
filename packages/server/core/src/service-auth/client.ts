@@ -130,6 +130,20 @@ function nonceOf(value: string | null): string | undefined {
   return value !== null && NONCE.test(value) ? value : undefined;
 }
 
+/**
+ * A 401 to a signed request names no error (RFC 6750 section 3.1: the DPoP
+ * scheme defines no signature), so it can mean only this much.
+ */
+function refusedSignatureLine(kind: ServiceTargetKind): string {
+  return `The app refused this ${HOLDER[kind]}'s signed request (HTTP 401): its credential is not connected yet or has ended, or this clock is off`;
+}
+
+/** A challenge with no error code, or none at all (a channel failure carries no headers). */
+function namesNoError(headers: Headers | undefined): boolean {
+  const challenge = headers ? headers.get('www-authenticate') : null;
+  return challenge === null || !/\berror=/.test(challenge);
+}
+
 /** A 401 whose challenge names the token invalid, or names nothing (a channel failure carries no headers). */
 function refusesToken(headers: Headers | undefined): boolean {
   const challenge = headers ? headers.get('www-authenticate') : null;
@@ -222,8 +236,9 @@ export function createServiceAuth(
   let lastFailure: TokenRequestError | undefined;
   let loggedFailure: FailureKind | undefined;
   let sending: 'token' | 'signature' | undefined;
-  /** The status of the app's last refusal, until an answer below 400 ends it. */
-  let refusedStatus: number | undefined;
+  /** Which refused line the app's last refusal wrote, until an answer below 400 ends it. */
+  let refusedAs: string | undefined;
+  /** One retry per refusal: set by a dropped token, ended by any answer but a 401. */
   let retriedRefusal = false;
 
   /**
@@ -286,12 +301,13 @@ export function createServiceAuth(
     return metadata;
   }
 
-  function clockOffset(response: Response): string {
-    const date = response.headers.get('date');
+  /** This clock against an answer's `Date`, when it carries one. */
+  function clockOffset(headers: Headers | undefined, server: string): string {
+    const date = headers ? headers.get('date') : null;
     const at = date === null ? NaN : Date.parse(date);
     if (Number.isNaN(at)) return '';
     const offset = Math.round((now() - at) / 1000);
-    return `; this clock is ${offset >= 0 ? '+' : ''}${offset} s off the auth server's`;
+    return `; this clock is ${offset >= 0 ? '+' : ''}${offset} s off the ${server}'s`;
   }
 
   async function tokenOf(
@@ -393,7 +409,7 @@ export function createServiceAuth(
       const clock =
         answer.error === 'invalid_client' ||
         answer.error === 'invalid_dpop_proof'
-          ? clockOffset(response)
+          ? clockOffset(response.headers, 'auth server')
           : '';
       throw new TokenRequestError(
         `The auth server refused this credential's token request (${what})${clock}`,
@@ -557,17 +573,21 @@ export function createServiceAuth(
     answered({ status, headers }) {
       const nonce = nonceOf(headers ? headers.get('dpop-nonce') : null);
       if (nonce !== undefined) nonces.set(origin, nonce);
+      if (status !== 401) retriedRefusal = false;
       if (status === 401 && nonce !== undefined && asksForNonce(headers))
         return sending === 'token';
       if (status !== 401 && status !== 403) {
-        if (status < 400) {
-          refusedStatus = undefined;
-          retriedRefusal = false;
-        }
+        if (status < 400) refusedAs = undefined;
         return false;
       }
-      if (status !== refusedStatus) logger.error(refusedLine(kind, status));
-      refusedStatus = status;
+      const signed =
+        status === 401 && sending === 'signature' && namesNoError(headers);
+      const line = signed
+        ? refusedSignatureLine(kind)
+        : refusedLine(kind, status);
+      if (line !== refusedAs)
+        logger.error(signed ? line + clockOffset(headers, 'app') : line);
+      refusedAs = line;
       if (
         status === 401 &&
         current &&
