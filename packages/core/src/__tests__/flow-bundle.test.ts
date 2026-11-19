@@ -118,6 +118,41 @@ describe('Flow Zod schema — bundle section', () => {
     expect(result.success).toBe(true);
   });
 
+  test('parses bundle.flows on a server flow', () => {
+    const result = JsonSchema.safeParse({
+      version: 4,
+      flows: {
+        casamoda: { config: { platform: 'web' } },
+        server: {
+          config: {
+            platform: 'server',
+            bundle: { flows: { casamoda: 'casamoda/walker.js' } },
+          },
+        },
+      },
+    });
+    expect(result.success).toBe(true);
+  });
+
+  test('rejects a bundle.flows value that is no string', () => {
+    const raw: unknown = {
+      version: 4,
+      flows: {
+        casamoda: { config: { platform: 'web' } },
+        server: {
+          config: {
+            platform: 'server',
+            bundle: { flows: { casamoda: 1 } },
+          },
+        },
+      },
+    };
+    const result = JsonSchema.safeParse(raw);
+    expect(result.error?.issues.map((issue) => issue.path.join('.'))).toEqual([
+      expect.stringMatching(/bundle\.flows\.casamoda$/),
+    ]);
+  });
+
   test('rejects unknown bundle field', () => {
     const raw: unknown = {
       version: 4,

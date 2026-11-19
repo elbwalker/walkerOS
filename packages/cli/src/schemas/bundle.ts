@@ -11,7 +11,10 @@ import { FilePathSchema } from './primitives';
  * Bundle options schema.
  *
  * @remarks
- * Options for the programmatic bundle() API.
+ * A schema of the basic bundle options, published with the other schemas of
+ * `@walkeros/cli/dev`. The options `bundle()` takes are the `BundleOptions`
+ * interface of `commands/bundle/index.ts`; the MCP's `flow_bundle` input is
+ * `BundleInputShape` below.
  */
 export const BundleOptionsSchema = z.object({
   silent: z.boolean().optional().describe('Suppress all output'),

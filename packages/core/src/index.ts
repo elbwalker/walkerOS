@@ -3,6 +3,7 @@ export * from './types';
 export * from './branch';
 export * from './anonymizeIP';
 export * from './flow';
+export * from './served-flows';
 export * from './assign';
 export * from './byPath';
 export * from './include';

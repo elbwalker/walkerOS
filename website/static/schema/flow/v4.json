@@ -158,11 +158,21 @@
           "additionalProperties": {
             "type": "string"
           }
+        },
+        "flows": {
+          "description": "Web flows this server flow serves: web flow key to the file path in its output folder (server flows only)",
+          "type": "object",
+          "propertyNames": {
+            "type": "string"
+          },
+          "additionalProperties": {
+            "type": "string"
+          }
         }
       },
       "additionalProperties": false,
       "title": "Flow.Bundle",
-      "description": "Bundle configuration (packages + overrides + traceInclude + env)."
+      "description": "Bundle configuration (packages + overrides + traceInclude + env + flows)."
     },
     "FlowConfig": {
       "type": "object",
@@ -186,7 +196,7 @@
           ]
         },
         "bundle": {
-          "description": "Bundle configuration: NPM packages, transitive dependency overrides.",
+          "description": "Bundle configuration: NPM packages, transitive dependency overrides, served web flows.",
           "allOf": [
             {
               "$ref": "#/definitions/FlowBundle"
@@ -1380,7 +1390,7 @@
               "maximum": 300
             }
           },
-          "required": ["url", "token"],
+          "required": ["url"],
           "additionalProperties": false
         },
         "preview": {

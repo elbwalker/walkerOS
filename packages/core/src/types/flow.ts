@@ -304,6 +304,25 @@ export namespace Flow {
      * ```
      */
     env?: Record<string, string>;
+
+    /**
+     * Web flows this server flow serves.
+     *
+     * The key is a web flow's key in the same file, the value the path of its
+     * built file in the server's output folder: bare file names joined by
+     * `/`. Building the server flow builds each listed web flow there. The
+     * value is a file location, never a public path: the flow's own routes
+     * and its fs store decide how the file is served. Keys and values are
+     * read as written, never resolved as references.
+     *
+     * Server flows only.
+     *
+     * @example
+     * ```json
+     * { "casamoda": "casamoda/walker.js", "venti": "venti/track.js" }
+     * ```
+     */
+    flows?: Record<string, string>;
   }
 
   /**

@@ -29,6 +29,7 @@ describe('tmpRunDir', () => {
       'bundle',
       'wrap',
       'archive',
+      'served',
       'setup',
     ];
     const masked: string[] = [];

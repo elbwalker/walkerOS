@@ -293,3 +293,64 @@ describe('loadBundleConfig config.bundle.env must be literal', () => {
     );
   });
 });
+
+describe('loadBundleConfig served flows', () => {
+  const listing = {
+    version: 4,
+    flows: {
+      server: {
+        config: {
+          platform: 'server',
+          bundle: {
+            flows: { venti: 'venti/track.js', casamoda: 'casamoda/walker.js' },
+          },
+        },
+      },
+      casamoda: { config: { platform: 'web' } },
+      venti: { config: { platform: 'web' } },
+    },
+  };
+
+  it('answers the served flows of a server flow in key order', () => {
+    const result = loadBundleConfig(listing, {
+      configPath: './test.json',
+      flowName: 'server',
+    });
+    expect(result.served).toEqual([
+      { flow: 'venti', path: 'venti/track.js' },
+      { flow: 'casamoda', path: 'casamoda/walker.js' },
+    ]);
+  });
+
+  it('answers no served flows for a web flow', () => {
+    const result = loadBundleConfig(listing, {
+      configPath: './test.json',
+      flowName: 'casamoda',
+      buildEnv: {},
+    });
+    expect(result.served).toEqual([]);
+  });
+
+  it('refuses a listing the served checks refuse, naming its path', () => {
+    expect(() =>
+      loadBundleConfig(
+        {
+          version: 4,
+          flows: {
+            server: {
+              config: {
+                platform: 'server',
+                bundle: { flows: { ghost: 'ghost/walker.js' } },
+              },
+            },
+          },
+        },
+        { configPath: './test.json' },
+      ),
+    ).toThrow(
+      new Error(
+        'Invalid configuration:\n  - flows.server.config.bundle.flows.ghost: "ghost" is no flow of this file',
+      ),
+    );
+  });
+});

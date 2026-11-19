@@ -32,7 +32,7 @@ stages are kept apart.
 For a server flow this writes `dist/flow.mjs`, `dist/package.json`, and
 `dist/node_modules/`. The step packages load from `node_modules/`, so ship the
 whole directory, not `flow.mjs` alone. A web flow builds to a single
-`dist/walker.js` that any static host can serve.
+`dist/walker.js` that any static host can serve. A server flow that lists the web flow in `config.bundle.flows` writes it into its own output, where the server flow's own routes serve it, see [Serving files](/docs/apps/runtime#serving-files).
 
 ## Run it yourself
 

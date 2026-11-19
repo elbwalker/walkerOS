@@ -2,6 +2,7 @@
 
 import { describe, it, expect } from '@jest/globals';
 import { validateFlow } from '../../../commands/validate/validators/flow.js';
+import { VALIDATE_CODES } from '../../../commands/validate/types.js';
 
 describe('validateFlow', () => {
   it('passes valid flow configuration', () => {
@@ -1604,5 +1605,80 @@ describe('closed schemas (silent failures E1, E7, E10, E11, E14, E24, E25, E26)'
         'flows.default.destinations.d.config.logger.format',
       ],
     ]);
+  });
+});
+
+describe('served flows (flow:served)', () => {
+  const file = (listing: Record<string, string>) => ({
+    version: 4,
+    flows: {
+      server: { config: { platform: 'server', bundle: { flows: listing } } },
+      casamoda: { config: { platform: 'web' } },
+      edge: { config: { platform: 'server' } },
+    },
+  });
+
+  it.each([
+    'SERVED_FLOWS_NOT_SERVER',
+    'SERVED_FLOW_NOT_WEB',
+    'SERVED_PATH_INVALID',
+    'SERVED_PATH_CONFLICT',
+  ])('%s is a validate code', (code) => {
+    expect(VALIDATE_CODES).toContain(code);
+  });
+
+  it('runs once per run, right after flow:structure', () => {
+    const result = validateFlow(file({ casamoda: 'casamoda/walker.js' }));
+    expect(result.errors).toEqual([]);
+    const checks = result.details.scope?.checks ?? [];
+    expect(checks.filter((check) => check === 'flow:served')).toHaveLength(1);
+    expect(checks[checks.indexOf('flow:structure') + 1]).toBe('flow:served');
+  });
+
+  it('refuses a path inside node_modules', () => {
+    const result = validateFlow(file({ casamoda: 'node_modules/walker.js' }));
+    expect(result.valid).toBe(false);
+    expect(result.errors).toEqual([
+      {
+        path: 'flows.server.config.bundle.flows.casamoda',
+        code: 'SERVED_PATH_CONFLICT',
+        message:
+          '"node_modules/walker.js" collides with "node_modules", which the server build writes',
+        value: 'node_modules/walker.js',
+      },
+    ]);
+  });
+
+  it('reads the listed flow from the whole file under --flow server', () => {
+    const result = validateFlow(file({ edge: 'edge/walker.js' }), {
+      flow: 'server',
+    });
+    expect(result.errors).toEqual([
+      {
+        path: 'flows.server.config.bundle.flows.edge',
+        code: 'SERVED_FLOW_NOT_WEB',
+        message:
+          'Flow "edge" has platform "server": a served flow is a web flow',
+      },
+    ]);
+  });
+
+  it('skips a server flow with earlier errors', () => {
+    const result = validateFlow({
+      version: 4,
+      flows: {
+        server: {
+          config: { platform: 'server', bundle: { flows: { casamoda: 1 } } },
+        },
+        casamoda: { config: { platform: 'web' } },
+      },
+    });
+    expect(result.details.skipped).toContainEqual(
+      expect.objectContaining({
+        path: 'flows.server',
+        check: 'flow:served',
+        code: 'GATED_BY_ERRORS',
+      }),
+    );
   });
 });

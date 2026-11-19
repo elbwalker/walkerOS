@@ -131,15 +131,23 @@ export const BundleSchema = z
       .describe(
         'Declared build-time values for web $env references (inlined into public bundles, never secrets)',
       ),
+    flows: z
+      .record(z.string(), z.string())
+      .optional()
+      .describe(
+        'Web flows this server flow serves: web flow key to the file path in its output folder (server flows only)',
+      ),
   })
   .strict()
   .meta({
     id: 'FlowBundle',
     title: 'Flow.Bundle',
     description:
-      'Bundle configuration (packages + overrides + traceInclude + env).',
+      'Bundle configuration (packages + overrides + traceInclude + env + flows).',
   })
-  .describe('Bundle configuration (packages + overrides + traceInclude + env)');
+  .describe(
+    'Bundle configuration (packages + overrides + traceInclude + env + flows)',
+  );
 
 // ========================================
 // Inline Code Schema
@@ -798,7 +806,7 @@ export const ConfigSchema = z
       'Free-form key-value settings consumed by the platform runtime.',
     ),
     bundle: BundleSchema.optional().describe(
-      'Bundle configuration: NPM packages, transitive dependency overrides.',
+      'Bundle configuration: NPM packages, transitive dependency overrides, served web flows.',
     ),
   })
   .meta({

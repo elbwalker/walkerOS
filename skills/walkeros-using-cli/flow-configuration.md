@@ -19,7 +19,8 @@ Complete reference for Flow.Json JSON configuration format.
           "packages": {},
           "overrides": {},
           "traceInclude": [],
-          "env": {}
+          "env": {},
+          "flows": {}
         }
       },
       "sources": {},
@@ -215,6 +216,26 @@ globs both work, resolved against the install root (where pacote put files):
         "node_modules/some-pkg/data/*.json",
         "node_modules/another-pkg/lib/runtime-loaded.js"
       ]
+    }
+  }
+}
+```
+
+### flows (server flows only)
+
+A server flow lists the web flows it serves under
+`flow.<name>.config.bundle.flows`: the key is a web flow of the same file, the
+value is the file's path in the server's output folder. One `walkeros bundle`
+builds the server and writes each web file at its path (or packs it into the
+archive). Routes and stores stay in the server flow, see
+[Serving files](https://www.walkeros.io/docs/apps/runtime#serving-files).
+
+```json
+{
+  "config": {
+    "platform": "server",
+    "bundle": {
+      "flows": { "casamoda": "casamoda/walker.js" }
     }
   }
 }

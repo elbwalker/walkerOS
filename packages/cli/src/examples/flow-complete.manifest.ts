@@ -1865,6 +1865,10 @@ export const flowCompleteCoverage = {
     overrides: { excluded: 'no transitive version conflict to resolve here' },
     traceInclude: { excluded: 'root include already ships the asset folder' },
     env: 'bundle-env',
+    flows: {
+      excluded:
+        'the server flow serves walker.js from the root include, built by its own command in chapter state-stores',
+    },
   } satisfies Coverage<keyof Flow.Bundle>,
   bundlePackage: {
     version: 'package-version',

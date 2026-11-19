@@ -24,16 +24,30 @@
  *
  * Local paths: a manifest build refuses every config-chosen filesystem input
  * (local step packages, `bundle.packages.<name>.path`, `bundle.traceInclude`,
- * `include`) with `LOCAL_PATH_NOT_ALLOWED`, before anything is fetched.
+ * `include`) with `LOCAL_PATH_NOT_ALLOWED`, in the named flow and in each web
+ * flow it serves, before anything is fetched.
+ *
+ * Served flows: a server flow that lists web flows in `config.bundle.flows`
+ * builds them into every bundle artifact's output, as `walkeros bundle` does.
+ * One bundle artifact may also name them as `served` outputs, keyed by
+ * exactly the listed web flows: the CLI PUTs each web file that artifact's
+ * build placed and reports its path, bytes and sha256 on its result entry.
+ * Every output is written into one folder, so a listed path whose first part
+ * is a bundle artifact's `outputName` (case-folded) is `INVALID_CONFIG`.
  *
  * Packages: without `packages` every bundle artifact resolves its packages
  * fresh. `{ tree }` installs exactly that recorded tree for every bundle
  * artifact and resolves nothing. `{ resolve }` resolves once, taking only
  * versions published at or before `before` for every spec but the exempt ones,
  * and installs that tree for every later artifact. Either way the result
- * carries the installed tree and its digest.
+ * carries the installed tree and its digest. Each served web flow installs a
+ * tree of its own under the same rule: `{ tree }` takes it from
+ * `served.<key>`, one for each listed web flow and none for another;
+ * `{ resolve }` resolves it once under the same cutoff; the result reports
+ * it under `packages.served.<key>`.
  */
 
+import { BARE_FILE_NAME_PATTERN } from '@walkeros/core';
 import { z } from '@walkeros/core/dev';
 import { PackageTreeSchema } from '../core/package-tree.js';
 import type { BundleTarget } from '../commands/bundle/targets.js';
@@ -64,7 +78,7 @@ export const BuildWrapObserveSchema = z
  */
 const OutputNameSchema = z
   .string()
-  .regex(/^[A-Za-z0-9][A-Za-z0-9._-]*$/, 'Must be a bare file name')
+  .regex(BARE_FILE_NAME_PATTERN, 'Must be a bare file name')
   .describe('Output file name; its extension picks the format (.tar.gz packs)');
 
 const BUNDLE_TARGET_NAMES = [
@@ -91,8 +105,8 @@ const RESERVED_HEADERS: ReadonlySet<string> = new Set([
   'host',
 ]);
 
-const OutputFields = {
-  outputName: OutputNameSchema,
+/** Where and how one output is PUT. */
+const PutFields = {
   putUrl: HttpUrlSchema.describe('Presigned PUT for exactly this output'),
   contentType: z
     .string()
@@ -114,10 +128,18 @@ const OutputFields = {
     ),
 };
 
+const OutputFields = { outputName: OutputNameSchema, ...PutFields };
+
 export const BuildBundleArtifactSchema = z
   .object({
     target: z.enum(BUNDLE_TARGET_NAMES).describe('Named bundle target'),
     ...OutputFields,
+    served: z
+      .record(z.string().min(1), z.object(PutFields).strict())
+      .optional()
+      .describe(
+        'The web files this build places, PUT as outputs of their own: each web flow its config.bundle.flows lists, by key',
+      ),
   })
   .strict();
 
@@ -211,6 +233,12 @@ export const BuildPackagesSchema = z
         tree: PackageTreeSchema.describe(
           'Install exactly this tree for every bundle artifact',
         ),
+        served: z
+          .record(z.string().min(1), PackageTreeSchema)
+          .optional()
+          .describe(
+            'The tree each served web flow installs, by its key: one for every listed web flow and none for another',
+          ),
       })
       .strict(),
     z
@@ -258,6 +286,7 @@ export const BuildManifestSchema = z
   .superRefine((manifest, ctx) => {
     const seen = new Set<string>();
     const bundled = new Set<string>();
+    let servedNamed = false;
     manifest.artifacts.forEach((artifact, index) => {
       if (seen.has(artifact.outputName)) {
         ctx.addIssue({
@@ -275,6 +304,16 @@ export const BuildManifestSchema = z
             path: ['flowConfig'],
             message: 'flowConfig is required for bundle artifacts',
           });
+        }
+        if (artifact.served) {
+          if (servedNamed) {
+            ctx.addIssue({
+              code: 'custom',
+              path: ['artifacts', index, 'served'],
+              message: 'Only one artifact may name served outputs',
+            });
+          }
+          servedNamed = true;
         }
       } else if (
         'artifact' in artifact.skeleton &&
@@ -356,6 +395,17 @@ export const BuildResultSchema = z
           outputName: z.string(),
           bytes: z.number().int().nonnegative(),
           sha256: z.string(),
+          served: z
+            .array(
+              z.object({
+                flow: z.string(),
+                path: z.string(),
+                bytes: z.number().int().nonnegative(),
+                sha256: z.string(),
+              }),
+            )
+            .optional()
+            .describe("The served outputs PUT from this artifact's build"),
         }),
       )
       .describe('Outputs PUT successfully, in manifest order'),
@@ -363,6 +413,13 @@ export const BuildResultSchema = z
       .object({
         digest: z.string().describe('sha256 of the canonical tree'),
         tree: PackageTreeSchema,
+        served: z
+          .record(
+            z.string(),
+            z.object({ digest: z.string(), tree: PackageTreeSchema }),
+          )
+          .optional()
+          .describe('The tree each served web flow installed, by its key'),
       })
       .optional()
       .describe('The tree the bundle artifacts installed, when asked for'),

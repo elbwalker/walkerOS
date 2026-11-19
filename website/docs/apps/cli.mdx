@@ -448,7 +448,7 @@ The bundle is now ready to deploy!
 
 When `--output` is a URL (e.g., a presigned S3 URL), the CLI bundles to a temp file and uploads it with an HTTP PUT. Today that upload fails with `Error: fetch failed` before any request reaches the server (seen on Node.js 22), so for a build that uploads its output use a [manifest build](#manifest-builds---manifest).
 
-For server flows, `-o` resolves to a directory: `dist/{flow.mjs, package.json, node_modules/}`. When `-o` ends in `.tar.gz` or `.tgz`, that same directory is packed into a single gzip archive instead (server flows only). For multi-flow `--all`, each flow gets its own subdirectory: `dist/<flowName>/...`.
+For server flows, `-o` resolves to a directory: `dist/{flow.mjs, package.json, node_modules/}`. When `-o` ends in `.tar.gz` or `.tgz`, that same directory is packed into a single gzip archive instead (server flows only). For multi-flow `--all`, each flow gets its own subdirectory: `dist/<flowName>/...`. A server flow that lists web flows in `config.bundle.flows` also gets each of them at its path in that directory, see [Serving files](/docs/apps/runtime#serving-files). With `--all --release r1`, `dist/casamoda/walker.js` carries `r1`, and `dist/server/casamoda/walker.js`, the copy the server flow serves, carries its own content release. With `--json` and no `-o`, the server flow's entry in the JSON result lists the flows left out in `servedLeftOut`.
 
 ### Multi-Flow Example
 
@@ -542,16 +542,51 @@ combine with it.
 | `flowConfig` | The `flow.json` content. Required when any bundle artifact is requested |
 | `flowName` | Flow to build in a multi-flow config |
 | `buildEnv` | Base values for web `$env`, beneath `config.bundle.env`. Never the CLI process's own environment |
-| `artifacts[]` | At least one. Each has a unique `outputName` (a bare file name), a `putUrl`, and optional `contentType` and `headers`. A bundle artifact sets `target` (`cdn`, `cdn-skeleton`, `runner`, `simulate` or `push`); a wrap artifact sets `target: "wrap"`, `platform` and `skeleton` |
+| `artifacts[]` | At least one. Each has a unique `outputName` (a bare file name), a `putUrl`, and optional `contentType` and `headers`. A bundle artifact sets `target` (`cdn`, `cdn-skeleton`, `runner`, `simulate` or `push`) and, on at most one artifact, `served`, see [served web flows](#served-web-flows); a wrap artifact sets `target: "wrap"`, `platform` and `skeleton` |
 | `resultPutUrl` | Presigned PUT URL for the result JSON |
 | `packages` | Optional. How bundle artifacts install their packages, see below |
 
-The result is `{ ok, toolchain, artifacts: [{ target, outputName, bytes, sha256 }], packages?, error? }`,
+The result is `{ ok, toolchain, artifacts: [{ target, outputName, bytes, sha256, served? }], packages?, error? }`,
 where `error` carries a `code`, a `message` and the `outputName` being built.
 Error codes: `INVALID_MANIFEST`, `TOOLCHAIN_MISMATCH`, `INVALID_CONFIG`,
 `MISSING_BUILD_ENV`, `WEB_SECRET_REF`, `UNSUPPORTED_PACKAGE_SPEC`,
 `LOCAL_PATH_NOT_ALLOWED`, `BUILD_FAILED`, `PACKAGE_UNAVAILABLE`,
 `PACKAGE_TREE_INVALID`, `UPLOAD_FAILED`.
+
+#### Served web flows
+
+A server flow that lists web flows in `config.bundle.flows` builds them with
+every bundle artifact, as `walkeros bundle` does: each archive carries the web
+files at their paths. See [Serving files](/docs/apps/runtime#serving-files).
+Every listed web flow is loaded before any is built, so a missing
+`config.bundle.env` value or a local path in a listed web flow fails the
+manifest before anything is fetched.
+
+At most one bundle artifact may name the files as outputs of their own:
+
+<CodeSnippet
+  code={`"served": {
+  "casamoda": { "putUrl": "<presigned PUT URL>", "contentType": "application/javascript" }
+}`}
+  language="json"
+/>
+
+The keys are exactly the listed web flows. The CLI uploads each web file that
+artifact's build placed, and the artifact's result entry carries
+`served: [{ flow, path, bytes, sha256 }]`. A failed upload is `UPLOAD_FAILED`.
+
+The manifest is refused with `INVALID_MANIFEST` and one of these lines:
+
+- `Served outputs name "<key>", which flow "<flow>" does not serve`
+- `Served outputs leave out "<key>", which flow "<flow>" serves`
+- `Only one artifact may name served outputs`
+- `Package trees name "<key>", which flow "<flow>" does not serve`
+
+A listed path whose first part equals, ignoring case, a bundle artifact's `outputName` is
+refused with `INVALID_CONFIG`:
+`"<value>" collides with "<outputName>", which this manifest builds`. A local
+path in a listed web flow is `LOCAL_PATH_NOT_ALLOWED`, with the location
+prefixed by `flows.<key>.`.
 
 #### Recorded package trees (`packages`)
 
@@ -559,7 +594,8 @@ Without `packages`, every bundle artifact resolves its packages fresh from the
 registry, as a local build does. With it, every bundle artifact of the manifest
 installs one tree, and the result reports that tree as
 `packages: { digest, tree }` (`digest` is the sha256 of the tree's canonical
-JSON):
+JSON). Each web flow a server flow lists installs a tree of its own, reported as
+`packages.served: { <key>: { digest, tree } }`:
 
 - `{ "resolve": { "before": "<ISO time>", "exempt": ["@walkeros/"] } }`
   resolves once. Every pick takes only a version published at or before
@@ -578,6 +614,8 @@ JSON):
   outside `node_modules/<name>` and `node_modules/<name>/node_modules/<name>`,
   a missing declared package, or an edge with no package in the tree fails
   with `PACKAGE_TREE_INVALID` before anything is fetched.
+
+With `{ "tree" }`, `packages.served` carries `{ <key>: <tree> }` for every listed web flow and for no other. A listed web flow without a recorded tree fails with `PACKAGE_TREE_INVALID`: `No recorded tree for served flow "<key>"`. With `resolve`, each listed web flow resolves under the same cutoff, and later artifacts install the trees the first one recorded.
 
 A tree is `{ version: 1, registry, before, packages }`, where `packages` maps
 each install path to `{ name, version, resolved, integrity, dependencies? }`.
@@ -1277,7 +1315,7 @@ Output (valid):
 ```
 Validating flow...
 
-Scope: flows default; 11 check(s): file:schema, flow:schema, flow:steps, flow:package-versions, flow:structure, flow:routes, flow:examples, flow:contract-examples, flow:mapping-keys, flow:resolve, flow:package-settings
+Scope: flows default; 12 check(s): file:schema, flow:schema, flow:steps, flow:package-versions, flow:structure, flow:served, flow:routes, flow:examples, flow:contract-examples, flow:mapping-keys, flow:resolve, flow:package-settings
 
 Validation Results:
   ✓ All checks passed
@@ -1340,7 +1378,7 @@ With `--strict`, warnings and skipped checks fail the run (exit 2), and the verd
 ```
 Validating flow...
 
-Scope: flows server; 11 check(s): file:schema, flow:schema, flow:steps, flow:package-versions, flow:structure, flow:routes, flow:examples, flow:contract-examples, flow:mapping-keys, flow:resolve, flow:package-settings
+Scope: flows server; 12 check(s): file:schema, flow:schema, flow:steps, flow:package-versions, flow:structure, flow:served, flow:routes, flow:examples, flow:contract-examples, flow:mapping-keys, flow:resolve, flow:package-settings
 
 Validation Results:
   ⚠ flows.server.config.bundle.packages.@walkeros/destination-demo: Package "@walkeros/destination-demo" has no version specified
@@ -1478,7 +1516,7 @@ JSON output format for the file of step 4 (`details.context`, the IntelliSense c
     "connectionsChecked": 0,
     "scope": {
       "flows": ["server"],
-      "checks": ["file:schema", "flow:schema", "flow:steps", "flow:package-versions", "flow:structure", "flow:routes", "flow:examples", "flow:contract-examples", "flow:mapping-keys", "flow:resolve", "flow:package-settings"]
+      "checks": ["file:schema", "flow:schema", "flow:steps", "flow:package-versions", "flow:structure", "flow:served", "flow:routes", "flow:examples", "flow:contract-examples", "flow:mapping-keys", "flow:resolve", "flow:package-settings"]
     },
     "skipped": [
       {
@@ -1512,7 +1550,7 @@ Codes group as follows (the full list is exported as `VALIDATE_CODES` from `@wal
 | Group | Codes |
 |-------|-------|
 | Scope and options | `FLOW_NOT_FOUND`, `ENTRY_NOT_FOUND`, `AMBIGUOUS_ENTRY`, `OPTION_NOT_APPLICABLE` |
-| Structure and resolution | `SCHEMA_VALIDATION`, `INVALID_COMPONENT_NAME`, `INVALID_REFERENCE`, `STORE_REFERENCE_NOT_FOUND`, `STATE_STORE_UNKNOWN`, `STATE_STORE_FILE`, `UNRESOLVED_REFERENCE`, `FLOW_CYCLE`, `VAR_CYCLE`, `UNKNOWN_KEY`, `DEPRECATED_PACKAGE`, `MAPPING_NO_OP`, `MAPPING_VALUE_NO_OPERATOR`, `MAPPING_VALUE_PRODUCERS`, `BATCH_WITHOUT_PUSH_BATCH`, `MALFORMED_REFERENCE`, `WEB_LOGGER_FORMAT` |
+| Structure and resolution | `SCHEMA_VALIDATION`, `INVALID_COMPONENT_NAME`, `INVALID_REFERENCE`, `STORE_REFERENCE_NOT_FOUND`, `STATE_STORE_UNKNOWN`, `STATE_STORE_FILE`, `UNRESOLVED_REFERENCE`, `FLOW_CYCLE`, `VAR_CYCLE`, `UNKNOWN_KEY`, `DEPRECATED_PACKAGE`, `MAPPING_NO_OP`, `MAPPING_VALUE_NO_OPERATOR`, `MAPPING_VALUE_PRODUCERS`, `BATCH_WITHOUT_PUSH_BATCH`, `MALFORMED_REFERENCE`, `WEB_LOGGER_FORMAT`, `SERVED_FLOWS_NOT_SERVER`, `SERVED_FLOW_NOT_WEB`, `SERVED_PATH_INVALID`, `SERVED_PATH_CONFLICT` |
 | Settings | `ENTRY_SCHEMA` |
 | Contracts | `NO_CONTRACT_SECTION`, `INVALID_EXTENDS`, `CIRCULAR_EXTENDS`, `UNRESOLVED_CONTRACT` |
 | Skips | `GATED_BY_ERRORS`, `CONTRACT_NOT_STATIC`, `NO_PACKAGE`, `NO_SETTINGS_SCHEMA`, `SCHEMA_UNAVAILABLE` |

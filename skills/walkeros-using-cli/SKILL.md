@@ -154,7 +154,8 @@ loads it itself, events go nowhere while the push still reports them as done.
         "bundle": {
           "packages": {},               // NPM packages pacote will install
           "overrides": {},              // Transitive dep version pins (npm-style)
-          "traceInclude": []            // Optional: nft escape hatch (paths/globs)
+          "traceInclude": [],           // Optional: nft escape hatch (paths/globs)
+          "flows": {}                   // Server flows only: web flow key -> file path in the output folder
         }
       },
       "sources": {},                    // Event sources
@@ -180,7 +181,7 @@ exact version everywhere in the install graph. Direct `packages` specs always
 win over overrides; overrides only substitute transitive resolution.
 
 **Schema version stays at 4.** Build-time fields live under
-`flow.<name>.config.bundle.{packages, overrides, traceInclude, env}`. A
+`flow.<name>.config.bundle.{packages, overrides, traceInclude, env, flows}`. A
 `config.bundle.external` field fails `walkeros validate` (`Unrecognized key`);
 the bundle only warns and builds, so remove it.
 
@@ -465,6 +466,10 @@ Output:
   nft-traced)
 - Server archive: `flow.tar.gz` / `flow.tgz` (the server bundle directory packed
   into a single gzip file)
+- Served web flows: a server flow that lists web flows in `config.bundle.flows`
+  also gets each one at its path in the directory or archive
+  (`Served flow casamoda: casamoda/walker.js`). Stdout and URL outputs carry the
+  server file alone and warn `Served flows left out (stdout): ...`.
 
 Use `-o ./dist/walker.js` for web, `-o ./dist/` for a server directory, or
 `-o ./flow.tar.gz` for a server archive. Web single-file bundles do not support

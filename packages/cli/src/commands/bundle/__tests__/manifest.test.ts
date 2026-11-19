@@ -1,6 +1,10 @@
+import crypto from 'crypto';
 import http from 'http';
+import os from 'os';
 import path from 'path';
 import fs from 'fs-extra';
+import { x as tarExtract } from 'tar';
+import { FlowReferenceError } from '@walkeros/core';
 import {
   runBuildManifest,
   resolveManifestSource,
@@ -10,6 +14,8 @@ import { BuildManifestSchema } from '../../../schemas/build-manifest';
 import { BuildResultSchema } from '../../../schemas/build-manifest';
 import { VERSION } from '../../../version';
 import { bundle } from '../index';
+import { packBundleDir } from '../archive';
+import type { BuiltServedFlow } from '../served';
 import { wrapSkeleton } from '../wrap';
 import {
   PackageTreeError,
@@ -712,19 +718,20 @@ describe('BuildManifestSchema wrap options', () => {
   });
 });
 
+const fixtureTree: PackageTree = PackageTreeSchema.parse(
+  JSON.parse(
+    fs.readFileSync(
+      path.join(
+        __dirname,
+        '../../../core/__tests__/fixtures/package-trees.json',
+      ),
+      'utf8',
+    ),
+  ).cases[0].tree,
+);
+
 describe('runBuildManifest packages', () => {
   let stub: Stub | undefined;
-  const fixtureTree: PackageTree = PackageTreeSchema.parse(
-    JSON.parse(
-      fs.readFileSync(
-        path.join(
-          __dirname,
-          '../../../core/__tests__/fixtures/package-trees.json',
-        ),
-        'utf8',
-      ),
-    ).cases[0].tree,
-  );
   const installs: Array<PackageInstall | undefined> = [];
 
   beforeEach(() => {
@@ -832,6 +839,442 @@ describe('runBuildManifest packages', () => {
   });
 });
 
+describe('runBuildManifest served flows', () => {
+  let stub: Stub | undefined;
+  const sleep = jest.fn(async (_ms: number) => {});
+  const SERVED = { casamoda: 'casamoda/walker.js', venti: 'venti/track.js' };
+
+  interface BundleCall {
+    outputName: string;
+    named: PackageInstall | undefined;
+    served: Record<string, PackageInstall | undefined>;
+    onServed: boolean;
+  }
+  const calls: BundleCall[] = [];
+
+  function treeFor(flow: string): PackageTree {
+    return {
+      version: 1,
+      registry: `https://registry.example/${flow}/`,
+      before: null,
+      packages: {},
+    };
+  }
+
+  function servingFlow(
+    casamoda: Record<string, unknown> = { config: { platform: 'web' } },
+    flows: Record<string, string> = SERVED,
+  ) {
+    return {
+      version: 4,
+      flows: {
+        casamoda,
+        venti: { config: { platform: 'web' } },
+        server: { config: { platform: 'server', bundle: { flows } } },
+      },
+    };
+  }
+
+  function servedOutputs(base: string, flows = Object.keys(SERVED)) {
+    return Object.fromEntries(
+      flows.map((flow) => [
+        flow,
+        { putUrl: `${base}/served/${flow}?X-Amz-Signature=secret` },
+      ]),
+    );
+  }
+
+  /** The archive names both served flows, the skeleton none. */
+  const servingManifest =
+    (overrides: (base: string) => Record<string, unknown> = () => ({})) =>
+    (base: string) => ({
+      version: 1,
+      toolchain: VERSION,
+      flowConfig: servingFlow(),
+      flowName: 'server',
+      artifacts: [
+        {
+          target: 'cdn',
+          outputName: 'bundle.server.tar.gz',
+          putUrl: `${base}/out/bundle.server.tar.gz`,
+          served: servedOutputs(base),
+        },
+        {
+          target: 'cdn-skeleton',
+          outputName: 'skeleton.mjs',
+          putUrl: `${base}/out/skeleton.mjs`,
+        },
+      ],
+      resultPutUrl: `${base}/result.json`,
+      ...overrides(base),
+    });
+
+  function sha256Of(content: Buffer): string {
+    return crypto.createHash('sha256').update(content).digest('hex');
+  }
+
+  async function archiveEntry(
+    archive: Buffer | undefined,
+    entry: string,
+  ): Promise<Buffer> {
+    if (!archive) throw new Error('no archive PUT');
+    const dir = await fs.mkdtemp(path.join(os.tmpdir(), 'manifest-archive-'));
+    try {
+      const file = path.join(dir, 'archive.tar.gz');
+      await fs.writeFile(file, archive);
+      await tarExtract({ file, cwd: dir });
+      return await fs.readFile(path.join(dir, entry));
+    } finally {
+      await fs.remove(dir);
+    }
+  }
+
+  beforeEach(() => {
+    calls.length = 0;
+    // As bundle() does: each served flow asks for its install, the web
+    // files land in the server's archive, and onServed gets the same files.
+    mockedBundle.mockImplementation(async (_config, options) => {
+      const output = options?.buildOverrides?.output;
+      if (!output) throw new Error('no output');
+      const served: Record<string, PackageInstall | undefined> = {};
+      for (const flow of Object.keys(SERVED)) {
+        const install = options?.servedPackageInstall?.(flow);
+        if (install && 'resolve' in install) install.onTree(treeFor(flow));
+        served[flow] = install;
+      }
+      const named = options?.buildOverrides?.packageInstall;
+      if (named && 'resolve' in named) named.onTree(fixtureTree);
+      calls.push({
+        outputName: path.basename(output),
+        named,
+        served,
+        onServed: options?.onServed !== undefined,
+      });
+
+      const scratch = await fs.mkdtemp(
+        path.join(os.tmpdir(), 'manifest-served-'),
+      );
+      try {
+        const built: BuiltServedFlow[] = [];
+        for (const [flow, servedPath] of Object.entries(SERVED)) {
+          const file = path.join(scratch, 'built', flow, 'file.js');
+          await fs.outputFile(file, `web:${flow}`);
+          await fs.copy(file, path.join(scratch, 'server', servedPath));
+          built.push({ flow, path: servedPath, file });
+        }
+        if (output.endsWith('.tar.gz')) {
+          await fs.outputFile(path.join(scratch, 'server', 'flow.mjs'), 's');
+          await packBundleDir(path.join(scratch, 'server'), output, [
+            'flow.mjs',
+            ...Object.values(SERVED),
+          ]);
+        } else {
+          await fs.outputFile(output, `bundle:${options?.target}`);
+        }
+        await options?.onServed?.(built);
+      } finally {
+        await fs.remove(scratch);
+      }
+    });
+  });
+
+  afterEach(async () => {
+    await stub?.close();
+    stub = undefined;
+    sleep.mockClear();
+  });
+
+  it('PUTs each served file of the archive and reports it on that entry', async () => {
+    stub = await startStub(servingManifest());
+    const { result } = await runBuildManifest(`${stub.base}/manifest.json`);
+
+    expect(result.ok).toBe(true);
+    const archive = stub.puts.get('/out/bundle.server.tar.gz')?.body;
+    const expected = [];
+    for (const [flow, servedPath] of Object.entries(SERVED)) {
+      const entry = await archiveEntry(archive, servedPath);
+      const put = stub.puts.get(`/served/${flow}`);
+      expect({ body: put?.body, contentType: put?.contentType }).toEqual({
+        body: entry,
+        contentType: 'application/javascript',
+      });
+      expected.push({
+        flow,
+        path: servedPath,
+        bytes: entry.length,
+        sha256: sha256Of(entry),
+      });
+    }
+    expect(result.artifacts.map((a) => [a.outputName, a.served])).toEqual([
+      ['bundle.server.tar.gz', expected],
+      ['skeleton.mjs', undefined],
+    ]);
+    expect(readResult(stub)).toEqual(result);
+  });
+
+  it('hands onServed only to the artifact that names served outputs', async () => {
+    stub = await startStub(servingManifest());
+    await runBuildManifest(`${stub.base}/manifest.json`);
+
+    expect(calls.map((call) => [call.outputName, call.onServed])).toEqual([
+      ['bundle.server.tar.gz', true],
+      ['skeleton.mjs', false],
+    ]);
+  });
+
+  it.each([
+    [
+      'served outputs name a flow the server does not serve',
+      (base: string) => ({
+        artifacts: [
+          {
+            target: 'cdn',
+            outputName: 'bundle.server.tar.gz',
+            putUrl: `${base}/out/a`,
+            served: servedOutputs(base, ['casamoda', 'venti', 'ghost']),
+          },
+        ],
+      }),
+      'Served outputs name "ghost", which flow "server" does not serve',
+    ],
+    [
+      'served outputs leave out a flow the server serves',
+      (base: string) => ({
+        artifacts: [
+          {
+            target: 'cdn',
+            outputName: 'bundle.server.tar.gz',
+            putUrl: `${base}/out/a`,
+            served: servedOutputs(base, ['casamoda']),
+          },
+        ],
+      }),
+      'Served outputs leave out "venti", which flow "server" serves',
+    ],
+    [
+      'served outputs appear on two artifacts',
+      (base: string) => ({
+        artifacts: ['a.tar.gz', 'b.tar.gz'].map((outputName) => ({
+          target: 'cdn',
+          outputName,
+          putUrl: `${base}/out/${outputName}`,
+          served: servedOutputs(base),
+        })),
+      }),
+      'artifacts.1.served: Only one artifact may name served outputs',
+    ],
+    [
+      'package trees name a flow the server does not serve',
+      () => ({
+        packages: {
+          tree: fixtureTree,
+          served: {
+            casamoda: fixtureTree,
+            venti: fixtureTree,
+            ghost: fixtureTree,
+          },
+        },
+      }),
+      'Package trees name "ghost", which flow "server" does not serve',
+    ],
+  ])(
+    'refuses a manifest whose %s before any build',
+    async (_label, overrides, message) => {
+      stub = await startStub(servingManifest(overrides));
+      const { result } = await runBuildManifest(`${stub.base}/manifest.json`);
+
+      expect(result.error).toEqual({ code: 'INVALID_MANIFEST', message });
+      expect(mockedBundle).not.toHaveBeenCalled();
+    },
+  );
+
+  it('reports a served PUT that fails three times as UPLOAD_FAILED of its artifact', async () => {
+    stub = await startStub(servingManifest(), {
+      '/served/venti': [503, 503, 503],
+    });
+    const { result } = await runBuildManifest(`${stub.base}/manifest.json`, {
+      sleep,
+    });
+
+    expect(result.error).toEqual({
+      code: 'UPLOAD_FAILED',
+      message: 'Served output venti: Upload failed after 3 attempts: HTTP 503',
+      outputName: 'bundle.server.tar.gz',
+    });
+  });
+
+  it.each([
+    [
+      'a local package path',
+      {
+        config: {
+          platform: 'web',
+          bundle: { packages: { x: { path: './x' } } },
+        },
+      },
+      'LOCAL_PATH_NOT_ALLOWED',
+      'Local filesystem paths are not allowed in a manifest build: flows.casamoda.config.bundle.packages.x.path',
+    ],
+    [
+      'an $env that buildEnv lacks',
+      {
+        config: { platform: 'web' },
+        destinations: {
+          d: {
+            package: '@walkeros/web-destination-gtag',
+            config: { id: '$env.MISSING' },
+          },
+        },
+      },
+      'MISSING_BUILD_ENV',
+      'Served flow casamoda failed to build: Environment variable "MISSING" not found and no default provided',
+    ],
+  ])(
+    'refuses a served flow with %s before any build',
+    async (_label, casamoda, code, message) => {
+      stub = await startStub(
+        servingManifest(() => ({ flowConfig: servingFlow(casamoda) })),
+      );
+      const { result } = await runBuildManifest(`${stub.base}/manifest.json`);
+
+      expect(result.error).toEqual({ code, message });
+      expect(mockedBundle).not.toHaveBeenCalled();
+    },
+  );
+
+  it.each(['bundle.mjs', 'Bundle.mjs/x.js'])(
+    'refuses a served path %s that an artifact output takes before any build',
+    async (servedPath) => {
+      stub = await startStub(
+        servingManifest((base) => ({
+          flowConfig: servingFlow(undefined, {
+            casamoda: servedPath,
+            venti: 'venti/track.js',
+          }),
+          artifacts: [
+            {
+              target: 'cdn-skeleton',
+              outputName: 'bundle.mjs',
+              putUrl: `${base}/out/bundle.mjs`,
+            },
+          ],
+        })),
+      );
+      const { result } = await runBuildManifest(`${stub.base}/manifest.json`);
+
+      expect(result.error).toEqual({
+        code: 'INVALID_CONFIG',
+        message: `Invalid configuration:\n  - flows.server.config.bundle.flows.casamoda: "${servedPath}" collides with "bundle.mjs", which this manifest builds`,
+      });
+      expect(mockedBundle).not.toHaveBeenCalled();
+      expect([...stub.puts.keys()]).toEqual(['/result.json']);
+    },
+  );
+
+  it('classifies a served build failure by its cause', async () => {
+    const message =
+      'Served flow casamoda failed to build: Environment variable "X" not found and no default provided';
+    mockedBundle.mockRejectedValue(
+      new Error(message, {
+        cause: new FlowReferenceError(
+          'MISSING_ENV',
+          'X',
+          'Environment variable "X" not found and no default provided',
+        ),
+      }),
+    );
+    stub = await startStub(servingManifest());
+    const { result } = await runBuildManifest(`${stub.base}/manifest.json`);
+
+    expect(result.error).toEqual({
+      code: 'MISSING_BUILD_ENV',
+      message,
+      outputName: 'bundle.server.tar.gz',
+    });
+  });
+
+  describe('package trees', () => {
+    const before = '2026-11-03T12:00:00.000Z';
+    const recorded = {
+      casamoda: { tree: treeFor('casamoda') },
+      venti: { tree: treeFor('venti') },
+    };
+
+    it('resolves each served flow once under the cutoff and installs its tree for later artifacts', async () => {
+      stub = await startStub(
+        servingManifest(() => ({
+          packages: { resolve: { before, exempt: ['@walkeros/'] } },
+        })),
+      );
+      const { result } = await runBuildManifest(`${stub.base}/manifest.json`);
+
+      expect(result.ok).toBe(true);
+      const [first, second] = calls;
+      const request = { before: new Date(before), exempt: ['@walkeros/'] };
+      expect(
+        Object.values(first.served).map((install) =>
+          install && 'resolve' in install ? install.resolve : install,
+        ),
+      ).toEqual([request, request]);
+      expect(second.served).toEqual(recorded);
+      expect(result.packages?.served).toEqual({
+        casamoda: {
+          digest: packageTreeDigest(treeFor('casamoda')),
+          tree: treeFor('casamoda'),
+        },
+        venti: {
+          digest: packageTreeDigest(treeFor('venti')),
+          tree: treeFor('venti'),
+        },
+      });
+      expect(readResult(stub)).toEqual(result);
+    });
+
+    it('installs the recorded tree of each served flow for every artifact', async () => {
+      stub = await startStub(
+        servingManifest(() => ({
+          packages: {
+            tree: fixtureTree,
+            served: { casamoda: treeFor('casamoda'), venti: treeFor('venti') },
+          },
+        })),
+      );
+      const { result } = await runBuildManifest(`${stub.base}/manifest.json`);
+
+      expect(result.ok).toBe(true);
+      expect(calls.map((call) => call.served)).toEqual([recorded, recorded]);
+    });
+
+    it('refuses a recorded tree without one for a served flow before any build', async () => {
+      stub = await startStub(
+        servingManifest(() => ({
+          packages: {
+            tree: fixtureTree,
+            served: { casamoda: treeFor('casamoda') },
+          },
+        })),
+      );
+      const { result } = await runBuildManifest(`${stub.base}/manifest.json`);
+
+      expect(result.error).toEqual({
+        code: 'PACKAGE_TREE_INVALID',
+        message: 'No recorded tree for served flow "venti"',
+      });
+      expect(mockedBundle).not.toHaveBeenCalled();
+    });
+
+    it('resolves served flows fresh without packages', async () => {
+      stub = await startStub(servingManifest());
+      const { result } = await runBuildManifest(`${stub.base}/manifest.json`);
+
+      expect(result.ok).toBe(true);
+      const fresh = { casamoda: undefined, venti: undefined };
+      expect(calls.map((call) => call.served)).toEqual([fresh, fresh]);
+      expect(result).not.toHaveProperty('packages');
+    });
+  });
+});
+
 describe('BuildManifestSchema packages', () => {
   const manifest = (packages: unknown) => ({
     version: 1,
@@ -874,6 +1317,19 @@ describe('BuildManifestSchema packages', () => {
       false,
     ],
     ['an unknown mode', { latest: true }, false],
+    [
+      'a tree with a tree per served flow',
+      { tree: fixtureTree, served: { casamoda: fixtureTree } },
+      true,
+    ],
+    [
+      'a resolve request with served trees',
+      {
+        resolve: { before: '2026-11-03T12:00:00.000Z', exempt: [] },
+        served: { casamoda: fixtureTree },
+      },
+      false,
+    ],
   ])('%s', (_name, packages, ok) => {
     expect(BuildManifestSchema.safeParse(manifest(packages)).success).toBe(ok);
   });

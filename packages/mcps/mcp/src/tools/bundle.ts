@@ -14,7 +14,9 @@ const TITLE = 'Bundle Flow';
 const DESCRIPTION =
   'Bundle a walkerOS flow configuration into deployable JavaScript. ' +
   'Resolves all destinations, sources, and transformers, then outputs ' +
-  'a tree-shaken production bundle. Returns bundle statistics.';
+  'a tree-shaken production bundle. Returns bundle statistics. ' +
+  'A server flow also builds each web flow its config.bundle.flows lists, ' +
+  'at its path beside the server bundle.';
 
 const inputSchema = {
   ...schemas.BundleInputShape,

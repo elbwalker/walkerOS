@@ -420,6 +420,192 @@ Never include the output directory itself (`include: ["./dist"]` with output
 directory that holds credentials. `include` applies to server builds only: a
 web build copies nothing and logs that it ignored `include`.
 
+### Web flows a server flow serves
+
+A server flow lists the web flows it serves in `config.bundle.flows`. Each key
+is a web flow of the same file. Each value is the path of that flow's file in
+the server's output folder: bare file names joined by `/`, such as
+`casamoda/walker.js`. It is never a `$flow` reference and never a public URL
+path. The file's routes stay in the server flow, as in the example above.
+
+One `walkeros bundle --flow <server> -o dist/` writes `dist/flow.mjs` and each
+listed web flow at its path. With a `.tar.gz` output, the archive packs the
+server files and exactly the listed paths. Without `-o`, and with a URL
+output, the CLI builds the server alone and logs
+`Served flows left out (stdout): casamoda, venti` (or `(URL upload)`) as a
+warning. `walkeros validate` checks the listing, see
+[the validate codes](/docs/apps/cli#validate-command).
+
+A path inside `flow.mjs`, `package.json` or `node_modules` is refused. So are
+two paths that are equal or nest, compared without case. At build time, a path
+the output file or an include copy takes is refused too. `--flow <server>`
+checks the listing. A whole-file `walkeros validate` also checks each listed
+web flow.
+
+A served file is the finished walker.js, the same as
+`walkeros bundle --flow <web>` writes. `--release` stamps the flow the command
+names. Each served flow keeps its own release, or the `collector.release` it
+authors.
+
+<CodeSnippet
+  code={`{
+  "version": 4,
+  "include": ["./public"],
+  "flows": {
+    "casamoda": {
+      "config": {
+        "platform": "web",
+        "settings": {
+          "windowCollector": "casamoda"
+        }
+      },
+      "destinations": {
+        "probe": {
+          "code": {
+            "push": "$code:(event) => event.name"
+          }
+        }
+      }
+    },
+    "venti": {
+      "config": {
+        "platform": "web",
+        "settings": {
+          "windowCollector": "venti"
+        }
+      },
+      "destinations": {
+        "probe": {
+          "code": {
+            "push": "$code:(event) => event.name"
+          }
+        }
+      }
+    },
+    "server": {
+      "config": {
+        "platform": "server",
+        "bundle": {
+          "flows": {
+            "casamoda": "casamoda/walker.js",
+            "venti": "public/track.js"
+          }
+        }
+      },
+      "stores": {
+        "casamoda": {
+          "package": "@walkeros/server-store-fs",
+          "config": {
+            "settings": {
+              "basePath": "./casamoda"
+            },
+            "file": true
+          }
+        },
+        "public": {
+          "package": "@walkeros/server-store-fs",
+          "config": {
+            "settings": {
+              "basePath": "./public"
+            },
+            "file": true
+          }
+        }
+      },
+      "sources": {
+        "http": {
+          "package": "@walkeros/server-source-express",
+          "config": {
+            "settings": {
+              "paths": ["/collect", "/walker.js", "/s/*path"]
+            },
+            "ingest": {
+              "map": {
+                "method": {
+                  "key": "method"
+                },
+                "path": {
+                  "key": "path"
+                }
+              }
+            }
+          },
+          "next": {
+            "one": [
+              {
+                "match": {
+                  "and": [
+                    {
+                      "key": "ingest.method",
+                      "operator": "eq",
+                      "value": "GET"
+                    },
+                    {
+                      "key": "ingest.path",
+                      "operator": "eq",
+                      "value": "/walker.js"
+                    }
+                  ]
+                },
+                "next": "casamodaFile"
+              },
+              {
+                "match": {
+                  "and": [
+                    {
+                      "key": "ingest.method",
+                      "operator": "eq",
+                      "value": "GET"
+                    },
+                    {
+                      "key": "ingest.path",
+                      "operator": "prefix",
+                      "value": "/s/"
+                    }
+                  ]
+                },
+                "next": "publicFile"
+              }
+            ]
+          }
+        }
+      },
+      "transformers": {
+        "casamodaFile": {
+          "package": "@walkeros/server-transformer-file",
+          "env": {
+            "store": "$store.casamoda"
+          }
+        },
+        "publicFile": {
+          "package": "@walkeros/server-transformer-file",
+          "config": {
+            "settings": {
+              "prefix": "/s"
+            }
+          },
+          "env": {
+            "store": "$store.public"
+          }
+        }
+      }
+    }
+  }
+}`}
+  language="json"
+/>
+
+A `bundle.flows` path and a relative `basePath` resolve against the same
+folder: the one the server bundle runs in. That is the output folder, the
+image's `/app/flow`, or the folder an archive extracts into. See
+[File paths at runtime](#file-paths-at-runtime).
+
+Point a store at a folder of its own for each web file, as `casamoda` does
+above. A store on the output root serves the server bundle and its include
+copies too. To serve several files through one store, give the file
+transformer a `prefix`, as `publicFile` does above: a request inside the prefix
+that the store does not find answers `404`, and a request outside it passes on.
+
 ## File paths at runtime
 
 Before loading a flow, the runtime changes its working directory to the

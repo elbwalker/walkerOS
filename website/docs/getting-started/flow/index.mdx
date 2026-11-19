@@ -134,6 +134,8 @@ Build-time configuration lives under `flows.<name>.config.bundle`. The `packages
 - **`imports`** - Array of named exports to import
 - **`path`** - Local filesystem path (takes precedence over `version`)
 
+**`flows`** (server flows only) maps the key of a web flow in the same file to the path of its built file in the server's output folder. See [Serving files](/docs/apps/runtime#serving-files).
+
 **`overrides`** is a `Record<string, string>`: for each named package, the version to use for any transitive reference. Direct package specs always win over overrides; overrides only substitute transitive dependencies during resolution.
 
 For development or custom packages, use `path` to reference a local directory:

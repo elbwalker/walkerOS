@@ -9,6 +9,7 @@ export type TmpRunKind =
   | 'bundle'
   | 'wrap'
   | 'archive'
+  | 'served'
   | 'setup';
 
 /**
