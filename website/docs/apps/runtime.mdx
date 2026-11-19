@@ -275,9 +275,12 @@ When connected, the runtime:
 
 The credential itself is never sent. With it the runtime buys a token that
 lasts 24 hours and works only together with the credential's key, and renews
-it every hour. When the auth server cannot be reached, the runtime signs each
-request with the credential's key instead and keeps serving; one ERROR line
-says so, and one more when a token is bought again. A credential the app
+it every hour. It buys the first one at start, before the flow serves, and
+waits at most 2.5 seconds per attempt: when the token endpoint cannot be
+reached, the flow starts anyway. When the auth server cannot be reached, the
+runtime signs each request to the app with the credential's key instead and
+keeps serving; one ERROR line says so, and one more when a token is bought
+again. A credential the app
 refuses (replaced by a new pairing, revoked, or its deployment ended) writes
 one ERROR line, `The app refused this runner's credential (replaced, revoked
 or ended); a self-hosted runner is paired again on its Self-hosted tab`, and

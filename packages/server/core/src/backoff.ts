@@ -24,6 +24,7 @@ export function fullJitterDelay(
 /**
  * A `Retry-After` value, delta-seconds or an HTTP date, in ms from `now`;
  * `undefined` when absent or unreadable, and never negative.
+ * Dates too, unlike core's `retryAfterSeconds`: the app may send one; callers cap it.
  */
 export function retryAfterMs(
   header: string | null,

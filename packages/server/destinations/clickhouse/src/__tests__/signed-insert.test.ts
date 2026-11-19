@@ -215,14 +215,23 @@ describe('the signed insert', () => {
 
   // A refused signature fails again; the batch is dead-lettered at once with
   // one line, naming a clock that is off by more than 5 s.
-  // A Date carries whole seconds: 30.7 s ahead reads as 30 s.
+  // A Date carries whole seconds, so a Date 31 s past this second reads as
+  // 30 or 31 s ahead, whatever this second's fraction.
   it.each<[string, () => Record<string, string>, string]>([
     [
       'a Date 30 s ahead',
-      () => ({ Date: new Date(Date.now() + 30_700).toUTCString() }),
-      'The data server refused the insert: 403, clock offset 30 s',
+      () => ({
+        Date: new Date(
+          Math.floor(Date.now() / 1000) * 1000 + 31_000,
+        ).toUTCString(),
+      }),
+      'The data server refused the insert: 403, clock offset 3[01] s',
     ],
-    ['no Date', () => ({}), 'The data server refused the insert: 403'],
+    [
+      'no Date',
+      () => ({}),
+      'The data server refused the insert: 403(?!, clock)',
+    ],
   ])(
     'dead-letters a 403 with %s as code auth and one ERROR line',
     async (_name, headers, message) => {
@@ -240,13 +249,42 @@ describe('the signed insert', () => {
         code: 'auth',
         status: 403,
         retryable: false,
-        message,
+        message: expect.stringMatching(new RegExp(`^${message}$`)),
       });
       expect(dlq.map(([dead]) => dead.id)).toEqual([event.id]);
-      expect(errors).toEqual([expect.stringContaining(message)]);
+      expect(errors).toEqual([expect.stringMatching(new RegExp(message))]);
       expect(errors.join('\n')).not.toContain('refused"');
     },
   );
+
+  // A signer that refuses (an http URL to a public host, the app's origin)
+  // fails the insert at once with its fact, and no request leaves.
+  it('dead-letters an insert its signer refuses as code auth, sending nothing', async () => {
+    open = await door();
+    const fact =
+      'The door signer signs https, or http to a loopback or private host, only';
+    let calls = 0;
+    const authorize: Authorize = async () => {
+      calls += 1;
+      throw new Error(fact);
+    };
+
+    const { event, result, dlq } = await deliver({
+      url: open.url,
+      settings: { signed: true },
+      authorize,
+    });
+
+    expect(open.received).toEqual([]);
+    expect(calls).toBe(1);
+    expect(result.failed?.clickhouse?.reason).toEqual({
+      code: 'auth',
+      retryable: false,
+      message: `ClickHouse insert not signed: ${fact}`,
+    });
+    expect(dlq.map(([dead]) => dead.id)).toEqual([event.id]);
+    expect(errors).toEqual([expect.stringContaining(fact)]);
+  });
 
   // Without the opt-in, a host's signer changes nothing: a customer's own
   // ClickHouse keeps its credential, or none, and the client path.

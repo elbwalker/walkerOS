@@ -73,6 +73,7 @@ const DELAY_SECONDS = /^\d+$/;
  * A `Retry-After` of delay-seconds, at most `RETRY_AFTER_MAX_S`; undefined
  * for none, an HTTP date or anything unreadable, so a far date or a huge
  * value never parks a sender.
+ * No date, unlike server-core's `retryAfterMs`: a date needs both clocks to agree.
  */
 export function retryAfterSeconds(header: string | null): number | undefined {
   if (header === null) return undefined;
