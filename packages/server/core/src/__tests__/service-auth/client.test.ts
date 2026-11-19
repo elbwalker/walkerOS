@@ -423,6 +423,47 @@ describe('the service credential client', () => {
     await run();
   });
 
+  it.each<[string, ServiceTargetKind, Record<string, string>, string]>([
+    [
+      "a runner's, with the answer's Date",
+      'deployment',
+      { Date: new Date(T0 - 90_000).toUTCString() },
+      "The app refused this runner's DPoP proof (HTTP 401): this clock is off or the request URL is not the app's; this clock is +90 s off the app's; pairing again does not help",
+    ],
+    [
+      "a runner's, with no Date",
+      'deployment',
+      {},
+      "The app refused this runner's DPoP proof (HTTP 401): this clock is off or the request URL is not the app's; pairing again does not help",
+    ],
+    [
+      "a data agent's",
+      'data-plane',
+      {},
+      "The app refused this data agent's DPoP proof (HTTP 401): this clock is off or the request URL is not the app's; pairing again does not help",
+    ],
+    [
+      "an automation's",
+      'automation',
+      {},
+      "The app refused this automation's DPoP proof (HTTP 401): this clock is off or the request URL is not the app's; a new automation does not help",
+    ],
+  ])(
+    'names a refused DPoP proof, %s, by its own line and keeps the token',
+    async (_name, kind, extra, line) => {
+      const s = stub(kind);
+      await s.auth.authorize(get);
+      const refused = new Headers({
+        'WWW-Authenticate': 'DPoP error="invalid_dpop_proof", algs="ES256"',
+        ...extra,
+      });
+      expect(s.auth.answered({ status: 401, headers: refused })).toBe(false);
+      expect((await s.auth.authorize(get)).Authorization).toBe('DPoP tok-1');
+      expect(s.tokenRequests).toHaveLength(1);
+      expect(s.lines).toEqual([line]);
+    },
+  );
+
   it.each<[string, unknown, { status: number } | undefined]>([
     [
       "the app's own 401",

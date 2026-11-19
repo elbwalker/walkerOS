@@ -138,6 +138,27 @@ function refusedSignatureLine(kind: ServiceTargetKind): string {
   return `The app refused this ${HOLDER[kind]}'s signed request (HTTP 401): its credential is not connected yet or has ended, or this clock is off`;
 }
 
+/**
+ * A 401 refusing the DPoP proof, not the token (RFC 9449 section 7.1): at the
+ * app that means its `iat` is off the app's clock or its `htu` is not the
+ * app's URL, so no new credential helps.
+ */
+function refusedProofLine(kind: ServiceTargetKind): string {
+  return `The app refused this ${HOLDER[kind]}'s DPoP proof (HTTP 401): this clock is off or the request URL is not the app's`;
+}
+
+/** What does not help when the app refuses a proof, per kind. */
+const NO_NEW_CREDENTIAL: Record<ServiceTargetKind, string> = {
+  deployment: 'pairing again does not help',
+  'data-plane': 'pairing again does not help',
+  automation: 'a new automation does not help',
+};
+
+function refusesProof(headers: Headers | undefined): boolean {
+  const challenge = headers ? headers.get('www-authenticate') : null;
+  return challenge !== null && /\berror="invalid_dpop_proof"/.test(challenge);
+}
+
 /** A challenge with no error code, or none at all (a channel failure carries no headers). */
 function namesNoError(headers: Headers | undefined): boolean {
   const challenge = headers ? headers.get('www-authenticate') : null;
@@ -580,13 +601,23 @@ export function createServiceAuth(
         if (status < 400) refusedAs = undefined;
         return false;
       }
+      const proof =
+        status === 401 && sending === 'token' && refusesProof(headers);
       const signed =
         status === 401 && sending === 'signature' && namesNoError(headers);
-      const line = signed
-        ? refusedSignatureLine(kind)
-        : refusedLine(kind, status);
+      const line = proof
+        ? refusedProofLine(kind)
+        : signed
+          ? refusedSignatureLine(kind)
+          : refusedLine(kind, status);
       if (line !== refusedAs)
-        logger.error(signed ? line + clockOffset(headers, 'app') : line);
+        logger.error(
+          proof
+            ? `${line}${clockOffset(headers, 'app')}; ${NO_NEW_CREDENTIAL[kind]}`
+            : signed
+              ? line + clockOffset(headers, 'app')
+              : line,
+        );
       refusedAs = line;
       if (
         status === 401 &&
