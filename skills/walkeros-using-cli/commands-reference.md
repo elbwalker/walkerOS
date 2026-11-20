@@ -176,6 +176,25 @@ walkeros bundle flow.json -o flow.tar.gz
 runneros start flow.tar.gz
 ```
 
+### Remote mode
+
+```bash
+runneros remote --cache <dir> [options]
+
+Options:
+  --cache <dir>         Release cache folder (required)
+  --no-heartbeat        Send no counters, errors or lines in the check-in
+  --heap <MB>           Heap of the flow in MB (default: from the memory granted)
+  -p, --port <number>   Port (default: 8080)
+  --json                JSON output
+  -v, --verbose         Verbose output
+  -s, --silent          Silent mode
+```
+
+Takes releases from the walkerOS app with `WALKEROS_CREDENTIAL` (a paired
+deployment's credential), no `--env-file`. See
+https://www.walkeros.io/docs/apps/remote.
+
 ---
 
 ## api

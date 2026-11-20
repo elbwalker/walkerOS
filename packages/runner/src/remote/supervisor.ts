@@ -15,18 +15,35 @@
  *
  * Refusal marks live in memory: the per-instance folder they would live in
  * lasts exactly as long as this process. Every secret value the supervisor
- * handles is known to the loggers before a child is forked.
+ * handles is known to the loggers before a child is forked, and reaches the
+ * cache only sealed, as it arrived.
+ *
+ * A server release may serve web parts (`served.ts`). One extraction
+ * function, for a boot, a swap, a fallback and a crash restart, extracts a
+ * release's folder and places each listed path's current web release,
+ * under one lock per release folder. At a swap, while the old child
+ * serves, the named web releases are fetched before the fork. At a boot
+ * with an empty cache they are fetched before the fork for at most
+ * `BOOT_WEB_FETCH_MS`: the app has just served the release, and a web file
+ * not there by then is placed right after the fork. Every other start (a
+ * boot from the cache, a fallback, a crash restart) forks with what the
+ * cache holds, the archive's own copies included. Each start but a swap
+ * queues a web consider, which fetches a newer web release and places it
+ * into the running folder with no restart. A web part never stops its
+ * server release from serving.
  */
 
 import { rm } from 'fs/promises';
 import { join } from 'path';
 import {
   SHUTDOWN_DEADLINE_MS,
+  type CheckInAnswer,
   type Logger,
   type RefusalCheck,
   type ReleaseDocument,
   type RemoteLast,
-  type RemoteState,
+  type RemoteReport,
+  type ServedDeployment,
 } from '@walkeros/core';
 import {
   maskKnownValues,
@@ -51,16 +68,27 @@ import {
   serverSecretValues,
   type InjectionPlan,
 } from '../secret-injection.js';
-import type { AppLink } from './app-link.js';
-import type { ReleaseCache } from './cache.js';
-import { messageOf } from './errors.js';
+import { appCall, type AppLink } from './app-link.js';
+import {
+  newestFirst,
+  SEALED_SET_MAX_BYTES,
+  type ArtifactKind,
+  type CachedRelease,
+  type ReleaseCache,
+} from './cache.js';
+import { codeOf, messageOf } from './errors.js';
 import type {
   ChildMessage,
   ChildReport,
   ChildStart,
+  SignAnswer,
+  SignRequest,
   SupervisorMessage,
 } from './ipc.js';
 import {
+  cachedSecretsNotRemovedLine,
+  cachedSecretsRemovedLine,
+  cachedSecretsUnreadLine,
   crashLine,
   documentNotFetchedLine,
   documentRefusedByLine,
@@ -76,6 +104,8 @@ import {
   releaseStartingLine,
   restartNotReadyLine,
   restartNotStartedLine,
+  archiveNotCachedLine,
+  secretsNotCachedLine,
   skippedLine,
   startingAgainLine,
   type ChildExit,
@@ -89,6 +119,13 @@ import {
   readReleaseDocument,
 } from './release-document.js';
 import { addCounters } from './report.js';
+import {
+  createServedFiles,
+  type ArtifactFetch,
+  type DocumentFetch,
+  type RequestFailure,
+  type WebCurrents,
+} from './served.js';
 
 /** From a child's fork until it must be ready. */
 export const READY_DEADLINE_MS = 60_000;
@@ -96,9 +133,20 @@ export const READY_DEADLINE_MS = 60_000;
 export const CHILD_KILL_AFTER_MS = SHUTDOWN_DEADLINE_MS + 1500;
 /** How long a check-in waits for the report it asked a child for. */
 export const REPORT_WAIT_MS = 1000;
+/**
+ * The most signs of one child that wait for the signer at once, so a
+ * runaway flow cannot swell the supervisor's memory; past it a sign is
+ * refused at once.
+ */
+export const SIGNS_IN_FLIGHT_MAX = 64;
+/**
+ * The whole wait of a boot with an empty cache for the web files its release
+ * lists, from the start of that web step: a hanging web file never holds the
+ * first fork past it.
+ */
+export const BOOT_WEB_FETCH_MS = 3000;
 
 const DOCUMENT_TIMEOUT_MS = 10_000;
-const SECRET_SET_MAX_BYTES = 1_048_576;
 const SECRET_SET_TIMEOUT_MS = 10_000;
 const ARCHIVE_TIMEOUT_MS = 300_000;
 
@@ -114,6 +162,14 @@ const CRASH_FIRST_DELAY_MS = 1000;
 const CRASH_MAX_DELAY_MS = 60_000;
 /** A child ready this long has served well: its next crash waits the first delay again. */
 const CRASH_RESET_AFTER_MS = 60_000;
+
+/**
+ * When a start fetches the web releases its release lists: before its fork
+ * (a swap, while the old child serves), before its fork for at most
+ * `BOOT_WEB_FETCH_MS` (a boot with an empty cache), or after its fork
+ * (every other start, which forks with what the cache holds).
+ */
+type WebStep = 'before-fork' | 'bounded' | 'after-fork';
 
 /** The supervisor's end of a child process. */
 export interface ChildHandle {
@@ -168,23 +224,24 @@ export interface ChildrenReport {
 }
 
 export interface Supervisor {
-  /** `named` is the boot check-in's release; undefined when it did not answer. */
+  /** `named` is the boot check-in's answer; undefined when it did not answer. */
   boot(
-    named: number | null | undefined,
+    named: CheckInAnswer | undefined,
   ): Promise<'serving' | 'waiting' | 'nothing'>;
-  /** Works toward the sequence the app names; resolves once that work is done. */
-  consider(sequence: number | null): Promise<void>;
-  state(): RemoteState;
+  /**
+   * Works toward the release the answer names, then the web releases it
+   * names for the running release's web parts; resolves once that work is
+   * done.
+   */
+  consider(named: CheckInAnswer): Promise<void>;
+  state(): RemoteReport;
   /** Asks the running child for its report, waiting at most 1000 ms. */
   report(): Promise<ChildrenReport>;
   /** Stops the child; resolves with its exit code, or 0 when none ran. */
   stop(): Promise<number>;
 }
 
-interface Release {
-  document: ReleaseDocument;
-  sha256: string;
-}
+type Release = CachedRelease;
 
 interface Prepared extends Release {
   flowFile: string;
@@ -192,7 +249,7 @@ interface Prepared extends Release {
   heapMb: number;
   /**
    * The values the child masks: this release's own walkerOS and server
-   * values. The supervisor's own values (its token) never reach a child.
+   * values. The supervisor's own values (its credential) never reach a child.
    */
   known: string[];
 }
@@ -214,6 +271,8 @@ interface ChildRecord {
   /** Set while a launch waits for this child's ready. */
   onReady?: () => void;
   onAsked: Array<() => void>;
+  /** Its signs still waiting for the signer. */
+  signing: number;
 }
 
 const NOTHING_REPORTED: CounterSnapshot = {
@@ -271,6 +330,15 @@ function refusingSide(
   return undefined;
 }
 
+/** A failed request as its line names it: a 401 or 403 by the side that answered it, the rest by the failure or the status. */
+function failureOf(error: ChannelError, fromRequest: boolean): RequestFailure {
+  const side =
+    error.failure === 'refused' ? refusingSide(error, fromRequest) : undefined;
+  return side && error.status !== undefined
+    ? { side, status: error.status }
+    : { reason: reasonOf(error) };
+}
+
 /** An error no step expected, in one line. */
 function stepFailedLine(error: unknown): string {
   return `Release step failed: ${messageOf(error)}`;
@@ -280,20 +348,6 @@ function stepFailedLine(error: unknown): string {
 function exitCodeOf(exit: ChildExit | undefined): number {
   if (!exit) return 0;
   return exit.code ?? 1;
-}
-
-/** The cached releases, newest first; of two at one sequence the lower sha256, as the high-water mark takes. */
-function newestFirst(entries: Release[]): Release[] {
-  const sorted = [...entries].sort(
-    (a, b) =>
-      b.document.sequence - a.document.sequence ||
-      a.sha256.localeCompare(b.sha256),
-  );
-  return sorted.filter(
-    (entry, index) =>
-      index === 0 ||
-      sorted[index - 1].document.sequence !== entry.document.sequence,
-  );
 }
 
 function remaskErrors(
@@ -328,7 +382,7 @@ export function createSupervisor(deps: SupervisorDeps): Supervisor {
   const everReady = new Set<number>();
   const everStarted = new Set<number>();
   const extracted = new Set<number>();
-  /** Each release's walkerOS secret values, once fetched: values only grow. */
+  /** Each release's walkerOS secret values, once opened: values only grow. */
   const secretSets = new Map<number, Record<string, string>>();
 
   let last: RemoteLast | null = null;
@@ -400,7 +454,7 @@ export function createSupervisor(deps: SupervisorDeps): Supervisor {
    * line names: none for a document whose sequence did not read.
    */
   function refuse(
-    refusal: { check: RefusalCheck; names?: readonly string[] },
+    refusal: { check: RefusalCheck; names?: readonly string[]; fact?: string },
     sequence: number,
     shown: number | undefined,
   ): void {
@@ -416,7 +470,12 @@ export function createSupervisor(deps: SupervisorDeps): Supervisor {
     marks.set(sequence, entry);
     noteLast(entry);
     logger.error(
-      releaseRefusedLine({ check: refusal.check, sequence: shown, names }),
+      releaseRefusedLine({
+        check: refusal.check,
+        sequence: shown,
+        names,
+        fact: refusal.fact,
+      }),
     );
   }
 
@@ -454,28 +513,27 @@ export function createSupervisor(deps: SupervisorDeps): Supervisor {
     subject:
       | { what: 'document' }
       | { what: 'archive' | 'walkerOS secrets'; sequence: number },
-    error: ChannelError,
-    fromRequest: boolean,
+    failure: RequestFailure,
   ): void {
-    const side =
-      error.failure === 'refused'
-        ? refusingSide(error, fromRequest)
-        : undefined;
-    const { status } = error;
     if (subject.what === 'document')
       fetchFailed(
-        side && status !== undefined
-          ? documentRefusedByLine(side, status)
-          : documentNotFetchedLine(reasonOf(error)),
+        'side' in failure
+          ? documentRefusedByLine(failure.side, failure.status)
+          : documentNotFetchedLine(failure.reason),
       );
     else
       fetchFailed(
-        side && status !== undefined
-          ? releaseRefusedByLine(subject.sequence, subject.what, side, status)
+        'side' in failure
+          ? releaseRefusedByLine(
+              subject.sequence,
+              subject.what,
+              failure.side,
+              failure.status,
+            )
           : releaseNotFetchedLine(
               subject.sequence,
               subject.what,
-              reasonOf(error),
+              failure.reason,
             ),
       );
   }
@@ -488,89 +546,232 @@ export function createSupervisor(deps: SupervisorDeps): Supervisor {
     );
   }
 
+  /**
+   * The one document fetch, for the server part and each web part: a
+   * conditional GET with the part's high-water ETag, the answer read
+   * against that part's deployment and mark.
+   */
+  async function getDocument(part: {
+    deployment: string;
+    url: string;
+  }): Promise<DocumentFetch> {
+    const highWater = await cache.highWater(part.deployment);
+    let answer: Awaited<ReturnType<typeof conditionalGet>>;
+    try {
+      answer = await appCall(
+        link,
+        () =>
+          conditionalGet({
+            url: part.url,
+            authorize: link.authorize,
+            timeoutMs: DOCUMENT_TIMEOUT_MS,
+            maxBytes: DOCUMENT_MAX_BYTES,
+            ...(highWater && { etag: `"${highWater.sha256}"` }),
+          }),
+        (got) => got.status,
+      );
+    } catch (error) {
+      if (!(error instanceof ChannelError)) throw error;
+      if (error.failure === 'size')
+        return { got: 'refused', refusal: new ReleaseRefusal('document-size') };
+      return { got: 'failed', failure: failureOf(error, true) };
+    }
+    if (answer.status === 404) return { got: 'none' };
+    if (answer.status === 304) {
+      const cached = (await cache.documents(part.deployment)).find(
+        (entry) => entry.sha256 === highWater?.sha256,
+      );
+      return cached ? { got: 'document', release: cached } : { got: 'gone' };
+    }
+    try {
+      const release = readReleaseDocument(answer.body, {
+        deployment: part.deployment,
+        highWater,
+      });
+      return { got: 'document', release, bytes: answer.body };
+    } catch (error) {
+      if (!(error instanceof ReleaseRefusal)) throw error;
+      return { got: 'refused', refusal: error };
+    }
+  }
+
   /** The document the app serves now; refusals are marked and logged. */
   async function fetchDocument(
     named: number,
   ): Promise<{ release: Release; bytes?: Uint8Array } | undefined> {
-    const highWater = await cache.highWater(deployment);
-    let answer: Awaited<ReturnType<typeof conditionalGet>>;
-    try {
-      answer = await conditionalGet({
-        url: releaseUrl(link.origin),
-        authorize: link.authorize,
-        timeoutMs: DOCUMENT_TIMEOUT_MS,
-        maxBytes: DOCUMENT_MAX_BYTES,
-        ...(highWater && { etag: `"${highWater.sha256}"` }),
-      });
-    } catch (error) {
-      if (!(error instanceof ChannelError)) throw error;
-      if (error.failure === 'size')
-        refuse({ check: 'document-size' }, named, undefined);
-      else requestFailed({ what: 'document' }, error, true);
-      return undefined;
-    }
-    // Nothing is released, though the check-in named a release.
-    if (answer.status === 404) {
-      fetchFailed(documentNotFetchedLine('404'));
-      return undefined;
-    }
-    if (answer.status === 304) {
-      const cached = (await cache.documents(deployment)).find(
-        (entry) => entry.sha256 === highWater?.sha256,
-      );
-      if (cached) noteFloor(cached.document);
-      return cached && { release: cached };
-    }
-    try {
-      const release = readReleaseDocument(answer.body, {
-        deployment,
-        highWater,
-      });
-      noteFloor(release.document);
-      return { release, bytes: answer.body };
-    } catch (error) {
-      if (!(error instanceof ReleaseRefusal)) throw error;
-      refuse(error, error.sequence ?? named, error.sequence);
-      return undefined;
+    const got = await getDocument({ deployment, url: releaseUrl(link.origin) });
+    switch (got.got) {
+      case 'document':
+        noteFloor(got.release.document);
+        return { release: got.release, bytes: got.bytes };
+      case 'refused':
+        refuse(
+          got.refusal,
+          got.refusal.sequence ?? named,
+          got.refusal.sequence,
+        );
+        return undefined;
+      case 'failed':
+        requestFailed({ what: 'document' }, got.failure);
+        return undefined;
+      // Nothing is released, though the check-in named a release.
+      case 'none':
+        fetchFailed(documentNotFetchedLine('404'));
+        return undefined;
+      case 'gone':
+        return undefined;
     }
   }
 
-  /** The release's archive in the cache: checked, else fetched. */
-  async function ensureArtifact(release: Release): Promise<boolean> {
-    const { artifact, sequence } = release.document;
-    if (await cache.checkArtifact(artifact)) return true;
-    const subject = { what: 'archive', sequence } as const;
+  /**
+   * The one artifact fetch, for a server release's archive and a web
+   * release's file: checked in the cache, else fetched by the document's
+   * release (the archive route's one redirect followed with no credentials)
+   * and stored.
+   */
+  async function getArtifact(
+    release: Release,
+    kind: ArtifactKind,
+  ): Promise<ArtifactFetch> {
+    const { artifact } = release.document;
+    if (await cache.checkArtifact(artifact, kind)) return { got: 'stored' };
     let chunks: AsyncIterable<Uint8Array>;
     try {
-      chunks = await openStream({
-        url: archiveUrl(link.origin, release.document.release),
-        authorize: link.authorize,
-        timeoutMs: ARCHIVE_TIMEOUT_MS,
-        followRedirectWithoutCredentials: true,
-      });
+      chunks = await appCall(
+        link,
+        () =>
+          openStream({
+            url: archiveUrl(link.origin, release.document.release),
+            authorize: link.authorize,
+            timeoutMs: ARCHIVE_TIMEOUT_MS,
+            followRedirectWithoutCredentials: true,
+          }),
+        () => 200,
+      );
     } catch (error) {
       if (!(error instanceof ChannelError)) throw error;
-      requestFailed(subject, error, true);
-      return false;
+      return { got: 'failed', failure: failureOf(error, true) };
     }
     try {
       // The cache caps the body at the document's bytes, which the reader
       // bounds at the largest archive.
-      await cache.storeArtifact(chunks, artifact);
-      return true;
+      await cache.storeArtifact(chunks, artifact, kind);
+      return { got: 'stored' };
     } catch (error) {
-      // A refusal from the cache names no sequence: the document's is added.
-      if (error instanceof ReleaseRefusal) refuse(error, sequence, sequence);
+      if (error instanceof ReleaseRefusal)
+        return { got: 'refused', refusal: error };
       // The body's read failed: its hop, if any, names the side.
-      else if (error instanceof ChannelError)
-        requestFailed(subject, error, false);
-      // A disk fault is this instance's, not the release's.
-      else logger.error(notStartedLine(sequence, messageOf(error)));
-      return false;
+      if (error instanceof ChannelError)
+        return { got: 'failed', failure: failureOf(error, false) };
+      return { got: 'fault', error };
     }
   }
 
-  /** The release's walkerOS secret values: 'needs-app' when the app did not answer. */
+  /**
+   * The release's archive in the cache: checked, else fetched. `cacheOnly`
+   * is a cold boot's and a fallback's: an archive the cache does not hold
+   * skips the release with one line, so a start from the cache never waits
+   * for the app; a newer named release is the consider's to fetch.
+   */
+  async function ensureArtifact(
+    release: Release,
+    cacheOnly = false,
+  ): Promise<boolean> {
+    const { sequence } = release.document;
+    if (cacheOnly) {
+      if (await cache.checkArtifact(release.document.artifact, 'archive'))
+        return true;
+      logger.error(archiveNotCachedLine(sequence));
+      return false;
+    }
+    const got = await getArtifact(release, 'archive');
+    switch (got.got) {
+      case 'stored':
+        return true;
+      // A refusal from the cache names no sequence: the document's is added.
+      case 'refused':
+        refuse(got.refusal, sequence, sequence);
+        return false;
+      case 'failed':
+        requestFailed({ what: 'archive', sequence }, got.failure);
+        return false;
+      // A disk fault is this instance's, not the release's.
+      case 'fault':
+        logger.error(notStartedLine(sequence, messageOf(got.error)));
+        return false;
+    }
+  }
+
+  const servedFiles = createServedFiles({
+    cache,
+    logger,
+    origin: link.origin,
+    fetchDocument: getDocument,
+    fetchArtifact: getArtifact,
+  });
+
+  /**
+   * Opens a release's sealed set with this credential's key and checks it
+   * names every walkerOS secret the release reads; throws ReleaseRefusal
+   * 'secret-set'. Its values are known from the moment they are held,
+   * whatever the release does next.
+   */
+  async function openSet(
+    bytes: Uint8Array,
+    document: ReleaseDocument,
+  ): Promise<Record<string, string>> {
+    const { sequence } = document;
+    const values = await link.readSecretSet(bytes, { deployment, sequence });
+    knownValues.add(Object.values(values));
+    // A set without a name the release reads would start a flow without it.
+    if (document.secrets.app.some((name) => !Object.hasOwn(values, name)))
+      throw new ReleaseRefusal('secret-set', sequence);
+    return values;
+  }
+
+  /**
+   * The release's walkerOS secret values: from memory, else from the set
+   * the cache holds under this credential's key id, else from the app. A
+   * cached set that does not open is removed and fetched again; a set under
+   * another key id is never read. A cache fault in reading or removing a
+   * set is one line with its code, and the set counts as not cached: the
+   * app is asked, and with the app down the release waits for it like any
+   * set the cache does not hold.
+   */
+  async function secretValues(
+    release: Release,
+  ): Promise<Record<string, string> | 'needs-app' | undefined> {
+    const { sequence } = release.document;
+    const held = secretSets.get(sequence);
+    if (held) return held;
+    let cached: Uint8Array | undefined;
+    try {
+      cached = await cache.sealedSet(link.keyId, sequence);
+    } catch (error) {
+      logger.error(cachedSecretsUnreadLine(sequence, codeOf(error)));
+    }
+    if (cached) {
+      try {
+        const values = await openSet(cached, release.document);
+        secretSets.set(sequence, values);
+        return values;
+      } catch (error) {
+        if (!(error instanceof ReleaseRefusal)) throw error;
+        try {
+          await cache.removeSealedSet(link.keyId, sequence);
+          logger.error(cachedSecretsRemovedLine(sequence));
+        } catch (removal) {
+          logger.error(cachedSecretsNotRemovedLine(sequence, codeOf(removal)));
+        }
+      }
+    }
+    return fetchSecretSet(release);
+  }
+
+  /**
+   * The release's walkerOS secret values from the app, cached as they
+   * arrived once they opened: 'needs-app' when the app did not answer.
+   */
   async function fetchSecretSet(
     release: Release,
   ): Promise<Record<string, string> | 'needs-app' | undefined> {
@@ -578,19 +779,27 @@ export function createSupervisor(deps: SupervisorDeps): Supervisor {
     const { sequence } = document;
     let answer: Awaited<ReturnType<typeof conditionalGet>>;
     try {
-      answer = await conditionalGet({
-        url: releaseSecretsUrl(link.origin, document.release),
-        authorize: link.authorize,
-        timeoutMs: SECRET_SET_TIMEOUT_MS,
-        maxBytes: SECRET_SET_MAX_BYTES,
-      });
+      answer = await appCall(
+        link,
+        () =>
+          conditionalGet({
+            url: releaseSecretsUrl(link.origin, document.release),
+            authorize: link.authorize,
+            timeoutMs: SECRET_SET_TIMEOUT_MS,
+            maxBytes: SEALED_SET_MAX_BYTES,
+          }),
+        (got) => got.status,
+      );
     } catch (error) {
       if (!(error instanceof ChannelError)) throw error;
       if (error.failure === 'size') {
         refuse({ check: 'secret-set' }, sequence, sequence);
         return undefined;
       }
-      requestFailed({ what: 'walkerOS secrets', sequence }, error, true);
+      requestFailed(
+        { what: 'walkerOS secrets', sequence },
+        failureOf(error, true),
+      );
       return 'needs-app';
     }
     // The app serves the current release's values only: this one is past.
@@ -598,40 +807,140 @@ export function createSupervisor(deps: SupervisorDeps): Supervisor {
       logger.error(skippedLine(sequence));
       return undefined;
     }
+    let values: Record<string, string>;
     try {
-      const values = link.readSecretSet(answer.body, { deployment, sequence });
-      // A set without a name the release reads would start a flow without it.
-      // Known from the moment it is held, whatever the release does next.
-      knownValues.add(Object.values(values));
-      if (document.secrets.app.some((name) => !Object.hasOwn(values, name)))
-        throw new ReleaseRefusal('secret-set', sequence);
-      secretSets.set(sequence, values);
-      return values;
+      values = await openSet(answer.body, document);
     } catch (error) {
       if (!(error instanceof ReleaseRefusal)) throw error;
       refuse(error, sequence, sequence);
       return undefined;
     }
+    secretSets.set(sequence, values);
+    try {
+      await cache.storeSealedSet(link.keyId, sequence, answer.body);
+    } catch (error) {
+      // The values are held in memory: the release goes on without a cached copy.
+      logger.error(secretsNotCachedLine(sequence, codeOf(error)));
+    }
+    return values;
+  }
+
+  function folderOf(sequence: number): string {
+    return join(releasesFolder, String(sequence));
+  }
+
+  /**
+   * One lock per release folder: an extraction (a swap's, a boot's, a
+   * fallback's or a crash restart's) and a placement into a running folder
+   * never write one folder at once, so whichever runs last writes what is
+   * current then.
+   */
+  const folderLocks = new Map<number, Promise<unknown>>();
+  function underFolderLock<T>(
+    sequence: number,
+    task: () => Promise<T>,
+  ): Promise<T> {
+    const run = (folderLocks.get(sequence) ?? Promise.resolve()).then(task);
+    const held = run.catch(() => undefined);
+    folderLocks.set(sequence, held);
+    void held.then(() => {
+      if (folderLocks.get(sequence) === held) folderLocks.delete(sequence);
+    });
+    return run;
+  }
+
+  /**
+   * A web fetch an empty-cache boot stopped waiting for at its cap: the web
+   * consider queued after that boot's fork waits for it, then places what
+   * it brought.
+   */
+  let bootWebFetch: Promise<WebCurrents> | undefined;
+
+  /**
+   * The web releases the newest answer names above their newest cached
+   * release, fetched before a fork: in full at a swap, for at most
+   * `BOOT_WEB_FETCH_MS` at a boot with an empty cache. Undefined when the
+   * cap passed first: the extraction then looks up the cache itself, and
+   * whatever arrives later is placed after the fork.
+   */
+  async function fetchServedBeforeFork(
+    served: readonly ServedDeployment[],
+    named: CheckInAnswer,
+    step: 'before-fork' | 'bounded',
+  ): Promise<WebCurrents | undefined> {
+    const fetching = servedFiles.fetchNamed(served, named);
+    if (step === 'before-fork') return fetching;
+    let cancel: () => void = () => {};
+    const capped = new Promise<undefined>((resolve) => {
+      cancel = timers.after(BOOT_WEB_FETCH_MS, () => resolve(undefined));
+    });
+    let currents: WebCurrents | undefined;
+    try {
+      currents = await Promise.race([fetching, capped]);
+    } finally {
+      cancel();
+    }
+    if (currents === undefined) bootWebFetch = fetching;
+    return currents;
+  }
+
+  /**
+   * The one extraction, for a boot, a swap, a fallback and a crash restart.
+   * First, outside the lock, the web step (`WebStep`): at a swap and at a
+   * boot with an empty cache the web releases the newest answer names are
+   * fetched before the fork; a fetch that fails never refuses the server
+   * release. Then, under the folder's lock, the folder removed, the archive
+   * extracted and each listed path given its current web release. Resolves
+   * with the flow.mjs path; throws a ReleaseRefusal naming no sequence, or a
+   * fault of this instance.
+   */
+  async function extractRelease(
+    release: Release,
+    webStep: WebStep,
+  ): Promise<string> {
+    const { document } = release;
+    const { sequence } = document;
+    const currents =
+      webStep !== 'after-fork' && document.served && newest
+        ? await fetchServedBeforeFork(document.served, newest, webStep)
+        : undefined;
+    return underFolderLock(sequence, async () => {
+      const into = folderOf(sequence);
+      await rm(into, { recursive: true, force: true });
+      extracted.add(sequence);
+      const flowFile = await cache.extractArtifact(document.artifact, into);
+      await servedFiles.place(document, into, 'extraction', currents);
+      return flowFile;
+    });
+  }
+
+  /** A refusal that says the cached archive is gone or damaged since its check. */
+  function isObjectGone(error: unknown): boolean {
+    return (
+      error instanceof ReleaseRefusal &&
+      (error.check === 'artifact-bytes' || error.check === 'artifact-sha256')
+    );
   }
 
   /** Extracts into `releases/<sequence>/`; an object gone since its check is fetched once more. */
-  async function extract(release: Release): Promise<string | undefined> {
-    const { sequence, artifact } = release.document;
-    const into = join(releasesFolder, String(sequence));
+  async function extract(
+    release: Release,
+    options: { webStep: WebStep; cacheOnly: boolean },
+  ): Promise<string | undefined> {
+    const { sequence } = release.document;
     for (let attempt = 0; ; attempt += 1) {
       try {
-        await rm(into, { recursive: true, force: true });
-        extracted.add(sequence);
-        return await cache.extractArtifact(artifact, into);
+        return await extractRelease(
+          release,
+          attempt === 0 ? options.webStep : 'after-fork',
+        );
       } catch (error) {
         if (!(error instanceof ReleaseRefusal)) {
           logger.error(notStartedLine(sequence, messageOf(error)));
           return undefined;
         }
-        const objectGone =
-          error.check === 'artifact-bytes' || error.check === 'artifact-sha256';
-        if (objectGone && attempt === 0) {
-          if (await ensureArtifact(release)) continue;
+        if (isObjectGone(error) && attempt === 0) {
+          if (await ensureArtifact(release, options.cacheOnly)) continue;
           return undefined;
         }
         refuse(error, sequence, sequence);
@@ -645,11 +954,21 @@ export function createSupervisor(deps: SupervisorDeps): Supervisor {
    * on every load from the cache: the secret names against this
    * environment, the heap, the archive, the walkerOS secret set and the
    * extraction. `documentBytes` are stored once the names pass.
+   * `webStep` is when the named web releases are fetched (`WebStep`), after
+   * the fork unless named. `cacheOnly` is a cold boot's and a fallback's:
+   * the archive is taken from the cache only.
    */
   async function prepare(
     release: Release,
-    documentBytes?: Uint8Array,
+    options: {
+      documentBytes?: Uint8Array;
+      webStep?: WebStep;
+      cacheOnly?: boolean;
+    } = {},
   ): Promise<Prepared | 'needs-app' | undefined> {
+    const { documentBytes } = options;
+    const webStep = options.webStep ?? 'after-fork';
+    const cacheOnly = options.cacheOnly ?? false;
     const { document } = release;
     const { sequence } = document;
     const refused = checkReleaseSecrets(document.secrets, deps.env);
@@ -667,16 +986,16 @@ export function createSupervisor(deps: SupervisorDeps): Supervisor {
       return undefined;
     }
 
-    if (!(await ensureArtifact(release))) return undefined;
+    if (!(await ensureArtifact(release, cacheOnly))) return undefined;
 
     let values: Record<string, string> = {};
     if (document.secrets.app.length > 0) {
-      const held = secretSets.get(sequence) ?? (await fetchSecretSet(release));
+      const held = await secretValues(release);
       if (held === undefined || held === 'needs-app') return held;
       values = held;
     }
 
-    const flowFile = await extract(release);
+    const flowFile = await extract(release, { webStep, cacheOnly });
     if (flowFile === undefined) return undefined;
 
     // Known before the child logs its first line.
@@ -731,7 +1050,55 @@ export function createSupervisor(deps: SupervisorDeps): Supervisor {
       }
       case 'format':
         return;
+      case 'sign':
+        signFor(record, message);
+        return;
     }
+  }
+
+  /**
+   * Signs one ingest write of a child's steps with the link's door signer,
+   * which applies the one door rule, never with the app's `authorize`. A
+   * refused sign is the step's own error, so it writes no line here; the
+   * answer for a child that has exited is dropped. A draining child is still
+   * signed for: its last writes need it.
+   */
+  function signFor(record: ChildRecord, request: SignRequest): void {
+    const { id } = request;
+    if (record.signing >= SIGNS_IN_FLIGHT_MAX) {
+      record.handle.send({
+        type: 'sign-refused',
+        id,
+        message: `${SIGNS_IN_FLIGHT_MAX} signing requests are in flight`,
+      });
+      return;
+    }
+    record.signing += 1;
+    void link
+      .signStep({
+        method: request.method,
+        url: request.url,
+        contentDigest: request.contentDigest,
+      })
+      .then(
+        (headers): SignAnswer => ({
+          type: 'signed',
+          id,
+          headers: {
+            'Signature-Input': headers['Signature-Input'],
+            Signature: headers.Signature,
+          },
+        }),
+        (error: unknown): SignAnswer => ({
+          type: 'sign-refused',
+          id,
+          message: messageOf(error),
+        }),
+      )
+      .then((answer) => {
+        record.signing -= 1;
+        if (!record.exit) record.handle.send(answer);
+      });
   }
 
   function onChildExit(record: ChildRecord): void {
@@ -753,6 +1120,7 @@ export function createSupervisor(deps: SupervisorDeps): Supervisor {
       stopping: false,
       reported: NOTHING_REPORTED,
       onAsked: [],
+      signing: 0,
     };
     handle.onMessage((message) => onChildMessage(record, message));
     handle.onExit((code, signal) => {
@@ -789,10 +1157,12 @@ export function createSupervisor(deps: SupervisorDeps): Supervisor {
   /**
    * Forks a child for `prepared` and waits for its ready. The port server
    * closes first; `still` is asked right before the fork, after every wait.
+   * `afterFork` runs right after the fork.
    */
   async function launch(
     prepared: Prepared,
     still: () => boolean,
+    afterFork?: () => void,
   ): Promise<Launched> {
     await port.close();
     if (stopping || !still()) return 'stopped';
@@ -810,6 +1180,7 @@ export function createSupervisor(deps: SupervisorDeps): Supervisor {
     const record = watch(prepared, deps.spawnChild(start, prepared.heapMb));
     current = record;
     everStarted.add(sequence);
+    afterFork?.();
     const outcome = await readyOrNot(record);
     if (outcome === 'ready') {
       everReady.add(sequence);
@@ -856,23 +1227,18 @@ export function createSupervisor(deps: SupervisorDeps): Supervisor {
   }
 
   /**
-   * The release's extraction made again from its archive, re-hashed: the
-   * crashed child could write its own folder. Answers why not, on a failure.
+   * The release's extraction made again from its archive, re-hashed, with
+   * the current web releases placed: the crashed child could write its own
+   * folder. It fetches nothing, so the restart never waits for the app.
+   * Answers why not, on a failure.
    */
   async function extractAgain(
     prepared: Prepared,
-  ): Promise<{ ok: true } | { ok: false; reason: string }> {
-    const { sequence, artifact } = prepared.document;
+  ): Promise<
+    { ok: true } | { ok: false; reason: string; objectGone: boolean }
+  > {
     try {
-      await rm(join(releasesFolder, String(sequence)), {
-        recursive: true,
-        force: true,
-      });
-      extracted.add(sequence);
-      await cache.extractArtifact(
-        artifact,
-        join(releasesFolder, String(sequence)),
-      );
+      await extractRelease(prepared, 'after-fork');
       return { ok: true };
     } catch (error) {
       return {
@@ -881,27 +1247,85 @@ export function createSupervisor(deps: SupervisorDeps): Supervisor {
           error instanceof ReleaseRefusal
             ? `extraction refused (${error.check})`
             : messageOf(error),
+        objectGone: isObjectGone(error),
       };
+    }
+  }
+
+  /** Crashed releases whose archive the app's copy refused in this process: never downloaded again here. */
+  const refetchRefused = new Map<number, RefusalCheck>();
+
+  /**
+   * The archive of a crashed release, gone from the cache since its check,
+   * fetched again: stored, or why not. No reason means the extraction's own
+   * stands (a failed request writes its own line). A refusal marks nothing,
+   * since the release ran and a crash restart is never a refusal, and that
+   * archive is not downloaded again in this process: the restarts go on
+   * from the cache, where another instance may store a good copy.
+   */
+  async function refetchArchive(
+    release: Release,
+  ): Promise<{ stored: true } | { stored: false; reason?: string }> {
+    const { sequence } = release.document;
+    const seen = refetchRefused.get(sequence);
+    if (seen !== undefined)
+      return { stored: false, reason: `archive refused (${seen})` };
+    let got: ArtifactFetch;
+    try {
+      got = await getArtifact(release, 'archive');
+    } catch (error) {
+      // A cache fault: one line with its code, and the back-off goes on,
+      // since nothing else would start this release again.
+      return { stored: false, reason: codeOf(error) };
+    }
+    switch (got.got) {
+      case 'stored':
+        return { stored: true };
+      case 'refused':
+        refetchRefused.set(sequence, got.refusal.check);
+        return {
+          stored: false,
+          reason: `archive refused (${got.refusal.check})`,
+        };
+      case 'failed':
+        requestFailed({ what: 'archive', sequence }, got.failure);
+        return { stored: false };
+      case 'fault':
+        return { stored: false, reason: codeOf(got.error) };
     }
   }
 
   /**
    * Starts a crashed release again: its archive extracted afresh, the same
    * values, the same sink. An extraction that fails backs off again on the
-   * same release, never another, and marks nothing.
+   * same release, never another, and marks nothing. An archive gone from
+   * the cache since (a sibling removed a damaged copy) is fetched first
+   * (`refetchArchive`): nothing serves meanwhile, so the fetch holds
+   * nothing. It forks with what the cache holds and queues a web consider
+   * right after the fork.
    */
   async function restart(record: ChildRecord): Promise<void> {
     const still = () => !swapping && current === record;
     if (stopping || !still()) return;
-    const extraction = await extractAgain(record.prepared);
+    let extraction = await extractAgain(record.prepared);
     if (stopping || !still()) return;
+    if (!extraction.ok && extraction.objectGone) {
+      const refetched = await refetchArchive(record.prepared);
+      if (stopping || !still()) return;
+      if (refetched.stored) {
+        extraction = await extractAgain(record.prepared);
+        if (stopping || !still()) return;
+      } else if (refetched.reason !== undefined)
+        extraction = { ok: false, reason: refetched.reason, objectGone: true };
+    }
     if (!extraction.ok) {
+      const { reason } = extraction;
       restartLater(record, (delay) =>
-        restartNotStartedLine(sequenceOf(record), extraction.reason, delay),
+        restartNotStartedLine(sequenceOf(record), reason, delay),
       );
       return;
     }
-    const outcome = await launch(record.prepared, still);
+    const outcome = await launch(record.prepared, still, queueServed);
     if (outcome === 'stopped') return;
     if (outcome === 'ready') {
       logger.info(releaseRunningLine(factsOf(record.prepared)));
@@ -913,14 +1337,15 @@ export function createSupervisor(deps: SupervisorDeps): Supervisor {
     notReadyAgain(again, outcome.cause);
   }
 
+  /** Each removal under its folder's lock: a crash restart may still extract that folder. */
   async function removeExtractionsBut(sequence: number): Promise<void> {
     for (const other of [...extracted]) {
       if (other === sequence) continue;
-      await rm(join(releasesFolder, String(other)), {
-        recursive: true,
-        force: true,
-      });
+      await underFolderLock(other, () =>
+        rm(folderOf(other), { recursive: true, force: true }),
+      );
       extracted.delete(other);
+      servedFiles.forget(other);
     }
   }
 
@@ -929,10 +1354,12 @@ export function createSupervisor(deps: SupervisorDeps): Supervisor {
    * so the previous release's errors are not reported again under it. A
    * sequence not yet seen ready in this process that does not get ready is
    * refused on this instance; one seen ready before counts as a crash.
+   * `afterFork` runs right after its fork.
    */
   async function startRelease(
     prepared: Prepared,
     was: number | undefined,
+    afterFork?: () => void,
   ): Promise<'ready' | 'refused' | 'stopped' | 'crashed'> {
     const sequence = prepared.document.sequence;
     await rm(errorSinkPath(deps.folder), { force: true });
@@ -943,7 +1370,7 @@ export function createSupervisor(deps: SupervisorDeps): Supervisor {
         : releaseStartingLine(factsOf(prepared)),
     );
     noteLast({ sequence, state: 'starting' });
-    const outcome = await launch(prepared, () => true);
+    const outcome = await launch(prepared, () => true, afterFork);
     if (outcome === 'stopped') return 'stopped';
     if (outcome === 'ready') {
       logger.info(
@@ -977,7 +1404,9 @@ export function createSupervisor(deps: SupervisorDeps): Supervisor {
    * Starts the highest good cached release below `below` (any, without it)
    * and at or above the floor, the highest `secretsSince` in the cache:
    * never one whose secret values a later release changed. Each candidate
-   * passes every check again first.
+   * passes every check again first. A boot from the cache and a fallback
+   * fork with what the cache holds and queue a web consider right after
+   * the fork.
    */
   async function startBest(
     below: number | undefined,
@@ -997,13 +1426,13 @@ export function createSupervisor(deps: SupervisorDeps): Supervisor {
         break;
       }
       if (marks.has(sequence)) continue;
-      const prepared = await prepare(release);
+      const prepared = await prepare(release, { cacheOnly: true });
       if (prepared === 'needs-app') {
         needsApp ??= sequence;
         continue;
       }
       if (prepared === undefined) continue;
-      const started = await startRelease(prepared, was);
+      const started = await startRelease(prepared, was, queueServed);
       if (started === 'ready' || started === 'crashed') return 'serving';
       if (started === 'stopped') return 'none';
     }
@@ -1019,8 +1448,14 @@ export function createSupervisor(deps: SupervisorDeps): Supervisor {
     return 'none';
   }
 
-  /** The swap: the old child drains, then the new release starts. */
-  async function swapTo(prepared: Prepared): Promise<void> {
+  /**
+   * The swap: the old child drains, then the new release starts. `afterFork`
+   * runs right after the new child's fork.
+   */
+  async function swapTo(
+    prepared: Prepared,
+    afterFork?: () => void,
+  ): Promise<void> {
     swapping = true;
     try {
       cancelCrash?.();
@@ -1031,7 +1466,7 @@ export function createSupervisor(deps: SupervisorDeps): Supervisor {
       // it on the port chain, so the port is held from the exit to the fork.
       if (old && !old.exit) await stopChild(old);
       if (stopping) return;
-      const started = await startRelease(prepared, was);
+      const started = await startRelease(prepared, was, afterFork);
       if (started === 'refused')
         await startBest(prepared.document.sequence, was);
     } finally {
@@ -1042,30 +1477,93 @@ export function createSupervisor(deps: SupervisorDeps): Supervisor {
   /**
    * One consider: the document the app serves (which may be newer than the
    * one named), every check, then the swap. A refusal leaves the serving
-   * child untouched.
+   * child untouched. While a child serves, the named web files are
+   * fetched before the fork. With none alive, `idle` says when: `bounded`
+   * at a boot with an empty cache, else after the fork; a web consider
+   * right after the fork places what came later with no restart.
    */
-  async function take(named: number): Promise<void> {
+  async function take(
+    named: number,
+    idle: WebStep = 'after-fork',
+  ): Promise<void> {
     if (stopping || settledFor(named)) return;
     const fetched = await fetchDocument(named);
     if (!fetched || stopping || settledFor(fetched.release.document.sequence))
       return;
-    const prepared = await prepare(fetched.release, fetched.bytes);
+    const serving = current !== undefined && !current.exit;
+    const prepared = await prepare(fetched.release, {
+      documentBytes: fetched.bytes,
+      webStep: serving ? 'before-fork' : idle,
+    });
     if (prepared === undefined || prepared === 'needs-app' || stopping) return;
-    await swapTo(prepared);
+    await swapTo(prepared, serving ? undefined : queueServed);
+  }
+
+  /** The newest check-in answer: its web releases are what a web consider works toward. */
+  let newest: CheckInAnswer | undefined;
+
+  /**
+   * The web consider: the web parts the held release lists, fetched where
+   * the newest answer names one above its newest cached release, then the
+   * current web release placed into the folder of a child that is alive,
+   * with no restart. The held release is the current child's, running,
+   * starting or waiting for its crash restart; a release refused here holds
+   * none, and while no child is alive a crash restart's extraction places
+   * what is current. A web fetch an empty-cache boot stopped waiting for
+   * comes first: the files it brings are placed once they arrive. It never
+   * sets `swapping`, which the crash restart reads.
+   */
+  async function considerServed(): Promise<void> {
+    const held = current;
+    if (stopping || !newest || !held || marks.has(sequenceOf(held))) return;
+    const listed = held.prepared.document.served;
+    if (!listed) return;
+    const pending = bootWebFetch;
+    bootWebFetch = undefined;
+    if (pending) await pending;
+    const currents = await servedFiles.fetchNamed(listed, newest);
+    // A crash restart may have forked meanwhile: the same release, its folder.
+    const live = current;
+    if (stopping || !live || live.exit) return;
+    const { document } = live.prepared;
+    await underFolderLock(document.sequence, () =>
+      servedFiles.place(
+        document,
+        folderOf(document.sequence),
+        'running',
+        currents,
+      ),
+    );
+  }
+
+  let servedQueued = false;
+  /** A web consider in the serial chain for the newest answer; one waits at a time. */
+  function queueServed(): void {
+    if (servedQueued || stopping) return;
+    servedQueued = true;
+    void serial(async () => {
+      servedQueued = false;
+      await considerServed();
+    }).catch((error: unknown) => {
+      logger.error(stepFailedLine(error));
+    });
   }
 
   let wanted: number | undefined;
   let queued: Promise<void> | undefined;
 
-  function consider(sequence: number | null): Promise<void> {
-    if (sequence === null || stopping) return Promise.resolve();
-    wanted = sequence;
+  function consider(named: CheckInAnswer): Promise<void> {
+    if (stopping) return Promise.resolve();
+    newest = named;
+    if (named.release !== null) wanted = named.release;
     if (!queued)
       queued = serial(async () => {
         queued = undefined;
         const target = wanted;
         wanted = undefined;
         if (target !== undefined) await take(target);
+        // After any server release the same answer names.
+        await considerServed();
       }).catch((error: unknown) => {
         logger.error(stepFailedLine(error));
       });
@@ -1073,23 +1571,26 @@ export function createSupervisor(deps: SupervisorDeps): Supervisor {
   }
 
   async function boot(
-    named: number | null | undefined,
+    named: CheckInAnswer | undefined,
   ): Promise<'serving' | 'waiting' | 'nothing'> {
+    if (named) newest = named;
     const result = await serial(async () => {
       await port.open();
       const cached = await cache.documents(deployment);
       if (cached.length === 0) {
-        if (named === null || named === undefined) {
+        if (named === undefined || named.release === null) {
           logger.error(
-            noReleaseToRunLine(named === null ? 'no-release' : 'no-answer'),
+            noReleaseToRunLine(
+              named === undefined ? 'no-answer' : 'no-release',
+            ),
           );
           return 'nothing';
         }
-        await take(named);
+        await take(named.release, 'bounded');
         return running() === null ? 'waiting' : 'serving';
       }
       const best = await startBest(undefined, undefined);
-      if (typeof named === 'number' && (running() ?? 0) < named)
+      if (named && named.release !== null && (running() ?? 0) < named.release)
         void consider(named);
       return best === 'serving' ? 'serving' : 'waiting';
     }).catch((error: unknown) => {
@@ -1174,10 +1675,19 @@ export function createSupervisor(deps: SupervisorDeps): Supervisor {
     return stopped;
   }
 
+  function state(): RemoteReport {
+    const sequence = running();
+    const served =
+      sequence !== null && current
+        ? servedFiles.report(current.prepared.document)
+        : undefined;
+    return { running: sequence, last, ...(served && { served }) };
+  }
+
   return {
     boot,
     consider,
-    state: () => ({ running: running(), last }),
+    state,
     report,
     stop,
   };

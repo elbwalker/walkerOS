@@ -5,7 +5,7 @@
  * is read. Without it the runner runs open source and calls no app.
  */
 
-import type { Authorize, Logger } from '@walkeros/core';
+import type { Authorize, Logger, ServiceCredential } from '@walkeros/core';
 import type { KnownValues } from '@walkeros/core/node';
 import {
   createDoorAuthorize,
@@ -37,20 +37,34 @@ export function holdsCredential(env: NodeJS.ProcessEnv): boolean {
 }
 
 /**
+ * The credential in `WALKEROS_CREDENTIAL`, read once, for start mode and
+ * remote mode alike: the raw value joins the masked values first, so no line
+ * shows it even when it does not read, and the variable is removed from
+ * `env` before its value is checked, so no child inherits it. Undefined
+ * without the variable; a value that is no walkerOS credential throws the
+ * fact, naming the variable, never the value.
+ */
+export function readRunnerCredential(options: {
+  env: NodeJS.ProcessEnv;
+  knownValues: KnownValues;
+}): ServiceCredential | undefined {
+  const raw = options.env[SERVICE_CREDENTIAL_ENV];
+  if (raw) options.knownValues.add([raw]);
+  return readServiceCredential(options.env) ?? undefined;
+}
+
+/**
  * Read the credential once, before any flow code loads, and remove it from
- * `env`, so no step and no child reads it. Its value joins the masked values,
- * so no line shows it. Undefined without the variable; a value that is no
- * walkerOS credential throws the fact, naming the variable, never the value.
- * Only a deployment's credential writes ingest, so only it gets `steps`.
+ * `env`, so no step and no child reads it. Without it the runner runs open
+ * source and calls no app. Only a deployment's credential writes ingest, so
+ * only it gets `steps`.
  */
 export function connectApp(options: {
   env: NodeJS.ProcessEnv;
   logger: Logger.Instance;
   knownValues: KnownValues;
 }): RunnerLink | undefined {
-  const raw = options.env[SERVICE_CREDENTIAL_ENV];
-  if (raw) options.knownValues.add([raw]);
-  const credential = readServiceCredential(options.env);
+  const credential = readRunnerCredential(options);
   if (!credential) return undefined;
   return {
     app: createServiceAuth(credential, { logger: options.logger }),

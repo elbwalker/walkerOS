@@ -6,12 +6,14 @@ export * from './retryBudget';
 export * from './backoff';
 export * from './channel';
 
-// The service credential client: the credential reader, discovery, the RFC
-// 10070 assertion, DPoP proofs and RFC 9421 signatures, all ES256 on WebCrypto.
+// The service credential client: the credential reader, the opener of what
+// the app seals to the credential (ECDH-ES, A256GCM), discovery, the RFC 10070
+// assertion, DPoP proofs and RFC 9421 signatures, all on WebCrypto.
 export {
   SERVICE_CREDENTIAL_ENV,
   readServiceCredential,
 } from './service-auth/credential';
+export { openSealedSecretSet } from './service-auth/sealed-set';
 export { discoverIssuer, metadataUrl } from './service-auth/discovery';
 export {
   ASSERTION_LIFETIME_SECONDS,
@@ -44,6 +46,7 @@ export type {
 // a door runs on each signed request.
 export {
   SIGNATURE_TAGS,
+  assertDoorTarget,
   createDoorAuthorize,
   signDoorRequest,
 } from './service-auth/door-sign';

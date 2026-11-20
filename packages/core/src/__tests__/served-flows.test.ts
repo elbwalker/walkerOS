@@ -1,6 +1,13 @@
 import type { Flow } from '../types/flow';
 import type { ServedFlowIssue } from '../served-flows';
-import { getServedFlows } from '../served-flows';
+import {
+  SERVER_OUTPUT_ENTRIES,
+  firstPathPartIs,
+  getServedFlows,
+  isServedPath,
+  servedFlowPath,
+  servedPathsOverlap,
+} from '../served-flows';
 
 const PLATFORMS: Record<string, Flow.Config['platform']> = {
   casamoda: 'web',
@@ -260,5 +267,72 @@ describe('getServedFlows', () => {
     ],
   ])('refuses %s', (_, on, listing, issues) => {
     expect(getServedFlows(file(listing, on), on).issues).toEqual(issues);
+  });
+});
+
+describe('isServedPath', () => {
+  it.each<[string, boolean]>([
+    ['a.js', true],
+    ['a/b.js', true],
+    ['', false],
+    ['/a', false],
+    ['a/', false],
+    ['a//b', false],
+    ['../a', false],
+    ['.a/b', false],
+    ['a/.b', false],
+    ['a b', false],
+  ])('answers "%s" with %s', (value, expected) => {
+    expect(isServedPath(value)).toBe(expected);
+  });
+});
+
+describe('servedPathsOverlap', () => {
+  it.each<[string, string, boolean]>([
+    ['a/w.js', 'A/W.js', true],
+    ['a', 'a/w.js', true],
+    ['a/b', 'a/bc', false],
+    ['a/w.js', 'b/w.js', false],
+  ])('answers "%s" and "%s" with %s', (a, b, expected) => {
+    expect(servedPathsOverlap(a, b)).toBe(expected);
+  });
+});
+
+describe('firstPathPartIs', () => {
+  it.each<[string, string, boolean]>([
+    ['Flow.mjs/x', 'flow.mjs', true],
+    ['NODE_MODULES', 'node_modules', true],
+    ['flow.mjs.d/x', 'flow.mjs', false],
+  ])('answers "%s" and "%s" with %s', (path, name, expected) => {
+    expect(firstPathPartIs(path, name)).toBe(expected);
+  });
+});
+
+describe('servedFlowPath', () => {
+  it.each<[string, string, string | undefined, string]>([
+    [
+      'the entry "casamoda"',
+      'server',
+      'casamoda',
+      'flows.server.config.bundle.flows.casamoda',
+    ],
+    [
+      'the whole listing',
+      'server',
+      undefined,
+      'flows.server.config.bundle.flows',
+    ],
+  ])('names %s of "%s"', (_name, server, flow, expected) => {
+    expect(servedFlowPath(server, flow)).toBe(expected);
+  });
+});
+
+describe('SERVER_OUTPUT_ENTRIES', () => {
+  it('lists what a server build writes at its output root, in order', () => {
+    expect(SERVER_OUTPUT_ENTRIES).toEqual([
+      'flow.mjs',
+      'node_modules',
+      'package.json',
+    ]);
   });
 });

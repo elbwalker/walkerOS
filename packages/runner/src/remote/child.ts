@@ -1,7 +1,9 @@
 /**
  * The flow child of `runneros remote`: today's pipeline, run in a process of
  * its own per release, fed that release's secret values over the IPC channel
- * and reporting to its supervisor instead of the app.
+ * and reporting to its supervisor instead of the app. It holds no credential:
+ * its steps' ingest writes are signed by the supervisor, asked over the same
+ * channel.
  *
  * Everything this process sends its supervisor leaves the process, so it is
  * masked here first: every value the supervisor knows and every delivered
@@ -11,8 +13,9 @@
  */
 
 import { createCLILogger, createKnownValues } from '@walkeros/core/node';
-import type { Collector } from '@walkeros/core';
+import type { Authorize, Collector } from '@walkeros/core';
 import type { KnownValues } from '@walkeros/core/node';
+import { contentDigest } from '@walkeros/server-core';
 import { runPipeline } from '../pipeline.js';
 import { createRuntimeLogging, RUNTIME_COLORS } from '../runtime-logging.js';
 import type { FlowLogger } from '../runtime-logging.js';
@@ -31,15 +34,120 @@ import {
 } from '../heartbeat.js';
 import { redactErrors, redactLine, redactLogs } from '../redact.js';
 import { SecretRefusalError } from '../secret-injection.js';
-import type {
-  ChildMessage,
-  ChildReport,
-  ChildStart,
-  SupervisorMessage,
+import {
+  SIGN_REQUEST_BOUNDS,
+  type ChildMessage,
+  type ChildReport,
+  type ChildStart,
+  type SignAnswer,
+  type SignRequest,
+  type SupervisorMessage,
 } from './ipc.js';
 
 /** How long a child waits for its start message. */
 export const START_TIMEOUT_MS = 10_000;
+
+/** How long a step's sign waits for the supervisor's answer. */
+export const SIGN_TIMEOUT_MS = 5000;
+
+const SIGN_FIELDS: ReadonlyArray<keyof typeof SIGN_REQUEST_BOUNDS> = [
+  'method',
+  'url',
+  'contentDigest',
+];
+
+interface WaitingSign {
+  /** The Content-Digest the signature covers, answered beside it. */
+  digest: string;
+  timer: ReturnType<typeof setTimeout>;
+  resolve(headers: Record<string, string>): void;
+  reject(error: Error): void;
+}
+
+/**
+ * The steps' signer in a remote child: each call sends the supervisor the
+ * request's method, URL and the digest of its exact body, never the body,
+ * and answers the two signature headers it gets back with that
+ * `Content-Digest`. A request past the IPC bounds is refused here before it
+ * is sent, since the supervisor would not act on it; a call waits at most
+ * `timeoutMs`, and `close` rejects every waiting call and each later one.
+ */
+export function createIpcAuthorize(
+  send: (message: SignRequest) => void,
+  options: { timeoutMs?: number } = {},
+): {
+  authorize: Authorize;
+  answer(message: SignAnswer): void;
+  close(fact: string): void;
+} {
+  const timeoutMs = options.timeoutMs ?? SIGN_TIMEOUT_MS;
+  const waiting = new Map<number, WaitingSign>();
+  let nextId = 0;
+  let closed: string | undefined;
+
+  const authorize: Authorize = ({ method, url, body }) => {
+    const request: SignRequest = {
+      type: 'sign',
+      id: nextId,
+      method,
+      url,
+      contentDigest: contentDigest(body ?? new Uint8Array(0)),
+    };
+    for (const field of SIGN_FIELDS) {
+      const max = SIGN_REQUEST_BOUNDS[field];
+      if (request[field].length > max)
+        return Promise.reject(
+          new Error(
+            `The request to sign is past the IPC bounds (${field}, ${max} characters)`,
+          ),
+        );
+    }
+    if (closed !== undefined) return Promise.reject(new Error(closed));
+    nextId += 1;
+    return new Promise((resolve, reject) => {
+      const timer = setTimeout(() => {
+        waiting.delete(request.id);
+        reject(
+          new Error(`The supervisor did not sign within ${timeoutMs / 1000} s`),
+        );
+      }, timeoutMs);
+      waiting.set(request.id, {
+        digest: request.contentDigest,
+        timer,
+        resolve,
+        reject,
+      });
+      send(request);
+    });
+  };
+
+  return {
+    authorize,
+    answer(message) {
+      const call = waiting.get(message.id);
+      if (!call) return;
+      waiting.delete(message.id);
+      clearTimeout(call.timer);
+      if (message.type === 'sign-refused') {
+        call.reject(new Error(message.message));
+        return;
+      }
+      call.resolve({
+        'Signature-Input': message.headers['Signature-Input'],
+        Signature: message.headers.Signature,
+        'Content-Digest': call.digest,
+      });
+    },
+    close(fact) {
+      closed = fact;
+      for (const call of waiting.values()) {
+        clearTimeout(call.timer);
+        call.reject(new Error(fact));
+      }
+      waiting.clear();
+    },
+  };
+}
 
 /** The child's end of the channel to its supervisor. */
 export interface ParentLink {
@@ -75,6 +183,7 @@ export function runChild(
   let reporter: HeartbeatHandle | undefined;
   let started = false;
   let ready = false;
+  const signer = createIpcAuthorize((message) => parent.send(message));
 
   return new Promise<void>((resolve) => {
     const timer = setTimeout(() => {
@@ -87,6 +196,7 @@ export function runChild(
 
     parent.onDisconnect(() => {
       clearTimeout(timer);
+      signer.close('The supervisor disconnected');
       if (ready) {
         logger.error('The supervisor disconnected; the flow drains');
         kill('SIGTERM');
@@ -100,6 +210,10 @@ export function runChild(
     parent.onMessage((message) => {
       if (message.type === 'report') {
         void reporter?.sendOnce();
+        return;
+      }
+      if (message.type === 'signed' || message.type === 'sign-refused') {
+        signer.answer(message);
         return;
       }
       // One release per child: a later start is not acted on.
@@ -167,6 +281,7 @@ export function runChild(
           knownValues,
           instanceId: start.instanceId,
           delivered: start.values,
+          authorize: signer.authorize,
           report: (collector) => {
             reporter?.stop();
             reporter = createChildReporter({

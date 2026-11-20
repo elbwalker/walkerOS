@@ -73,21 +73,28 @@ export function releaseRunningLine(
   return `Release ${releaseLabel(release.sequence)} running (${factsText(release)}${replaced})`;
 }
 
-/** A refusal by a check; the secret checks name the variables, never values. */
+/**
+ * A refusal by a check; the secret checks name the variables, never values.
+ * `fact` says why a check refused when its name alone does not, as the
+ * opener of a sealed set says it; it quotes no value.
+ */
 export function releaseRefusedLine(refusal: {
   check: RefusalCheck;
   sequence?: number;
   names?: readonly string[];
+  fact?: string;
 }): string {
   const subject =
     refusal.sequence === undefined
       ? 'Release document'
       : `Release ${releaseLabel(refusal.sequence)}`;
-  const names =
+  const detail =
     refusal.names && refusal.names.length > 0
       ? `: ${refusal.names.join(', ')}`
-      : '';
-  return `${subject} refused (${refusal.check}${names})`;
+      : refusal.fact === undefined
+        ? ''
+        : `: ${refusal.fact}`;
+  return `${subject} refused (${refusal.check}${detail})`;
 }
 
 export function notReadyLine(sequence: number, deadlineMs: number): string {
@@ -107,6 +114,11 @@ export function startingAgainLine(sequence: number): string {
 
 export function skippedLine(sequence: number): string {
   return `Release ${releaseLabel(sequence)} skipped (the app does not serve its walkerOS secrets)`;
+}
+
+/** A cached release whose archive is not in the cache: a cold boot or a fallback asks the app nothing for it. */
+export function archiveNotCachedLine(sequence: number): string {
+  return `Release ${releaseLabel(sequence)} skipped (its archive is not in the cache)`;
 }
 
 export function crashLine(
@@ -228,6 +240,124 @@ export function cachedDocumentSkippedLine(
   return `Cached release document ${shortSha(sha256)} skipped (${check})`;
 }
 
+/**
+ * A cached document this instance cannot read; it stays on disk, since
+ * another instance may. `code` is the error's code, never its message.
+ */
+export function cachedDocumentUnreadLine(sha256: string, code: string): string {
+  return `Cached release document ${shortSha(sha256)} not read: ${code}`;
+}
+
 export function cachedArtifactRemovedLine(sha256: string): string {
   return `Cached artifact ${shortSha(sha256)} failed its check and was removed`;
+}
+
+/** A cached sealed set this runner's key did not open; the app is asked next. */
+export function cachedSecretsRemovedLine(sequence: number): string {
+  return `Cached walkerOS secrets of ${releaseLabel(sequence)} did not open and were removed`;
+}
+
+/**
+ * A cached sealed set the cache could not read, taken as not cached; the app
+ * is asked next. `code` is the error's code, never its message, which names
+ * the path and the key id.
+ */
+export function cachedSecretsUnreadLine(
+  sequence: number,
+  code: string,
+): string {
+  return `Cached walkerOS secrets of ${releaseLabel(sequence)} not read: ${code}`;
+}
+
+/** A cached sealed set that did not open and could not be removed; the app is asked next. `code` as above. */
+export function cachedSecretsNotRemovedLine(
+  sequence: number,
+  code: string,
+): string {
+  return `Cached walkerOS secrets of ${releaseLabel(sequence)} did not open and were not removed: ${code}`;
+}
+
+/**
+ * A sealed set the cache did not take; the release goes on with the values
+ * it holds. `code` is the error's code (`ENOSPC`, `EACCES`), never its
+ * message, which names the path and the key id.
+ */
+export function secretsNotCachedLine(sequence: number, code: string): string {
+  return `Release ${releaseLabel(sequence)} walkerOS secrets not cached: ${code}`;
+}
+
+/**
+ * A web release a server release serves, as its lines name it: the served
+ * path and the web sequence, never the web deployment's id, which a person
+ * does not know and the redactor may mask (`remote.served` keys by it). No
+ * sequence when a cache fault kept the release from being known.
+ */
+export interface ServedFileFacts {
+  path: string;
+  sequence?: number;
+}
+
+function servedText({ path, sequence }: ServedFileFacts): string {
+  return sequence === undefined
+    ? `Served file ${path}`
+    : `Served file ${path} ${releaseLabel(sequence)}`;
+}
+
+/** `was` is the web sequence it replaces in a running release's folder; none in a fresh extraction. */
+export function servedPlacedLine(
+  file: ServedFileFacts,
+  sha256: string,
+  was?: number,
+): string {
+  const replaced =
+    was === undefined || was === file.sequence
+      ? ''
+      : `, was ${releaseLabel(was)}`;
+  return `${servedText(file)} placed (${shortSha(sha256)}${replaced})`;
+}
+
+/** A web document or file a check refused; that sequence is not fetched again. */
+export function servedRefusedLine(
+  file: ServedFileFacts,
+  check: RefusalCheck,
+): string {
+  return `${servedText(file)} refused (${check})`;
+}
+
+/** `reason` is the failure or the HTTP status of the request for the web document or file. */
+export function servedNotFetchedLine(
+  file: ServedFileFacts,
+  reason: string,
+): string {
+  return `${servedText(file)} not fetched (${reason})`;
+}
+
+export function servedRefusedByLine(
+  file: ServedFileFacts,
+  side: RefusingSide,
+  status: number,
+): string {
+  return `${servedText(file)} refused by ${sideText(side)} (${status})`;
+}
+
+/**
+ * Why a web release was not placed: a fault's error code, a check the
+ * folder failed (a check reads in parentheses, since `placed:` and a long
+ * value would read as a key and its value), or a cached file gone since it
+ * was checked.
+ */
+export type NotPlacedReason =
+  | { code: string }
+  | { check: RefusalCheck }
+  | 'not-cached';
+
+export function servedNotPlacedLine(
+  file: ServedFileFacts,
+  why: NotPlacedReason,
+): string {
+  if (why === 'not-cached')
+    return `${servedText(file)} not placed: not in the cache`;
+  return 'check' in why
+    ? `${servedText(file)} not placed (${why.check})`
+    : `${servedText(file)} not placed: ${why.code}`;
 }

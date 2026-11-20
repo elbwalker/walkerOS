@@ -8,8 +8,14 @@
 import { createHash } from 'crypto';
 import {
   RELEASE_DOCUMENT_VERSION,
+  SERVER_OUTPUT_ENTRIES,
+  firstPathPartIs,
+  isServedPath,
+  isServiceId,
+  servedPathsOverlap,
   type RefusalCheck,
   type ReleaseDocument,
+  type ServedDeployment,
 } from '@walkeros/core';
 import { isRecord, jsonOf } from './json.js';
 import { releaseRefusedLine } from './lines.js';
@@ -28,14 +34,18 @@ const SECRET_NAME = /^[A-Za-z_][A-Za-z0-9_]*$/;
 /** A display field never refuses a release: it is cleaned and cut instead. */
 const FLOW_NAME_MAX = 128;
 
-/** A release a check refused; its message is the line that says so. */
+/**
+ * A release a check refused; its message is the line that says so. `fact`
+ * says why, where the check's name alone does not.
+ */
 export class ReleaseRefusal extends Error {
   constructor(
     readonly check: RefusalCheck,
     readonly sequence?: number,
     readonly names?: readonly string[],
+    readonly fact?: string,
   ) {
-    super(releaseRefusedLine({ check, sequence, names }));
+    super(releaseRefusedLine({ check, sequence, names, fact }));
     this.name = 'ReleaseRefusal';
   }
 }
@@ -54,6 +64,47 @@ function isNameList(value: unknown): value is string[] {
     value.every((name) => typeof name === 'string' && SECRET_NAME.test(name)) &&
     new Set(value).size === value.length
   );
+}
+
+/**
+ * The web parts a server release serves, as written: absent, or at least
+ * one entry, each naming a deployment other than `own` and none twice, at
+ * a path core's path rule takes and no other entry's path overlaps, with
+ * the web sequence its archive holds there. Other members are dropped. Any
+ * other form throws `invalid()`.
+ */
+function readServed(
+  value: unknown,
+  own: string,
+  invalid: () => Error,
+): ServedDeployment[] | undefined {
+  if (value === undefined) return undefined;
+  if (!Array.isArray(value) || value.length === 0) throw invalid();
+  const served: ServedDeployment[] = [];
+  for (const entry of value) {
+    if (!isRecord(entry)) throw invalid();
+    const { deployment, path, sequence } = entry;
+    if (
+      !isServiceId(deployment) ||
+      deployment === own ||
+      typeof path !== 'string' ||
+      !isServedPath(path) ||
+      !isCount(sequence) ||
+      served.some(
+        (earlier) =>
+          earlier.deployment === deployment ||
+          servedPathsOverlap(earlier.path, path),
+      )
+    )
+      throw invalid();
+    served.push({ deployment, path, sequence });
+  }
+  return served;
+}
+
+/** A served file there would overwrite the server build or be lost from its archive. */
+function isServerOutputPath(path: string): boolean {
+  return SERVER_OUTPUT_ENTRIES.some((name) => firstPathPartIs(path, name));
 }
 
 /**
@@ -87,10 +138,12 @@ function shownFlowName(name: string): string {
 
 /**
  * Read and check a release document: its version first, before any other
- * field; then every field's type; then the deployment, the release id, the
- * archive's size and the sequence against the high-water mark (at or above
- * it, and equal only for the same bytes). Unknown fields are ignored. A
- * refusal names the sequence once the document's sequence reads.
+ * field; then every field's type, the served list's included; then the
+ * deployment, the release id, the archive's size, the served paths against
+ * what a server build writes at its root, and the sequence against the
+ * high-water mark (at or above it, and equal only for the same bytes).
+ * Unknown fields are ignored. A refusal names the sequence once the
+ * document's sequence reads.
  */
 export function readReleaseDocument(
   bytes: Uint8Array,
@@ -130,6 +183,9 @@ export function readReleaseDocument(
   const server = secrets.server;
   if (secrets.app.some((name) => server.includes(name)))
     throw refuse('document-format');
+  const served = readServed(value.served, deployment, () =>
+    refuse('document-format'),
+  );
 
   if (deployment !== expect.deployment) throw refuse('deployment');
   if (!RELEASE_ID.test(release)) throw refuse('release-id');
@@ -139,6 +195,8 @@ export function readReleaseDocument(
     artifact.bytes > ARTIFACT_MAX_BYTES
   )
     throw refuse('artifact-bytes');
+  if (served?.some(({ path }) => isServerOutputPath(path)))
+    throw refuse('archive-entry');
 
   const sha256 = sha256Hex(bytes);
   const highWater = expect.highWater;
@@ -160,6 +218,7 @@ export function readReleaseDocument(
       secrets: { app: [...secrets.app], server: [...server] },
       secretsSince,
       releasedAt,
+      ...(served && { served }),
     },
     sha256,
   };

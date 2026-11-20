@@ -30,6 +30,7 @@ import { dirname, join } from 'path';
 import { Readable } from 'stream';
 import { x as tarExtract } from 'tar';
 import { isStdinPiped, readStdin } from './stdin.js';
+import { SERVER_OUTPUT_ENTRIES } from '@walkeros/core';
 import { sendWithServiceAuth } from '@walkeros/server-core';
 import { attemptHeaders } from './auth-headers.js';
 import type { AppAuth } from './credentials.js';
@@ -239,7 +240,7 @@ async function extractToDir(
   // post-extract existence check proves THIS archive delivered flow.mjs, not
   // a leftover. A private folder is new, so the wipe finds nothing there.
   const entryPath = join(destDir, FLOW_ENTRY);
-  for (const member of [FLOW_ENTRY, 'node_modules', 'package.json']) {
+  for (const member of SERVER_OUTPUT_ENTRIES) {
     rmSync(join(destDir, member), { recursive: true, force: true });
   }
 

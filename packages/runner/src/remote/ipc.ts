@@ -30,8 +30,8 @@ export interface ChildStart {
   values: Record<string, string>;
   /**
    * The release's own values the supervisor masks, so the child masks them
-   * from its first line. The supervisor's own values (its token) are never
-   * among them.
+   * from its first line. The supervisor's own values (its credential) are
+   * never among them.
    */
   known: string[];
   verbose?: boolean;
@@ -39,7 +39,31 @@ export interface ChildStart {
   json?: boolean;
 }
 
-export type SupervisorMessage = ChildStart | { type: 'report' };
+/**
+ * A child's request to sign one ingest write of its steps. The child holds
+ * no credential and sends no body: the digest of the exact body bytes is
+ * what the signature covers.
+ */
+export interface SignRequest {
+  type: 'sign';
+  /** Unique per child: the answer carries it back. */
+  id: number;
+  method: string;
+  url: string;
+  /** server-core's `contentDigest` of the exact body, the empty body when none. */
+  contentDigest: string;
+}
+
+/** The supervisor's answer to one `sign`: the two signature headers, or the fact it refused with. */
+export type SignAnswer =
+  | {
+      type: 'signed';
+      id: number;
+      headers: { 'Signature-Input': string; Signature: string };
+    }
+  | { type: 'sign-refused'; id: number; message: string };
+
+export type SupervisorMessage = ChildStart | { type: 'report' } | SignAnswer;
 
 /**
  * The child's report: raw cumulative counters (the supervisor takes the
@@ -58,7 +82,26 @@ export type ChildMessage =
   | { type: 'format'; format: Logger.Format }
   | { type: 'ready' }
   | { type: 'failed'; message: string; refused?: InjectionPlan['refused'] }
-  | ChildReport;
+  | ChildReport
+  | SignRequest;
+
+/**
+ * The longest each field of a `sign` may be. The child refuses a longer
+ * request before it sends it, and the supervisor does not act on one, so a
+ * runaway step cannot swell the supervisor's memory. A URL fits a request
+ * line, and the sha-256 digest is far shorter than its bound.
+ */
+export const SIGN_REQUEST_BOUNDS = {
+  method: 16,
+  url: 2048,
+  contentDigest: 128,
+} as const;
+
+/**
+ * The longest a signature header or a refusal's fact may be: both are far
+ * shorter, so a longer one is not the supervisor's answer.
+ */
+const SIGN_ANSWER_STRING_MAX = 1024;
 
 const FORMATS: readonly Logger.Format[] = ['text', 'json'];
 const LEVELS: readonly RecentLogEntry['level'][] = [
@@ -105,6 +148,14 @@ function isInteger(value: unknown): value is number {
   return typeof value === 'number' && Number.isSafeInteger(value);
 }
 
+function isSignId(value: unknown): value is number {
+  return isInteger(value) && value >= 0;
+}
+
+function isStringUpTo(value: unknown, max: number): value is string {
+  return isString(value) && value.length <= max;
+}
+
 function isArrayOf<T>(
   value: unknown,
   guard: (item: unknown) => item is T,
@@ -129,7 +180,7 @@ const CHILD_LOGS_MAX = 100;
 const CHILD_REFUSED_MAX = 64;
 
 function isChildString(value: unknown): value is string {
-  return isString(value) && value.length <= CHILD_STRING_MAX;
+  return isStringUpTo(value, CHILD_STRING_MAX);
 }
 
 function isStringRecord(value: unknown): value is Record<string, string> {
@@ -152,11 +203,33 @@ function isChildStart(value: Record<string, unknown>): boolean {
   );
 }
 
+/** Exactly the two signature headers, each within its bound. */
+function isSignedHeaders(value: unknown): boolean {
+  return (
+    isRecord(value) &&
+    Object.keys(value).length === 2 &&
+    isStringUpTo(value['Signature-Input'], SIGN_ANSWER_STRING_MAX) &&
+    isStringUpTo(value.Signature, SIGN_ANSWER_STRING_MAX)
+  );
+}
+
 export function isSupervisorMessage(
   value: unknown,
 ): value is SupervisorMessage {
   if (!isRecord(value)) return false;
-  return value.type === 'report' || isChildStart(value);
+  switch (value.type) {
+    case 'report':
+      return true;
+    case 'signed':
+      return isSignId(value.id) && isSignedHeaders(value.headers);
+    case 'sign-refused':
+      return (
+        isSignId(value.id) &&
+        isStringUpTo(value.message, SIGN_ANSWER_STRING_MAX)
+      );
+    default:
+      return isChildStart(value);
+  }
 }
 
 function isDestinationCounter(value: unknown): value is DestinationCounter {
@@ -230,6 +303,13 @@ export function isChildMessage(value: unknown): value is ChildMessage {
         isOptional(value.release, isChildString) &&
         isArrayOf(value.errors, isRecentError, CHILD_ERRORS_MAX) &&
         isArrayOf(value.logs, isRecentLogEntry, CHILD_LOGS_MAX)
+      );
+    case 'sign':
+      return (
+        isSignId(value.id) &&
+        isStringUpTo(value.method, SIGN_REQUEST_BOUNDS.method) &&
+        isStringUpTo(value.url, SIGN_REQUEST_BOUNDS.url) &&
+        isStringUpTo(value.contentDigest, SIGN_REQUEST_BOUNDS.contentDigest)
       );
     default:
       return false;

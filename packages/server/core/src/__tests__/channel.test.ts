@@ -292,6 +292,65 @@ describe('a failed request', () => {
     },
   );
 
+  /** The ChannelError a request failed with. */
+  async function failureOf(answer: Promise<unknown>): Promise<ChannelError> {
+    try {
+      await answer;
+    } catch (error) {
+      if (error instanceof ChannelError) return error;
+      throw error;
+    }
+    throw new Error('The request did not fail');
+  }
+
+  it.each(calls)(
+    "%s fails a 401 with the answer's headers on its ChannelError",
+    async (call) => {
+      const date = 'Tue, 20 Apr 2021 02:07:55 GMT';
+      routes['/path'] = (_, res) =>
+        res
+          .writeHead(401, {
+            'WWW-Authenticate': 'DPoP error="invalid_dpop_proof"',
+            Date: date,
+          })
+          .end();
+      const { status, headers } = await failureOf(
+        requests[call](`${base}/path`),
+      );
+      expect({
+        status,
+        challenge: headers?.get('www-authenticate'),
+        date: headers?.get('date'),
+      }).toEqual({
+        status: 401,
+        challenge: 'DPoP error="invalid_dpop_proof"',
+        date,
+      });
+    },
+  );
+
+  it.each<[keyof typeof requests, string, Handler]>(
+    calls.flatMap(
+      (call): Array<[keyof typeof requests, string, Handler]> => [
+        [call, 'no answer within timeoutMs', () => {}],
+        [
+          call,
+          'body past maxBytes',
+          (_, res) => res.writeHead(200).end(Buffer.alloc(4096, 1)),
+        ],
+        [
+          call,
+          'connection reset without an answer',
+          (req) => req.socket.destroy(),
+        ],
+      ],
+    ),
+  )('%s fails %s with no headers', async (call, _, handler) => {
+    routes['/path'] = handler;
+    const { headers } = await failureOf(requests[call](`${base}/path`));
+    expect(headers).toBeUndefined();
+  });
+
   it('closes the connection of a body past maxBytes, long before its time limit', async () => {
     const closed = new Promise<string>((resolve) => {
       routes['/big'] = (_, res) => {

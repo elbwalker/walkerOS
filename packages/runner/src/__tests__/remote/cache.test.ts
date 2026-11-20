@@ -1,4 +1,5 @@
 import {
+  chmodSync,
   existsSync,
   mkdtempSync,
   readFileSync,
@@ -7,9 +8,10 @@ import {
   writeFileSync,
   mkdirSync,
   symlinkSync,
+  watch,
 } from 'fs';
 import { execFileSync } from 'child_process';
-import { readFile } from 'fs/promises';
+import { open, readFile } from 'fs/promises';
 import { tmpdir } from 'os';
 import { join } from 'path';
 import { c as tarCreate } from 'tar';
@@ -23,6 +25,7 @@ import {
   buildRelease,
   type ReleaseFixture,
 } from '../helpers/release-fixture.js';
+import { refusalOf, until } from '../helpers/supervisor-harness.js';
 
 let root: string;
 let cacheDir: string;
@@ -48,16 +51,6 @@ function filesIn(folder: string): string[] {
   return existsSync(folder) ? readdirSync(folder).sort() : [];
 }
 
-async function refusalOf(work: Promise<unknown>): Promise<ReleaseRefusal> {
-  try {
-    await work;
-  } catch (error) {
-    if (error instanceof ReleaseRefusal) return error;
-    throw error;
-  }
-  throw new Error('no refusal');
-}
-
 async function cacheWith(...releases: ReleaseFixture[]): Promise<ReleaseCache> {
   const cache = await createReleaseCache(cacheDir, createMockLogger());
   for (const release of releases)
@@ -73,9 +66,16 @@ async function storedRelease(sequence = 17): Promise<{
   const logger = createMockLogger();
   const cache = await createReleaseCache(cacheDir, logger);
   const release = await buildRelease({ sequence });
-  await cache.storeArtifact(chunksOf(release.archive), release.artifact);
+  await cache.storeArtifact(
+    chunksOf(release.archive),
+    release.artifact,
+    'archive',
+  );
   return { cache, release, logger };
 }
+
+/** A temporary name of walker.js, as the cache writes it beside the target. */
+const TEMPORARY = /^walker\.js\.tmp-[0-9a-f]{16}$/;
 
 function flipOneByte(path: string): void {
   const bytes = readFileSync(path);
@@ -246,6 +246,31 @@ describe('documents', () => {
 
     expect(await cache.highWater('dep_none')).toBeUndefined();
   });
+  it('takes a document it cannot read as absent, with one WARN line per file, and answers the others', async () => {
+    const kept = await buildRelease({ sequence: 1 });
+    const unread = await buildRelease({ sequence: 2 });
+    const logger = createMockLogger();
+    const cache = await createReleaseCache(cacheDir, logger);
+    for (const release of [kept, unread])
+      await cache.storeDocument(release.documentBytes, release.documentSha256);
+    const path = join(cacheDir, 'documents', `${unread.documentSha256}.json`);
+    chmodSync(path, 0o000);
+
+    try {
+      const first = await cache.documents(FIXTURE_DEPLOYMENT);
+      const again = await cache.documents(FIXTURE_DEPLOYMENT);
+
+      expect(
+        [first, again].map((found) => found.map(({ sha256 }) => sha256)),
+      ).toEqual([[kept.documentSha256], [kept.documentSha256]]);
+      expect(logger.warn).toHaveBeenCalledTimes(1);
+      expect(logger.warn).toHaveBeenCalledWith(
+        `Cached release document sha256 ${unread.documentSha256.slice(0, 12)} not read: EACCES`,
+      );
+    } finally {
+      chmodSync(path, 0o600);
+    }
+  });
 });
 
 describe('storeArtifact', () => {
@@ -281,7 +306,7 @@ describe('storeArtifact', () => {
     }
 
     const refusal = await refusalOf(
-      cache.storeArtifact(longer(), release.artifact),
+      cache.storeArtifact(longer(), release.artifact, 'archive'),
     );
 
     expect([refusal.check, pulled, closed]).toEqual([
@@ -318,6 +343,7 @@ describe('storeArtifact', () => {
         cache.storeArtifact(
           chunksOf(change(release.archive)),
           release.artifact,
+          'archive',
         ),
       );
 
@@ -335,7 +361,7 @@ describe('storeArtifact', () => {
     }
 
     await expect(
-      cache.storeArtifact(broken(), release.artifact),
+      cache.storeArtifact(broken(), release.artifact, 'archive'),
     ).rejects.toThrow('socket closed');
     expect(filesIn(join(cacheDir, 'artifacts'))).toEqual([]);
   });
@@ -346,14 +372,22 @@ describe('storeArtifact', () => {
     const second = await createReleaseCache(cacheDir, createMockLogger());
 
     await Promise.all([
-      first.storeArtifact(chunksOf(release.archive, 97), release.artifact),
-      second.storeArtifact(chunksOf(release.archive, 131), release.artifact),
+      first.storeArtifact(
+        chunksOf(release.archive, 97),
+        release.artifact,
+        'archive',
+      ),
+      second.storeArtifact(
+        chunksOf(release.archive, 131),
+        release.artifact,
+        'archive',
+      ),
     ]);
 
     expect(filesIn(join(cacheDir, 'artifacts'))).toEqual([
       `${release.artifact.sha256}.tgz`,
     ]);
-    expect(await first.checkArtifact(release.artifact)).toBe(true);
+    expect(await first.checkArtifact(release.artifact, 'archive')).toBe(true);
   });
 });
 
@@ -361,7 +395,7 @@ describe('checkArtifact', () => {
   it('answers true for a good object', async () => {
     const { cache, release, logger } = await storedRelease();
 
-    expect(await cache.checkArtifact(release.artifact)).toBe(true);
+    expect(await cache.checkArtifact(release.artifact, 'archive')).toBe(true);
     expect(logger.error).not.toHaveBeenCalled();
   });
 
@@ -369,7 +403,7 @@ describe('checkArtifact', () => {
     const { cache, logger } = await storedRelease();
     const missing = await buildRelease({ sequence: 18, flowName: 'other' });
 
-    expect(await cache.checkArtifact(missing.artifact)).toBe(false);
+    expect(await cache.checkArtifact(missing.artifact, 'archive')).toBe(false);
     expect(logger.error).not.toHaveBeenCalled();
   });
 
@@ -385,7 +419,9 @@ describe('checkArtifact', () => {
       const { cache, release, logger } = await storedRelease();
       damage(join(cacheDir, 'artifacts', `${release.artifact.sha256}.tgz`));
 
-      expect(await cache.checkArtifact(release.artifact)).toBe(false);
+      expect(await cache.checkArtifact(release.artifact, 'archive')).toBe(
+        false,
+      );
       expect(filesIn(join(cacheDir, 'artifacts'))).toEqual([]);
       expect(logger.error).toHaveBeenCalledWith(
         `Cached artifact sha256 ${release.artifact.sha256.slice(0, 12)} failed its check and was removed`,
@@ -438,7 +474,7 @@ describe('extractArtifact', () => {
   ): Promise<{ cache: ReleaseCache; artifact: ReleaseDocument['artifact'] }> {
     const cache = await cacheWith();
     const artifact = { sha256: sha256Hex(archive), bytes: archive.byteLength };
-    await cache.storeArtifact(chunksOf(archive), artifact);
+    await cache.storeArtifact(chunksOf(archive), artifact, 'archive');
     return { cache, artifact };
   }
 
@@ -456,7 +492,7 @@ describe('extractArtifact', () => {
         sha256: sha256Hex(archive),
         bytes: archive.byteLength,
       };
-      await cache.storeArtifact(chunksOf(archive), artifact);
+      await cache.storeArtifact(chunksOf(archive), artifact, 'archive');
       return {
         cache,
         artifact,
@@ -549,5 +585,262 @@ describe('extractArtifact', () => {
 
     expect(check).toBe('archive-entry');
     expect(filesIn(releases)).toEqual([]);
+  });
+});
+
+describe('web files', () => {
+  const script = new TextEncoder().encode('window.walker = "v5";\n');
+  const file = { sha256: sha256Hex(script), bytes: script.byteLength };
+  const objectPath = () => join(cacheDir, 'artifacts', `${file.sha256}.js`);
+
+  async function storedFile(): Promise<{
+    cache: ReleaseCache;
+    logger: ReturnType<typeof createMockLogger>;
+  }> {
+    const logger = createMockLogger();
+    const cache = await createReleaseCache(cacheDir, logger);
+    await cache.storeArtifact(chunksOf(script, 7), file, 'file');
+    return { cache, logger };
+  }
+
+  /** The release folder of a served file, with v4 at its path. */
+  function servedFolder(): { folder: string; target: string } {
+    const folder = join(root, 'instance', 'releases', '17', 'casamoda');
+    mkdirSync(folder, { recursive: true });
+    const target = join(folder, 'walker.js');
+    writeFileSync(target, 'window.walker = "v4";\n');
+    return { folder, target };
+  }
+
+  it('stores a web file as artifacts/<sha>.js with no temporary file', async () => {
+    await storedFile();
+
+    expect(filesIn(join(cacheDir, 'artifacts'))).toEqual([`${file.sha256}.js`]);
+    expect(new Uint8Array(readFileSync(objectPath()))).toEqual(script);
+  });
+
+  it('answers true for a good web file', async () => {
+    const { cache, logger } = await storedFile();
+
+    expect(await cache.checkArtifact(file, 'file')).toBe(true);
+    expect(logger.error).not.toHaveBeenCalled();
+  });
+
+  it('removes a damaged web file, says so and answers false', async () => {
+    const { cache, logger } = await storedFile();
+    flipOneByte(objectPath());
+
+    expect(await cache.checkArtifact(file, 'file')).toBe(false);
+    expect(filesIn(join(cacheDir, 'artifacts'))).toEqual([]);
+    expect(logger.error).toHaveBeenCalledWith(
+      `Cached artifact sha256 ${file.sha256.slice(0, 12)} failed its check and was removed`,
+    );
+  });
+
+  it('places the web file at a path not there yet', async () => {
+    const { cache } = await storedFile();
+    const target = join(root, 'walker.js');
+
+    expect(await cache.placeFile(file, target)).toBe(true);
+    expect(new Uint8Array(readFileSync(target))).toEqual(script);
+  });
+
+  it('renames over the target: an open handle reads the old bytes, a new read the new ones', async () => {
+    const { cache } = await storedFile();
+    const { target } = servedFolder();
+    const before = await open(target, 'r');
+
+    try {
+      expect(await cache.placeFile(file, target)).toBe(true);
+
+      expect((await before.readFile()).toString()).toBe(
+        'window.walker = "v4";\n',
+      );
+      expect(new Uint8Array(readFileSync(target))).toEqual(script);
+    } finally {
+      await before.close();
+    }
+  });
+
+  it('writes its temporary name in the target own folder and leaves none', async () => {
+    const { cache } = await storedFile();
+    const { folder, target } = servedFolder();
+    const seen: string[] = [];
+    const watcher = watch(folder, (_event, name) => {
+      if (name) seen.push(name.toString());
+    });
+
+    try {
+      await cache.placeFile(file, target);
+      await until(() => seen.some((name) => TEMPORARY.test(name)));
+    } finally {
+      watcher.close();
+    }
+
+    expect(filesIn(folder)).toEqual(['walker.js']);
+  });
+
+  it('removes its temporary file and rejects with the code when the rename over the target fails', async () => {
+    const { cache } = await storedFile();
+    const { folder } = servedFolder();
+    // A non-empty directory at the target: the copy succeeds, the rename does not.
+    const target = join(folder, 'walker.js.d');
+    mkdirSync(target);
+    writeFileSync(join(target, 'kept.js'), 'kept');
+
+    await expect(cache.placeFile(file, target)).rejects.toMatchObject({
+      code: 'EISDIR',
+    });
+    expect(filesIn(folder)).toEqual(['walker.js', 'walker.js.d']);
+    expect(filesIn(target)).toEqual(['kept.js']);
+  });
+
+  it.each<[string, () => void]>([
+    ['missing', () => rmSync(objectPath())],
+    ['damaged', () => flipOneByte(objectPath())],
+  ])(
+    'answers false for a web file that is %s and leaves the target as it was',
+    async (_case, change) => {
+      const { cache } = await storedFile();
+      const { folder, target } = servedFolder();
+      change();
+
+      expect(await cache.placeFile(file, target)).toBe(false);
+      expect(readFileSync(target, 'utf8')).toBe('window.walker = "v4";\n');
+      expect(filesIn(folder)).toEqual(['walker.js']);
+    },
+  );
+});
+
+describe('sealed sets', () => {
+  const KEY_ID = 'k'.repeat(43);
+  const OTHER_KEY_ID = 'o'.repeat(43);
+  const SEALED_SET_MAX = 1_048_576;
+  /** Bytes the cache keeps as they are: it never opens a set. */
+  const sealed = (text: string) => new TextEncoder().encode(text);
+
+  function sealedPath(keyId: string, sequence: number): string {
+    return join(cacheDir, 'secrets', keyId, `${sequence}.jwe`);
+  }
+
+  /** A file planted under a sealed set's name, its folder made. */
+  function plant(keyId: string, sequence: number): string {
+    const path = sealedPath(keyId, sequence);
+    mkdirSync(join(cacheDir, 'secrets', keyId), { recursive: true });
+    return path;
+  }
+
+  it('writes secrets/<key id>/<sequence>.jwe through a temporary name and a rename, and reads the same bytes', async () => {
+    const cache = await cacheWith();
+    const bytes = sealed('eyJhbGciOiJFQ0RILUVTIn0..iv.ciphertext.tag');
+
+    await cache.storeSealedSet(KEY_ID, 17, bytes);
+
+    expect(filesIn(join(cacheDir, 'secrets'))).toEqual([KEY_ID]);
+    expect(filesIn(join(cacheDir, 'secrets', KEY_ID))).toEqual(['17.jwe']);
+    expect(new Uint8Array(readFileSync(sealedPath(KEY_ID, 17)))).toEqual(bytes);
+    expect(await cache.sealedSet(KEY_ID, 17)).toEqual(bytes);
+  });
+
+  it('replaces the set under one name with the bytes of a second store', async () => {
+    const cache = await cacheWith();
+    await cache.storeSealedSet(KEY_ID, 17, sealed('first'));
+
+    await cache.storeSealedSet(KEY_ID, 17, sealed('second'));
+
+    expect(await cache.sealedSet(KEY_ID, 17)).toEqual(sealed('second'));
+    expect(filesIn(join(cacheDir, 'secrets', KEY_ID))).toEqual(['17.jwe']);
+  });
+
+  const BAD_KEY_ID = 'A sealed set key id is not 43 base64url characters';
+  const BAD_SEQUENCE =
+    'A sealed set sequence is not a safe integer of at least 1';
+
+  it.each<[string, string, number, string]>([
+    ['a key id of 42 characters', 'k'.repeat(42), 17, BAD_KEY_ID],
+    ['a key id of 44 characters', 'k'.repeat(44), 17, BAD_KEY_ID],
+    ['a key id with a path in it', `${'k'.repeat(40)}/..`, 17, BAD_KEY_ID],
+    [
+      'a key id with a character outside base64url',
+      `${'k'.repeat(42)}=`,
+      17,
+      BAD_KEY_ID,
+    ],
+    ['a sequence of 0', KEY_ID, 0, BAD_SEQUENCE],
+    ['a sequence of 1.5', KEY_ID, 1.5, BAD_SEQUENCE],
+    ['a sequence past the safe integers', KEY_ID, 2 ** 53, BAD_SEQUENCE],
+    ['a sequence that is not a number', KEY_ID, Number.NaN, BAD_SEQUENCE],
+  ])(
+    'refuses %s on every sealed set call, before any path is made',
+    async (_case, keyId, sequence, fact) => {
+      const cache = await cacheWith();
+
+      await expect(
+        cache.storeSealedSet(keyId, sequence, sealed('x')),
+      ).rejects.toThrow(new Error(fact));
+      await expect(cache.sealedSet(keyId, sequence)).rejects.toThrow(
+        new Error(fact),
+      );
+      await expect(cache.removeSealedSet(keyId, sequence)).rejects.toThrow(
+        new Error(fact),
+      );
+      expect(existsSync(join(cacheDir, 'secrets'))).toBe(false);
+    },
+  );
+
+  it.each<[string, (path: string) => void]>([
+    [
+      'a symbolic link',
+      (path) => {
+        const target = join(root, 'elsewhere.jwe');
+        writeFileSync(target, 'sealed elsewhere');
+        symlinkSync(target, path);
+      },
+    ],
+    ['a FIFO', (path) => execFileSync('mkfifo', [path])],
+    ['a folder', (path) => mkdirSync(path)],
+    [
+      'a file above 1 MiB',
+      (path) => writeFileSync(path, Buffer.alloc(SEALED_SET_MAX + 1, 0x61)),
+    ],
+  ])('reads %s under a sealed set name as missing', async (_case, place) => {
+    const cache = await cacheWith();
+    place(plant(KEY_ID, 17));
+
+    expect(await cache.sealedSet(KEY_ID, 17)).toBeUndefined();
+  });
+
+  it('reads a set of exactly 1 MiB', async () => {
+    const cache = await cacheWith();
+    const bytes = new Uint8Array(SEALED_SET_MAX).fill(0x61);
+    await cache.storeSealedSet(KEY_ID, 17, bytes);
+
+    expect(await cache.sealedSet(KEY_ID, 17)).toEqual(bytes);
+  });
+
+  it('removes a set, which then reads as missing', async () => {
+    const cache = await cacheWith();
+    await cache.storeSealedSet(KEY_ID, 17, sealed('sealed'));
+
+    await cache.removeSealedSet(KEY_ID, 17);
+
+    expect(await cache.sealedSet(KEY_ID, 17)).toBeUndefined();
+    expect(filesIn(join(cacheDir, 'secrets', KEY_ID))).toEqual([]);
+  });
+
+  it("reads its own key id's set with secrets/ unlistable and another key id's folder unreadable", async () => {
+    const cache = await cacheWith();
+    await cache.storeSealedSet(KEY_ID, 17, sealed('own'));
+    await cache.storeSealedSet(OTHER_KEY_ID, 17, sealed('other'));
+    const secrets = join(cacheDir, 'secrets');
+    chmodSync(join(secrets, OTHER_KEY_ID), 0o000);
+    chmodSync(secrets, 0o100);
+    try {
+      expect(await cache.sealedSet(KEY_ID, 17)).toEqual(sealed('own'));
+      expect(await cache.sealedSet(KEY_ID, 18)).toBeUndefined();
+    } finally {
+      chmodSync(secrets, 0o700);
+      chmodSync(join(secrets, OTHER_KEY_ID), 0o700);
+    }
   });
 });

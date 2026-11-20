@@ -9,6 +9,8 @@ import {
 export const TEST_ISSUER = 'https://auth.example.test';
 export const TEST_APP = 'https://app.example.test';
 export const TEST_DEPLOYMENT = 'dep_test1';
+/** An issuer on a closed port: the client buys no token and signs its requests. */
+export const CLOSED_ISSUER = 'http://127.0.0.1:9';
 
 /** RFC 7638: the SHA-256 of the required members in order, base64url. */
 function thumbprint(jwk: { crv: string; kty: string; x: string; y: string }) {
@@ -41,16 +43,21 @@ async function privateKey(use: 'sig' | 'enc'): Promise<PrivateEcJwk> {
   };
 }
 
-/** A credential with fresh keys, as the auth server makes one, and its string. */
+/**
+ * A credential with fresh keys, as the auth server makes one, and its string.
+ * A run against the stand-in app sets `resource` to `<its origin>/api` and
+ * `iss` to {@link CLOSED_ISSUER}.
+ */
 export async function testCredential(
   kind: ServiceTargetKind = 'deployment',
+  options: { resource?: string; iss?: string; id?: string } = {},
 ): Promise<{ credential: ServiceCredential; raw: string }> {
   const credential: ServiceCredential = {
     v: 1,
-    iss: TEST_ISSUER,
-    resource: `${TEST_APP}/api`,
+    iss: options.iss ?? TEST_ISSUER,
+    resource: options.resource ?? `${TEST_APP}/api`,
     client_id: 'crd_testclient000000000000',
-    target: { kind, id: TEST_DEPLOYMENT },
+    target: { kind, id: options.id ?? TEST_DEPLOYMENT },
     sig: await privateKey('sig'),
     enc: await privateKey('enc'),
   };

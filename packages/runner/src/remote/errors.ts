@@ -19,3 +19,11 @@ export function errorCode(error: unknown): string | undefined {
     ? error.code
     : undefined;
 }
+
+/**
+ * A fault as a line names it: its code, never its message, which names a
+ * path of this instance (and, for a sealed set, the key id).
+ */
+export function codeOf(error: unknown): string {
+  return errorCode(error) ?? 'no error code';
+}

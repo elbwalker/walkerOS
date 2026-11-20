@@ -1,6 +1,14 @@
-import { existsSync, readFileSync, writeFileSync } from 'fs';
+import {
+  chmodSync,
+  existsSync,
+  mkdirSync,
+  readFileSync,
+  readdirSync,
+  writeFileSync,
+} from 'fs';
 import { join } from 'path';
 import type { RefusalCheck } from '@walkeros/core';
+import { openSealedSecretSet } from '@walkeros/server-core';
 import { errorSinkPath } from '../../error-sink.js';
 import {
   archiveOf,
@@ -9,8 +17,9 @@ import {
   type ReleaseFixture,
 } from '../helpers/release-fixture.js';
 import { sha256Hex } from '../../remote/release-document.js';
+import { sealSecretSet } from '../helpers/seal.js';
 import {
-  TOKEN,
+  answer,
   createHarness,
   settle,
   until,
@@ -28,7 +37,7 @@ afterEach(async () => {
 async function serveV1(): Promise<ReleaseFixture> {
   const v1 = await buildRelease({ sequence: 1 });
   await h.cacheRelease(v1);
-  expect(await h.supervisor.boot(1)).toBe('serving');
+  expect(await h.supervisor.boot(answer(1))).toBe('serving');
   return v1;
 }
 
@@ -66,7 +75,7 @@ describe('the swap', () => {
       kill(signal);
     };
 
-    await h.supervisor.consider(2);
+    await h.supervisor.consider(answer(2));
 
     expect(routesAtSigterm).toEqual(['release', 'archive', 'secrets']);
     const tail = h.events.slice(h.events.indexOf('SIGTERM v1'));
@@ -85,8 +94,14 @@ describe('the swap', () => {
     expect(existsSync(join(h.folder, 'releases', '2', 'flow.mjs'))).toBe(true);
   });
 
+  // The fourth: the names a secret check refuses by, or the opener's fact.
   it.each<
-    [string, () => Promise<ReleaseFixture>, RefusalCheck, string[] | undefined]
+    [
+      string,
+      () => Promise<ReleaseFixture>,
+      RefusalCheck,
+      string[] | string | undefined,
+    ]
   >([
     [
       'another deployment',
@@ -224,13 +239,19 @@ describe('the swap', () => {
           sequence: 2,
           secrets: { app: ['TOKEN_B'], server: [] },
         });
-        return {
-          ...v2,
-          secretSet: (await buildRelease({ sequence: 3 })).secretSet,
-        };
+        h.standIn.setSecretSet(
+          2,
+          await sealSecretSet({
+            key: h.credential.enc,
+            deployment: v2.document.deployment,
+            sequence: 3,
+            values: v2.values,
+          }),
+        );
+        return v2;
       },
       'secret-set',
-      undefined,
+      "The sealed set's header names another sequence",
     ],
     [
       'a secret set without a name the release names',
@@ -245,14 +266,15 @@ describe('the swap', () => {
     ],
   ])(
     'refuses %s without touching v1, and takes nothing more for it',
-    async (_name, make, check, names) => {
+    async (_name, make, check, shown) => {
+      const names = Array.isArray(shown) ? shown : undefined;
       h = await createHarness({ env: { API_KEY: 'host-value' } });
       await serveV1();
       const v2 = await make();
       h.standIn.serve(v2, { current: true });
       const errorsBefore = h.errors().length;
 
-      await h.supervisor.consider(2);
+      await h.supervisor.consider(answer(2));
 
       expect(h.child(1).signals).toEqual([]);
       expect(h.supervisor.state()).toEqual({
@@ -269,13 +291,17 @@ describe('the swap', () => {
         check === 'document-version' || check === 'document-size'
           ? 'Release document'
           : 'Release v2';
+      const detail =
+        shown === undefined
+          ? ''
+          : `: ${Array.isArray(shown) ? shown.join(', ') : shown}`;
       expect(h.errors().slice(errorsBefore)).toEqual([
-        `${subject} refused (${check}${names ? `: ${names.join(', ')}` : ''})`,
+        `${subject} refused (${check}${detail})`,
       ]);
 
       const requests = h.standIn.requests.length;
       const lines = h.lines.length;
-      await h.supervisor.consider(2);
+      await h.supervisor.consider(answer(2));
       expect(h.standIn.requests).toHaveLength(requests);
       expect(h.lines).toHaveLength(lines);
     },
@@ -295,7 +321,7 @@ describe('the swap', () => {
       { current: true },
     );
 
-    await h.supervisor.consider(2);
+    await h.supervisor.consider(answer(2));
 
     expect(h.supervisor.state().last).toEqual({
       sequence: 2,
@@ -317,7 +343,7 @@ describe('the swap', () => {
       { current: true },
     );
 
-    await h.supervisor.consider(2);
+    await h.supervisor.consider(answer(2));
 
     const cut = server.slice(0, 20).map((name) => name.slice(0, 128));
     expect(h.supervisor.state().last).toEqual({
@@ -345,11 +371,11 @@ describe('the swap', () => {
     expect(v3.artifact).toEqual(v2.artifact);
     await serveV1();
     h.standIn.serve(v2, { current: true });
-    await h.supervisor.consider(2);
+    await h.supervisor.consider(answer(2));
     h.standIn.serve(v3, { current: true });
     const archives = routes().filter((route) => route === 'archive').length;
 
-    await h.supervisor.consider(3);
+    await h.supervisor.consider(answer(3));
 
     expect(routes().filter((route) => route === 'archive')).toHaveLength(
       archives,
@@ -374,7 +400,7 @@ describe('the swap', () => {
       if (start.sequence === 2) knownAtFork = h.knownValues.values();
     };
 
-    await h.supervisor.consider(2);
+    await h.supervisor.consider(answer(2));
 
     expect(knownAtFork).toEqual(
       expect.arrayContaining(['value-api_key-v2', 'server-salt-value']),
@@ -384,7 +410,7 @@ describe('the swap', () => {
     );
   });
 
-  it('hands the child its release values, never the token the supervisor masks', async () => {
+  it('hands the child its release values, never the credential the supervisor masks', async () => {
     h = await createHarness({ env: { SALT: 'server-salt-value' } });
     await serveV1();
     h.standIn.serve(
@@ -395,14 +421,14 @@ describe('the swap', () => {
       { current: true },
     );
 
-    await h.supervisor.consider(2);
+    await h.supervisor.consider(answer(2));
 
     expect(h.child(2).start.known).toEqual(
       expect.arrayContaining(['value-api_key-v2', 'server-salt-value']),
     );
-    expect(h.child(2).start.known).not.toContain(TOKEN);
-    expect(h.child(1).start.known).not.toContain(TOKEN);
-    expect(h.knownValues.values()).toContain(TOKEN);
+    expect(h.child(2).start.known).not.toContain(h.raw);
+    expect(h.child(1).start.known).not.toContain(h.raw);
+    expect(h.knownValues.values()).toContain(h.raw);
   });
 
   it('takes a consider during the swap after the new child is ready, never two children at once', async () => {
@@ -418,10 +444,10 @@ describe('the swap', () => {
     };
     const timer = setInterval(count, 1);
 
-    const toV2 = h.supervisor.consider(2);
+    const toV2 = h.supervisor.consider(answer(2));
     await until(() => h.children.some((child) => child.sequence === 2));
     h.standIn.serve(v3, { current: true });
-    const toV3 = h.supervisor.consider(3);
+    const toV3 = h.supervisor.consider(answer(3));
     await settle();
     expect(h.children.some((child) => child.sequence === 3)).toBe(false);
 
@@ -437,13 +463,13 @@ describe('the swap', () => {
     expect(most).toBe(1);
   });
 
-  it('follows the archive redirect without the token', async () => {
+  it("follows the archive redirect without the credential's headers", async () => {
     h = await createHarness();
     await serveV1();
     h.standIn.serve(await buildRelease({ sequence: 2 }), { current: true });
     h.standIn.redirectArchives(true);
 
-    await h.supervisor.consider(2);
+    await h.supervisor.consider(answer(2));
 
     const archive = h.standIn.requests.find(
       (request) => request.route === 'archive',
@@ -451,10 +477,14 @@ describe('the swap', () => {
     const storage = h.standIn.requests.find(
       (request) => request.route === 'storage',
     );
-    expect(archive?.headers.authorization).toBe(
-      `Bearer stand-in-token-for-tests`,
-    );
-    expect(storage?.headers.authorization).toBeUndefined();
+    expect(archive?.headers['signature-input']).toEqual(expect.any(String));
+    expect(
+      Object.keys(storage?.headers ?? {}).filter((name) =>
+        ['authorization', 'dpop', 'signature', 'signature-input'].includes(
+          name,
+        ),
+      ),
+    ).toEqual([]);
     expect(h.supervisor.state().running).toBe(2);
   });
 
@@ -485,12 +515,12 @@ describe('the swap', () => {
       );
       h.standIn.setAnswer(route, { status });
 
-      await h.supervisor.consider(2);
+      await h.supervisor.consider(answer(2));
 
       expect(h.supervisor.state()).toEqual({ running: 1, last: null });
       expect(h.errors()).toEqual([line]);
       const asked = routes().filter((seen) => seen === route).length;
-      await h.supervisor.consider(2);
+      await h.supervisor.consider(answer(2));
       expect(routes().filter((seen) => seen === route)).toHaveLength(asked + 1);
     },
   );
@@ -501,7 +531,7 @@ describe('the swap', () => {
     h.standIn.serve(await buildRelease({ sequence: 2 }), { current: true });
     h.heap.fails = true;
 
-    await h.supervisor.consider(2);
+    await h.supervisor.consider(answer(2));
 
     expect(h.child(1).signals).toEqual([]);
     expect(h.supervisor.state()).toEqual({
@@ -525,7 +555,7 @@ describe('the swap', () => {
         sinkAtFork = existsSync(sink) ? readFileSync(sink, 'utf-8') : undefined;
     };
 
-    await h.supervisor.consider(2);
+    await h.supervisor.consider(answer(2));
 
     expect(sinkAtFork ?? '').toBe('');
   });
@@ -544,5 +574,104 @@ describe('the swap', () => {
     expect(readFileSync(sink, 'utf-8')).toBe(
       '{"message":"v1 failed","firstSeen":1}\n',
     );
+  });
+});
+
+describe('walkerOS secrets in the cache', () => {
+  afterEach(() => {
+    expect(h.filesHoldingSecrets()).toEqual([]);
+  });
+
+  /** The release v2 with one walkerOS secret, current at the stand-in. */
+  async function serveV2WithSecrets(): Promise<ReleaseFixture> {
+    const v2 = await buildRelease({
+      sequence: 2,
+      secrets: { app: ['API_KEY'], server: [] },
+    });
+    h.standIn.serve(v2, { current: true });
+    return v2;
+  }
+
+  /** The names under the cache's secrets/ folder, one level per key id. */
+  function sealedFiles(): string[] {
+    const secrets = join(h.cacheDir, 'secrets');
+    if (!existsSync(secrets)) return [];
+    return readdirSync(secrets).flatMap((keyId) =>
+      readdirSync(join(secrets, keyId)).map((name) => `${keyId}/${name}`),
+    );
+  }
+
+  it('caches a fetched set as it arrived, after it opened, under the key id and the sequence', async () => {
+    h = await createHarness();
+    await serveV1();
+    const v2 = await serveV2WithSecrets();
+    const sent = await sealSecretSet({
+      key: h.credential.enc,
+      deployment: v2.document.deployment,
+      sequence: 2,
+      values: v2.values,
+    });
+    h.standIn.setSecretSet(2, sent);
+
+    await h.supervisor.consider(answer(2));
+
+    expect(sealedFiles()).toEqual([`${h.credential.enc.kid}/2.jwe`]);
+    const cached = new Uint8Array(
+      readFileSync(join(h.cacheDir, 'secrets', h.credential.enc.kid, '2.jwe')),
+    );
+    expect(cached).toEqual(sent);
+    expect(
+      await openSealedSecretSet(cached, {
+        key: h.credential.enc,
+        deployment: v2.document.deployment,
+        sequence: 2,
+      }),
+    ).toEqual(v2.values);
+    expect(h.supervisor.state().running).toBe(2);
+  });
+
+  it('refuses a set that does not open as secret-set and caches nothing', async () => {
+    h = await createHarness();
+    await serveV1();
+    const v2 = await serveV2WithSecrets();
+    h.standIn.setSecretSet(
+      2,
+      await sealSecretSet({
+        key: h.credential.enc,
+        deployment: v2.document.deployment,
+        sequence: 2,
+        values: v2.values,
+        header: { zip: 'DEF' },
+      }),
+    );
+
+    await h.supervisor.consider(answer(2));
+
+    expect(h.supervisor.state()).toEqual({
+      running: 1,
+      last: { sequence: 2, state: 'refused', check: 'secret-set' },
+    });
+    expect(sealedFiles()).toEqual([]);
+  });
+
+  it('starts the release with the values it holds when its set cannot be cached, with one line', async () => {
+    h = await createHarness();
+    await serveV1();
+    const v2 = await serveV2WithSecrets();
+    const secrets = join(h.cacheDir, 'secrets');
+    mkdirSync(secrets);
+    chmodSync(secrets, 0o500);
+    try {
+      await h.supervisor.consider(answer(2));
+    } finally {
+      chmodSync(secrets, 0o700);
+    }
+
+    expect(h.errors()).toEqual([
+      'Release v2 walkerOS secrets not cached: EACCES',
+    ]);
+    expect(h.supervisor.state()).toEqual({ running: 2, last: null });
+    expect(h.child(2).start.values).toEqual(v2.values);
+    expect(sealedFiles()).toEqual([]);
   });
 });

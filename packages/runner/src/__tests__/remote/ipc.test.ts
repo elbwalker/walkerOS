@@ -4,6 +4,8 @@ import {
   type ChildMessage,
   type ChildReport,
   type ChildStart,
+  type SignAnswer,
+  type SignRequest,
   type SupervisorMessage,
 } from '../../remote/ipc.js';
 
@@ -47,6 +49,30 @@ const REPORT: ChildReport = {
   ],
 };
 
+const SIGN: SignRequest = {
+  type: 'sign',
+  id: 0,
+  method: 'POST',
+  url: 'https://ingest.example.test/events',
+  contentDigest: 'sha-256=:47DEQpj8HBSa+/TImW+5JCeuQeRkm5NMpJWZG3hSuFU=:',
+};
+
+const SIGNED: SignAnswer = {
+  type: 'signed',
+  id: 0,
+  headers: {
+    'Signature-Input':
+      'walkeros=("@method" "@target-uri" "content-digest");created=1795200000;keyid="k";nonce="n";tag="walkeros-ingest"',
+    Signature: 'walkeros=:c2lnbmF0dXJl:',
+  },
+};
+
+const SIGN_REFUSED: SignAnswer = {
+  type: 'sign-refused',
+  id: 0,
+  message: 'The door signer signs POST requests only',
+};
+
 const SUPERVISOR_PASSES: Array<[string, SupervisorMessage]> = [
   ['a start', START],
   [
@@ -58,6 +84,23 @@ const SUPERVISOR_PASSES: Array<[string, SupervisorMessage]> = [
     { ...START, values: {}, known: [] },
   ],
   ['a report ask', { type: 'report' }],
+  ['a signed answer', SIGNED],
+  [
+    'a signed answer with headers of 1024 characters',
+    {
+      ...SIGNED,
+      id: Number.MAX_SAFE_INTEGER,
+      headers: {
+        'Signature-Input': 'i'.repeat(1024),
+        Signature: 's'.repeat(1024),
+      },
+    },
+  ],
+  ['a sign refusal', SIGN_REFUSED],
+  [
+    'a sign refusal of 1024 characters',
+    { ...SIGN_REFUSED, message: 'x'.repeat(1024) },
+  ],
 ];
 
 const SUPERVISOR_FAILS: Array<[string, unknown]> = [
@@ -73,6 +116,30 @@ const SUPERVISOR_FAILS: Array<[string, unknown]> = [
   ['a flag that is not a boolean', { ...START, json: 'yes' }],
   ['null', null],
   ['a string', 'start'],
+  [
+    'a signed answer with a third header name',
+    {
+      ...SIGNED,
+      headers: { ...SIGNED.headers, 'Content-Digest': SIGN.contentDigest },
+    },
+  ],
+  [
+    'a signed answer with one header name',
+    { ...SIGNED, headers: { Signature: SIGNED.headers.Signature } },
+  ],
+  [
+    'a signed answer with a header of 1025 characters',
+    { ...SIGNED, headers: { ...SIGNED.headers, Signature: 's'.repeat(1025) } },
+  ],
+  ['a signed answer without an id', { ...SIGNED, id: undefined }],
+  ['a signed answer with a negative id', { ...SIGNED, id: -1 }],
+  ['a sign refusal without an id', { ...SIGN_REFUSED, id: undefined }],
+  ['a sign refusal without a message', { ...SIGN_REFUSED, message: undefined }],
+  [
+    'a sign refusal of 1025 characters',
+    { ...SIGN_REFUSED, message: 'x'.repeat(1025) },
+  ],
+  ['a sign request sent to the child', SIGN],
 ];
 
 describe('isSupervisorMessage', () => {
@@ -127,6 +194,17 @@ const CHILD_PASSES: Array<[string, ChildMessage]> = [
   [
     'a report without counters or release',
     { type: 'report', reason: 'new-error', errors: [], logs: [] },
+  ],
+  ['a sign', SIGN],
+  [
+    'a sign at its bounds: method 16, url 2048, digest 128 characters',
+    {
+      ...SIGN,
+      id: Number.MAX_SAFE_INTEGER,
+      method: 'M'.repeat(16),
+      url: 'u'.repeat(2048),
+      contentDigest: 'd'.repeat(128),
+    },
   ],
 ];
 
@@ -197,6 +275,22 @@ const CHILD_FAILS: Array<[string, unknown]> = [
   ],
   ['a report with a release that is not a string', { ...REPORT, release: 17 }],
   ['undefined', undefined],
+  ['a sign without an id', { ...SIGN, id: undefined }],
+  ['a sign without a method', { ...SIGN, method: undefined }],
+  ['a sign without a url', { ...SIGN, url: undefined }],
+  ['a sign without a content digest', { ...SIGN, contentDigest: undefined }],
+  ['a sign with a negative id', { ...SIGN, id: -1 }],
+  ['a sign with a fractional id', { ...SIGN, id: 1.5 }],
+  ['a sign with a url of 2049 characters', { ...SIGN, url: 'u'.repeat(2049) }],
+  [
+    'a sign with a method of 17 characters',
+    { ...SIGN, method: 'M'.repeat(17) },
+  ],
+  [
+    'a sign with a content digest of 129 characters',
+    { ...SIGN, contentDigest: 'd'.repeat(129) },
+  ],
+  ['a signed answer sent by the child', SIGNED],
 ];
 
 describe('isChildMessage', () => {

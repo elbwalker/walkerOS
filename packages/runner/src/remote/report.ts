@@ -4,7 +4,11 @@
  * deployment ids the id-free route does not take, plus the `remote` report.
  */
 
-import type { RemoteState } from '@walkeros/core';
+import {
+  isServiceId,
+  type CheckInAnswer,
+  type RemoteReport,
+} from '@walkeros/core';
 import {
   heartbeatBody,
   type CounterPayload,
@@ -64,22 +68,45 @@ function isSequence(value: unknown): value is number {
 }
 
 /**
+ * The newest sequence of each web part, as the answer names them: every key
+ * a deployment id and every value a sequence; else undefined. A key such as
+ * `__proto__` stays an own entry.
+ */
+function servedOf(
+  value: Record<string, unknown>,
+): Record<string, number> | undefined {
+  const served: Array<[string, number]> = [];
+  for (const [deployment, sequence] of Object.entries(value)) {
+    if (!isServiceId(deployment) || !isSequence(sequence)) return undefined;
+    served.push([deployment, sequence]);
+  }
+  return Object.fromEntries(served);
+}
+
+/**
  * The check-in's answer: the deployment's newest released sequence (null for
- * none) and the interval the app asks for, which the loop takes only within
- * its bounds. Anything else in it is ignored; an answer that does not read
+ * none), the newest sequence of each web part its live version lists, and
+ * the interval the app asks for, which the loop takes only within its
+ * bounds. Anything else in it is ignored; an answer that does not read
  * throws.
  */
-export function readCheckInAnswer(bytes: Uint8Array): {
-  release: number | null;
-  intervalMs?: number;
-} {
+export function readCheckInAnswer(bytes: Uint8Array): CheckInAnswer {
   const answer = jsonOf(bytes);
   if (!isRecord(answer))
     throw new Error('The check-in answer is not a JSON object');
   const { release, intervalMs } = answer;
   if (release !== null && !isSequence(release))
     throw new Error('The check-in answer names no release sequence');
-  return typeof intervalMs === 'number' ? { release, intervalMs } : { release };
+  if (!isRecord(answer.served))
+    throw new Error('The check-in answer names no served web parts');
+  const served = servedOf(answer.served);
+  if (!served)
+    throw new Error(
+      'The check-in answer names a served web part that is not a deployment id with a sequence',
+    );
+  return typeof intervalMs === 'number'
+    ? { release, intervalMs, served }
+    : { release, served };
 }
 
 /** The newest errors first, at most the app's cap. */
@@ -106,7 +133,7 @@ export function checkInBody(input: {
   instanceId: string;
   intervalMs: number;
   heartbeat: boolean;
-  remote: RemoteState;
+  remote: RemoteReport;
   uptimeS: number;
   release?: string;
   counters?: CounterPayload;

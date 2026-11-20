@@ -10,7 +10,11 @@
 
 import { dirname } from 'path';
 import { fileURLToPath } from 'url';
-import { getErrorMessage, type Logger } from '@walkeros/core';
+import {
+  getErrorMessage,
+  type CheckInAnswer,
+  type Logger,
+} from '@walkeros/core';
 import { createKnownValues } from '@walkeros/core/node';
 import {
   ChannelError,
@@ -37,7 +41,7 @@ import { registerProcessGuards } from '../pipeline.js';
 import { redactErrors, redactLogs } from '../redact.js';
 import { createRuntimeLogging, RUNTIME_COLORS } from '../runtime-logging.js';
 import { VERSION } from '../version.js';
-import { appLinkFromEnvironment, type AppLink } from './app-link.js';
+import { appCall, appLinkFromEnvironment, type AppLink } from './app-link.js';
 import { createReleaseCache, type ReleaseCache } from './cache.js';
 import type { ChildStart } from './ipc.js';
 import {
@@ -53,7 +57,10 @@ import { checkInBody, readCheckInAnswer } from './report.js';
 import { spawnRemoteChild } from './spawn.js';
 import { createSupervisor, type ChildHandle } from './supervisor.js';
 
-/** The boot check-in's whole time, so a dead app never holds the boot. */
+/**
+ * The boot check-in's whole time with a release cached, so a dead app never
+ * holds that release from serving.
+ */
 const BOOT_CHECK_IN_MS = 5000;
 const CHECK_IN_ANSWER_MAX_BYTES = 16_384;
 const CHECK_IN_TIMEOUT_MS = 10_000;
@@ -133,6 +140,52 @@ export function checkInOutcomeLines(
         : checkInRefusedLine(refused, outcome.nextDelayMs),
     );
   };
+}
+
+/**
+ * The boot check-in's whole time. With a release of this deployment cached
+ * it is 5 s, after which the cached release starts. With none there is
+ * nothing to serve meanwhile, so it takes a check-in's 10 s: room for a
+ * slow first token purchase, after which the client signs, where 5 s would
+ * end the boot with no release. A cache it cannot list takes the 5 s too:
+ * the check-in is still sent, and the boot that follows names the fault.
+ */
+export async function bootCheckInMs(
+  cache: Pick<ReleaseCache, 'documents'>,
+  deployment: string,
+): Promise<number> {
+  try {
+    return (await cache.documents(deployment)).length === 0
+      ? CHECK_IN_TIMEOUT_MS
+      : BOOT_CHECK_IN_MS;
+  } catch {
+    return BOOT_CHECK_IN_MS;
+  }
+}
+
+/**
+ * One check-in: `body` posted to the app's check-in route, the app's answer
+ * handed to the link, the answer's body read. Throws a ChannelError for a
+ * failed request, and the fact for an answer that does not read.
+ */
+export async function postCheckIn(
+  link: Pick<AppLink, 'origin' | 'authorize' | 'answered'>,
+  body: Record<string, unknown>,
+  timeoutMs: number,
+): Promise<ReturnType<typeof readCheckInAnswer>> {
+  const answer = await appCall(
+    link,
+    () =>
+      postJson({
+        url: checkInUrl(link.origin),
+        authorize: link.authorize,
+        timeoutMs,
+        maxBytes: CHECK_IN_ANSWER_MAX_BYTES,
+        body,
+      }),
+    () => 200,
+  );
+  return readCheckInAnswer(answer);
 }
 
 export async function runRemote(options: RemoteOptions): Promise<void> {
@@ -254,7 +307,7 @@ export async function runRemote(options: RemoteOptions): Promise<void> {
   const loop = remoteCheckInLoop({
     checkIn: async () => {
       const answer = await checkIn(CHECK_IN_TIMEOUT_MS);
-      void supervisor.consider(answer.release);
+      void supervisor.consider(answer);
       return answer.intervalMs === undefined
         ? {}
         : { intervalMs: answer.intervalMs };
@@ -282,15 +335,7 @@ export async function runRemote(options: RemoteOptions): Promise<void> {
         ...redactLogs(logRing.snapshot(LOGS_PER_CHECK_IN)),
       ],
     });
-    const answer = readCheckInAnswer(
-      await postJson({
-        url: checkInUrl(link.origin),
-        authorize: link.authorize,
-        timeoutMs,
-        maxBytes: CHECK_IN_ANSWER_MAX_BYTES,
-        body,
-      }),
-    );
+    const answer = await postCheckIn(link, body, timeoutMs);
     children.taken();
     return answer;
   };
@@ -315,11 +360,11 @@ export async function runRemote(options: RemoteOptions): Promise<void> {
 
   // The boot check-in, before the boot: the loop takes its outcome as its
   // first check-in, so a refusal or a failure is held as any other is.
-  let named: number | null | undefined;
+  let named: CheckInAnswer | undefined;
   let bootResult: CheckInResult;
   try {
-    const answer = await checkIn(BOOT_CHECK_IN_MS);
-    named = answer.release;
+    const answer = await checkIn(await bootCheckInMs(cache, link.deploymentId));
+    named = answer;
     bootResult = {
       ok: true,
       answer:

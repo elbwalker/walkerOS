@@ -7,9 +7,6 @@
  * child hands in its secret values and its report instead. The served
  * artifact is immutable for the life of the process: there is no config
  * polling and no hot-swap.
- *
- * Env surface: `WALKEROS_FLOW_RELEASE` (with `WALKEROS_FLOW_NAME`) names the
- * artifact the container must run; any other artifact fails the boot.
  */
 
 import {
@@ -108,10 +105,6 @@ export async function runPipeline(options: PipelineOptions): Promise<void> {
   // once the health server exists; the listeners stay registered from here.
   const guards = registerProcessGuards(logger, undefined, options.format);
 
-  // The artifact this container was deployed to run. Read before the secrets
-  // are injected into the environment, so a secret cannot replace it.
-  const expected = readExpectedArtifact();
-
   logger.info(`walkeros/flow v${VERSION}`);
   // No colon after the label: `Instance: <hex>` reads as a key and a token
   // value to the redactor, which would print the id as ***.
@@ -167,12 +160,10 @@ export async function runPipeline(options: PipelineOptions): Promise<void> {
     );
     const loaded = showIdentity(handle.collector);
     logger.info(`Flow: ${loaded.name} release ${loaded.release}`);
-    assertExpectedArtifact(expected, handle.collector);
   } catch (error) {
-    // Collector construction failed, a delivered secret was refused, or the
-    // artifact is not the one this container was deployed to run: keep
-    // /ready non-200 so an orchestrator
-    // (Scaleway) does not shift traffic to this revision before we exit.
+    // Collector construction failed or a delivered secret was refused: keep
+    // /ready non-200 so an orchestrator (Scaleway) does not shift traffic to
+    // this revision before we exit.
     healthServer.setFailed(
       error instanceof Error ? error.message : String(error),
     );
@@ -636,56 +627,12 @@ const OUT_OF_BAND_WINDOW_MS = 60_000;
 /** A flow's identity as its bundle baked it onto the collector. */
 type ArtifactIdentity = Pick<FlowHandle['collector'], 'name' | 'release'>;
 
-/** The artifact a container must run: a release, and a flow name when set. */
-interface ExpectedArtifact {
-  name?: string;
-  release: string;
-}
-
-/**
- * Read the artifact this container must run from `WALKEROS_FLOW_RELEASE` and
- * `WALKEROS_FLOW_NAME`. Only a release turns the check on: a container stamped
- * with the flow name alone is not checked. An empty value counts as unset.
- */
-function readExpectedArtifact(): ExpectedArtifact | undefined {
-  const release = process.env.WALKEROS_FLOW_RELEASE;
-  if (release === undefined || release === '') return undefined;
-  const name = process.env.WALKEROS_FLOW_NAME;
-  return name === undefined || name === '' ? { release } : { name, release };
-}
-
 /** Display values of an identity; an artifact may carry neither. */
 function showIdentity({ name, release }: ArtifactIdentity): {
   name: string;
   release: string;
 } {
   return { name: name ?? '(unnamed)', release: release ?? '(none)' };
-}
-
-/**
- * Refuse a loaded artifact that is not the one this container was deployed to
- * run: another release, no release at all, or another flow name when a name is
- * expected. The throw keeps `/ready` from ever reporting it ready, and the
- * message names both sides.
- */
-function assertExpectedArtifact(
-  expected: ExpectedArtifact | undefined,
-  loaded: ArtifactIdentity,
-): void {
-  if (!expected) return;
-  const nameMatches =
-    expected.name === undefined || loaded.name === expected.name;
-  if (loaded.release === expected.release && nameMatches) return;
-
-  // Without an expected name any name is accepted, so the loaded one is shown.
-  const want = showIdentity({
-    name: expected.name ?? loaded.name,
-    release: expected.release,
-  });
-  const got = showIdentity(loaded);
-  throw new Error(
-    `Artifact mismatch: expected ${want.name}@${want.release}, loaded ${got.name}@${got.release}`,
-  );
 }
 
 /**

@@ -42,7 +42,7 @@ export {
 export type { LoadConfigResult, LoadConfigOptions } from './loader.js';
 
 // Served web flows
-export { SERVER_OUTPUT_ENTRIES, servedFlowErrors } from './served-flows.js';
+export { servedFlowErrors } from './served-flows.js';
 
 // Type re-exports
 export type {

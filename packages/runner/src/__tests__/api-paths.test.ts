@@ -4,11 +4,13 @@ import {
   RELEASE_OPERATION,
   RELEASE_SECRETS_OPERATION,
   SECRETS_OPERATION,
+  SERVED_RELEASE_OPERATION,
   archiveUrl,
   checkInUrl,
   releaseSecretsUrl,
   releaseUrl,
   secretsUrl,
+  servedReleaseUrl,
 } from '../api-paths.js';
 
 describe('api-paths', () => {
@@ -32,6 +34,18 @@ describe('api-paths', () => {
       'https://app.example/api/runner/release',
     ],
     [
+      SERVED_RELEASE_OPERATION,
+      'GET /api/runner/release?deployment={deploymentId}',
+      servedReleaseUrl('https://app.example.test', 'dep_AbC-1'),
+      'https://app.example.test/api/runner/release?deployment=dep_AbC-1',
+    ],
+    [
+      SERVED_RELEASE_OPERATION,
+      'GET /api/runner/release?deployment={deploymentId}',
+      servedReleaseUrl('https://app.example.test', 'dep_a&b=%'),
+      'https://app.example.test/api/runner/release?deployment=dep_a%26b%3D%25',
+    ],
+    [
       ARCHIVE_OPERATION,
       'GET /api/runner/versions/{versionId}/bundle-archive',
       archiveUrl('https://app.example', 'dv_a/b'),
@@ -44,7 +58,7 @@ describe('api-paths', () => {
       'https://app.example/api/runner/versions/dv_a%2Fb/secrets',
     ],
   ])(
-    'pins the operation %s and its URL, each path parameter encoded once',
+    'pins the operation %s and its URL, each parameter encoded once',
     (operation, pinned, url, expected) => {
       expect(operation).toBe(pinned);
       expect(url).toBe(expected);

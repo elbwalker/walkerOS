@@ -1,207 +1,492 @@
-import { redactLine } from '@walkeros/core';
+import {
+  encodeServiceCredential,
+  redactLine,
+  SERVICE_CREDENTIAL_PREFIX,
+  type Logger,
+  type ServiceCredential,
+} from '@walkeros/core';
 import { createKnownValues } from '@walkeros/core/node';
-import { appLinkFromEnvironment } from '../../remote/app-link.js';
+import {
+  APP_SIGNATURE_TAG,
+  ChannelError,
+  conditionalGet,
+  contentDigest,
+  createDoorCheck,
+  SIGNATURE_TAGS,
+  verifyRequestSignature,
+} from '@walkeros/server-core';
+import { releaseUrl } from '../../api-paths.js';
+import {
+  appCall,
+  appLinkFromEnvironment,
+  type AppLink,
+} from '../../remote/app-link.js';
 import { ReleaseRefusal } from '../../remote/release-document.js';
+import {
+  CLOSED_ISSUER,
+  TEST_APP,
+  TEST_DEPLOYMENT,
+  TEST_ISSUER,
+  testCredential,
+} from '../helpers/credential.js';
 import { createMockLogger } from '../helpers/mock-logger.js';
+import { sealSecretSet } from '../helpers/seal.js';
+import { startStandInApp } from '../helpers/stand-in-app.js';
+import {
+  recordingLogger,
+  until,
+  type Line,
+} from '../helpers/supervisor-harness.js';
 
-const LINK_ENV = {
-  WALKEROS_APP_URL: 'http://127.0.0.1:1234/x',
-  WALKEROS_DEPLOYMENT_ID: 'dep_shop1',
-  WALKEROS_DEPLOY_TOKEN: 'deploy-token-fixed',
-  WALKEROS_TOKEN: 'plain-token-fixed',
-};
+const METADATA = `${TEST_ISSUER}/.well-known/oauth-authorization-server`;
+const TOKEN_ENDPOINT = `${TEST_ISSUER}/api/services/token`;
+const REFUSED_LINE =
+  "The app refused this runner's credential (replaced, revoked or ended); a self-hosted runner is paired again on its Self-hosted tab (HTTP 401)";
+/** What `answered` is handed. */
+type Answer = { status: number; headers?: Headers };
+/** A fixed clock for the rows that read the clock offset. */
+const NOW = Date.parse('2026-11-20T10:00:00.000Z');
 
-function linkOf(env: NodeJS.ProcessEnv) {
+let credential: ServiceCredential;
+let raw: string;
+
+beforeAll(async () => {
+  ({ credential, raw } = await testCredential());
+});
+
+function linkOf(
+  env: NodeJS.ProcessEnv,
+  logger: Logger.Instance = createMockLogger(),
+): AppLink {
   return appLinkFromEnvironment({
     env,
-    logger: createMockLogger(),
+    logger,
     knownValues: createKnownValues(),
   });
 }
 
-function encode(value: unknown): Uint8Array {
-  return new TextEncoder().encode(JSON.stringify(value));
+function errorsOf(lines: Line[]): string[] {
+  return lines
+    .filter((line) => line.level === 'error')
+    .map((line) => line.message);
+}
+
+/** The auth server as the client reads it: discovery, and a token endpoint that answers or hangs. */
+function authServer(token: 'answers' | 'hangs') {
+  const seen: { tokenSignal?: AbortSignal } = {};
+  const fetch: typeof globalThis.fetch = async (input, init) => {
+    const url = String(input);
+    if (url === METADATA)
+      return Response.json({
+        issuer: TEST_ISSUER,
+        service_token_endpoint: TOKEN_ENDPOINT,
+        dpop_signing_alg_values_supported: ['ES256'],
+      });
+    if (url !== TOKEN_ENDPOINT) return new Response(null, { status: 404 });
+    if (token === 'hangs') {
+      seen.tokenSignal = init?.signal ?? undefined;
+      return new Promise<Response>(() => {});
+    }
+    return Response.json({
+      access_token: 'tok-1',
+      token_type: 'DPoP',
+      expires_in: 86400,
+      scope: 'runner:heartbeat runner:secrets runner:release',
+    });
+  };
+  return { fetch, seen };
 }
 
 describe('appLinkFromEnvironment', () => {
-  it('answers the origin of the app URL and the deployment', () => {
-    const link = linkOf({ ...LINK_ENV });
+  it.each<[string, () => Promise<string | undefined>, string]>([
+    [
+      'an unset variable',
+      async () => undefined,
+      'WALKEROS_CREDENTIAL is not set',
+    ],
+    [
+      'a value that is no credential',
+      async () => 'wos_run_left_over',
+      'WALKEROS_CREDENTIAL is not a walkerOS credential',
+    ],
+    [
+      'a credential with a member out of shape',
+      async () =>
+        SERVICE_CREDENTIAL_PREFIX +
+        Buffer.from(JSON.stringify({ ...credential, v: 2 })).toString(
+          'base64url',
+        ),
+      'WALKEROS_CREDENTIAL is not a walkerOS credential (v)',
+    ],
+    [
+      "a credential whose encryption key id is not that key's thumbprint",
+      async () =>
+        encodeServiceCredential({
+          ...credential,
+          enc: { ...credential.enc, kid: credential.sig.kid },
+        }),
+      'WALKEROS_CREDENTIAL is not a walkerOS credential (enc.kid)',
+    ],
+    [
+      "an automation's credential",
+      async () => (await testCredential('automation')).raw,
+      "WALKEROS_CREDENTIAL is not a deployment's credential (kind automation)",
+    ],
+    [
+      "a data agent's credential",
+      async () => (await testCredential('data-plane')).raw,
+      "WALKEROS_CREDENTIAL is not a deployment's credential (kind data-plane)",
+    ],
+  ])(
+    'refuses %s with its fact and leaves no variable behind',
+    async (_case, value, fact) => {
+      const set = await value();
+      const env: NodeJS.ProcessEnv = {
+        PATH: '/usr/bin',
+        ...(set !== undefined && { WALKEROS_CREDENTIAL: set }),
+      };
+      let message: string | undefined;
+      try {
+        linkOf(env);
+      } catch (error) {
+        message = error instanceof Error ? error.message : String(error);
+      }
 
-    expect([link.origin, link.deploymentId]).toEqual([
-      'http://127.0.0.1:1234',
-      'dep_shop1',
+      expect(message).toBe(fact);
+      expect(redactLine(fact)).toBe(fact);
+      expect(env).toEqual({ PATH: '/usr/bin' });
+    },
+  );
+
+  it('answers the origin, the deployment and the key id of the credential, a mixed-case id as written', async () => {
+    const mixed = await testCredential('deployment', {
+      resource: 'https://app.example.test:8443/api',
+      id: 'dep_AbC-1_x',
+    });
+
+    const link = linkOf({ WALKEROS_CREDENTIAL: mixed.raw });
+
+    expect([link.origin, link.deploymentId, link.keyId]).toEqual([
+      'https://app.example.test:8443',
+      'dep_AbC-1_x',
+      mixed.credential.enc.kid,
     ]);
   });
 
-  it.each<[string, NodeJS.ProcessEnv, string]>([
-    [
-      'the deploy token over the plain token',
-      { ...LINK_ENV },
-      'deploy-token-fixed',
-    ],
-    [
-      'the plain token alone',
-      { ...LINK_ENV, WALKEROS_DEPLOY_TOKEN: undefined },
-      'plain-token-fixed',
-    ],
-    [
-      'the plain token under an empty deploy token',
-      { ...LINK_ENV, WALKEROS_DEPLOY_TOKEN: '' },
-      'plain-token-fixed',
-    ],
-  ])('authorizes with %s', async (_case, env, token) => {
-    const link = linkOf(env);
+  it('signs a request to the origin while the token endpoint is down', async () => {
+    const closed = await testCredential('deployment', { iss: CLOSED_ISSUER });
+    const link = linkOf({ WALKEROS_CREDENTIAL: closed.raw });
+    const url = `${TEST_APP}/api/runner/release`;
 
-    await expect(
-      link.authorize({ method: 'GET', url: `${link.origin}/x` }),
-    ).resolves.toEqual({ Authorization: `Bearer ${token}` });
+    const headers = new Headers(await link.authorize({ method: 'GET', url }));
+
+    const { kty, crv, x, y } = closed.credential.sig;
+    const verified = await verifyRequestSignature({
+      method: 'GET',
+      url,
+      headers,
+      body: new Uint8Array(),
+      key: { kty, crv, x, y },
+      tag: APP_SIGNATURE_TAG,
+    });
+    expect([headers.has('authorization'), verified.ok]).toEqual([false, true]);
   });
 
-  it.each<[string, NodeJS.ProcessEnv, string]>([
-    [
-      'a deploy token with a line feed',
-      { ...LINK_ENV, WALKEROS_DEPLOY_TOKEN: 'deploy-token\nsecond-half' },
-      'WALKEROS_DEPLOY_TOKEN holds a character an HTTP header cannot carry',
-    ],
-    [
-      'a plain token with a carriage return',
-      {
-        ...LINK_ENV,
-        WALKEROS_DEPLOY_TOKEN: undefined,
-        WALKEROS_TOKEN: 'plain-token\rsecond-half',
-      },
-      'WALKEROS_TOKEN holds a character an HTTP header cannot carry',
-    ],
-    [
-      'a deploy token with a space',
-      { ...LINK_ENV, WALKEROS_DEPLOY_TOKEN: 'deploy token' },
-      'WALKEROS_DEPLOY_TOKEN holds a character an HTTP header cannot carry',
-    ],
-  ])(
-    'refuses %s, naming the variable and never the value',
-    (_case, env, message) => {
-      expect(() => linkOf(env)).toThrow(message);
-      expect(redactLine(message)).toBe(message);
-      expect(message).not.toContain('half');
-    },
-  );
-
-  it('makes the token a known value as it reads it', () => {
-    const knownValues = createKnownValues();
-
-    appLinkFromEnvironment({
-      env: { ...LINK_ENV },
+  it('sends a DPoP token and its proof once the auth server sells one', async () => {
+    const link = appLinkFromEnvironment({
+      env: { WALKEROS_CREDENTIAL: raw },
       logger: createMockLogger(),
-      knownValues,
+      knownValues: createKnownValues(),
+      serviceAuth: { fetch: authServer('answers').fetch },
     });
 
-    expect(knownValues.values()).toEqual(['deploy-token-fixed']);
+    await expect(
+      link.authorize({ method: 'GET', url: `${TEST_APP}/api/runner/release` }),
+    ).resolves.toEqual({
+      Authorization: 'DPoP tok-1',
+      DPoP: expect.any(String),
+    });
   });
 
-  it('removes all four names from the environment it read', () => {
-    const env: NodeJS.ProcessEnv = { ...LINK_ENV, PATH: '/usr/bin' };
+  it('writes the refused line once per change of state', () => {
+    const lines: Line[] = [];
+    const link = linkOf({ WALKEROS_CREDENTIAL: raw }, recordingLogger(lines));
 
-    linkOf(env);
+    link.answered({ status: 401 });
+    link.answered({ status: 401 });
+    link.answered({ status: 200 });
+    link.answered({ status: 401 });
 
-    expect(env).toEqual({ PATH: '/usr/bin' });
+    expect(errorsOf(lines)).toEqual([REFUSED_LINE, REFUSED_LINE]);
   });
 
-  it.each<[string, NodeJS.ProcessEnv, string]>([
-    [
-      'a missing app URL',
-      { ...LINK_ENV, WALKEROS_APP_URL: undefined },
-      'WALKEROS_APP_URL is not set',
-    ],
-    [
-      'an app URL that does not parse',
-      { ...LINK_ENV, WALKEROS_APP_URL: 'app.example' },
-      'WALKEROS_APP_URL is not an http or https URL',
-    ],
-    [
-      'an app URL of another scheme',
-      { ...LINK_ENV, WALKEROS_APP_URL: 'ftp://app.example' },
-      'WALKEROS_APP_URL is not an http or https URL',
-    ],
-    [
-      'a missing deployment',
-      { ...LINK_ENV, WALKEROS_DEPLOYMENT_ID: '' },
-      'WALKEROS_DEPLOYMENT_ID is not set',
-    ],
-    [
-      'a malformed deployment',
-      { ...LINK_ENV, WALKEROS_DEPLOYMENT_ID: 'abc' },
-      'WALKEROS_DEPLOYMENT_ID is not a deployment id (dep_ and 1 to 64 lowercase letters or digits)',
-    ],
-    [
-      'no token',
-      { ...LINK_ENV, WALKEROS_DEPLOY_TOKEN: undefined, WALKEROS_TOKEN: '' },
-      'WALKEROS_DEPLOY_TOKEN and WALKEROS_TOKEN are not set',
-    ],
-  ])(
-    'throws naming the variable for %s, and removes the names',
-    (_case, env, message) => {
-      expect(() => linkOf(env)).toThrow(message);
-      expect(redactLine(message)).toBe(message);
-      expect(
-        Object.keys(env).filter((name) => env[name] !== undefined),
-      ).toEqual([]);
-    },
-  );
+  it('writes the refused-proof line with the clock offset when the app refuses the DPoP proof', async () => {
+    const standIn = await startStandInApp();
+    try {
+      const atStandIn = await testCredential('deployment', {
+        resource: `${standIn.origin}/api`,
+      });
+      const lines: Line[] = [];
+      const link = appLinkFromEnvironment({
+        env: { WALKEROS_CREDENTIAL: atStandIn.raw },
+        logger: recordingLogger(lines),
+        knownValues: createKnownValues(),
+        serviceAuth: { fetch: authServer('answers').fetch, now: () => NOW },
+      });
+      standIn.setAnswer('release', {
+        status: 401,
+        headers: {
+          'WWW-Authenticate': 'DPoP error="invalid_dpop_proof"',
+          Date: new Date(NOW - 3_600_000).toUTCString(),
+        },
+      });
 
-  it('closes without throwing', () => {
-    expect(() => linkOf({ ...LINK_ENV }).close()).not.toThrow();
+      await expect(
+        appCall(
+          link,
+          () =>
+            conditionalGet({
+              url: releaseUrl(link.origin),
+              authorize: link.authorize,
+              timeoutMs: 5000,
+              maxBytes: 65_536,
+            }),
+          (answer) => answer.status,
+        ),
+      ).rejects.toBeInstanceOf(ChannelError);
+      expect(errorsOf(lines)).toEqual([
+        "The app refused this runner's DPoP proof (HTTP 401): this clock is off or the request URL is not the app's; this clock is +3600 s off the app's; pairing again does not help",
+      ]);
+    } finally {
+      await standIn.stop();
+    }
+  });
+
+  it('aborts a token request in flight on close', async () => {
+    const auth = authServer('hangs');
+    const link = appLinkFromEnvironment({
+      env: { WALKEROS_CREDENTIAL: raw },
+      logger: createMockLogger(),
+      knownValues: createKnownValues(),
+      serviceAuth: { fetch: auth.fetch },
+    });
+    const pending = link
+      .authorize({ method: 'GET', url: `${TEST_APP}/api/runner/release` })
+      .catch(() => undefined);
+    await until(() => auth.seen.tokenSignal !== undefined);
+
+    link.close();
+
+    expect(auth.seen.tokenSignal?.aborted).toBe(true);
+    await pending;
+  });
+});
+
+describe('appCall', () => {
+  const headers = new Headers({ 'WWW-Authenticate': 'DPoP error="x"' });
+
+  it.each<[string, () => Promise<number>, Answer[]]>([
+    ['an answer the call took', async () => 304, [{ status: 304 }]],
+    [
+      "the app's own refusal, with its headers",
+      async () => {
+        throw new ChannelError('HTTP 401', 'refused', {
+          status: 401,
+          hop: 'origin',
+          headers,
+        });
+      },
+      [{ status: 401, headers }],
+    ],
+    [
+      "storage's refusal after the redirect",
+      async () => {
+        throw new ChannelError('HTTP 403', 'refused', {
+          status: 403,
+          hop: 'redirect',
+          headers,
+        });
+      },
+      [],
+    ],
+    [
+      'a failure with no answer',
+      async () => {
+        throw new ChannelError('Request timed out after 10 ms', 'timeout', {
+          hop: 'origin',
+        });
+      },
+      [],
+    ],
+  ])('hands `answered` %s', async (_case, call, handed) => {
+    const answers: Answer[] = [];
+
+    await appCall(
+      { answered: (answer) => answers.push(answer) },
+      call,
+      (status) => status,
+    ).catch(() => undefined);
+
+    expect(answers).toEqual(handed);
+  });
+
+  it('throws what the call threw', async () => {
+    const failure = new ChannelError('HTTP 401', 'refused', {
+      status: 401,
+      hop: 'origin',
+    });
+
+    await expect(
+      appCall(
+        { answered: () => {} },
+        async () => {
+          throw failure;
+        },
+        () => 200,
+      ),
+    ).rejects.toBe(failure);
   });
 });
 
 describe('readSecretSet', () => {
-  it('keeps a value named __proto__ as a value of its own', () => {
-    const values = linkOf({ ...LINK_ENV }).readSecretSet(
-      new TextEncoder().encode(
-        '{"deployment":"dep_shop1","sequence":17,"values":{"__proto__":"value-proto-v17"}}',
-      ),
-      { deployment: 'dep_shop1', sequence: 17 },
-    );
+  const expected = { deployment: TEST_DEPLOYMENT, sequence: 17 };
+  /** Built from entries, so `__proto__` is a name of its own. */
+  const values: Record<string, string> = Object.fromEntries([
+    ['API_KEY', 'value-abc123'],
+    ['__proto__', 'value-proto-v17'],
+  ]);
 
-    expect(Object.entries(values)).toEqual([['__proto__', 'value-proto-v17']]);
+  it('opens a set sealed to the credential, a value named __proto__ kept as its own', async () => {
+    const link = linkOf({ WALKEROS_CREDENTIAL: raw });
+    const sealed = await sealSecretSet({
+      key: credential.enc,
+      ...expected,
+      values,
+    });
+
+    const opened = await link.readSecretSet(sealed, expected);
+
+    expect(Object.entries(opened)).toEqual([
+      ['API_KEY', 'value-abc123'],
+      ['__proto__', 'value-proto-v17'],
+    ]);
   });
 
-  const expectSet = { deployment: 'dep_shop1', sequence: 17 };
+  it.each<[string, () => Promise<Uint8Array>, string]>([
+    [
+      'a set sealed to another key',
+      async () =>
+        sealSecretSet({
+          key: (await testCredential()).credential.enc,
+          ...expected,
+          values,
+        }),
+      'The sealed set is sealed to another key',
+    ],
+    [
+      'a set naming another deployment',
+      () =>
+        sealSecretSet({
+          key: credential.enc,
+          deployment: 'dep_other',
+          sequence: 17,
+          values,
+        }),
+      "The sealed set's header names another deployment",
+    ],
+    [
+      'a set naming another sequence',
+      () =>
+        sealSecretSet({
+          key: credential.enc,
+          deployment: TEST_DEPLOYMENT,
+          sequence: 16,
+          values,
+        }),
+      "The sealed set's header names another sequence",
+    ],
+    [
+      'bytes that are no JWE',
+      async () =>
+        new TextEncoder().encode(
+          JSON.stringify({ ...expected, values: { API_KEY: 'value-abc123' } }),
+        ),
+      'The sealed set is not a compact JWE of five parts',
+    ],
+  ])(
+    'refuses %s as secret-set, naming the fact',
+    async (_case, sealed, fact) => {
+      const link = linkOf({ WALKEROS_CREDENTIAL: raw });
+      let refusal: unknown;
+      try {
+        await link.readSecretSet(await sealed(), expected);
+      } catch (error) {
+        refusal = error;
+      }
 
-  it('answers the values of a set for this deployment and sequence', () => {
-    const link = linkOf({ ...LINK_ENV });
+      expect(refusal).toBeInstanceOf(ReleaseRefusal);
+      expect(refusal).toMatchObject({
+        check: 'secret-set',
+        sequence: 17,
+        message: `Release v17 refused (secret-set: ${fact})`,
+      });
+    },
+  );
+});
 
-    expect(
-      link.readSecretSet(
-        encode({ ...expectSet, values: { API_KEY: 'value-abc123' } }),
-        expectSet,
-      ),
-    ).toEqual({ API_KEY: 'value-abc123' });
+describe('signStep', () => {
+  it('signs a POST to a local door with the ingest tag, which the door check passes', async () => {
+    const link = linkOf({ WALKEROS_CREDENTIAL: raw });
+    const body = new TextEncoder().encode('{"name":"page view"}');
+    const digest = contentDigest(body);
+    const { kty, crv, x, y, kid } = credential.sig;
+    const door = createDoorCheck({
+      tag: SIGNATURE_TAGS.ingest,
+      lookup: async (keyid) => (keyid === kid ? { kty, crv, x, y } : undefined),
+      startedAt: 0,
+    });
+
+    const signed = await link.signStep({
+      method: 'POST',
+      url: 'http://127.0.0.1:8080/ingest',
+      contentDigest: digest,
+    });
+
+    await expect(
+      door.check({
+        origin: 'http://127.0.0.1:8080',
+        method: 'POST',
+        target: '/ingest',
+        headers: new Headers({ ...signed, 'Content-Digest': digest }),
+        body,
+      }),
+    ).resolves.toEqual({ ok: true, keyid: kid });
   });
 
-  it.each<[string, Uint8Array]>([
+  it.each<[string, { method: string; url: string }, string]>([
     [
-      'another deployment',
-      encode({ deployment: 'dep_other', sequence: 17, values: {} }),
+      'a GET',
+      { method: 'GET', url: 'http://127.0.0.1:8080/ingest' },
+      'The door signer signs POST requests only',
     ],
-    ['another sequence', encode({ ...expectSet, sequence: 16, values: {} })],
     [
-      'a value that is not a string',
-      encode({ ...expectSet, values: { API_KEY: 42 } }),
+      "the app's origin",
+      { method: 'POST', url: `${TEST_APP}/api/runner/check-in` },
+      'The door signer does not sign for the app or its auth server',
     ],
-    ['values that are not an object', encode({ ...expectSet, values: ['x'] })],
-    ['no values', encode(expectSet)],
-    ['an array', encode([expectSet])],
-    ['a body that is not JSON', new TextEncoder().encode('{"deployment"')],
-  ])('refuses %s as secret-set', (_case, bytes) => {
-    const link = linkOf({ ...LINK_ENV });
-    let refusal: unknown;
-    try {
-      link.readSecretSet(bytes, expectSet);
-    } catch (error) {
-      refusal = error;
-    }
+    [
+      "the issuer's origin",
+      { method: 'POST', url: `${TEST_ISSUER}/api/ingest` },
+      'The door signer does not sign for the app or its auth server',
+    ],
+  ])("refuses %s with the door rule's fact", async (_case, request, fact) => {
+    const link = linkOf({ WALKEROS_CREDENTIAL: raw });
 
-    expect(refusal).toBeInstanceOf(ReleaseRefusal);
-    expect(refusal).toMatchObject({ check: 'secret-set', sequence: 17 });
+    await expect(
+      link.signStep({
+        ...request,
+        contentDigest: contentDigest(new Uint8Array()),
+      }),
+    ).rejects.toThrow(new Error(fact));
   });
 });

@@ -353,3 +353,128 @@ describe('readReleaseDocument', () => {
     expect(refusal.message).toBe('Release v17 refused (deployment)');
   });
 });
+
+describe('readReleaseDocument served', () => {
+  const WEB = {
+    deployment: 'dep_web1',
+    path: 'casamoda/walker.js',
+    sequence: 4,
+  };
+  const OTHER = { deployment: 'dep_web2', path: 'shop/walker.js', sequence: 9 };
+
+  it.each<[string, Record<string, unknown>, unknown]>([
+    ['no served list as none', {}, undefined],
+    ['one entry as written', { served: [WEB] }, [WEB]],
+    [
+      'two entries with each sequence kept',
+      { served: [WEB, OTHER] },
+      [WEB, OTHER],
+    ],
+    [
+      'an entry with another member, which it drops',
+      { served: [{ ...WEB, flow: 'web' }] },
+      [WEB],
+    ],
+    [
+      'a first part that only starts with flow.mjs',
+      { served: [{ ...WEB, path: 'flow.mjs.d/w.js' }] },
+      [{ ...WEB, path: 'flow.mjs.d/w.js' }],
+    ],
+  ])('reads %s', (_case, fields, served) => {
+    const { document } = readReleaseDocument(withFields(fields), {
+      deployment: DEPLOYMENT,
+    });
+
+    expect(document.served).toEqual(served);
+    expect('served' in document).toBe(served !== undefined);
+  });
+
+  it.each<[string, unknown, RefusalCheck]>([
+    ['an empty list', [], 'document-format'],
+    ['a list that is not an array', { dep_web1: WEB }, 'document-format'],
+    [
+      'an entry that is not an object',
+      ['casamoda/walker.js'],
+      'document-format',
+    ],
+    [
+      'an entry without a path',
+      [{ deployment: WEB.deployment, sequence: 4 }],
+      'document-format',
+    ],
+    [
+      'an entry without a sequence',
+      [{ deployment: WEB.deployment, path: WEB.path }],
+      'document-format',
+    ],
+    ['a sequence of 0', [{ ...WEB, sequence: 0 }], 'document-format'],
+    ['a sequence of 1.5', [{ ...WEB, sequence: 1.5 }], 'document-format'],
+    ['a sequence "2"', [{ ...WEB, sequence: '2' }], 'document-format'],
+    [
+      'a deployment of 256 characters',
+      [{ ...WEB, deployment: 'd'.repeat(256) }],
+      'document-format',
+    ],
+    [
+      'a deployment with a space',
+      [{ ...WEB, deployment: 'dep web1' }],
+      'document-format',
+    ],
+    [
+      'an entry naming the document own deployment',
+      [{ ...WEB, deployment: DEPLOYMENT }],
+      'document-format',
+    ],
+    [
+      'two entries of one deployment',
+      [WEB, { ...OTHER, deployment: WEB.deployment }],
+      'document-format',
+    ],
+    [
+      'A/w.js beside a/w.js',
+      [
+        { ...WEB, path: 'A/w.js' },
+        { ...OTHER, path: 'a/w.js' },
+      ],
+      'document-format',
+    ],
+    [
+      'a beside a/w.js',
+      [
+        { ...WEB, path: 'a' },
+        { ...OTHER, path: 'a/w.js' },
+      ],
+      'document-format',
+    ],
+    ['the path ../w.js', [{ ...WEB, path: '../w.js' }], 'document-format'],
+    ['the path a//w.js', [{ ...WEB, path: 'a//w.js' }], 'document-format'],
+    ['the path .w.js', [{ ...WEB, path: '.w.js' }], 'document-format'],
+    ['the path a/../b.js', [{ ...WEB, path: 'a/../b.js' }], 'document-format'],
+    [
+      'the path Flow.MJS/x.js',
+      [{ ...WEB, path: 'Flow.MJS/x.js' }],
+      'archive-entry',
+    ],
+    [
+      'the path flow.mjs/w.js',
+      [{ ...WEB, path: 'flow.mjs/w.js' }],
+      'archive-entry',
+    ],
+    [
+      'the path Node_Modules/w.js',
+      [{ ...WEB, path: 'Node_Modules/w.js' }],
+      'archive-entry',
+    ],
+    [
+      'the path package.json',
+      [{ ...WEB, path: 'package.json' }],
+      'archive-entry',
+    ],
+  ])('refuses %s, naming the sequence', (_case, served, check) => {
+    const refusal = refusalOf(() =>
+      readReleaseDocument(withFields({ served }), { deployment: DEPLOYMENT }),
+    );
+
+    expect([refusal.check, refusal.sequence]).toEqual([check, 17]);
+  });
+});

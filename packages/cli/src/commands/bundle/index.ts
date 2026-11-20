@@ -21,14 +21,13 @@ import {
 import { tmpRunDir } from '../../core/tmp-names.js';
 import type { PackageInstall } from '../../core/package-tree.js';
 import { isArchiveOutput, packBundleDir } from './archive.js';
-import type { Flow, Logger } from '@walkeros/core';
+import { SERVER_OUTPUT_ENTRIES, type Flow, type Logger } from '@walkeros/core';
 import type { BundleStats } from './bundler.js';
 import {
   loadJsonConfig,
   loadBundleConfig,
   loadAllFlows,
   assertNoConfigErrors,
-  SERVER_OUTPUT_ENTRIES,
   type LoadConfigResult,
 } from '../../config/index.js';
 import { isUrl } from '../../config/utils.js';

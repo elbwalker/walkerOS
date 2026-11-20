@@ -6,7 +6,9 @@
 
 # @walkeros/runner
 
-Runs prebuilt walkerOS flow artifacts. Ships the `runneros` binary.
+Runs walkerOS server flows. Ships the `runneros` binary: `runneros start` runs
+one prebuilt artifact, and `runneros remote` takes releases from the walkerOS
+app.
 
 ## Installation
 
@@ -46,6 +48,11 @@ credential shown once when you pair a runner on a flow part's Self-hosted tab.
 It names the app and the deployment, and is read once at start and removed from
 the environment. With it the runner fetches its secrets at boot and checks in.
 Without it the runner calls no app.
+
+`runneros remote --cache <dir>` runs the releases the app hands it, each checked
+before it runs, and swaps to a new one with no image rebuild. It reads
+`WALKEROS_CREDENTIAL` only. See
+[Remote releases](https://www.walkeros.io/docs/apps/remote).
 
 [Documentation](https://www.walkeros.io/docs/apps/runtime) &bull;
 [Source Code](https://github.com/elbwalker/walkerOS/tree/main/packages/runner)

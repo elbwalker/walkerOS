@@ -147,6 +147,13 @@ export type Authorize = (request: {
 /** The version of the release document a remote runner reads. */
 export const RELEASE_DOCUMENT_VERSION = 1;
 
+/** One web part a server release serves: its deployment, its file's path in the release's folder, and the web sequence whose file the release's archive holds there. */
+export interface ServedDeployment {
+  deployment: string;
+  path: string;
+  sequence: number;
+}
+
 /**
  * What the app serves a remote runner about one release of its deployment.
  * The app writes it and the runner reads and checks it before any code of
@@ -162,6 +169,8 @@ export interface ReleaseDocument {
   secrets: { app: string[]; server: string[] };
   secretsSince: number;
   releasedAt: string;
+  /** A server release whose config lists web flows; absent when nothing is listed, never empty. */
+  served?: ServedDeployment[];
 }
 
 /**
@@ -202,4 +211,20 @@ export type RemoteLast =
 export interface RemoteState {
   running: number | null;
   last: RemoteLast | null;
+}
+
+/** The `remote` part of a check-in body: the server release, and each web part it serves. */
+export interface RemoteReport extends RemoteState {
+  /** Per web deployment; absent when the running release lists none. */
+  served?: Record<string, RemoteState>;
+}
+
+/** The check-in's answer as the app writes it. */
+export interface CheckInAnswer {
+  /** The deployment's newest released sequence; null when none or when it is not remote. */
+  release: number | null;
+  /** Taken only as an integer from 30 000 to 3 600 000. */
+  intervalMs?: number;
+  /** The newest sequence of each web part the live version lists; {} when it lists none. */
+  served: Record<string, number>;
 }

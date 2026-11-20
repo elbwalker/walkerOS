@@ -181,16 +181,9 @@ port would write the same file.
 | `BUNDLE` | `/app/flow/flow.mjs` in the image | Artifact path or URL |
 | `PORT` | `8080` | Port for the health server and the flow's HTTP handler. A source's own `port` setting has no effect under the runtime, and nothing logs that |
 | `WALKEROS_CREDENTIAL` | none | The runner's credential (`wos_cred_...`), shown once when you pair a runner in the app. It names the app and the deployment, so no other variable is needed. Read once at start and removed from the environment. Unset, the runtime calls no app |
-| `WALKEROS_FLOW_RELEASE` | none | Release the loaded flow must carry, or the runtime refuses to start. The walkerOS app sets it when it deploys a flow |
-| `WALKEROS_FLOW_NAME` | none | Flow name the loaded flow must carry, checked only together with `WALKEROS_FLOW_RELEASE`. The walkerOS app sets it |
 | `WALKEROS_HEARTBEAT_INTERVAL` | `60` | Seconds between heartbeats. Values below `10`, or not a number, are clamped to `10` |
 | `WALKEROS_CACHE_DIR` | `$XDG_CACHE_HOME/walkeros`, else `~/.cache/walkeros` | Where the runtime persists recent errors between restarts. `CACHE_DIR` is read as a fallback |
 | `NODE_OPTIONS` | `--max-old-space-size=384 --no-warnings` in the image | Heap cap sized for a 512 MB container. Raise it with the container's memory, and keep `--no-warnings`: the runtime logs Node's process warnings itself |
-
-Every start logs the loaded flow as `Flow: <name> release <release>`. With
-`WALKEROS_FLOW_RELEASE` set, a runtime that loaded any other artifact, or one
-without a release, never reports ready: it exits with
-`Artifact mismatch: expected <name>@<release>, loaded <name>@<release>`.
 
 The credential comes from the environment only, or from the `--env-file` you
 name. The runtime reads no config file and no CLI login.
@@ -271,7 +264,9 @@ When connected, the runtime:
   Each request gets a fresh signature over its exact bytes, with the
   credential's key, and works without the auth server. The signer never signs
   a request to the app or its auth server, so no step obtains headers for
-  them, and no step ever sees the credential.
+  them, and no step ever sees the credential. Under
+  [`runneros remote`](/docs/apps/remote#signed-ingest-writes) the flow runs in
+  a child process that holds no credential, and its supervisor signs each write.
 
 The credential itself is never sent. With it the runtime buys a token that
 lasts 24 hours and works only together with the credential's key, and renews
@@ -288,7 +283,8 @@ the flow keeps serving. When the auth server refuses a token request, the line
 names how far this machine's clock is off from the server's.
 
 The artifact itself never changes while the runtime runs. To ship a new
-version, bundle again and redeploy.
+version, bundle again and redeploy. To take new versions from the app with no
+redeploy, run [`runneros remote`](/docs/apps/remote) instead.
 
 Every value the flow reads through `$secret` or `$env` is masked by exact
 value (6 characters or longer) as `***`, whatever its source: the app, an
@@ -306,7 +302,8 @@ The runtime prints text lines by default. A flow that sets
 errors and warnings on stderr, which log collectors such as Cloud Run read as
 structured logs (see [Logger](/docs/collector/logger#log-format)). The lines
 before the flow loads, up to `Health server listening on port <port>`, print
-as text, because the runtime learns the format from the flow. The flow's
+as text, because the runtime learns the format from the flow. Every start then
+logs the loaded flow as `Flow: <name> release <release>`. The flow's
 `logger.level` applies to the collector's lines, and `--verbose` still forces
 `DEBUG`.
 
@@ -427,6 +424,9 @@ is a web flow of the same file. Each value is the path of that flow's file in
 the server's output folder: bare file names joined by `/`, such as
 `casamoda/walker.js`. It is never a `$flow` reference and never a public URL
 path. The file's routes stay in the server flow, as in the example above.
+
+A remote runner fetches and replaces these files as the app releases them, see
+[Served web files](/docs/apps/remote#served-web-files).
 
 One `walkeros bundle --flow <server> -o dist/` writes `dist/flow.mjs` and each
 listed web flow at its path. With a `.tar.gz` output, the archive packs the

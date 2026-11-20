@@ -2,7 +2,7 @@ import { mkdtemp, mkdir, rm, writeFile } from 'fs/promises';
 import { tmpdir } from 'os';
 import { dirname, join } from 'path';
 import { c as tarCreate } from 'tar';
-import type { ReleaseDocument } from '@walkeros/core';
+import type { ReleaseDocument, ServedDeployment } from '@walkeros/core';
 import { sha256Hex } from '../../remote/release-document.js';
 
 /** The deployment the fixtures and the stand-in app name by default. */
@@ -16,12 +16,17 @@ export interface ReleaseFixtureOptions {
   flowName?: string;
   /** The archive's `flow.mjs`; {@link defaultFlowSource} by default. */
   source?: string;
-  /** More archive entries, by path inside the archive. */
+  /**
+   * More archive entries, by path inside the archive: a served web file at
+   * its entry's path is the copy of the web release that entry names.
+   */
   files?: Record<string, string>;
+  /** The web parts the release serves; none by default. */
+  served?: ServedDeployment[];
   secrets?: { app: string[]; server: string[] };
   secretsSince?: number;
   releasedAt?: string;
-  /** The secret set's values; one per `secrets.app` name by default. */
+  /** The release's walkerOS secret values; one per `secrets.app` name by default. */
   values?: Record<string, string>;
 }
 
@@ -32,8 +37,8 @@ export interface ReleaseFixture {
   documentSha256: string;
   archive: Uint8Array;
   artifact: ReleaseDocument['artifact'];
-  /** The release's secret set as the stand-in seam reads it. */
-  secretSet: Uint8Array;
+  /** The release's walkerOS secret values, which the stand-in app seals at each read. */
+  values: Record<string, string>;
 }
 
 /**
@@ -119,7 +124,7 @@ async function tgzOf(entries: Record<string, string>): Promise<Uint8Array> {
   }
 }
 
-/** One release as the app would serve it: archive, document and secret set. */
+/** One release as the app holds it: archive, document and walkerOS secret values. */
 export async function buildRelease(
   options: ReleaseFixtureOptions,
 ): Promise<ReleaseFixture> {
@@ -148,6 +153,7 @@ export async function buildRelease(
     secrets,
     secretsSince: options.secretsSince ?? 1,
     releasedAt: options.releasedAt ?? '2026-11-18T10:00:00.000Z',
+    ...(options.served && { served: options.served }),
   };
   const documentBytes = new TextEncoder().encode(JSON.stringify(document));
   const values =
@@ -158,9 +164,6 @@ export async function buildRelease(
         `value-${name.toLowerCase()}-v${options.sequence}`,
       ]),
     );
-  const secretSet = new TextEncoder().encode(
-    JSON.stringify({ deployment, sequence: options.sequence, values }),
-  );
 
   return {
     document,
@@ -168,7 +171,64 @@ export async function buildRelease(
     documentSha256: sha256Hex(documentBytes),
     archive,
     artifact,
-    secretSet,
+    values,
+  };
+}
+
+export interface WebReleaseFixture {
+  document: ReleaseDocument;
+  documentBytes: Uint8Array;
+  /** The document's sha256: its cache name. */
+  documentSha256: string;
+  /** `"<documentSha256>"`, as the release route sends it. */
+  etag: string;
+  /** The web release's one file, the script's UTF-8 bytes. */
+  file: Uint8Array;
+  artifact: ReleaseDocument['artifact'];
+}
+
+/**
+ * One release of a web part as the app holds it: a version 1 document of
+ * the web deployment, with no secrets, whose artifact is the script as one
+ * file. Its version id is made from the deployment and the sequence, so two
+ * web parts at one sequence never share it.
+ */
+export function buildWebRelease(options: {
+  deployment: string;
+  sequence: number;
+  script: string;
+  /** The version id; `dv_w<8 hex of the deployment>s<sequence>` by default. */
+  release?: string;
+  flowName?: string;
+  /** 1 by default, as a web bundle holds no secret. */
+  secretsSince?: number;
+}): WebReleaseFixture {
+  const { deployment, sequence } = options;
+  const file = new TextEncoder().encode(options.script);
+  const artifact = { sha256: sha256Hex(file), bytes: file.byteLength };
+  const encodedDeployment = new TextEncoder().encode(deployment);
+  const document: ReleaseDocument = {
+    version: 1,
+    deployment,
+    sequence,
+    release:
+      options.release ??
+      `dv_w${sha256Hex(encodedDeployment).slice(0, 8)}s${sequence}`,
+    flowName: options.flowName ?? 'web',
+    artifact,
+    secrets: { app: [], server: [] },
+    secretsSince: options.secretsSince ?? 1,
+    releasedAt: '2026-11-18T10:00:00.000Z',
+  };
+  const documentBytes = new TextEncoder().encode(JSON.stringify(document));
+  const documentSha256 = sha256Hex(documentBytes);
+  return {
+    document,
+    documentBytes,
+    documentSha256,
+    etag: `"${documentSha256}"`,
+    file,
+    artifact,
   };
 }
 

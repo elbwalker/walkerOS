@@ -1,16 +1,26 @@
-import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'fs';
+import { chmodSync, mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'fs';
 import { tmpdir } from 'os';
 import { join, resolve } from 'path';
+import { createKnownValues } from '@walkeros/core/node';
 import { ChannelError } from '@walkeros/server-core';
 import { resetProcessGuardsForTest } from '../../pipeline.js';
+import { appLinkFromEnvironment, type AppLink } from '../../remote/app-link.js';
+import { createReleaseCache, type ReleaseCache } from '../../remote/cache.js';
 import {
+  bootCheckInMs,
   checkInOutcomeLines,
+  postCheckIn,
   remoteCheckInLoop,
   runRemote,
 } from '../../remote/command.js';
+import { TEST_ISSUER, testCredential } from '../helpers/credential.js';
+import { createMockLogger } from '../helpers/mock-logger.js';
+import {
+  buildRelease,
+  FIXTURE_DEPLOYMENT,
+} from '../helpers/release-fixture.js';
 import { recordingLogger, type Line } from '../helpers/supervisor-harness.js';
 import { startStandInApp } from '../helpers/stand-in-app.js';
-import { FIXTURE_DEPLOYMENT } from '../helpers/release-fixture.js';
 import {
   resolveRemoteOptions,
   type RemoteFlags,
@@ -132,13 +142,101 @@ describe('the check-in loop after the boot check-in', () => {
   });
 });
 
+describe('postCheckIn', () => {
+  it.each<
+    [
+      string,
+      number | undefined,
+      (answer: Promise<unknown>) => Promise<void>,
+      Array<{ status: number }>,
+    ]
+  >([
+    [
+      'a check-in the app takes',
+      undefined,
+      (answer) =>
+        expect(answer).resolves.toEqual({ release: null, served: {} }),
+      [{ status: 200 }],
+    ],
+    [
+      'a check-in the app refuses',
+      401,
+      (answer) => expect(answer).rejects.toBeInstanceOf(ChannelError),
+      [{ status: 401 }],
+    ],
+  ])(
+    'hands the link the status of %s',
+    async (_case, refused, settles, handed) => {
+      const standIn = await startStandInApp();
+      const linked = appLinkFromEnvironment({
+        env: { WALKEROS_CREDENTIAL: (await standIn.pair()).raw },
+        logger: createMockLogger(),
+        knownValues: createKnownValues(),
+      });
+      const answers: Array<{ status: number }> = [];
+      const link: AppLink = {
+        ...linked,
+        answered: ({ status }) => answers.push({ status }),
+      };
+      if (refused !== undefined)
+        standIn.setAnswer('check-in', { status: refused });
+      try {
+        await settles(
+          postCheckIn(link, { instanceId: '3f9a2b7c1d4e5f60' }, 5000),
+        );
+      } finally {
+        linked.close();
+        await standIn.stop();
+      }
+
+      expect(answers).toEqual(handed);
+    },
+  );
+});
+
+describe('bootCheckInMs', () => {
+  /** A document of `deployment` stored in the cache. */
+  const cached =
+    (deployment: string) =>
+    async (cache: ReleaseCache): Promise<void> => {
+      const v1 = await buildRelease({ sequence: 1, deployment });
+      await cache.storeDocument(v1.documentBytes, v1.documentSha256);
+    };
+
+  it.each<
+    [string, (cache: ReleaseCache, documents: string) => Promise<void>, number]
+  >([
+    ['an empty cache', async () => {}, 10_000],
+    [
+      'a cache holding a release of this deployment',
+      cached(FIXTURE_DEPLOYMENT),
+      5000,
+    ],
+    ['a cache holding only another deployment', cached('dep_other'), 10_000],
+    [
+      'a cache folder it cannot read',
+      async (_cache, documents) => chmodSync(documents, 0o000),
+      5000,
+    ],
+  ])('gives the boot check-in of %s its time', async (_case, prepare, ms) => {
+    const root = mkdtempSync(join(tmpdir(), 'walkeros-boot-check-in-'));
+    const documents = join(root, 'cache', 'documents');
+    try {
+      const cache = await createReleaseCache(
+        join(root, 'cache'),
+        createMockLogger(),
+      );
+      await prepare(cache, documents);
+
+      await expect(bootCheckInMs(cache, FIXTURE_DEPLOYMENT)).resolves.toBe(ms);
+    } finally {
+      chmodSync(documents, 0o700);
+      rmSync(root, { recursive: true, force: true });
+    }
+  });
+});
+
 describe('runRemote', () => {
-  const linkNames = [
-    'WALKEROS_APP_URL',
-    'WALKEROS_DEPLOYMENT_ID',
-    'WALKEROS_DEPLOY_TOKEN',
-    'WALKEROS_TOKEN',
-  ];
   let saved: NodeJS.ProcessEnv;
   let printed: string[];
   let listeners: {
@@ -150,7 +248,7 @@ describe('runRemote', () => {
 
   beforeEach(() => {
     saved = { ...process.env };
-    for (const name of linkNames) delete process.env[name];
+    delete process.env.WALKEROS_CREDENTIAL;
     listeners = {
       exception: process.listeners('uncaughtException'),
       rejection: process.listeners('unhandledRejection'),
@@ -189,16 +287,14 @@ describe('runRemote', () => {
     resetProcessGuardsForTest();
   });
 
-  it('writes the boot check-in refusal before an empty cache stops it', async () => {
+  it("writes the client's and the check-in's refusal before an empty cache stops it", async () => {
     const root = mkdtempSync(join(tmpdir(), 'walkeros-remote-run-'));
     const standIn = await startStandInApp();
     standIn.setAnswer('check-in', { status: 401 });
     // The instance folder is made under TMPDIR: this test's own.
     process.env.TMPDIR = join(root, 'tmp');
     mkdirSync(process.env.TMPDIR);
-    process.env.WALKEROS_APP_URL = standIn.origin;
-    process.env.WALKEROS_DEPLOYMENT_ID = FIXTURE_DEPLOYMENT;
-    process.env.WALKEROS_DEPLOY_TOKEN = 'stand-in-token-for-the-run';
+    process.env.WALKEROS_CREDENTIAL = (await standIn.pair()).raw;
     jest.spyOn(process, 'exit').mockImplementation(() => {
       throw new Error('exit');
     });
@@ -213,20 +309,91 @@ describe('runRemote', () => {
 
     const at = (text: string) =>
       printed.findIndex((line) => line.includes(text));
+    const client = at(
+      "The app refused this runner's signed request (HTTP 401): its credential is not connected yet or has ended, or this clock is off",
+    );
     const refused = at(
       'Check-in refused (401), serving on; next check-in in 5 min',
     );
-    expect(refused).toBeGreaterThanOrEqual(0);
+    expect(client).toBeGreaterThanOrEqual(0);
+    expect(client).toBeLessThan(refused);
     expect(refused).toBeLessThan(
       at('No release to run: the cache is empty and the app did not answer'),
     );
+  });
+
+  it('waits past 5 s at an empty cache for a slow first token, then checks in signed', async () => {
+    const root = mkdtempSync(join(tmpdir(), 'walkeros-remote-run-'));
+    const standIn = await startStandInApp();
+    const slow = await testCredential('deployment', {
+      resource: `${standIn.origin}/api`,
+      iss: TEST_ISSUER,
+      id: FIXTURE_DEPLOYMENT,
+    });
+    standIn.setCredential(slow.credential);
+    process.env.TMPDIR = join(root, 'tmp');
+    mkdirSync(process.env.TMPDIR);
+    process.env.WALKEROS_CREDENTIAL = slow.raw;
+    jest.spyOn(process, 'exit').mockImplementation(() => {
+      throw new Error('exit');
+    });
+    const after = (ms: number) =>
+      new Promise<void>((resolve) => setTimeout(resolve, ms));
+    let tokenRequests = 0;
+    // Discovery and a nonce answer take 2 s each, and the second token
+    // request hangs until the client's 2.5 s attempt cap: the client signs
+    // after about 6.5 s, past the 5 s a cached release would give it.
+    const realFetch = globalThis.fetch;
+    globalThis.fetch = async (input, init) => {
+      const url = String(input);
+      if (url === `${TEST_ISSUER}/.well-known/oauth-authorization-server`) {
+        await after(2000);
+        return Response.json({
+          issuer: TEST_ISSUER,
+          service_token_endpoint: `${TEST_ISSUER}/api/services/token`,
+          dpop_signing_alg_values_supported: ['ES256'],
+        });
+      }
+      if (url === `${TEST_ISSUER}/api/services/token`) {
+        tokenRequests += 1;
+        if (tokenRequests > 1) return new Promise<Response>(() => {});
+        await after(2000);
+        return Response.json(
+          { error: 'use_dpop_nonce' },
+          { status: 400, headers: { 'DPoP-Nonce': 'nonce-1' } },
+        );
+      }
+      return realFetch(input, init);
+    };
+    try {
+      await expect(
+        runRemote({ cacheDir: join(root, 'cache'), heartbeat: true, port: 0 }),
+      ).rejects.toThrow('exit');
+    } finally {
+      globalThis.fetch = realFetch;
+      await standIn.stop();
+      rmSync(root, { recursive: true, force: true });
+    }
+
+    expect(
+      standIn.requests
+        .filter((request) => request.route === 'check-in')
+        .map((request) => request.headers['signature-input'] !== undefined),
+    ).toEqual([true]);
+    expect(
+      printed.filter((line) => line.includes('No release to run')),
+    ).toEqual([
+      expect.stringContaining(
+        'No release to run: the cache is empty and the app names no release',
+      ),
+    ]);
   });
 
   it('keeps serving through an uncaught exception, with one ERROR line', async () => {
     const exit = jest.spyOn(process, 'exit').mockImplementation(() => {
       throw new Error('exit');
     });
-    // Without its link variables the command stops after its guards are up.
+    // Without its credential the command stops after its guards are up.
     await expect(
       runRemote({ cacheDir: '/unused', heartbeat: true, port: 8080 }),
     ).rejects.toThrow('exit');

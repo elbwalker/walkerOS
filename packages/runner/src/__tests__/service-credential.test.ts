@@ -9,13 +9,17 @@
 import { mkdtempSync, rmSync, writeFileSync } from 'fs';
 import { tmpdir } from 'os';
 import { join } from 'path';
-import type { Logger, ServiceCredential } from '@walkeros/core';
+import {
+  SERVICE_CREDENTIAL_PREFIX,
+  type Logger,
+  type ServiceCredential,
+} from '@walkeros/core';
 import { createKnownValues, type KnownValues } from '@walkeros/core/node';
 import {
   APP_SIGNATURE_TAG,
   verifyRequestSignature,
 } from '@walkeros/server-core';
-import { connectApp } from '../credentials.js';
+import { connectApp, readRunnerCredential } from '../credentials.js';
 import { createHeartbeat } from '../heartbeat.js';
 import { removeInstanceFolder } from '../instance-folder.js';
 import type { PipelineOptions } from '../pipeline.js';
@@ -301,22 +305,6 @@ describe('the runner with WALKEROS_CREDENTIAL', () => {
       },
     ],
     [
-      'a set WALKEROS_TOKEN or WALKEROS_FLOW_ID changes nothing and starts no app call',
-      async () => {
-        const net = stubNetwork({ token: 'up' });
-        delete process.env.WALKEROS_CREDENTIAL;
-        process.env.WALKEROS_TOKEN = 'wos_run_left_over';
-        process.env.WALKEROS_DEPLOY_TOKEN = 'wos_run_left_over';
-        process.env.WALKEROS_FLOW_ID = 'flow_1';
-        process.env.WALKEROS_PROJECT_ID = 'proj_1';
-        process.env.WALKEROS_APP_URL = TEST_APP;
-        await runCommand({ config: artifact });
-        expect(runPipeline.mock.calls[0]?.[0].api).toBeUndefined();
-        expect(runPipeline.mock.calls[0]?.[0].errorRing).toBeUndefined();
-        expect(net.seen).toEqual([]);
-      },
-    ],
-    [
       'a heartbeat body holding the credential string leaves masked',
       async () => {
         const net = stubNetwork({ token: 'up' });
@@ -337,5 +325,58 @@ describe('the runner with WALKEROS_CREDENTIAL', () => {
     ],
   ])('%s', async (_name, run) => {
     await run();
+  });
+});
+
+describe('readRunnerCredential', () => {
+  let credential: ServiceCredential;
+  let raw: string;
+  /** A credential string whose `v` is out of shape. */
+  let malformed: string;
+
+  beforeAll(async () => {
+    ({ credential, raw } = await testCredential());
+    malformed =
+      SERVICE_CREDENTIAL_PREFIX +
+      Buffer.from(JSON.stringify({ ...credential, v: 2 })).toString(
+        'base64url',
+      );
+  });
+
+  it.each<[string, () => string, () => ServiceCredential | string]>([
+    ['a credential', () => raw, () => credential],
+    [
+      'a malformed one',
+      () => malformed,
+      () => 'WALKEROS_CREDENTIAL is not a walkerOS credential (v)',
+    ],
+  ])(
+    'masks the string of %s before it reads it and leaves no variable behind',
+    (_case, value, outcome) => {
+      const knownValues = createKnownValues();
+      const env: NodeJS.ProcessEnv = {
+        WALKEROS_CREDENTIAL: value(),
+        PATH: '/usr/bin',
+      };
+      let read: ServiceCredential | string | undefined;
+      try {
+        read = readRunnerCredential({ env, knownValues });
+      } catch (error) {
+        read = error instanceof Error ? error.message : String(error);
+      }
+
+      expect(read).toEqual(outcome());
+      expect(knownValues.values()).toEqual([value()]);
+      expect(env).toEqual({ PATH: '/usr/bin' });
+    },
+  );
+
+  it('answers undefined without the variable and masks nothing', () => {
+    const knownValues = createKnownValues();
+
+    expect(
+      readRunnerCredential({ env: { PATH: '/usr/bin' }, knownValues }),
+    ).toBeUndefined();
+    expect(knownValues.values()).toEqual([]);
   });
 });

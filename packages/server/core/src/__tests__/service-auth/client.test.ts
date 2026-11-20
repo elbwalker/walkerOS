@@ -1,5 +1,5 @@
 import type { PublicEcJwk, ServiceTargetKind } from '@walkeros/core';
-import { ChannelError } from '../../channel';
+import { ChannelError, conditionalGet } from '../../channel';
 import {
   appAnswerOf,
   createServiceAuth,
@@ -464,11 +464,50 @@ describe('the service credential client', () => {
     },
   );
 
-  it.each<[string, unknown, { status: number } | undefined]>([
+  it('hears from a ChannelError the refused proof, with the clock offset, not a refused credential', async () => {
+    const s = stub();
+    const answer = new Response(null, {
+      status: 401,
+      headers: {
+        'WWW-Authenticate': 'DPoP error="invalid_dpop_proof", algs="ES256"',
+        Date: new Date(T0 - 90_000).toUTCString(),
+      },
+    });
+    const fetch = jest.spyOn(globalThis, 'fetch').mockResolvedValue(answer);
+    try {
+      const failed = await conditionalGet({
+        url: CHECK_IN,
+        authorize: s.auth.authorize,
+        timeoutMs: 1000,
+        maxBytes: 1024,
+      }).catch((error: unknown) => error);
+      const heard = appAnswerOf(failed);
+      expect(heard?.status).toBe(401);
+      if (heard) s.auth.answered(heard);
+    } finally {
+      fetch.mockRestore();
+    }
+    expect(s.lines).toEqual([
+      "The app refused this runner's DPoP proof (HTTP 401): this clock is off or the request URL is not the app's; this clock is +90 s off the app's; pairing again does not help",
+    ]);
+  });
+
+  const refusedHeaders = new Headers({ 'WWW-Authenticate': 'DPoP' });
+
+  it.each<[string, unknown, ReturnType<typeof appAnswerOf>]>([
     [
       "the app's own 401",
       new ChannelError('HTTP 401', 'refused', { status: 401, hop: 'origin' }),
       { status: 401 },
+    ],
+    [
+      "the app's own 401 with its headers",
+      new ChannelError('HTTP 401', 'refused', {
+        status: 401,
+        hop: 'origin',
+        headers: refusedHeaders,
+      }),
+      { status: 401, headers: refusedHeaders },
     ],
     [
       "the storage's 403 after the redirect",

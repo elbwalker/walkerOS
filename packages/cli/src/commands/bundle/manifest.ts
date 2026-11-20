@@ -23,7 +23,12 @@
 import crypto from 'crypto';
 import path from 'path';
 import fs from 'fs-extra';
-import { FlowReferenceError, type ServedFlow } from '@walkeros/core';
+import {
+  FlowReferenceError,
+  firstPathPartIs,
+  servedFlowPath,
+  type ServedFlow,
+} from '@walkeros/core';
 import type { ValidationError } from '@walkeros/core/dev';
 import { getErrorMessage } from '../../core/index.js';
 import { createCLILogger } from '../../core/cli-logger.js';
@@ -203,8 +208,7 @@ function assertServedKeys(
  * Every artifact is written into one output folder, where a served path
  * whose first part is a bundle artifact's output name collides with that
  * output. Refused up front, before anything is fetched, rather than at that
- * artifact's build. Compared case-folded, as a case-insensitive file system
- * sees the names.
+ * artifact's build.
  */
 function outputCollisionErrors(
   artifacts: readonly BuildArtifact[],
@@ -215,11 +219,12 @@ function outputCollisionErrors(
     .map(({ outputName }) => outputName);
   const errors: ValidationError[] = [];
   for (const { flow, path: servedPath } of loaded.served) {
-    const first = servedPath.split('/')[0].toLowerCase();
-    const outputName = outputNames.find((name) => name.toLowerCase() === first);
+    const outputName = outputNames.find((name) =>
+      firstPathPartIs(servedPath, name),
+    );
     if (outputName) {
       errors.push({
-        path: `flows.${loaded.flowName}.config.bundle.flows.${flow}`,
+        path: servedFlowPath(loaded.flowName, flow),
         code: 'SERVED_PATH_CONFLICT',
         message: `"${servedPath}" collides with "${outputName}", which this manifest builds`,
         value: servedPath,

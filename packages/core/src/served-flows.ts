@@ -3,6 +3,17 @@ import type { Flow } from './types/flow';
 /** A bare file name: no separator, no leading dot. */
 export const BARE_FILE_NAME_PATTERN = /^[A-Za-z0-9][A-Za-z0-9._-]*$/;
 
+/**
+ * What a server build writes at the root of its output folder, and all an
+ * archive output packs besides the served files: a served file inside one
+ * of them would overwrite the server build or be lost from the archive.
+ */
+export const SERVER_OUTPUT_ENTRIES = [
+  'flow.mjs',
+  'node_modules',
+  'package.json',
+] as const;
+
 /** One web flow a server flow serves, and the path of its file in the server's output folder. */
 export interface ServedFlow {
   flow: string;
@@ -24,8 +35,41 @@ export interface ServedFlowIssue {
 }
 
 /** A relative path of bare file names joined by "/". */
-function isServedPath(value: string): boolean {
+export function isServedPath(value: string): boolean {
   return value.split('/').every((part) => BARE_FILE_NAME_PATTERN.test(part));
+}
+
+/**
+ * The same path, or one a folder of the other, compared without case: on a
+ * case-insensitive file system (macOS and Windows by default) `A/walker.js`
+ * replaces `a/walker.js`.
+ */
+export function servedPathsOverlap(a: string, b: string): boolean {
+  const left = a.toLowerCase();
+  const right = b.toLowerCase();
+  return (
+    left === right ||
+    left.startsWith(`${right}/`) ||
+    right.startsWith(`${left}/`)
+  );
+}
+
+/**
+ * The path's first part is `name`, compared without case, since on a
+ * case-insensitive file system `Flow.mjs` is `flow.mjs`; a longer name such
+ * as `flow.mjs.d` is another part.
+ */
+export function firstPathPartIs(path: string, name: string): boolean {
+  return path.split('/')[0].toLowerCase() === name.toLowerCase();
+}
+
+/**
+ * `flows.<server>.config.bundle.flows`, and `.<flow>` for one entry: where a
+ * listing issue is reported.
+ */
+export function servedFlowPath(server: string, flow?: string): string {
+  const at = `flows.${server}.config.bundle.flows`;
+  return flow === undefined ? at : `${at}.${flow}`;
 }
 
 // Own keys only: a key such as "toString" is no flow of the file.
@@ -39,11 +83,6 @@ function platformFact(name: string, platform: string | undefined): string {
   return platform
     ? `Flow "${name}" has platform "${platform}"`
     : `Flow "${name}" has no platform`;
-}
-
-/** One path names a folder that holds the other. */
-function overlaps(a: string, b: string): boolean {
-  return a.startsWith(`${b}/`) || b.startsWith(`${a}/`);
 }
 
 /**
@@ -61,11 +100,10 @@ export function getServedFlows(
   const listing = config?.bundle?.flows;
   if (!listing) return { served: [], issues: [] };
 
-  const at = `flows.${flowName}.config.bundle.flows`;
   const issues: ServedFlowIssue[] = [];
   if (config.platform !== 'server')
     issues.push({
-      path: at,
+      path: servedFlowPath(flowName),
       code: 'SERVED_FLOWS_NOT_SERVER',
       message: `${platformFact(flowName, config.platform)}: only a server flow serves web flows`,
     });
@@ -75,7 +113,7 @@ export function getServedFlows(
   );
   const placed: ServedFlow[] = [];
   for (const entry of served) {
-    const path = `${at}.${entry.flow}`;
+    const path = servedFlowPath(flowName, entry.flow);
 
     const target = ownFlow(json, entry.flow);
     const platform = target?.config?.platform;
@@ -102,19 +140,15 @@ export function getServedFlows(
       continue;
     }
 
-    // Case-folded: on a case-insensitive file system (macOS and Windows by
-    // default) `A/walker.js` replaces `a/walker.js`.
-    const folded = entry.path.toLowerCase();
-    const other = placed.find((earlier) => {
-      const earlierFolded = earlier.path.toLowerCase();
-      return earlierFolded === folded || overlaps(earlierFolded, folded);
-    });
+    const other = placed.find((earlier) =>
+      servedPathsOverlap(earlier.path, entry.path),
+    );
     if (other)
       issues.push({
         path,
         code: 'SERVED_PATH_CONFLICT',
         message:
-          other.path.toLowerCase() === folded
+          other.path.toLowerCase() === entry.path.toLowerCase()
             ? `"${entry.path}" is also the path of "${other.flow}"`
             : `"${entry.path}" overlaps "${other.path}", the path of "${other.flow}"`,
         value: entry.path,

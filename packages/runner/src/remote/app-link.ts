@@ -1,18 +1,27 @@
 /**
- * The one way `runneros remote` reaches the app. The supervisor uses only
- * what this returns: the origin, the deployment, the headers per request and
- * the reader of a release's secret set. Nothing else in `remote/` reads the
- * environment for the link, the deployment or the token.
- *
- * This body links by the runner's environment: the app URL, the deployment
- * id and a bearer token, the names `runneros start` reads, and a secret set
- * in plain JSON. The supervisor depends on the `AppLink` shape alone, so
- * another way to link changes this file only.
+ * The one way `runneros remote` reaches the app: its deployment's service
+ * credential in `WALKEROS_CREDENTIAL`, read once. The credential names the
+ * app's origin, the runner's deployment and the key the app seals the
+ * release's secret values to; its client signs or buys tokens for each
+ * request and hears every answer. The supervisor uses only what this
+ * returns, so the credential itself never reaches it, a child or a line.
  */
 
 import type { Authorize, Logger } from '@walkeros/core';
 import type { KnownValues } from '@walkeros/core/node';
-import { isRecord, jsonOf } from './json.js';
+import {
+  appAnswerOf,
+  assertDoorTarget,
+  createServiceAuth,
+  jwkThumbprint,
+  openSealedSecretSet,
+  SERVICE_CREDENTIAL_ENV,
+  SIGNATURE_TAGS,
+  signDoorRequest,
+  type ServiceAuthOptions,
+} from '@walkeros/server-core';
+import { readRunnerCredential } from '../credentials.js';
+import { messageOf } from './errors.js';
 import { ReleaseRefusal } from './release-document.js';
 
 export interface AppLink {
@@ -20,122 +29,121 @@ export interface AppLink {
   readonly origin: string;
   /** The runner's own deployment: the document check and the high-water mark use it. */
   readonly deploymentId: string;
+  /** The credential's encryption key's RFC 7638 thumbprint: the cache folder of its sealed sets. */
+  readonly keyId: string;
   /** The headers one request needs. */
   readonly authorize: Authorize;
-  /** A release's secret values for this runner, checked to name this deployment and this sequence; throws ReleaseRefusal 'secret-set'. */
+  /** How the app answered a request `authorize` gave headers for. */
+  answered(answer: { status: number; headers?: Headers }): void;
+  /** Opens a release's sealed set; throws ReleaseRefusal 'secret-set'. */
   readSecretSet(
     bytes: Uint8Array,
     expect: { deployment: string; sequence: number },
-  ): Record<string, string>;
+  ): Promise<Record<string, string>>;
+  /** Signs one ingest write of the child's steps under the door signer's rule; throws the fact. */
+  signStep(request: {
+    method: string;
+    url: string;
+    contentDigest: string;
+  }): Promise<{ 'Signature-Input': string; Signature: string }>;
   /** Stops what the link runs. */
   close(): void;
 }
 
-/** The app's deployment ids: `dep_` and its id alphabet. */
-const DEPLOYMENT_ID = /^dep_[a-z0-9]{1,64}$/;
-
-/** A token as one header value carries it: visible ASCII, no space. */
-const HEADER_TOKEN = /^[\x21-\x7E]+$/;
-
-/** Every name this link reads; each is removed from the environment. */
-const LINK_NAMES = [
-  'WALKEROS_APP_URL',
-  'WALKEROS_DEPLOYMENT_ID',
-  'WALKEROS_DEPLOY_TOKEN',
-  'WALKEROS_TOKEN',
-] as const;
-
-function originOf(url: string | undefined): string {
-  if (!url) throw new Error('WALKEROS_APP_URL is not set');
-  let parsed: URL;
-  try {
-    parsed = new URL(url);
-  } catch {
-    throw new Error('WALKEROS_APP_URL is not an http or https URL');
-  }
-  if (parsed.protocol !== 'http:' && parsed.protocol !== 'https:')
-    throw new Error('WALKEROS_APP_URL is not an http or https URL');
-  return parsed.origin;
-}
-
-function deploymentOf(id: string | undefined): string {
-  if (!id) throw new Error('WALKEROS_DEPLOYMENT_ID is not set');
-  if (!DEPLOYMENT_ID.test(id))
-    throw new Error(
-      'WALKEROS_DEPLOYMENT_ID is not a deployment id (dep_ and 1 to 64 lowercase letters or digits)',
-    );
-  return id;
-}
-
 /**
- * A secret set in plain JSON, `{ deployment, sequence, values }`, that names
- * this deployment and this sequence, with a string per value.
- */
-function readPlainSecretSet(
-  bytes: Uint8Array,
-  expect: { deployment: string; sequence: number },
-): Record<string, string> {
-  const refused = new ReleaseRefusal('secret-set', expect.sequence);
-  const set = jsonOf(bytes);
-  if (
-    !isRecord(set) ||
-    set.deployment !== expect.deployment ||
-    set.sequence !== expect.sequence ||
-    !isRecord(set.values)
-  )
-    throw refused;
-  const entries: Array<[string, string]> = [];
-  for (const [name, value] of Object.entries(set.values)) {
-    if (typeof value !== 'string') throw refused;
-    entries.push([name, value]);
-  }
-  // Built from the entries, so a name such as `__proto__` stays a value of
-  // its own instead of being dropped by an assignment.
-  return Object.fromEntries(entries);
-}
-
-/**
- * Read the link once, then remove what was read from `env`, so no child
- * inherits it. The names are removed before a missing or malformed one
- * throws, so a refused start leaves none behind either. The token joins
- * `knownValues` as it is read, so no line shows it.
+ * Read the credential once and remove it from `env`, so no child inherits
+ * it; its string joins `knownValues` first, so no line shows it. Only a
+ * deployment's credential links a runner: each other case throws its fact,
+ * naming the variable, never the value.
  */
 export function appLinkFromEnvironment(options: {
   env: NodeJS.ProcessEnv;
   logger: Logger.Instance;
   knownValues: KnownValues;
+  /** For tests: the client's fetch, clock and jitter. */
+  serviceAuth?: Pick<ServiceAuthOptions, 'fetch' | 'now' | 'random'>;
 }): AppLink {
-  const { env } = options;
-  const read = {
-    url: env.WALKEROS_APP_URL,
-    deployment: env.WALKEROS_DEPLOYMENT_ID,
-    // The order of `runneros start`: an empty deploy token counts as unset.
-    token: env.WALKEROS_DEPLOY_TOKEN || env.WALKEROS_TOKEN,
-    tokenName: env.WALKEROS_DEPLOY_TOKEN
-      ? 'WALKEROS_DEPLOY_TOKEN'
-      : 'WALKEROS_TOKEN',
-  };
-  for (const name of LINK_NAMES) delete env[name];
-
-  const origin = originOf(read.url);
-  const deploymentId = deploymentOf(read.deployment);
-  const { token } = read;
-  if (!token)
-    throw new Error('WALKEROS_DEPLOY_TOKEN and WALKEROS_TOKEN are not set');
-  // A header value HTTP cannot carry would fail every request as a transport
-  // failure: refused here, naming the variable, never the value.
-  if (!HEADER_TOKEN.test(token))
+  const credential = readRunnerCredential(options);
+  if (!credential) throw new Error(`${SERVICE_CREDENTIAL_ENV} is not set`);
+  const { kind, id } = credential.target;
+  if (kind !== 'deployment')
     throw new Error(
-      `${read.tokenName} holds a character an HTTP header cannot carry`,
+      `${SERVICE_CREDENTIAL_ENV} is not a deployment's credential (kind ${kind})`,
     );
-  options.knownValues.add([token]);
-  const headers = { Authorization: `Bearer ${token}` };
+  // The cache files sealed sets under the key's RFC 7638 thumbprint: computed
+  // here, never taken from the claim, so two keys never share a folder.
+  if (jwkThumbprint(credential.enc) !== credential.enc.kid)
+    throw new Error(
+      `${SERVICE_CREDENTIAL_ENV} is not a walkerOS credential (enc.kid)`,
+    );
+  const auth = createServiceAuth(credential, {
+    logger: options.logger,
+    ...options.serviceAuth,
+  });
+  const now = options.serviceAuth?.now ?? Date.now;
 
   return {
-    origin,
-    deploymentId,
-    authorize: async () => ({ ...headers }),
-    readSecretSet: readPlainSecretSet,
-    close() {},
+    origin: auth.origin,
+    deploymentId: id,
+    keyId: credential.enc.kid,
+    authorize: auth.authorize,
+    answered(answer) {
+      // The next check-in is the retry: what `answered` answers is not used.
+      auth.answered(answer);
+    },
+    async readSecretSet(bytes, expect) {
+      try {
+        return await openSealedSecretSet(bytes, {
+          key: credential.enc,
+          deployment: expect.deployment,
+          sequence: expect.sequence,
+        });
+      } catch (error) {
+        // The opener's fact quotes no part of the set, a value or a key.
+        throw new ReleaseRefusal(
+          'secret-set',
+          expect.sequence,
+          undefined,
+          messageOf(error),
+        );
+      }
+    },
+    async signStep({ method, url, contentDigest }) {
+      assertDoorTarget({ method, url }, credential);
+      return signDoorRequest({
+        method,
+        url,
+        contentDigest,
+        key: credential.sig,
+        tag: SIGNATURE_TAGS.ingest,
+        created: Math.floor(now() / 1000),
+      });
+    },
+    close() {
+      auth.close();
+    },
   };
+}
+
+/**
+ * Runs one channel call to the app and hands its answer to `answered`: the
+ * status on success, `appAnswerOf` (status and headers) on a ChannelError,
+ * and nothing for a failure with no answer of the app's own, such as
+ * storage's after the archive's redirect. The call's error is thrown on.
+ */
+export async function appCall<T>(
+  link: Pick<AppLink, 'answered'>,
+  call: () => Promise<T>,
+  statusOf: (value: T) => number,
+): Promise<T> {
+  let value: T;
+  try {
+    value = await call();
+  } catch (error) {
+    const answer = appAnswerOf(error);
+    if (answer) link.answered(answer);
+    throw error;
+  }
+  link.answered({ status: statusOf(value) });
+  return value;
 }

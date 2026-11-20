@@ -1,4 +1,4 @@
-import type { RemoteState } from '@walkeros/core';
+import type { CheckInAnswer, RemoteState } from '@walkeros/core';
 import type { CounterPayload } from '../../heartbeat.js';
 import type { RecentError, RecentLogEntry } from '../../log-ring.js';
 import { VERSION } from '../../version.js';
@@ -133,24 +133,69 @@ describe('addCounters', () => {
 });
 
 describe('readCheckInAnswer', () => {
-  it.each([
+  it.each<[string, string, CheckInAnswer]>([
     [
       'a release and an interval',
-      '{"release":17,"intervalMs":60000}',
-      { release: 17, intervalMs: 60_000 },
+      '{"release":17,"intervalMs":60000,"served":{}}',
+      { release: 17, intervalMs: 60_000, served: {} },
     ],
-    ['no release', '{"release":null}', { release: null }],
+    [
+      'a release with no web part',
+      '{"release":3,"served":{}}',
+      { release: 3, served: {} },
+    ],
+    [
+      'no release, an interval and one web part',
+      '{"release":null,"intervalMs":60000,"served":{"dep_w1":2}}',
+      { release: null, intervalMs: 60_000, served: { dep_w1: 2 } },
+    ],
     [
       'extra fields',
-      '{"release":3,"plan":"pro","next":{"at":1}}',
-      { release: 3 },
+      '{"release":3,"plan":"pro","next":{"at":1},"served":{}}',
+      { release: 3, served: {} },
     ],
-    ['a string release', '{"release":"17"}', undefined],
-    ['a negative release', '{"release":-1}', undefined],
-    ['a body that is not JSON', '<html>busy</html>', undefined],
   ])('reads %s', (_name, text, answer) => {
-    if (answer === undefined)
-      expect(() => readCheckInAnswer(encode(text))).toThrow();
-    else expect(readCheckInAnswer(encode(text))).toEqual(answer);
+    expect(readCheckInAnswer(encode(text))).toEqual(answer);
+  });
+
+  const NO_RELEASE = 'The check-in answer names no release sequence';
+  const NO_SERVED = 'The check-in answer names no served web parts';
+  const BAD_SERVED =
+    'The check-in answer names a served web part that is not a deployment id with a sequence';
+
+  it.each<[string, string, string]>([
+    ['a string release', '{"release":"17","served":{}}', NO_RELEASE],
+    ['a negative release', '{"release":-1,"served":{}}', NO_RELEASE],
+    ['no served', '{"release":3}', NO_SERVED],
+    ['a served list', '{"release":3,"served":[]}', NO_SERVED],
+    ['a served null', '{"release":3,"served":null}', NO_SERVED],
+    ['a served sequence 0', '{"release":3,"served":{"dep_w1":0}}', BAD_SERVED],
+    [
+      'a served sequence 1.5',
+      '{"release":3,"served":{"dep_w1":1.5}}',
+      BAD_SERVED,
+    ],
+    [
+      'a served sequence "2"',
+      '{"release":3,"served":{"dep_w1":"2"}}',
+      BAD_SERVED,
+    ],
+    ['a served key a b', '{"release":3,"served":{"a b":2}}', BAD_SERVED],
+    [
+      'a body that is not JSON',
+      '<html>busy</html>',
+      'The check-in answer is not a JSON object',
+    ],
+  ])('refuses %s with its fact', (_name, text, fact) => {
+    expect(() => readCheckInAnswer(encode(text))).toThrow(new Error(fact));
+  });
+
+  it('keeps a web part named __proto__ as an own entry, not a prototype', () => {
+    const { served } = readCheckInAnswer(
+      encode('{"release":3,"served":{"__proto__":2}}'),
+    );
+
+    expect(Object.getOwnPropertyNames(served)).toEqual(['__proto__']);
+    expect(Object.getPrototypeOf(served)).toBe(Object.prototype);
   });
 });

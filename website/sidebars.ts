@@ -595,6 +595,7 @@ const sidebars: SidebarsConfig = {
           items: [
             'apps/cli',
             'apps/runtime',
+            'apps/remote',
             {
               type: 'category',
               label: 'Core',

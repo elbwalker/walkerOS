@@ -159,13 +159,13 @@ function refusesProof(headers: Headers | undefined): boolean {
   return challenge !== null && /\berror="invalid_dpop_proof"/.test(challenge);
 }
 
-/** A challenge with no error code, or none at all (a channel failure carries no headers). */
+/** A challenge with no error code, or none at all. */
 function namesNoError(headers: Headers | undefined): boolean {
   const challenge = headers ? headers.get('www-authenticate') : null;
   return challenge === null || !/\berror=/.test(challenge);
 }
 
-/** A 401 whose challenge names the token invalid, or names nothing (a channel failure carries no headers). */
+/** A 401 whose challenge names the token invalid, or that carries no challenge. */
 function refusesToken(headers: Headers | undefined): boolean {
   const challenge = headers ? headers.get('www-authenticate') : null;
   return challenge === null || /\berror="invalid_token"/.test(challenge);
@@ -209,17 +209,21 @@ async function errorAnswer(
 }
 
 /**
- * The app's own answer a channel failure carries: a status of the request's
- * own hop, never the storage's answer after the archive's redirect.
+ * The app's own answer a channel failure carries, for `answered`: a status of
+ * the request's own hop, with its headers when it came as an HTTP answer,
+ * never the storage's answer after the archive's redirect.
  */
-export function appAnswerOf(error: unknown): { status: number } | undefined {
+export function appAnswerOf(
+  error: unknown,
+): { status: number; headers?: Headers } | undefined {
   if (
     !(error instanceof ChannelError) ||
     error.hop !== 'origin' ||
     error.status === undefined
   )
     return undefined;
-  return { status: error.status };
+  const { status, headers } = error;
+  return headers === undefined ? { status } : { status, headers };
 }
 
 /**

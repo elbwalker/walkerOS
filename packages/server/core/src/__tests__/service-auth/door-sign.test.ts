@@ -3,6 +3,7 @@ import type { DoorDecision } from '../../service-auth/door-check';
 import { createDoorCheck } from '../../service-auth/door-check';
 import type { DoorTag } from '../../service-auth/door-sign';
 import {
+  assertDoorTarget,
   createDoorAuthorize,
   signDoorRequest,
 } from '../../service-auth/door-sign';
@@ -56,6 +57,39 @@ function paramsOf(signatureInput: string) {
     nonce: /;nonce="([^"]*)"/.exec(signatureInput)?.[1],
   };
 }
+
+/** What the door rule says of a request: `signs`, or the fact it throws. */
+function ruleOf(method: string, url: string): string {
+  try {
+    assertDoorTarget({ method, url }, credential);
+    return 'signs';
+  } catch (error) {
+    return error instanceof Error ? error.message : 'a throw that is no Error';
+  }
+}
+
+describe('assertDoorTarget', () => {
+  const POST_ONLY = 'The door signer signs POST requests only';
+  const HTTPS_OR_LOCAL =
+    'The door signer signs https, or http to a loopback or private host, only';
+  const NOT_THE_APP =
+    'The door signer does not sign for the app or its auth server';
+
+  it.each<[string, string, string]>([
+    ['GET', 'https://ingest.example.com/x', POST_ONLY],
+    ['PUT', 'https://ingest.example.com/x', POST_ONLY],
+    ['POST', 'http://ingest.example.com', HTTPS_OR_LOCAL],
+    ['POST', 'https://ingest.example.com/x', 'signs'],
+    ['POST', 'http://127.0.0.1:9000', 'signs'],
+    ['POST', 'http://10.0.0.5', 'signs'],
+    ['POST', 'http://192.168.1.2', 'signs'],
+    ['POST', 'http://localhost:9000', 'signs'],
+    ['POST', 'https://app.walkeros.io/elsewhere', NOT_THE_APP],
+    ['POST', 'https://auth.walkeros.io/api/services/token', NOT_THE_APP],
+  ])('answers a %s to %s with: %s', (method, url, expected) => {
+    expect(ruleOf(method, url)).toBe(expected);
+  });
+});
 
 describe('createDoorAuthorize', () => {
   it('signs every call anew, with a fresh 16-byte nonce and created', async () => {

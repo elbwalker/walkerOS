@@ -18,6 +18,8 @@ export class ChannelError extends Error {
   readonly retryAfterMs?: number;
   /** Which hop failed: the request's own URL, or the one redirect it followed. */
   readonly hop?: 'origin' | 'redirect';
+  /** The answer's headers, when the failure is an HTTP answer at its hop. */
+  readonly headers?: Headers;
 
   constructor(
     message: string,
@@ -26,6 +28,7 @@ export class ChannelError extends Error {
       status?: number;
       retryAfterMs?: number;
       hop?: 'origin' | 'redirect';
+      headers?: Headers;
       cause?: unknown;
     } = {},
   ) {
@@ -38,6 +41,7 @@ export class ChannelError extends Error {
     this.status = options.status;
     this.retryAfterMs = options.retryAfterMs;
     this.hop = options.hop;
+    this.headers = options.headers;
   }
 }
 
@@ -304,18 +308,27 @@ function redirectTarget(response: Response, from: string): string {
   return target.href;
 }
 
-/** The failure an answer that is not the one asked for stands for. */
+/**
+ * The failure an answer that is not the one asked for stands for. It keeps
+ * the answer's headers for the credential client (a refused proof's
+ * challenge, the `Date` it reads the clock offset from); no message quotes one.
+ */
 function answerFailure(response: Response, hop: Hop): ChannelError {
-  const { status } = response;
-  const retryAfter = retryAfterMs(response.headers.get('retry-after'));
+  const { status, headers } = response;
+  const retryAfter = retryAfterMs(headers.get('retry-after'));
   discard(response);
   if (isRedirect(status))
-    return new ChannelError(`HTTP ${status}`, 'redirect', { status, hop });
+    return new ChannelError(`HTTP ${status}`, 'redirect', {
+      status,
+      hop,
+      headers,
+    });
   const failure = status === 401 || status === 403 ? 'refused' : 'transport';
   return new ChannelError(`HTTP ${status}`, failure, {
     status,
     retryAfterMs: retryAfter,
     hop,
+    headers,
   });
 }
 

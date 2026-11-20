@@ -104,7 +104,8 @@ function hasOtherMember(
   return Object.keys(value).some((name) => !members.includes(name));
 }
 
-function isId(value: unknown): value is string {
+/** One of the app's ids: ^[A-Za-z0-9_-]{1,255}$, as a credential's client id and target id are read. */
+export function isServiceId(value: unknown): value is string {
   return typeof value === 'string' && ID.test(value);
 }
 
@@ -188,13 +189,13 @@ function readCredential(value: unknown): ServiceCredential | Fault {
   if (value.v !== 1) return new Fault('v');
   if (!isServiceUrl(iss)) return new Fault('iss');
   if (!isServiceUrl(resource)) return new Fault('resource');
-  if (!isId(client_id)) return new Fault('client_id');
+  if (!isServiceId(client_id)) return new Fault('client_id');
   if (!isRecord(target)) return new Fault('target');
   if (hasOtherMember(target, TARGET_MEMBERS))
     return new Fault('an unknown member in target');
   const { kind, id } = target;
   if (!isTargetKind(kind)) return new Fault('target.kind');
-  if (!isId(id)) return new Fault('target.id');
+  if (!isServiceId(id)) return new Fault('target.id');
   const sig = readKey(value.sig, 'sig', 'ES256');
   if (sig instanceof Fault) return sig;
   const enc = readKey(value.enc, 'enc', 'ECDH-ES');

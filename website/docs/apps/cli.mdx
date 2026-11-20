@@ -2220,7 +2220,7 @@ jobs:
 
 ### Deploy from CI
 
-A CI job deploys a flow saved in the walkerOS app with `walkeros api` and an automation's credential in `WALKEROS_CREDENTIAL`. The deploy request answers a `deploymentId`; the job then reads the deployment until its status is `published` (a web flow), `active` (a server flow) or `failed`:
+A CI job deploys a flow saved in the walkerOS app with `walkeros api` and an automation's credential in `WALKEROS_CREDENTIAL`. The deploy request answers a `deploymentId` and a `release` (`versionId`, `versionNumber`, `state`, `confirmed`, `url`, `parts`). The job then reads that release until its `state` is `waiting`, `live`, `failed` or `replaced`:
 
 <CodeSnippet
   code={`- name: Deploy the flow
@@ -2230,19 +2230,27 @@ A CI job deploys a flow saved in the walkerOS app with `walkeros api` and an aut
     FLOW_ID: flow_a1b2c3d4
   run: |
     set -euo pipefail
-    DEPLOYMENT=$(walkeros api POST "/api/projects/{projectId}/flows/$FLOW_ID/deploy" \\
-      --header "Idempotency-Key: $GITHUB_RUN_ID-$GITHUB_RUN_ATTEMPT" | jq -r .deploymentId)
+    ANSWER=$(walkeros api POST "/api/projects/{projectId}/flows/$FLOW_ID/deploy" \\
+      --header "Idempotency-Key: $GITHUB_RUN_ID-$GITHUB_RUN_ATTEMPT")
+    DEPLOYMENT=$(echo "$ANSWER" | jq -r .deploymentId)
+    RELEASE=$(echo "$ANSWER" | jq -r '.release.versionId // empty')
+    QUERY=\${RELEASE:+?release=$RELEASE}
     for attempt in $(seq 1 72); do
-      STATUS=$(walkeros api GET "/api/projects/{projectId}/deployments/$DEPLOYMENT" | jq -r .status)
-      case "$STATUS" in
-        published|active) echo "Deployed: $STATUS"; exit 0 ;;
-        failed) walkeros api GET "/api/projects/{projectId}/deployments/$DEPLOYMENT" | jq .error; exit 1 ;;
+      ANSWER=$(walkeros api GET "/api/projects/{projectId}/deployments/$DEPLOYMENT$QUERY")
+      case "$(echo "$ANSWER" | jq -r '.release.state // empty')" in
+        waiting)
+          echo "A person confirms this release in the app: $(echo "$ANSWER" | jq -r .release.url)"
+          exit 0 ;;
+        live) echo "Live"; exit 0 ;;
+        failed|replaced) echo "$ANSWER" | jq .release; exit 1 ;;
       esac
       sleep 10
     done
-    echo "Deployment $DEPLOYMENT did not finish within 12 minutes"; exit 1`}
+    echo "Deployment $DEPLOYMENT did not settle within 12 minutes"; exit 1`}
   language="yaml"
 />
+
+`waiting` is a release that a person confirms in the app before it goes out. The job prints the link to confirm it and ends with exit 0. `live` is a release that is out already, a web release to the CDN or a release confirmed before the job read it. `failed` and `replaced` end with exit 1 and the release on the log. The `release` query is the deploy answer's `release.versionId`, so the job reads its own release even after a newer one replaced it. A deploy request sent again with the same `Idempotency-Key` answers `status: already_created` with no `release`, and the job then reads the deployment without the query.
 
 The `Idempotency-Key` stays the same within one workflow attempt, so a deploy request sent again in that attempt answers the same deployment instead of starting a second one; a re-run of the workflow is a new attempt and deploys again. A non-2xx answer makes `walkeros api` exit 1, which fails the step through `set -e`, with the server's error on the log. A flow with several named settings answers `400 AMBIGUOUS_CONFIG`; deploy one of them with `POST /api/projects/{projectId}/flows/{flowId}/settings/{settingsId}/deploy`.
 

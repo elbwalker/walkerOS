@@ -10,7 +10,7 @@ import {
 } from '../secret-injection.js';
 
 const DECLARED: DeclaredEnv = {
-  secrets: ['API_KEY', 'NODE_OPTIONS', 'WALKEROS_FLOW_RELEASE', 'https_proxy'],
+  secrets: ['API_KEY', 'NODE_OPTIONS', 'WALKEROS_CREDENTIAL', 'https_proxy'],
   env: ['HOST'],
 };
 
@@ -75,7 +75,7 @@ describe('planSecretInjection', () => {
       'refuses declared reserved names',
       {
         NODE_OPTIONS: '--require=/tmp/x.js',
-        WALKEROS_FLOW_RELEASE: '41',
+        WALKEROS_CREDENTIAL: 'wos_cred_delivered-value',
         https_proxy: 'http://proxy.example',
       },
       DECLARED,
@@ -85,7 +85,7 @@ describe('planSecretInjection', () => {
         notDeclared: [],
         refused: [
           { name: 'NODE_OPTIONS', reason: 'secret-reserved' },
-          { name: 'WALKEROS_FLOW_RELEASE', reason: 'secret-reserved' },
+          { name: 'WALKEROS_CREDENTIAL', reason: 'secret-reserved' },
           { name: 'https_proxy', reason: 'secret-reserved' },
         ],
       },

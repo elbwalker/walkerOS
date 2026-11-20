@@ -1,13 +1,16 @@
 import type { CounterSnapshot } from '../../heartbeat.js';
-import { readFileSync, rmSync, writeFileSync } from 'fs';
+import { existsSync, readFileSync, rmSync, writeFileSync } from 'fs';
 import { join } from 'path';
+import { testCredential } from '../helpers/credential.js';
 import {
   buildRelease,
   defaultFlowSource,
   type ReleaseFixture,
 } from '../helpers/release-fixture.js';
 import {
+  answer,
   createHarness,
+  fault,
   settle,
   until,
   type Harness,
@@ -22,7 +25,7 @@ afterEach(async () => {
 async function serveV1(): Promise<ReleaseFixture> {
   const v1 = await buildRelease({ sequence: 1 });
   await h.cacheRelease(v1);
-  expect(await h.supervisor.boot(1)).toBe('serving');
+  expect(await h.supervisor.boot(answer(1))).toBe('serving');
   return v1;
 }
 
@@ -44,7 +47,7 @@ describe('a release that does not get ready', () => {
     h.standIn.serve(await buildRelease({ sequence: 2 }), { current: true });
     h.behaviours.set(2, { start: 'wait' });
 
-    const swap = h.supervisor.consider(2);
+    const swap = h.supervisor.consider(answer(2));
     await until(() => h.clock.waiting().includes(60_000));
     h.clock.advance(60_000);
     await swap;
@@ -68,7 +71,7 @@ describe('a release that does not get ready', () => {
     h.standIn.serve(await buildRelease({ sequence: 2 }), { current: true });
     h.behaviours.set(2, { start: 'exit', exitCode: 1 });
 
-    await h.supervisor.consider(2);
+    await h.supervisor.consider(answer(2));
 
     expect(h.supervisor.state()).toEqual({
       running: 1,
@@ -87,7 +90,7 @@ describe('a release that does not get ready', () => {
     });
     h.behaviours.set(2, { start: 'exit' });
 
-    await h.supervisor.consider(2);
+    await h.supervisor.consider(answer(2));
 
     expect(h.children.map((child) => child.sequence)).toEqual([1, 2]);
     expect(h.supervisor.state().running).toBeNull();
@@ -110,7 +113,7 @@ describe('a release that does not get ready', () => {
       },
     });
 
-    await h.supervisor.consider(2);
+    await h.supervisor.consider(answer(2));
 
     expect(h.supervisor.state().last).toEqual({
       sequence: 2,
@@ -134,7 +137,7 @@ describe('a release that does not get ready', () => {
       await h.cacheRelease(v3);
       h.standIn.serve(v3, { current: true });
       h.behaviours.set(3, { start: 'exit' });
-      await h.supervisor.boot(3);
+      await h.supervisor.boot(answer(3));
     }
 
     it('skips a lower release whose walkerOS secrets the app no longer serves, and starts the one below', async () => {
@@ -159,6 +162,33 @@ describe('a release that does not get ready', () => {
   });
 });
 
+describe('a cold-boot fallback with walkerOS secrets in the cache', () => {
+  afterEach(() => {
+    expect(h.filesHoldingSecrets()).toEqual([]);
+  });
+
+  it("opens the lower release's set from the cache when the newest exits before it is ready", async () => {
+    h = await createHarness();
+    const v1 = await buildRelease({
+      sequence: 1,
+      secrets: { app: ['API_KEY'], server: [] },
+    });
+    await h.cacheRelease(v1);
+    await h.cacheSealedSet(v1);
+    await h.cacheRelease(await buildRelease({ sequence: 2 }));
+    h.behaviours.set(2, { start: 'exit' });
+    await h.standIn.stop();
+
+    expect(await h.supervisor.boot(undefined)).toBe('serving');
+
+    expect(h.children.map((child) => child.sequence)).toEqual([2, 1]);
+    expect(h.child(1).start.values).toEqual({ API_KEY: 'value-api_key-v1' });
+    expect(h.errors()).toEqual([
+      'Release v2 exited before it was ready (code 1), refused on this instance',
+    ]);
+  });
+});
+
 describe('an archive refused', () => {
   it.each([
     ['the app', false, 'Release v2 archive refused by the app (403)'],
@@ -172,7 +202,7 @@ describe('an archive refused', () => {
       h.standIn.redirectArchives(redirect);
       h.standIn.setAnswer(redirect ? 'storage' : 'archive', { status: 403 });
 
-      await h.supervisor.consider(2);
+      await h.supervisor.consider(answer(2));
 
       expect(h.child(1).signals).toEqual([]);
       expect(h.supervisor.state()).toEqual({ running: 1, last: null });
@@ -180,12 +210,69 @@ describe('an archive refused', () => {
       const asked = h.standIn.requests.filter(
         (request) => request.route === 'archive',
       ).length;
-      await h.supervisor.consider(2);
+      await h.supervisor.consider(answer(2));
       expect(
         h.standIn.requests.filter((request) => request.route === 'archive'),
       ).toHaveLength(asked + 1);
     },
   );
+
+  it.each([
+    [
+      'the app',
+      false,
+      [200, 403],
+      [
+        "The app's route refused this runner's credential (scope or role; HTTP 403)",
+      ],
+    ],
+    ['storage', true, [200], []],
+  ] as const)(
+    'hands the link the answers of the app alone when %s refuses',
+    async (_side, redirect, statuses, clientLines) => {
+      h = await createHarness();
+      await serveV1();
+      h.standIn.serve(await buildRelease({ sequence: 2 }), { current: true });
+      h.standIn.redirectArchives(redirect);
+      h.standIn.setAnswer(redirect ? 'storage' : 'archive', { status: 403 });
+      const before = h.answers.length;
+
+      await h.supervisor.consider(answer(2));
+
+      expect(h.answers.slice(before).map((answer) => answer.status)).toEqual(
+        statuses,
+      );
+      expect(
+        h.linkLines
+          .map((line) => line.message)
+          .filter((message) => message.startsWith('The app')),
+      ).toEqual(clientLines);
+    },
+  );
+});
+
+describe('a credential the app no longer holds', () => {
+  it("hands the link the app's 401 with its challenge, names the app and marks nothing", async () => {
+    h = await createHarness();
+    await serveV1();
+    h.standIn.serve(await buildRelease({ sequence: 2 }), { current: true });
+    // Paired again elsewhere: the app now holds another credential.
+    h.standIn.setCredential((await testCredential()).credential);
+    const before = h.answers.length;
+
+    await h.supervisor.consider(answer(2));
+
+    expect(
+      h.answers
+        .slice(before)
+        .map((answer) => [
+          answer.status,
+          answer.headers?.get('www-authenticate'),
+        ]),
+    ).toEqual([[401, 'DPoP algs="ES256"']]);
+    expect(h.errors()).toEqual(['Release document refused by the app (401)']);
+    expect(h.supervisor.state()).toEqual({ running: 1, last: null });
+  });
 });
 
 describe('a crash restart', () => {
@@ -228,8 +315,131 @@ describe('a crash restart', () => {
     expect(h.errors()).toEqual([
       'Release v1 exited (code 1), starting it again in 1 s',
       `Cached artifact sha256 ${v1.artifact.sha256.slice(0, 12)} failed its check and was removed`,
+      'Release v1 archive not fetched (404)',
       'Release v1 not started on this instance: extraction refused (artifact-sha256); starting it again in 2 s',
     ]);
+  });
+
+  it("downloads a crashed release's refused archive once, its later restarts backing off from the cache with the refusal", async () => {
+    h = await createHarness();
+    const v1 = await serveV1();
+    rmSync(join(h.cacheDir, 'artifacts', `${v1.artifact.sha256}.tgz`));
+    const archive = new Uint8Array(v1.archive);
+    archive[archive.length >> 1] ^= 0xff;
+    h.standIn.serve({ ...v1, archive });
+
+    h.child(1).exit(1);
+    await until(() => h.clock.waiting().includes(1000));
+    h.clock.advance(1000);
+    await until(() => h.clock.waiting().includes(2000));
+    h.clock.advance(2000);
+    await until(() => h.clock.waiting().includes(4000));
+
+    expect(h.standIn.requests.map((request) => request.route)).toEqual([
+      'archive',
+    ]);
+    expect(h.children).toHaveLength(1);
+    expect(h.errors()).toEqual([
+      'Release v1 exited (code 1), starting it again in 1 s',
+      'Release v1 not started on this instance: archive refused (artifact-sha256); starting it again in 2 s',
+      'Release v1 not started on this instance: archive refused (artifact-sha256); starting it again in 4 s',
+    ]);
+  });
+
+  it('fetches an archive gone from the cache once and restarts on it, with no back-off line', async () => {
+    h = await createHarness();
+    const v1 = await serveV1();
+    h.standIn.serve(v1);
+    rmSync(join(h.cacheDir, 'artifacts', `${v1.artifact.sha256}.tgz`));
+
+    h.child(1).exit(1);
+    await until(() => h.clock.waiting().includes(1000));
+    h.clock.advance(1000);
+    await until(
+      () => h.children.length === 2 && h.supervisor.state().running === 1,
+    );
+
+    expect(h.errors()).toEqual([
+      'Release v1 exited (code 1), starting it again in 1 s',
+    ]);
+    expect(h.standIn.requests.map((request) => request.route)).toEqual([
+      'archive',
+    ]);
+  });
+
+  it('backs off with the code when the cache faults while a crash restart fetches its gone archive, and restarts once the fault clears', async () => {
+    let armed = false;
+    h = await createHarness({
+      cache: (real) => ({
+        ...real,
+        async checkArtifact(artifact, kind) {
+          if (armed && kind === 'archive') throw fault('EIO');
+          return real.checkArtifact(artifact, kind);
+        },
+      }),
+    });
+    const v1 = await serveV1();
+    h.standIn.serve(v1);
+    rmSync(join(h.cacheDir, 'artifacts', `${v1.artifact.sha256}.tgz`));
+    armed = true;
+
+    h.child(1).exit(1);
+    await until(() => h.clock.waiting().includes(1000));
+    h.clock.advance(1000);
+    await until(() => h.clock.waiting().includes(2000));
+
+    expect(h.errors()).toEqual([
+      'Release v1 exited (code 1), starting it again in 1 s',
+      'Release v1 not started on this instance: EIO; starting it again in 2 s',
+    ]);
+    armed = false;
+    h.clock.advance(2000);
+    await until(
+      () => h.children.length === 2 && h.supervisor.state().running === 1,
+    );
+  });
+
+  it("removes the old release's folder after a swap only once its crash restart has stopped extracting it", async () => {
+    let held: { folder: string; open: Promise<void> } | undefined;
+    let entered = false;
+    let extracted = false;
+    h = await createHarness({
+      cache: (real) => ({
+        ...real,
+        async extractArtifact(artifact, into) {
+          if (!held || into !== held.folder)
+            return real.extractArtifact(artifact, into);
+          entered = true;
+          await held.open;
+          const flowFile = await real.extractArtifact(artifact, into);
+          extracted = true;
+          return flowFile;
+        },
+      }),
+    });
+    await serveV1();
+    let open: () => void = () => {};
+    held = {
+      folder: join(h.folder, 'releases', '1'),
+      open: new Promise<void>((resolve) => {
+        open = resolve;
+      }),
+    };
+    h.child(1).exit(1);
+    await until(() => h.clock.waiting().includes(1000));
+    h.clock.advance(1000);
+    await until(() => entered);
+    h.standIn.serve(await buildRelease({ sequence: 2 }), { current: true });
+
+    const swap = h.supervisor.consider(answer(2));
+    await until(() => h.supervisor.state().running === 2);
+    open();
+    await swap;
+    await until(() => extracted);
+    await settle();
+
+    expect(existsSync(join(h.folder, 'releases', '1'))).toBe(false);
+    expect(existsSync(join(h.folder, 'releases', '2', 'flow.mjs'))).toBe(true);
   });
 });
 
@@ -245,7 +455,7 @@ describe('the secretsSince floor', () => {
         rmSync(join(h.cacheDir, 'documents', `${v2.documentSha256}.json`));
     };
 
-    await h.supervisor.consider(2);
+    await h.supervisor.consider(answer(2));
 
     expect(h.children.map((child) => child.sequence)).toEqual([1, 2]);
     expect(h.errors()).toContain(
@@ -262,7 +472,7 @@ describe('a crash', () => {
     h.standIn.serve(await buildRelease({ sequence: 2 }), { current: true });
     h.behaviours.set(2, { start: 'exit' });
 
-    const swap = h.supervisor.consider(2);
+    const swap = h.supervisor.consider(answer(2));
     await until(
       () => h.children.length === 3 && h.clock.waiting().includes(60_000),
     );
@@ -282,7 +492,7 @@ describe('a crash', () => {
     h.standIn.serve(await buildRelease({ sequence: 2 }), { current: true });
     h.behaviours.set(2, { start: 'exit' });
 
-    await h.supervisor.consider(2);
+    await h.supervisor.consider(answer(2));
 
     expect(h.supervisor.state()).toEqual({
       running: null,
@@ -404,7 +614,7 @@ describe('stop', () => {
     await serveV1();
     h.standIn.serve(await buildRelease({ sequence: 2 }), { current: true });
 
-    const swap = h.supervisor.consider(2);
+    const swap = h.supervisor.consider(answer(2));
     await until(() => h.child(1).signals.length === 1);
     const stopped = h.supervisor.stop();
     h.child(1).exit(0);
@@ -475,7 +685,7 @@ describe('report', () => {
     (await h.supervisor.report()).taken();
     v1Events = 5;
     h.standIn.serve(await buildRelease({ sequence: 2 }), { current: true });
-    await h.supervisor.consider(2);
+    await h.supervisor.consider(answer(2));
 
     const afterSwap = await h.supervisor.report();
     afterSwap.taken();

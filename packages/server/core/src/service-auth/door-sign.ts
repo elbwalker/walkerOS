@@ -42,35 +42,47 @@ export async function signDoorRequest(input: {
 }
 
 /**
+ * The door signer's rule: POST only, to https or http on a loopback or
+ * private host, never to the credential's resource or issuer origin, so a
+ * step never obtains headers the app takes. No list of door origins is kept:
+ * a runner that starts while the auth server is down still signs its ingest
+ * writes. Throws the fact.
+ */
+export function assertDoorTarget(
+  request: { method: string; url: string },
+  credential: Pick<ServiceCredential, 'resource' | 'iss'>,
+): void {
+  if (request.method !== 'POST')
+    throw new Error('The door signer signs POST requests only');
+  const target = new URL(request.url);
+  const local = target.protocol === 'http:' && isLocalHost(target.hostname);
+  if (target.protocol !== 'https:' && !local)
+    throw new Error(
+      'The door signer signs https, or http to a loopback or private host, only',
+    );
+  if (
+    target.origin === new URL(credential.resource).origin ||
+    target.origin === new URL(credential.iss).origin
+  )
+    throw new Error(
+      'The door signer does not sign for the app or its auth server',
+    );
+}
+
+/**
  * The `Authorize` a runner hands its steps: every call signs anew (a fresh
  * nonce and `created`, so a retry is a new signature) with the credential's
- * signing key and the ingest tag, over the exact body bytes. It signs a POST
- * to any https origin, or to http on a local host, but never to the app or
- * its auth server, so a step never obtains headers the app takes. No list of
- * door origins is kept: a runner that starts while the auth server is down
- * still signs its ingest writes.
+ * signing key and the ingest tag, over the exact body bytes, for the requests
+ * `assertDoorTarget` takes.
  */
 export function createDoorAuthorize(
   credential: ServiceCredential,
   options: { now?: () => number } = {},
 ): Authorize {
   const now = options.now ?? Date.now;
-  const app = new URL(credential.resource).origin;
-  const issuer = new URL(credential.iss).origin;
 
   return async ({ method, url, body }) => {
-    if (method !== 'POST')
-      throw new Error('The door signer signs POST requests only');
-    const target = new URL(url);
-    const local = target.protocol === 'http:' && isLocalHost(target.hostname);
-    if (target.protocol !== 'https:' && !local)
-      throw new Error(
-        'The door signer signs https, or http to a loopback or private host, only',
-      );
-    if (target.origin === app || target.origin === issuer)
-      throw new Error(
-        'The door signer does not sign for the app or its auth server',
-      );
+    assertDoorTarget({ method, url }, credential);
     const digest = contentDigest(body ?? new Uint8Array(0));
     const signed = await signDoorRequest({
       method,

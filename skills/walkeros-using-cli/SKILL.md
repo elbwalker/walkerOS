@@ -554,6 +554,14 @@ installed; a local flow config is refused and one fed by URL or stdin fails at
 import. Never generate a container or command that hands `flow.json` to the
 runtime; bundle first. The full reference is "Deploying a server flow" below.
 
+`runneros remote --cache <dir>` is the other mode: a self-hosted runner that
+takes its server flow releases from the walkerOS app instead of a built
+artifact. It reads `WALKEROS_CREDENTIAL` only (the credential of a paired
+deployment), takes no `--env-file`, checks each release before it runs and swaps
+to it with no image rebuild. Options: `--no-heartbeat`, `--heap <MB>`,
+`-p, --port`, `--json`, `-v`, `-s`. See
+https://www.walkeros.io/docs/apps/remote.
+
 ### Setup Command
 
 ```bash
@@ -764,17 +772,14 @@ flag forbids it. Generate two steps (bundle, then start), never one.
 | `BUNDLE`                      | Artifact path or URL (image default `/app/flow/flow.mjs`)                                                                                                                                                                                                |
 | `PORT`                        | Port (default 8080)                                                                                                                                                                                                                                      |
 | `WALKEROS_CREDENTIAL`         | The runner's credential (`wos_cred_...`) from pairing on the Self-hosted tab; it names the app and the deployment. Read once at start and removed from the environment; with it the runner fetches its secrets and checks in, without it it calls no app |
-| `WALKEROS_FLOW_RELEASE`       | Release the loaded flow must carry, or the boot fails                                                                                                                                                                                                    |
-| `WALKEROS_FLOW_NAME`          | Flow name it must carry; checked only with `WALKEROS_FLOW_RELEASE`                                                                                                                                                                                       |
 | `WALKEROS_HEARTBEAT_INTERVAL` | Seconds (default 60, minimum 10)                                                                                                                                                                                                                         |
 | `WALKEROS_CACHE_DIR`          | Error cache dir (then `CACHE_DIR`, then XDG `~/.cache/walkeros`)                                                                                                                                                                                         |
 
 Secrets are fetched ONCE at boot with a credential (401/403 is fatal). There is
-no config polling and no hot-swap: a new flow version is a rebuild and a
-redeploy. `/health` is always 200; `/ready` is 200 once the collector is
-constructed and, with `WALKEROS_FLOW_RELEASE` set, the loaded flow matches it;
-503 otherwise. A mismatch exits with
-`Artifact mismatch: expected <name>@<release>, loaded <name>@<release>`.
+no config polling and no hot-swap in start mode: a new flow version is a rebuild
+and a redeploy. `runneros remote` takes releases from the app with no redeploy,
+see https://www.walkeros.io/docs/apps/remote. `/health` is always 200; `/ready`
+is 200 once the collector is constructed, 503 otherwise.
 
 ### Constraints
 

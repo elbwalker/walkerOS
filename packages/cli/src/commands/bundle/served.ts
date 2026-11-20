@@ -6,7 +6,12 @@
 
 import path from 'path';
 import fs from 'fs-extra';
-import type { Logger, ServedFlow } from '@walkeros/core';
+import {
+  firstPathPartIs,
+  servedFlowPath,
+  type Logger,
+  type ServedFlow,
+} from '@walkeros/core';
 import type { ValidationError } from '@walkeros/core/dev';
 import { loadBundleConfig, type LoadConfigResult } from '../../config/index.js';
 import { getErrorMessage } from '../../core/index.js';
@@ -63,22 +68,19 @@ export async function servedWriteErrors(
     : [];
   const sourceDir = buildOptions.configDir || process.cwd();
 
-  // Compared case-folded: on a case-insensitive file system `Server.mjs` is
-  // the server's `server.mjs`.
-  const fold = (name: string): string => name.toLowerCase();
   const errors: ValidationError[] = [];
   for (const { flow, path: servedPath } of served) {
-    const [first, ...rest] = servedPath.split('/');
+    const rest = servedPath.split('/').slice(1);
     const conflict = (message: string): void => {
       errors.push({
-        path: `flows.${flowName}.config.bundle.flows.${flow}`,
+        path: servedFlowPath(flowName, flow),
         code: 'SERVED_PATH_CONFLICT',
         message,
         value: servedPath,
       });
     };
 
-    if (serverFile !== undefined && fold(first) === fold(serverFile)) {
+    if (serverFile !== undefined && firstPathPartIs(servedPath, serverFile)) {
       conflict(
         `"${servedPath}" collides with "${serverFile}", the server bundle's file`,
       );
@@ -86,7 +88,7 @@ export async function servedWriteErrors(
     }
     // copyIncludes copies each include to <output folder>/<basename>.
     for (const include of includes) {
-      if (fold(path.basename(include)) !== fold(first)) continue;
+      if (!firstPathPartIs(servedPath, path.basename(include))) continue;
       if (
         rest.length === 0 ||
         (await fs.pathExists(path.resolve(sourceDir, include, ...rest)))

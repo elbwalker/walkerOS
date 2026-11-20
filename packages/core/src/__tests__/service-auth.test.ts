@@ -3,6 +3,7 @@ import {
   SERVICE_CREDENTIAL_PREFIX,
   decodeServiceCredential,
   encodeServiceCredential,
+  isServiceId,
 } from '../service-auth';
 
 // The members of RFC 9421 Appendix B.1.3's test-key-ecc-p256; the schema
@@ -103,5 +104,20 @@ describe('service credential', () => {
     expect(message).not.toContain(
       value.slice(SERVICE_CREDENTIAL_PREFIX.length),
     );
+  });
+});
+
+describe('isServiceId', () => {
+  it.each<[string, unknown, boolean]>([
+    ['a deployment id', 'dep_a1', true],
+    ['mixed case, a hyphen and an underscore', 'dep_AbC-1_x', true],
+    ['255 characters', 'a'.repeat(255), true],
+    ['the empty string', '', false],
+    ['256 characters', 'a'.repeat(256), false],
+    ['a dot', 'dep_a.b', false],
+    ['a space', 'dep a', false],
+    ['a number', 1, false],
+  ])('answers %s with %s', (_name, value, expected) => {
+    expect(isServiceId(value)).toBe(expected);
   });
 });

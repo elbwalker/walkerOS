@@ -1,8 +1,9 @@
 import { mkdtempSync, readFileSync, rmSync, writeFileSync } from 'fs';
 import os from 'os';
 import { join } from 'path';
-import { redactLine, type Collector } from '@walkeros/core';
+import { redactLine, type Authorize, type Collector } from '@walkeros/core';
 import { createKnownValues } from '@walkeros/core/node';
+import { contentDigest } from '@walkeros/server-core';
 import type { PipelineOptions, runPipeline } from '../../pipeline.js';
 import type { FlowHandle } from '../../runner.js';
 import { ErrorRing, LogRing } from '../../log-ring.js';
@@ -10,12 +11,16 @@ import { counterSnapshot } from '../../heartbeat.js';
 import { SecretRefusalError } from '../../secret-injection.js';
 import {
   createChildReporter,
+  createIpcAuthorize,
   runChild,
+  SIGN_TIMEOUT_MS,
   type ParentLink,
 } from '../../remote/child.js';
 import type {
   ChildMessage,
   ChildStart,
+  SignAnswer,
+  SignRequest,
   SupervisorMessage,
 } from '../../remote/ipc.js';
 
@@ -386,6 +391,236 @@ describe('runChild', () => {
     );
     expect(printed).toEqual([expect.stringContaining(line)]);
     expect(redactLine(line)).toBe(line);
+  });
+
+  it.each<[string, (id: number) => SupervisorMessage | 'disconnect', string]>([
+    [
+      'a signed answer resolves it with the headers',
+      (id) => ({ type: 'signed', id, headers: SIGNED_HEADERS }),
+      'resolved',
+    ],
+    [
+      'a sign refusal rejects it with the fact',
+      (id) => ({ type: 'sign-refused', id, message: 'refused here' }),
+      'refused here',
+    ],
+    [
+      'a disconnect rejects it',
+      () => 'disconnect',
+      'The supervisor disconnected',
+    ],
+  ])(
+    "hands the pipeline the supervisor's signer: %s",
+    async (_case, answer, outcome) => {
+      const { parent, deliver, disconnect, sent } = fakeParent();
+      const pipeline = pipelineDoing(serving());
+
+      void runChild(parent, depsWith(pipeline.fn));
+      deliver(start);
+      await settle();
+      const authorize = pipeline.calls[0]?.authorize;
+      if (!authorize) throw new Error('the pipeline got no signer');
+      const signing = authorize({ method: 'POST', url: INGEST_URL }).then(
+        () => 'resolved',
+        (error: unknown) =>
+          error instanceof Error ? error.message : String(error),
+      );
+      const request = sent.find(isSign);
+      if (!request) throw new Error('no sign was sent');
+      const message = answer(request.id);
+      if (message === 'disconnect') disconnect();
+      else deliver(message);
+
+      await expect(signing).resolves.toBe(outcome);
+    },
+  );
+});
+
+const INGEST_URL = 'https://ingest.example.test/events';
+const SIGNED_HEADERS = {
+  'Signature-Input':
+    'walkeros=("@method" "@target-uri" "content-digest");created=1795200000;keyid="k";nonce="n";tag="walkeros-ingest"',
+  Signature: 'walkeros=:c2lnbmF0dXJl:',
+};
+
+function isSign(message: ChildMessage): message is SignRequest {
+  return message.type === 'sign';
+}
+
+/** The child's signer with what it sent kept, and a way to answer it. */
+function ipcSigner(options?: { timeoutMs?: number }) {
+  const sent: SignRequest[] = [];
+  const signer = createIpcAuthorize((message) => {
+    sent.push(message);
+  }, options);
+  return { ...signer, sent };
+}
+
+/** How a call settled: its headers, or the message it rejected with. */
+function outcomeOf(
+  call: ReturnType<Authorize>,
+): Promise<Record<string, string> | string> {
+  return call.then(
+    (headers) => headers,
+    (error: unknown) =>
+      error instanceof Error ? error.message : String(error),
+  );
+}
+
+describe('createIpcAuthorize', () => {
+  afterEach(() => {
+    jest.useRealTimers();
+  });
+
+  it.each<[string, Uint8Array | undefined]>([
+    ['a body', new TextEncoder().encode('{"row":1}\n')],
+    ['the empty body when there is none', undefined],
+  ])(
+    'sends one sign with the digest of %s, never the body, and answers the signature headers with that Content-Digest',
+    async (_case, body) => {
+      const signer = ipcSigner();
+      const digest = contentDigest(body ?? new Uint8Array(0));
+
+      const call = signer.authorize({ method: 'POST', url: INGEST_URL, body });
+      signer.answer({ type: 'signed', id: 0, headers: SIGNED_HEADERS });
+
+      expect(signer.sent).toEqual([
+        {
+          type: 'sign',
+          id: 0,
+          method: 'POST',
+          url: INGEST_URL,
+          contentDigest: digest,
+        },
+      ]);
+      await expect(call).resolves.toEqual({
+        ...SIGNED_HEADERS,
+        'Content-Digest': digest,
+      });
+    },
+  );
+
+  it.each<[string, { method: string; url: string }, string]>([
+    [
+      'a URL of 2049 characters',
+      { method: 'POST', url: `${INGEST_URL}/`.padEnd(2049, 'u') },
+      'The request to sign is past the IPC bounds (url, 2048 characters)',
+    ],
+    [
+      'a method of 17 characters',
+      { method: 'M'.repeat(17), url: INGEST_URL },
+      'The request to sign is past the IPC bounds (method, 16 characters)',
+    ],
+  ])('refuses %s at once and sends nothing', async (_case, request, fact) => {
+    const signer = ipcSigner();
+
+    await expect(signer.authorize(request)).rejects.toThrow(fact);
+    expect(signer.sent).toEqual([]);
+  });
+
+  it('resolves each of two calls answered out of order with its own answer', async () => {
+    const signer = ipcSigner();
+    const first = signer.authorize({ method: 'POST', url: `${INGEST_URL}/1` });
+    const second = signer.authorize({ method: 'POST', url: `${INGEST_URL}/2` });
+    const [one, two] = signer.sent.map((message) => message.id);
+
+    signer.answer({
+      type: 'signed',
+      id: two,
+      headers: { ...SIGNED_HEADERS, Signature: 'walkeros=:dHdv:' },
+    });
+    signer.answer({
+      type: 'signed',
+      id: one,
+      headers: { ...SIGNED_HEADERS, Signature: 'walkeros=:b25l:' },
+    });
+
+    expect(one).not.toBe(two);
+    await expect(first).resolves.toMatchObject({
+      Signature: 'walkeros=:b25l:',
+    });
+    await expect(second).resolves.toMatchObject({
+      Signature: 'walkeros=:dHdv:',
+    });
+  });
+
+  it("rejects with a sign refusal's fact", async () => {
+    const signer = ipcSigner();
+    const call = signer.authorize({ method: 'POST', url: INGEST_URL });
+
+    signer.answer({
+      type: 'sign-refused',
+      id: 0,
+      message: 'The door signer signs POST requests only',
+    });
+
+    await expect(call).rejects.toThrow(
+      'The door signer signs POST requests only',
+    );
+  });
+
+  it('rejects a call the supervisor does not answer within 5 s', async () => {
+    jest.useFakeTimers();
+    const signer = ipcSigner();
+    const call = outcomeOf(
+      signer.authorize({ method: 'POST', url: INGEST_URL }),
+    );
+
+    await jest.advanceTimersByTimeAsync(SIGN_TIMEOUT_MS - 1);
+    const early = await Promise.race([call, Promise.resolve('pending')]);
+    await jest.advanceTimersByTimeAsync(1);
+
+    expect(early).toBe('pending');
+    const fact = 'The supervisor did not sign within 5 s';
+    await expect(call).resolves.toBe(fact);
+    expect(redactLine(fact)).toBe(fact);
+  });
+
+  it('rejects every waiting call with the fact it is closed with', async () => {
+    const signer = ipcSigner();
+    const calls = [1, 2, 3].map((n) =>
+      outcomeOf(
+        signer.authorize({ method: 'POST', url: `${INGEST_URL}/${n}` }),
+      ),
+    );
+
+    signer.close('The supervisor disconnected');
+
+    await expect(Promise.all(calls)).resolves.toEqual([
+      'The supervisor disconnected',
+      'The supervisor disconnected',
+      'The supervisor disconnected',
+    ]);
+  });
+
+  it('rejects a call made after close at once with the close fact, and sends nothing', async () => {
+    jest.useFakeTimers();
+    const signer = ipcSigner();
+    signer.close('The supervisor disconnected');
+
+    const call = outcomeOf(
+      signer.authorize({ method: 'POST', url: INGEST_URL }),
+    );
+    await jest.advanceTimersByTimeAsync(0);
+
+    expect(await Promise.race([call, Promise.resolve('pending')])).toBe(
+      'The supervisor disconnected',
+    );
+    expect(signer.sent).toEqual([]);
+  });
+
+  it('changes nothing on an answer for an id it did not send', async () => {
+    const signer = ipcSigner();
+    const call = signer.authorize({ method: 'POST', url: INGEST_URL });
+    const unknown: SignAnswer[] = [
+      { type: 'signed', id: 7, headers: SIGNED_HEADERS },
+      { type: 'sign-refused', id: 8, message: 'not this one' },
+    ];
+
+    for (const message of unknown) signer.answer(message);
+    signer.answer({ type: 'signed', id: 0, headers: SIGNED_HEADERS });
+
+    await expect(call).resolves.toMatchObject(SIGNED_HEADERS);
   });
 });
 

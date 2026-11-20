@@ -1,11 +1,24 @@
-import { mkdirSync, mkdtempSync, rmSync } from 'fs';
+import {
+  lstatSync,
+  mkdirSync,
+  mkdtempSync,
+  readFileSync,
+  readdirSync,
+  rmSync,
+} from 'fs';
 import { tmpdir } from 'os';
-import { join } from 'path';
-import type { Logger, ReleaseDocument } from '@walkeros/core';
+import { join, relative } from 'path';
+import type {
+  CheckInAnswer,
+  Logger,
+  PrivateEcJwk,
+  ReleaseDocument,
+  ServiceCredential,
+} from '@walkeros/core';
 import { createKnownValues, type KnownValues } from '@walkeros/core/node';
 import type { CounterSnapshot } from '../../heartbeat.js';
 import type { RecentError } from '../../log-ring.js';
-import { appLinkFromEnvironment } from '../../remote/app-link.js';
+import { appLinkFromEnvironment, type AppLink } from '../../remote/app-link.js';
 import { createReleaseCache, type ReleaseCache } from '../../remote/cache.js';
 import type {
   ChildMessage,
@@ -13,7 +26,7 @@ import type {
   ChildStart,
   SupervisorMessage,
 } from '../../remote/ipc.js';
-import { sha256Hex } from '../../remote/release-document.js';
+import { ReleaseRefusal, sha256Hex } from '../../remote/release-document.js';
 import {
   createSupervisor,
   type ChildHandle,
@@ -21,10 +34,9 @@ import {
   type SupervisorDeps,
   type SupervisorTimers,
 } from '../../remote/supervisor.js';
-import { FIXTURE_DEPLOYMENT, type ReleaseFixture } from './release-fixture.js';
+import type { ReleaseFixture } from './release-fixture.js';
+import { sealSecretSet, valuesSealed } from './seal.js';
 import { startStandInApp, type StandInApp } from './stand-in-app.js';
-
-export const TOKEN = 'stand-in-token-for-tests';
 
 export interface Line {
   level: 'error' | 'warn' | 'info' | 'debug';
@@ -202,9 +214,47 @@ export async function until(check: () => boolean): Promise<void> {
   }
 }
 
+/** An fs error as Node gives it: a message and its code. */
+export function fault(code: string): Error {
+  return Object.assign(new Error(`${code}: i/o error`), { code });
+}
+
+/** The refusal `work` rejects with; anything else it throws is thrown again. */
+export async function refusalOf(
+  work: Promise<unknown>,
+): Promise<ReleaseRefusal> {
+  try {
+    await work;
+  } catch (error) {
+    if (error instanceof ReleaseRefusal) return error;
+    throw error;
+  }
+  throw new Error('no refusal');
+}
+
 /** Lets pending I/O and immediates run. */
 export function settle(): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, 20));
+}
+
+/** Every regular file under `folder`, by its path. */
+function filesUnder(folder: string): string[] {
+  const found: string[] = [];
+  for (const name of readdirSync(folder)) {
+    const path = join(folder, name);
+    const entry = lstatSync(path);
+    if (entry.isDirectory()) found.push(...filesUnder(path));
+    else if (entry.isFile()) found.push(path);
+  }
+  return found;
+}
+
+/** A check-in answer as the app writes it: the release it names and each served web part's newest sequence. */
+export function answer(
+  release: number | null,
+  served: Record<string, number> = {},
+): CheckInAnswer {
+  return { release, served };
 }
 
 /** A fixture whose document is changed, its bytes and sha256 with it. */
@@ -225,6 +275,13 @@ export function withDocument(
 export interface Harness {
   supervisor: Supervisor;
   standIn: StandInApp;
+  /** The runner's credential, which the stand-in holds, and its string. */
+  credential: ServiceCredential;
+  raw: string;
+  /** Every answer the supervisor handed the link, in order. */
+  answers: Array<{ status: number; headers?: Headers }>;
+  /** The lines of the link's credential client, apart from the supervisor's. */
+  linkLines: Line[];
   cache: ReleaseCache;
   folder: string;
   cacheDir: string;
@@ -244,13 +301,36 @@ export interface Harness {
   heap: { mb: number; fails: boolean; onCall?: () => void };
   /** Called with each start message as the child is forked. */
   onSpawn?: (start: ChildStart) => void;
+  /** Signs in the link's place while set, as a slow or failing signer would. */
+  signStep?: AppLink['signStep'];
   /** Writes a release's objects into the cache, as another instance would. */
   cacheRelease(release: ReleaseFixture): Promise<void>;
+  /**
+   * Seals a release's walkerOS values to `key` (the runner's own by default)
+   * and caches them under its key id, as an instance holding that key would;
+   * answers the sealed bytes.
+   */
+  cacheSealedSet(
+    release: ReleaseFixture,
+    key?: PrivateEcJwk,
+  ): Promise<Uint8Array>;
+  /**
+   * The files under the cache folder, by their path inside it, that hold a
+   * secret: any value the test sealer sealed (the stand-in's sets and the
+   * test's own), any value the supervisor knows (the credential's string
+   * among them), or a private key of the credential.
+   */
+  filesHoldingSecrets(): string[];
   close(): Promise<void>;
 }
 
 export async function createHarness(
-  options: { env?: NodeJS.ProcessEnv; readyDeadlineMs?: number } = {},
+  options: {
+    env?: NodeJS.ProcessEnv;
+    readyDeadlineMs?: number;
+    /** The cache the supervisor sees, around the real one: a fault, a hold or a count. */
+    cache?: (real: ReleaseCache) => ReleaseCache;
+  } = {},
 ): Promise<Harness> {
   const root = mkdtempSync(join(tmpdir(), 'walkeros-supervisor-test-'));
   const folder = join(root, 'instance');
@@ -264,24 +344,36 @@ export async function createHarness(
   const heap: Harness['heap'] = { mb: 200, fails: false };
   const clock = manualTimers();
   const logger = recordingLogger(lines);
-  const standIn = await startStandInApp({ token: TOKEN });
+  const standIn = await startStandInApp();
+  const { credential, raw } = await standIn.pair();
   const cache = await createReleaseCache(cacheDir, logger);
   const knownValues = createKnownValues();
   const env: NodeJS.ProcessEnv = { ...options.env };
-  const link = appLinkFromEnvironment({
-    env: {
-      WALKEROS_APP_URL: standIn.origin,
-      WALKEROS_DEPLOYMENT_ID: FIXTURE_DEPLOYMENT,
-      WALKEROS_DEPLOY_TOKEN: TOKEN,
-    },
-    logger,
+  // The client's own lines (no token bought, requests signed, a refusal)
+  // are kept apart, so each test reads the supervisor's lines alone.
+  const linkLines: Line[] = [];
+  const linked = appLinkFromEnvironment({
+    env: { WALKEROS_CREDENTIAL: raw },
+    logger: recordingLogger(linkLines),
     knownValues,
   });
+  const answers: Harness['answers'] = [];
+  const hooks: {
+    onSpawn?: (start: ChildStart) => void;
+    signStep?: AppLink['signStep'];
+  } = {};
+  const link: AppLink = {
+    ...linked,
+    answered(answer) {
+      answers.push(answer);
+      linked.answered(answer);
+    },
+    signStep: (request) => (hooks.signStep ?? linked.signStep)(request),
+  };
 
-  const hooks: { onSpawn?: (start: ChildStart) => void } = {};
   const deps: SupervisorDeps = {
     link,
-    cache,
+    cache: options.cache ? options.cache(cache) : cache,
     folder,
     instanceId: '3f9a2b7c1d4e5f60',
     port: 8080,
@@ -335,8 +427,18 @@ export async function createHarness(
     set onSpawn(hook) {
       hooks.onSpawn = hook;
     },
+    get signStep() {
+      return hooks.signStep;
+    },
+    set signStep(hook) {
+      hooks.signStep = hook;
+    },
     supervisor,
     standIn,
+    credential,
+    raw,
+    answers,
+    linkLines,
     cache,
     folder,
     cacheDir,
@@ -365,9 +467,35 @@ export async function createHarness(
       async function* once(): AsyncGenerator<Uint8Array> {
         yield release.archive;
       }
-      await cache.storeArtifact(once(), release.artifact);
+      await cache.storeArtifact(once(), release.artifact, 'archive');
+    },
+    async cacheSealedSet(release, key = credential.enc) {
+      const { deployment, sequence } = release.document;
+      const sealed = await sealSecretSet({
+        key,
+        deployment,
+        sequence,
+        values: release.values,
+      });
+      await cache.storeSealedSet(key.kid, sequence, sealed);
+      return sealed;
+    },
+    filesHoldingSecrets() {
+      const secrets = [
+        ...valuesSealed(),
+        ...knownValues.values(),
+        credential.sig.d,
+        credential.enc.d,
+      ];
+      return filesUnder(cacheDir)
+        .filter((path) => {
+          const text = readFileSync(path).toString('latin1');
+          return secrets.some((secret) => text.includes(secret));
+        })
+        .map((path) => relative(cacheDir, path));
     },
     async close() {
+      linked.close();
       await standIn.stop();
       rmSync(root, { recursive: true, force: true });
     },

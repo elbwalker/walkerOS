@@ -17,8 +17,8 @@ const start: ChildStart = {
 const env: NodeJS.ProcessEnv = {
   PATH: '/usr/bin',
   SALT: 'server-salt-value',
-  WALKEROS_DEPLOY_TOKEN: 'runner-token-value',
-  WALKEROS_FLOW_RELEASE: 'dv_r16',
+  WALKEROS_CREDENTIAL: 'wos_cred_runner-credential-value',
+  WALKEROS_CACHE_DIR: '/tmp/walkeros-cache',
   WALKEROS_X: 'x',
 };
 
