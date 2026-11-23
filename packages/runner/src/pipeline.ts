@@ -1,45 +1,34 @@
 /**
  * Unified runtime pipeline for walkerOS flows
  *
- * Used by `runneros start`, locally and in containers. Creates the health
- * server, loads the prebuilt flow, and enables heartbeat and secrets when API
- * config is provided. The served artifact is immutable for the life of the
- * process: there is no config polling and no hot-swap.
- *
- * Env surface: `WALKEROS_OBSERVER_URL` + `WALKEROS_INGEST_TOKEN` +
- * `WALKEROS_DEPLOYMENT_ID` together gate telemetry and the trace poller;
- * `WALKEROS_OBSERVE_LEVEL` sets the baseline telemetry level (a `trace`
- * baseline also skips the trace poller). `WALKEROS_FLOW_RELEASE` (with
- * `WALKEROS_FLOW_NAME`) names the artifact the container must run; any other
- * artifact fails the boot.
+ * Used by `runneros start`, locally and in containers, and by the flow child
+ * of `runneros remote`. Creates the health server, loads the prebuilt flow,
+ * and enables heartbeat and secrets when API config is provided; the remote
+ * child hands in its secret values and its report instead. The served
+ * artifact is immutable for the life of the process: there is no config
+ * polling and no hot-swap.
  */
 
-import type {
-  Logger,
-  ObserverFn,
-  PreviewKey,
-  TelemetryLevel,
-} from '@walkeros/core';
 import {
-  createBatchedPoster,
-  createTelemetryObserver,
-  getTraceUntil,
-  resolveTelemetryOptions,
+  isObject,
+  SHUTDOWN_DEADLINE_MS,
+  type Authorize,
+  type DeclaredEnv,
+  type Destination,
+  type Logger,
 } from '@walkeros/core';
-import {
-  createHealthServer,
-  type HealthServer,
-  type PreviewGateConfig,
-} from './health-server.js';
+import type { KnownValues } from '@walkeros/core/node';
+import { createHealthServer, type HealthServer } from './health-server.js';
 import { loadFlow, type RuntimeConfig, type FlowHandle } from './runner.js';
-import {
-  createHeartbeat,
-  getInstanceId,
-  type HeartbeatHandle,
-} from './heartbeat.js';
-import { createTracePoller, type TracePollerHandle } from './trace-poller.js';
+import type { AppAuth } from './credentials.js';
+import { createHeartbeat, type HeartbeatHandle } from './heartbeat.js';
 import { fetchSecrets } from './secrets-fetcher.js';
 import { RunnerAuthError } from './runner-auth-error.js';
+import {
+  knownValuesOf,
+  planSecretInjection,
+  SecretRefusalError,
+} from './secret-injection.js';
 import type { ErrorRing, LogRing } from './log-ring.js';
 import type { FlowLogger } from './runtime-logging.js';
 import { VERSION } from './version.js';
@@ -67,20 +56,38 @@ export interface PipelineOptions {
   errorRing?: ErrorRing;
   logRing?: LogRing;
   /**
-   * Called with every fetched secret value once the secrets are injected, so
-   * the caller's loggers mask them from then on (their `knownSecrets` reads
-   * the list per line).
+   * The values the caller's loggers and the heartbeat mask. Every fetched
+   * secret value and the value of every name the flow declares join it before
+   * the flow starts, so each line read from then on masks them.
    */
-  onSecrets?: (values: string[]) => void;
+  knownValues: KnownValues;
+  /** This runner process's id, printed at start and carried by each beat. */
+  instanceId: string;
+  /** The app, when the runner holds a credential: the boot's secret read and the check-in. */
   api?: {
-    appUrl: string;
-    token: string;
-    projectId: string;
-    flowId: string;
-    deploymentId?: string;
+    app: AppAuth;
     heartbeatIntervalMs: number;
     cacheDir: string;
   };
+  /**
+   * The secret values a supervisor delivered, injected the way fetched ones
+   * are, in place of the app fetch. Read only without `api`.
+   */
+  delivered?: Readonly<Record<string, string>>;
+  /**
+   * Builds the report handle once the flow is ready, in place of the app
+   * heartbeat: it is started, flushed on each new distinct error and sent
+   * once more at the drain, as the heartbeat is.
+   */
+  report?: (collector: FlowHandle['collector']) => HeartbeatHandle;
+  /** Called once the flow is ready and the signal handlers are in place. */
+  onReady?: () => void;
+  /**
+   * The signer the flow's steps get as `context.authorize`: start mode's
+   * door signer for a deployment credential, or the one a remote child is
+   * handed. Without it no step can sign.
+   */
+  authorize?: Authorize;
 }
 
 /**
@@ -98,27 +105,13 @@ export async function runPipeline(options: PipelineOptions): Promise<void> {
   // once the health server exists; the listeners stay registered from here.
   const guards = registerProcessGuards(logger, undefined, options.format);
 
-  // The artifact this container was deployed to run. Read before the secrets
-  // are injected into the environment, so a secret cannot replace it.
-  const expected = readExpectedArtifact();
-
-  // Inject secrets before loading flow
-  if (api) {
-    await injectSecrets(api, logger, options.onSecrets);
-  }
-
   logger.info(`walkeros/flow v${VERSION}`);
-  logger.info(`Instance: ${getInstanceId()}`);
-
-  // Preview intake gate: resolved once from the boot env. A production
-  // container has no `WALKEROS_PREVIEW_*` vars, so this is undefined and the
-  // health server delegates exactly as before. A preview container is stamped
-  // with all five vars (by the app) and gets an armed gate. A partial or
-  // malformed set throws here, before the server binds (see resolvePreviewGate).
-  const previewGate = resolvePreviewGate();
+  // No colon after the label: `Instance: <hex>` reads as a key and a token
+  // value to the redactor, which would print the id as ***.
+  logger.info(`Instance ${options.instanceId}`);
 
   // Health server (always on)
-  const healthServer = await createHealthServer(port, logger, previewGate);
+  const healthServer = await createHealthServer(port, logger);
 
   // Wire the out-of-band degrade net into the already-registered guards. A
   // sustained loop of uncaught exceptions / unhandled rejections (a wedged
@@ -142,27 +135,12 @@ export async function runPipeline(options: PipelineOptions): Promise<void> {
   });
   guards.setOnOutOfBandError(() => outOfBandTracker.record());
 
-  // Telemetry observers: only wire when observer URL, ingest token, and
-  // deployment id are all present. Missing env (local dev, run --flow without
-  // API) results in a no-op telemetry path. The active trace window arrives
-  // via the trace-poller below (which writes the shared `traceUntil` holder);
-  // the per-emit supplier reads it, so trace flips on and off at runtime
-  // without a redeploy. WALKEROS_OBSERVE_LEVEL sets the baseline telemetry
-  // level for the process; `traceUntil` keeps higher priority in the
-  // resolver, so a standard (or off) baseline can still be elevated to trace.
-  const observeLevel = readObserveLevel(logger);
-  const telemetryObservers = buildTelemetryObservers(
-    api?.flowId ?? 'flow',
-    observeLevel,
-  );
-  // Gated on the observers: no telemetry wired means the bundle must see no
-  // observeLevel either (collector capture stays fully absent).
-  const telemetryObserveLevel = telemetryObservers
-    ? buildObserveLevelSupplier(api?.flowId ?? 'flow', observeLevel)
-    : undefined;
-
   // Load flow
-  const runtimeConfig: RuntimeConfig = { port, ...options.flowLogger };
+  const runtimeConfig: RuntimeConfig = {
+    port,
+    ...options.flowLogger,
+    ...(options.authorize ? { authorize: options.authorize } : {}),
+  };
   let handle: FlowHandle;
   try {
     handle = await loadFlow(
@@ -171,16 +149,21 @@ export async function runPipeline(options: PipelineOptions): Promise<void> {
       logger,
       loggerConfig,
       healthServer,
-      telemetryObservers,
-      telemetryObserveLevel,
+      (declared) =>
+        injectSecrets(
+          declared,
+          api,
+          options.delivered,
+          logger,
+          options.knownValues,
+        ),
     );
     const loaded = showIdentity(handle.collector);
     logger.info(`Flow: ${loaded.name} release ${loaded.release}`);
-    assertExpectedArtifact(expected, handle.collector);
   } catch (error) {
-    // Collector construction failed, or the artifact is not the one this
-    // container was deployed to run: keep /ready non-200 so an orchestrator
-    // (Scaleway) does not shift traffic to this revision before we exit.
+    // Collector construction failed or a delivered secret was refused: keep
+    // /ready non-200 so an orchestrator (Scaleway) does not shift traffic to
+    // this revision before we exit.
     healthServer.setFailed(
       error instanceof Error ? error.message : String(error),
     );
@@ -194,82 +177,59 @@ export async function runPipeline(options: PipelineOptions): Promise<void> {
   logger.info('Flow running');
   logger.info(`Port: ${port}`);
 
-  // API features (heartbeat)
+  // The report (remote child) or the app heartbeat, never both.
   let heartbeat: HeartbeatHandle | null = null;
-  let tracePoller: TracePollerHandle | null = null;
 
-  // Trace-poller: GET the observer's `/trace/:deploymentId` and feed the
-  // result into the shared `traceUntil` holder. Gated on the SAME env as the
-  // telemetry observers (observer base + ingest token + deployment id), NOT on
-  // `api`: a flow with `api` but no observer env (local dev) must not start a
-  // poller that errors every interval.
-  const observerBase = process.env.WALKEROS_OBSERVER_URL;
-  const ingestToken = process.env.WALKEROS_INGEST_TOKEN;
-  const deploymentId = process.env.WALKEROS_DEPLOYMENT_ID;
-  if (observerBase && ingestToken && deploymentId) {
-    if (observeLevel === 'trace') {
-      // The poller only exists to elevate the level via `traceUntil`. With a
-      // trace baseline there is nothing to elevate, so polling would burn a
-      // request every interval for no effect.
-      logger.info('Trace poller: skipped (observe level is trace)');
-    } else {
-      tracePoller = createTracePoller(
-        {
-          url: `${observerBase}/trace/${deploymentId}`,
-          token: ingestToken,
-          intervalMs: 15_000,
-        },
-        logger,
-      );
-      tracePoller.start();
-      logger.info('Trace poller: active (every 15s)');
-    }
-  }
-
-  if (shouldStartHeartbeat(api)) {
+  if (options.report) {
+    heartbeat = options.report(handle.collector);
+    heartbeat.start();
+  } else if (shouldStartHeartbeat(api)) {
     heartbeat = createHeartbeat(
       {
-        appUrl: api.appUrl,
-        token: api.token,
-        projectId: api.projectId,
-        flowId: api.flowId,
-        deploymentId: api.deploymentId,
+        app: api.app,
+        instanceId: options.instanceId,
         intervalMs: api.heartbeatIntervalMs,
         getCounters: () => handle.collector.status,
         getErrors: () => options.errorRing?.snapshot() ?? [],
         getLogs: () => options.logRing?.snapshot() ?? [],
+        knownValues: options.knownValues,
+        release: handle.collector.release,
       },
       logger,
     );
     heartbeat.start();
     logger.info(`Heartbeat: active (every ${api.heartbeatIntervalMs / 1000}s)`);
+  }
 
-    // Flush on first new distinct error: a fresh error key triggers a single
-    // debounced out-of-band beat so the failure surfaces well before the next
-    // steady interval (and before a crash can drop the in-memory ring). Repeats
-    // (isNew=false) do not flush, so a hot error loop does not spam POSTs. The
-    // ring↔heartbeat coupling lives here because this file owns both.
-    const beat = heartbeat;
+  // Flush on first new distinct error: a fresh error key triggers a single
+  // debounced out-of-band beat so the failure surfaces well before the next
+  // steady interval (and before a crash can drop the in-memory ring). Repeats
+  // (isNew=false) do not flush, so a hot error loop does not spam POSTs. The
+  // ring↔heartbeat coupling lives here because this file owns both.
+  const beat = heartbeat;
+  if (beat)
     options.errorRing?.setListener((_entry, isNew) => {
       if (isNew) beat.flushSoon();
     });
-  }
 
   // Single shutdown orchestrator, driven through the extracted, dependency-
   // injected `runShutdown` so the final-flush ordering is unit-testable.
   const shutdown = (signal: string) =>
     runShutdown(signal, {
-      tracePoller,
       heartbeat,
       collector: handle.collector,
       healthServer,
       logger,
       exit: (code) => process.exit(code),
-      forceTimeoutMs: 15000,
+      // A second past the collector's own deadline, under Cloud Run's 10 s.
+      forceTimeoutMs: SHUTDOWN_DEADLINE_MS + 1000,
     });
 
   process.on('SIGTERM', () => shutdown('SIGTERM'));
   process.on('SIGINT', () => shutdown('SIGINT'));
+
+  // Last, so a flow its caller sees ready always drains on SIGTERM.
+  options.onReady?.();
 
   // Keep process alive
   await new Promise(() => {});
@@ -281,7 +241,6 @@ export async function runPipeline(options: PipelineOptions): Promise<void> {
  * Mirrors the {@link ProcessGuardDeps} pattern.
  */
 export interface ShutdownDeps {
-  tracePoller: TracePollerHandle | null;
   heartbeat: HeartbeatHandle | null;
   collector: FlowHandle['collector'];
   healthServer: Pick<
@@ -294,29 +253,39 @@ export interface ShutdownDeps {
   forceTimeoutMs: number;
 }
 
+/** Collectors whose drain has begun: a later signal only says so. */
+const draining = new WeakSet<ShutdownDeps['collector']>();
+
 /**
  * Orchestrate a graceful shutdown. Order:
- *   /ready drops to 503 → tracePoller.stop → final heartbeat sendOnce (await,
- *   best-effort) → heartbeat.stop → collector shutdown → healthServer.close →
- *   exit(0).
+ *   /ready drops to 503 → final heartbeat started → heartbeat.stop →
+ *   collector drain → the final beat awaited until the drain deadline →
+ *   healthServer.close → exit 1 when the drain names a destination or
+ *   pushes its deadline cut, else 0.
  *
  * Readiness drops FIRST so a load balancer stops routing new traffic to a
  * container that is draining.
  *
- * The final `sendOnce` runs BEFORE collector drain so the last beat reflects the
- * pre-drain counters/DLQ depth (what the operator wants at the moment of
- * failure) and carries the final ring contents (incl. the error that may have
- * triggered the shutdown). It is wrapped so a slow/rejecting POST cannot block
- * shutdown; the whole sequence sits inside a force-timer so a hung step still
- * exits at `forceTimeoutMs` (`sendOnce` has its own ~10s AbortSignal, under the
- * 15s deadline).
+ * The final beat builds its body at once, so it carries the pre-drain
+ * counters and the last ring contents (incl. the error that may have
+ * triggered the shutdown); its POST runs beside the drain, so an
+ * unreachable app never takes the drain's time. The collector bounds its
+ * drain by `SHUTDOWN_DEADLINE_MS`; the force timer exits 1 at
+ * `forceTimeoutMs` if anything still hangs. A second signal during the
+ * drain writes one line, and the first decides the exit code.
  */
 export async function runShutdown(
   signal: string,
   deps: ShutdownDeps,
 ): Promise<void> {
+  if (draining.has(deps.collector)) {
+    deps.logger.info(`Received ${signal} during shutdown, the drain goes on`);
+    return;
+  }
+  draining.add(deps.collector);
   deps.logger.info(`Received ${signal}, shutting down...`);
   deps.healthServer.setReady(false);
+  const deadlineAt = Date.now() + SHUTDOWN_DEADLINE_MS;
 
   const forceTimer = setTimeout(() => {
     deps.logger.error('Shutdown timed out, forcing exit');
@@ -324,22 +293,30 @@ export async function runShutdown(
   }, deps.forceTimeoutMs);
 
   try {
-    if (deps.tracePoller) deps.tracePoller.stop();
+    // Best-effort: a slow or rejecting POST must not wedge shutdown.
+    const beat = deps.heartbeat?.sendOnce().catch(() => {});
+    deps.heartbeat?.stop();
 
-    // Final out-of-band beat: egress the last ring contents (incl. the failure
-    // that may have triggered this shutdown) before stopping/draining. Best-
-    // effort: a slow or rejecting POST must not wedge shutdown.
-    if (deps.heartbeat) await deps.heartbeat.sendOnce().catch(() => {});
-    if (deps.heartbeat) deps.heartbeat.stop();
-
-    if (deps.collector.command) {
-      await deps.collector.command('shutdown');
-    }
+    const result = deps.collector.command
+      ? await deps.collector.command('shutdown')
+      : undefined;
+    if (beat) await settledBy(beat, deadlineAt);
     await deps.healthServer.close();
+
+    const lost = lostDestinationsOf(result);
+    for (const { id, code, phase } of lost)
+      deps.logger.error(
+        phase === 'destroy'
+          ? `Shutdown: destination '${id}' did not close cleanly (${code}); events it buffered may be lost`
+          : `Shutdown lost events: destination '${id}' did not flush its batch (${code})`,
+      );
+    const cut = shutdownFailureOf(result);
+    if (cut)
+      deps.logger.error(`Shutdown lost events: ${cut.message} (${cut.code})`);
 
     deps.logger.info('Shutdown complete');
     clearTimeout(forceTimer);
-    deps.exit(0);
+    deps.exit(lost.length || cut ? 1 : 0);
   } catch (error) {
     clearTimeout(forceTimer);
     deps.logger.error(
@@ -347,6 +324,59 @@ export async function runShutdown(
     );
     deps.exit(1);
   }
+}
+
+/** Resolves when `work` settles or at `deadlineAt`, whichever comes first. */
+function settledBy(work: Promise<void>, deadlineAt: number): Promise<void> {
+  return new Promise<void>((resolve) => {
+    const timer = setTimeout(resolve, Math.max(0, deadlineAt - Date.now()));
+    void work.finally(() => {
+      clearTimeout(timer);
+      resolve();
+    });
+  });
+}
+
+/**
+ * The destinations a collector's shutdown answer names under `failed`, each
+ * with its reason code and the phase that failed; none unless `ok` is false.
+ * A failed destination is lost (`flush`) unless the answer marks it as one
+ * that did not close cleanly (`destroy`). A collector of an earlier version
+ * answers nothing.
+ */
+export function lostDestinationsOf(result: unknown): Array<{
+  id: string;
+  code: string;
+  phase: NonNullable<Destination.Ref['phase']>;
+}> {
+  if (!isObject(result) || result.ok !== false || !isObject(result.failed))
+    return [];
+  return Object.entries(result.failed).map(([id, ref]) => ({
+    id,
+    code:
+      isObject(ref) &&
+      isObject(ref.reason) &&
+      typeof ref.reason.code === 'string'
+        ? ref.reason.code
+        : 'unknown',
+    phase: isObject(ref) && ref.phase === 'destroy' ? 'destroy' : 'flush',
+  }));
+}
+
+/**
+ * The failure a collector's shutdown answer names beside its destinations:
+ * `ok` false with a `reason`, as for pushes still running at the drain
+ * deadline, whose events go with the process. None for any other answer.
+ */
+function shutdownFailureOf(
+  result: unknown,
+): { code: string; message: string } | undefined {
+  if (!isObject(result) || result.ok !== false || !isObject(result.reason))
+    return undefined;
+  const { code, message } = result.reason;
+  return typeof code === 'string' && typeof message === 'string'
+    ? { code, message }
+    : undefined;
 }
 
 /**
@@ -594,140 +624,8 @@ const OUT_OF_BAND_THRESHOLD = 5;
 /** Rolling window for the out-of-band degrade counter. */
 const OUT_OF_BAND_WINDOW_MS = 60_000;
 
-/**
- * The five env vars that stamp a preview container's identity. All five are set
- * together by the app when it boots a preview session container; a production
- * container has none of them. `iss` and `pb` are as load-bearing as the keyring:
- * without `pb`, `verifyActivation` returns `pb-mismatch` for every grant, and
- * `iss` is a required verifier input, so three vars could never work.
- */
-const PREVIEW_ENV_VARS = {
-  keyring: 'WALKEROS_PREVIEW_KEYRING',
-  ses: 'WALKEROS_PREVIEW_SES',
-  sb: 'WALKEROS_PREVIEW_SB',
-  iss: 'WALKEROS_PREVIEW_ISS',
-  pb: 'WALKEROS_PREVIEW_PB',
-} as const;
-
-type PreviewEnvKey = keyof typeof PREVIEW_ENV_VARS;
-const PREVIEW_ENV_KEYS: PreviewEnvKey[] = ['keyring', 'ses', 'sb', 'iss', 'pb'];
-
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === 'object' && value !== null && !Array.isArray(value);
-}
-
-/**
- * Parse `WALKEROS_PREVIEW_KEYRING` defensively, it is attacker-adjacent config.
- * A malformed value throws (fail closed at boot), never falls through to inert:
- * an inert-on-parse-error path would silently reopen the exact hole the gate
- * closes. Expects a non-empty JSON array of `{ kid: string, spki: string }`.
- */
-function parsePreviewKeyring(raw: string): PreviewKey[] {
-  let parsed: unknown;
-  try {
-    parsed = JSON.parse(raw);
-  } catch {
-    throw new Error(
-      `${PREVIEW_ENV_VARS.keyring} is not valid JSON (expected a JSON array of {kid, spki})`,
-    );
-  }
-  if (!Array.isArray(parsed) || parsed.length === 0) {
-    throw new Error(
-      `${PREVIEW_ENV_VARS.keyring} must be a non-empty JSON array of {kid, spki}`,
-    );
-  }
-  const keyring: PreviewKey[] = [];
-  for (const entry of parsed) {
-    if (
-      !isRecord(entry) ||
-      typeof entry.kid !== 'string' ||
-      entry.kid === '' ||
-      typeof entry.spki !== 'string' ||
-      entry.spki === ''
-    ) {
-      throw new Error(
-        `${PREVIEW_ENV_VARS.keyring} entries must each be {kid: string, spki: string}`,
-      );
-    }
-    keyring.push({ kid: entry.kid, spki: entry.spki });
-  }
-  return keyring;
-}
-
-/**
- * Resolve the preview intake gate from the boot env. Three outcomes, and the
- * partial case is deliberately loud:
- *
- * - NONE of the five vars present → returns undefined. The runner is a
- *   production container; intake stays byte-identical to today.
- * - ALL five present → returns a resolved {@link PreviewGateConfig}. The gate is
- *   armed and every delegated request must carry a session-bound grant.
- * - A PARTIAL set (or malformed keyring) → throws. A partial set is an app-side
- *   stamping bug; running unauthenticated would reopen the hole this gate
- *   closes, and 401-ing everything would be undiagnosable, so we fail the boot
- *   loudly naming the offending vars. An empty-string var counts as absent.
- *
- * Injectable `env` for testing; defaults to `process.env` at the boot site.
- */
-export function resolvePreviewGate(
-  env: NodeJS.ProcessEnv = process.env,
-): PreviewGateConfig | undefined {
-  const value = (key: PreviewEnvKey): string | undefined => {
-    const raw = env[PREVIEW_ENV_VARS[key]];
-    return raw === undefined || raw === '' ? undefined : raw;
-  };
-
-  const present = PREVIEW_ENV_KEYS.filter((key) => value(key) !== undefined);
-  if (present.length === 0) return undefined;
-
-  if (present.length < PREVIEW_ENV_KEYS.length) {
-    const missing = PREVIEW_ENV_KEYS.filter(
-      (key) => value(key) === undefined,
-    ).map((key) => PREVIEW_ENV_VARS[key]);
-    throw new Error(
-      `Incomplete preview gate env: missing ${missing.join(', ')}. All of ` +
-        `${PREVIEW_ENV_KEYS.map((key) => PREVIEW_ENV_VARS[key]).join(', ')} ` +
-        `must be set together (app-side container stamping bug).`,
-    );
-  }
-
-  const keyringRaw = value('keyring');
-  const iss = value('iss');
-  const pb = value('pb');
-  const ses = value('ses');
-  const sb = value('sb');
-  // present.length === PREVIEW_ENV_KEYS.length guarantees all are defined; the
-  // guard keeps the types honest without a cast.
-  if (!keyringRaw || !iss || !pb || !ses || !sb) return undefined;
-
-  return {
-    keyring: parsePreviewKeyring(keyringRaw),
-    iss,
-    pb,
-    expectSession: { ses, sb },
-  };
-}
-
 /** A flow's identity as its bundle baked it onto the collector. */
 type ArtifactIdentity = Pick<FlowHandle['collector'], 'name' | 'release'>;
-
-/** The artifact a container must run: a release, and a flow name when set. */
-interface ExpectedArtifact {
-  name?: string;
-  release: string;
-}
-
-/**
- * Read the artifact this container must run from `WALKEROS_FLOW_RELEASE` and
- * `WALKEROS_FLOW_NAME`. Only a release turns the check on: a container stamped
- * with the flow name alone is not checked. An empty value counts as unset.
- */
-function readExpectedArtifact(): ExpectedArtifact | undefined {
-  const release = process.env.WALKEROS_FLOW_RELEASE;
-  if (release === undefined || release === '') return undefined;
-  const name = process.env.WALKEROS_FLOW_NAME;
-  return name === undefined || name === '' ? { release } : { name, release };
-}
 
 /** Display values of an identity; an artifact may carry neither. */
 function showIdentity({ name, release }: ArtifactIdentity): {
@@ -738,33 +636,7 @@ function showIdentity({ name, release }: ArtifactIdentity): {
 }
 
 /**
- * Refuse a loaded artifact that is not the one this container was deployed to
- * run: another release, no release at all, or another flow name when a name is
- * expected. The throw keeps `/ready` from ever reporting it ready, and the
- * message names both sides.
- */
-function assertExpectedArtifact(
-  expected: ExpectedArtifact | undefined,
-  loaded: ArtifactIdentity,
-): void {
-  if (!expected) return;
-  const nameMatches =
-    expected.name === undefined || loaded.name === expected.name;
-  if (loaded.release === expected.release && nameMatches) return;
-
-  // Without an expected name any name is accepted, so the loaded one is shown.
-  const want = showIdentity({
-    name: expected.name ?? loaded.name,
-    release: expected.release,
-  });
-  const got = showIdentity(loaded);
-  throw new Error(
-    `Artifact mismatch: expected ${want.name}@${want.release}, loaded ${got.name}@${got.release}`,
-  );
-}
-
-/**
- * The heartbeat runs whenever the flow has API credentials, so the operator
+ * The heartbeat runs whenever the runner holds a credential, so the operator
  * keeps runner observability (counters, errors, logs).
  */
 export function shouldStartHeartbeat(
@@ -773,125 +645,54 @@ export function shouldStartHeartbeat(
   return Boolean(api);
 }
 
-const OBSERVE_LEVELS: ReadonlyArray<TelemetryLevel> = [
-  'off',
-  'standard',
-  'trace',
-];
-
 /**
- * Read and validate `WALKEROS_OBSERVE_LEVEL` once at boot. The value sets
- * the runtime's baseline telemetry level (`off` | `standard` | `trace`).
- * The resolver gives the runtime `traceUntil` window higher priority, so a
- * baseline of `off` or `standard` can still be elevated to trace at runtime.
- * Unset or empty means the resolver's standard default applies. Invalid
- * values are logged and ignored (treated as unset).
+ * Prepare the environment of a loaded artifact before its flow starts: fetch
+ * the app's secrets (when connected) or take the delivered ones, mask every
+ * such value and every value of a name the flow declares, refuse the boot on
+ * a reserved or already set name, then set what the plan allows. A fetch that
+ * fails for another reason than auth boots on without the app's secrets.
  */
-function readObserveLevel(logger: Logger.Instance): TelemetryLevel | undefined {
-  const raw = process.env.WALKEROS_OBSERVE_LEVEL;
-  if (raw === undefined || raw === '') return undefined;
-  const level = OBSERVE_LEVELS.find((candidate) => candidate === raw);
-  if (!level) {
-    logger.warn(
-      `Ignoring invalid WALKEROS_OBSERVE_LEVEL "${raw}" (expected off, standard, or trace)`,
-    );
-    return undefined;
-  }
-  return level;
-}
-
-/**
- * Build the telemetry observer array the runtime forwards through the
- * bundle context. Returns undefined when telemetry is disabled (missing env
- * vars). The bundle then sees no `context.observers` and skips the install
- * loop entirely.
- *
- * `WALKEROS_OBSERVER_URL` is the observer base; the ingest POST URL is built
- * as `${base}/ingest/${WALKEROS_DEPLOYMENT_ID}`. Transport-level env is
- * sampled once at boot: rebuilding the poster on every emit would discard
- * the batch buffer. Projection-level opts (`level`, `sample`,
- * `includeIn`/`Out`/`MappingKey`, plus the active `traceUntil`) are
- * re-resolved per emit through the supplier so the trace-poller's writes to
- * the shared holder reach the projection. The optional `observeLevel`
- * baseline (from `WALKEROS_OBSERVE_LEVEL`) feeds the resolver's `observe`
- * block; `traceUntil` keeps its higher priority.
- */
-function buildTelemetryObservers(
-  flowId: string,
-  observeLevel?: TelemetryLevel,
-): Array<ObserverFn> | undefined {
-  const base = process.env.WALKEROS_OBSERVER_URL;
-  const token = process.env.WALKEROS_INGEST_TOKEN;
-  const deploymentId = process.env.WALKEROS_DEPLOYMENT_ID;
-  if (!base || !token || !deploymentId) return undefined;
-
-  const url = `${base}/ingest/${deploymentId}`;
-  const emit = createBatchedPoster({ url, token });
-  const observe =
-    observeLevel !== undefined ? { level: observeLevel } : undefined;
-  return [
-    createTelemetryObserver(emit, () =>
-      resolveTelemetryOptions({ flowId, observe, traceUntil: getTraceUntil() }),
-    ),
-  ];
-}
-
-/**
- * Build the level supplier forwarded through the bundle context beside the
- * observers. The generated server entry installs it as
- * `collector.observeLevel`, which the collector's destination capture path
- * reads to gate call capture at trace. Resolves through the SAME
- * `resolveTelemetryOptions` inputs as the observer's per-emit supplier, so
- * the reported level follows the trace-poller's `traceUntil` window exactly:
- * null (off with no active trace) maps to 'off', otherwise the resolved
- * level ('standard' fallback matches the observer's own default).
- */
-function buildObserveLevelSupplier(
-  flowId: string,
-  observeLevel?: TelemetryLevel,
-): () => TelemetryLevel {
-  const observe =
-    observeLevel !== undefined ? { level: observeLevel } : undefined;
-  return () => {
-    const opts = resolveTelemetryOptions({
-      flowId,
-      observe,
-      traceUntil: getTraceUntil(),
-    });
-    // The ?? fallback satisfies the non-optional return type only; the
-    // resolver always sets level on a non-null result, so it never fires.
-    return opts ? (opts.level ?? 'standard') : 'off';
-  };
-}
-
 async function injectSecrets(
+  declared: DeclaredEnv | undefined,
+  api: PipelineOptions['api'],
+  delivered: PipelineOptions['delivered'],
+  logger: Logger.Instance,
+  knownValues: KnownValues,
+): Promise<void> {
+  const fetched = api ? await fetchAppSecrets(api, logger) : (delivered ?? {});
+  knownValues.add(knownValuesOf(fetched, declared, process.env));
+
+  const plan = planSecretInjection(fetched, declared, process.env);
+  if (plan.refused.length > 0) throw new SecretRefusalError(plan.refused);
+
+  const set = Object.entries(plan.set);
+  for (const [name, value] of set) process.env[name] = value;
+  if (set.length > 0)
+    logger.info(`Injected ${set.length} secret(s) into environment`);
+  if (plan.notDeclared.length > 0)
+    logger.info(
+      `Not injected, the flow does not read them: ${plan.notDeclared.join(', ')}`,
+    );
+}
+
+async function fetchAppSecrets(
   api: NonNullable<PipelineOptions['api']>,
   logger: Logger.Instance,
-  onSecrets?: (values: string[]) => void,
-): Promise<void> {
+): Promise<Record<string, string>> {
   try {
-    const secrets = await fetchSecrets({
-      appUrl: api.appUrl,
-      token: api.token,
-      projectId: api.projectId,
-      flowId: api.flowId,
-    });
-    const count = Object.keys(secrets).length;
-    if (count > 0) {
-      for (const [name, value] of Object.entries(secrets)) {
-        process.env[name] = value;
-      }
-      onSecrets?.(Object.values(secrets));
-      logger.info(`Injected ${count} secret(s) into environment`);
-    }
+    // Before the flow serves. Unless the bundle's read bought it already,
+    // this buys the credential's first token (its first connect), bounded by
+    // the token request's own time, and signs when the auth server is down.
+    return await fetchSecrets({ app: api.app });
   } catch (error) {
-    // Fatal: a 401/403 means the token is missing, revoked or not bound to
-    // this flow. fetchSecrets classifies it as RunnerAuthError before any
-    // generic status check, so this is the branch a revoked token reaches.
+    // Fatal: a 401/403 means the app refused the credential: replaced,
+    // revoked or ended, or not a runner's. fetchSecrets classifies it as
+    // RunnerAuthError before any generic status check.
     if (error instanceof RunnerAuthError) throw error;
     logger.warn(
       `Could not fetch secrets: ${error instanceof Error ? error.message : error}`,
     );
     logger.info('Continuing without secrets (flow may not require them)');
+    return {};
   }
 }

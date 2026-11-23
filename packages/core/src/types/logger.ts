@@ -106,6 +106,13 @@ export interface Instance {
    * @returns A new logger instance with the scope applied
    */
   scope: (name: string) => Instance;
+
+  /**
+   * Masks text that leaves the runtime outside a log line, such as an issue
+   * message the Observe reporter sends: `Config.mask`, or the text unchanged.
+   * The handler masks log lines.
+   */
+  mask: (text: string) => string;
 }
 
 /**
@@ -141,6 +148,13 @@ export interface Config {
 
   /** Custom handler for json() output. Default: console.log(JSON.stringify(data, null, 2)) */
   jsonHandler?: (data: unknown) => void;
+
+  /**
+   * Masks text that leaves outside a log line (`Instance.mask`); the handler
+   * masks log lines. A node host passes one that hides its known secret
+   * values (`createCLILoggerConfig`). Default: the text unchanged.
+   */
+  mask?: (text: string) => string;
 }
 
 /**
@@ -151,6 +165,8 @@ export interface InternalConfig {
   handler?: Handler;
   jsonHandler?: (data: unknown) => void;
   scope: string[];
+  /** Masks text that leaves outside a log line. */
+  mask: (text: string) => string;
 }
 
 /**

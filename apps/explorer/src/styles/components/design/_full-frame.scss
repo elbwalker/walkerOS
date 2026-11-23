@@ -1,0 +1,13 @@
+// Full-frame design components (TitleCover, Slide, EndCard): each fills the
+// scene or slide it is placed in and centres its content in both axes, with
+// the section spacing as the safe area.
+@layer components {
+  .elb-full-frame {
+    box-sizing: border-box;
+    display: grid;
+    place-content: center;
+    width: 100%;
+    height: 100%;
+    padding: var(--section-y);
+  }
+}

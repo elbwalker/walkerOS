@@ -7,8 +7,16 @@
 
 import path from 'path';
 import fs from 'fs-extra';
-import { getFlowSettings, getPlatform, type Flow } from '@walkeros/core';
-import { validateFlowStructure } from '@walkeros/core/dev';
+import {
+  getFlowSettings,
+  getPlatform,
+  type Flow,
+  type ServedFlow,
+} from '@walkeros/core';
+import {
+  validateFlowStructure,
+  type ValidationError,
+} from '@walkeros/core/dev';
 import type { BuildOptions } from '../types/bundle.js';
 import {
   validateFlowConfig,
@@ -22,6 +30,7 @@ import {
   assertWindowCollector,
   type WindowCollectorSource,
 } from './window-collector.js';
+import { servedFlowErrors } from './served-flows.js';
 
 /** Default folder for includes if it exists */
 const DEFAULT_INCLUDE_FOLDER = './shared';
@@ -45,6 +54,11 @@ export interface LoadConfigResult {
    * release. Never carries an env or secret value.
    */
   configDigest: string;
+  /**
+   * The web flows this flow serves (`config.bundle.flows`), in key order and
+   * checked; empty for a web flow or a flow that lists none.
+   */
+  served: ServedFlow[];
 }
 
 /**
@@ -84,6 +98,11 @@ function assertFlowStructure(config: Flow.Json, flowName: string): void {
     ...config,
     flows: { [flowName]: config.flows[flowName] },
   });
+  assertNoConfigErrors(errors);
+}
+
+/** Throws the preflight's error, one line per path, when there are errors. */
+export function assertNoConfigErrors(errors: readonly ValidationError[]): void {
   if (errors.length === 0) return;
   const lines = errors.map((error) => `  - ${error.path}: ${error.message}`);
   throw new Error(`Invalid configuration:\n${lines.join('\n')}`);
@@ -129,6 +148,10 @@ export function loadBundleConfig(
   const flowName = resolveFlow(config, options.flowName, availableFlows);
 
   assertFlowStructure(config, flowName);
+  // Validate's `flow:served`, on the whole file: a listed key must be a web
+  // flow of the same file.
+  const { served, errors: servedErrors } = servedFlowErrors(config, flowName);
+  assertNoConfigErrors(servedErrors);
   assertLiteralBuildEnv(config, flowName);
 
   // Resolve with deferred mode first (markers don't affect platform detection)
@@ -215,6 +238,7 @@ export function loadBundleConfig(
     isMultiFlow,
     availableFlows,
     configDigest: flowConfigDigest,
+    served,
   };
 }
 

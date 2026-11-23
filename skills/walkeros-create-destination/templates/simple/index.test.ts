@@ -1,5 +1,5 @@
 import { startFlow } from '@walkeros/collector';
-import { clone, createLogger, observeEnv } from '@walkeros/core';
+import { clone, createLogger, recordEnv } from '@walkeros/core';
 import type { Config } from './types';
 import { destinationVendor } from '.';
 import { examples } from './dev';
@@ -23,7 +23,7 @@ describe('vendor destination', () => {
     expect(init.in).toEqual(config);
 
     // Record the calls on the paths `examples.env.simulation` names
-    const observed = observeEnv(
+    const recorded = recordEnv(
       clone(examples.env.push),
       examples.env.simulation,
     );
@@ -31,12 +31,12 @@ describe('vendor destination', () => {
     await destinationVendor.init?.({
       id: 'vendor',
       config,
-      env: observed.env,
+      env: recorded.env,
       logger: createLogger(),
       collector,
     });
 
-    expect(observed.calls.map(({ fn, args }) => [fn, ...args])).toEqual(
+    expect(recorded.calls.map(({ fn, args }) => [fn, ...args])).toEqual(
       init.out,
     );
   });

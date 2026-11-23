@@ -9,21 +9,18 @@
 import { existsSync } from 'fs';
 import { homedir } from 'os';
 import path from 'path';
-import chalk from 'chalk';
-import { Level, createTimer, getErrorMessage } from '@walkeros/core';
+import { createTimer, getErrorMessage } from '@walkeros/core';
 import type { Logger } from '@walkeros/core';
 import {
   createCLILogger,
+  createKnownValues,
   scrubSecrets,
-  type CLILoggerColors,
 } from '@walkeros/core/node';
-import {
-  ensureSinkDir,
-  errorSinkPath,
-  seedErrorRingFromJsonl,
-} from './error-sink.js';
-import { ErrorRing, LogRing } from './log-ring.js';
-import { resolveAppUrl, resolveRunToken } from './credentials.js';
+import { errorSinkPath, wireErrorSink } from './error-sink.js';
+import { ErrorRing, LogRing, ringTap } from './log-ring.js';
+import { newInstanceId } from './heartbeat.js';
+import { removeInstanceFolder } from './instance-folder.js';
+import { connectApp, holdsCredential, type AppAuth } from './credentials.js';
 import {
   isPrebuiltArtifact,
   resolveBundle,
@@ -31,11 +28,8 @@ import {
 } from './resolve-bundle.js';
 import { validatePort } from './validators.js';
 import { runPipeline, type PipelineOptions } from './pipeline.js';
-import { createRuntimeLogging } from './runtime-logging.js';
+import { createRuntimeLogging, RUNTIME_COLORS } from './runtime-logging.js';
 import type { RunCommandOptions } from './types.js';
-
-/** The runtime's terminal colours, injected into the shared logger factory. */
-const RUNTIME_COLORS: CLILoggerColors = { error: chalk.red };
 
 /** Artifact looked up in the working directory when none is given. */
 const DEFAULT_ARTIFACT = 'flow.mjs';
@@ -115,36 +109,42 @@ export function assertPrebuiltArtifact(resolved: ResolvedBundle): void {
 }
 
 /**
+ * The rings the heartbeat reads. The heartbeat and the error sink run only
+ * with a credential, so without one no ring is built: it would only hold
+ * lines nobody reads.
+ */
+function heartbeatRings(connected: boolean): {
+  errorRing?: ErrorRing;
+  logRing?: LogRing;
+} {
+  if (!connected) return {};
+  const errorRing = new ErrorRing(20);
+  return { errorRing, logRing: new LogRing(100) };
+}
+
+/**
  * CLI command function for `runneros start`
  */
 export async function runCommand(options: RunCommandOptions): Promise<void> {
   const timer = createTimer();
   timer.start();
 
-  const errorRing = new ErrorRing(20);
-  const logRing = new LogRing(100);
+  const { errorRing, logRing } = heartbeatRings(holdsCredential(process.env));
 
-  const LEVEL_NAME = {
-    [Level.ERROR]: 'error',
-    [Level.WARN]: 'warn',
-    [Level.INFO]: 'info',
-    [Level.DEBUG]: 'debug',
-  } as const;
+  // The runner's and the collector's lines are tapped here: every ERROR, WARN
+  // and INFO line, and a DEBUG line only with --verbose or a flow at DEBUG.
+  // Without rings no line is masked here.
+  const onLine = ringTap({ errorRing, logRing });
 
-  // Every line, the runner's and the collector's, is tapped here. The text
-  // line feeds the rings (heartbeat, error sink); the tap also receives the
-  // line as a structured entry (scope, and the context with code, status,
-  // retryable, suppressed) for a forwarder.
-  const onLine = (level: Level, message: string) => {
-    if (level === Level.ERROR) errorRing.add(message);
-    logRing.add({ time: Date.now(), level: LEVEL_NAME[level], message });
-  };
+  // One id for this process: the start line prints it, each beat carries it.
+  const instanceId = newInstanceId();
 
-  // Secret values fetched at startup, filled by the pipeline once injected.
-  // Both loggers read the list per line, so every line after the fetch masks
-  // them, in the console and in both rings.
-  const knownSecrets: string[] = [];
-  const readKnownSecrets = (): readonly string[] => knownSecrets;
+  // The values the runner masks: the pipeline adds every fetched secret value
+  // and the value of every name the artifact declares, before the flow
+  // starts, with or without the app. Both loggers and the heartbeat read the
+  // set when they mask, so every line read from then on masks them, in the
+  // console and in both rings.
+  const knownValues = createKnownValues();
 
   // The runner's logger and the config the deployed bundle's collector builds
   // its own logger from (`context.logger`), so its destination errors flow
@@ -155,51 +155,34 @@ export async function runCommand(options: RunCommandOptions): Promise<void> {
   // despite failed deliveries). Both use the flow's own `logger.format` once
   // the bundle reports it.
   const logging = createRuntimeLogging(
-    { ...options, onLine, knownSecrets: readKnownSecrets },
+    { ...options, onLine, knownSecrets: knownValues },
     RUNTIME_COLORS,
   );
   const { logger } = logging;
 
   try {
+    // The credential names the app and the deployment. It is read first,
+    // before any flow code loads, and removed from the environment; an
+    // unreadable one throws its fact and exits 1 below. Without it the
+    // runner runs open source and calls no app.
+    const link = connectApp({
+      env: process.env,
+      logger: logger.scope('runner'),
+      knownValues,
+    });
+    const app = link?.app;
+
     // Resolve port
     const port = options.port ?? 8080;
     if (options.port !== undefined) {
       validatePort(options.port);
     }
 
-    // Resolve API config
-    const flowId = options.flowId;
-    const projectId = options.project;
-    const token = resolveRunToken();
-    const appUrl = resolveAppUrl();
-
     let apiConfig: PipelineOptions['api'] | undefined;
 
-    if (flowId) {
-      if (!token) {
-        logger.error(
-          `Remote flow requires authentication.\n\n` +
-            `  No token found. Set one in the environment:\n` +
-            `    $ export WALKEROS_DEPLOY_TOKEN=<your-token>`,
-        );
-        process.exit(1);
-      }
-      if (!projectId) {
-        logger.error(
-          `--flow-id requires --project or WALKEROS_PROJECT_ID.\n\n` +
-            `  Set the project:\n` +
-            `    $ runneros start --flow-id ${flowId} --project <your-project-id>\n` +
-            `    $ export WALKEROS_PROJECT_ID=<your-project-id>`,
-        );
-        process.exit(1);
-      }
-
+    if (app) {
       apiConfig = {
-        appUrl,
-        token,
-        projectId,
-        flowId,
-        deploymentId: options.deploymentId,
+        app,
         heartbeatIntervalMs: resolveHeartbeatIntervalMs(
           process.env.WALKEROS_HEARTBEAT_INTERVAL ??
             process.env.HEARTBEAT_INTERVAL,
@@ -212,19 +195,15 @@ export async function runCommand(options: RunCommandOptions): Promise<void> {
       };
 
       // Durable error persistence: only when a cacheDir exists (managed/API
-      // run). Wire the synchronous jsonl sink, then read-and-ship any errors
-      // that a prior boot persisted before a crash (seed into the ring so the
-      // first heartbeat re-reports them, then truncate). Best-effort throughout.
-      //
-      // Ensure the cache dir exists BEFORE wiring the sink, so the synchronous
-      // jsonl append can succeed on a fresh container.
-      ensureSinkDir(apiConfig.cacheDir);
-      const sinkPath = errorSinkPath(apiConfig.cacheDir);
-      seedErrorRingFromJsonl(errorRing, sinkPath);
-      errorRing.setSink(sinkPath);
+      // run). Read-and-ship any errors that a prior boot on this port
+      // persisted before a crash, then persist each new one. Best-effort
+      // throughout.
+      if (errorRing) {
+        wireErrorSink(errorRing, errorSinkPath(apiConfig.cacheDir, port));
+      }
     }
 
-    const bundlePath = await resolveBundlePath(options.config, logger);
+    const bundlePath = await resolveBundlePath(options.config, logger, app);
 
     // Run pipeline
     logger.info('Starting flow...');
@@ -236,11 +215,12 @@ export async function runCommand(options: RunCommandOptions): Promise<void> {
       flowLogger: logging.flowLogger,
       format: logging.format,
       api: apiConfig,
+      // A deployment's door signer, for its steps' ingest writes.
+      ...(link?.steps ? { authorize: link.steps } : {}),
       errorRing,
       logRing,
-      onSecrets: (values) => {
-        knownSecrets.push(...values);
-      },
+      knownValues,
+      instanceId,
     });
   } catch (error) {
     const duration = timer.getElapsed() / 1000;
@@ -252,7 +232,7 @@ export async function runCommand(options: RunCommandOptions): Promise<void> {
       // scrub here. A failed fetch message can carry a presigned URL.
       logger.json({
         success: false,
-        error: scrubSecrets(errorMessage, { known: knownSecrets }),
+        error: scrubSecrets(errorMessage, { known: knownValues.compiled() }),
         duration,
       });
     } else {
@@ -272,10 +252,16 @@ export async function runCommand(options: RunCommandOptions): Promise<void> {
 async function resolveBundlePath(
   artifactInput: string | undefined,
   logger: ReturnType<typeof createCLILogger>,
+  app: AppAuth | undefined,
 ): Promise<string> {
   const resolved: ResolvedBundle = artifactInput
-    ? await resolveBundle(artifactInput)
+    ? await resolveBundle(artifactInput, { app })
     : { path: DEFAULT_ARTIFACT, source: 'file' };
+
+  // A bundle in a private folder (outside the image) is this process's
+  // alone: the folder goes when the process exits, a refusal included.
+  const { folder } = resolved;
+  if (folder) process.on('exit', () => removeInstanceFolder(folder));
 
   assertPrebuiltArtifact(resolved);
 

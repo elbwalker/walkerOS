@@ -10,6 +10,7 @@ export function createMockLogger(): Logger.Instance {
       throw msg instanceof Error ? msg : new Error(String(msg));
     }),
     json: jest.fn(),
+    mask: jest.fn((text: string) => text),
     scope: jest.fn(() => logger),
   };
   return logger;

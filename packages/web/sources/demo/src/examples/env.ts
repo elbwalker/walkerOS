@@ -20,6 +20,7 @@ const noopLogger: Logger.Instance = {
     throw typeof message === 'string' ? new Error(message) : message;
   },
   json: noopFn,
+  mask: (text: string) => text,
   scope: () => noopLogger,
 };
 

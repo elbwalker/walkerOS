@@ -1,0 +1,1000 @@
+{
+  "description": "Shared by walkerOS packages/cli and the app (src/lib/bundles/__tests__/fixtures): the same trees, verdicts and digests in both repos. Regenerate both copies together.",
+  "options": {
+    "registry": "https://registry.npmjs.org/",
+    "declared": {
+      "@walkeros/collector": "4.9.0"
+    },
+    "exempt": ["@walkeros/"]
+  },
+  "cases": [
+    {
+      "id": "valid tree with a nested copy and an alias",
+      "verdict": "valid",
+      "digest": "1a02aff1ec3d59c128b622afb42b53e994aeb182f3df348b01cba77df3c74418",
+      "tree": {
+        "version": 1,
+        "registry": "https://registry.npmjs.org/",
+        "before": "2026-11-03T12:00:00.000Z",
+        "packages": {
+          "node_modules/@walkeros/collector": {
+            "name": "@walkeros/collector",
+            "version": "4.9.0",
+            "resolved": "https://registry.npmjs.org/@walkeros/collector/-/collector-4.9.0.tgz",
+            "integrity": "sha512-X+/kH1HAXLMqs3MqnTYuxywONgp/Sw6nCcMV4Va7r6xOdgIFk76vY2WrBqoE7Gg89iKQMb51a/xbkzGHzCklRQ==",
+            "dependencies": {
+              "@walkeros/core": "4.9.0",
+              "arrify": "^2.0.0",
+              "string-width-cjs": "npm:string-width@^4.2.0"
+            }
+          },
+          "node_modules/@walkeros/core": {
+            "name": "@walkeros/core",
+            "version": "4.9.0",
+            "resolved": "https://registry.npmjs.org/@walkeros/core/-/core-4.9.0.tgz",
+            "integrity": "sha512-ygCGIXJCHKpaqpgRLPz7x/bXF+cBtr1c+rip2OImo1GKNuE4xRqIM9Wd+pcoTIRtr3NiEjy6dpt3UBwlHak7Og=="
+          },
+          "node_modules/arrify": {
+            "name": "arrify",
+            "version": "3.0.0",
+            "resolved": "https://registry.npmjs.org/arrify/-/arrify-3.0.0.tgz",
+            "integrity": "sha512-MQdmN1wNg6UKUFovDAjXUh832csuO265sw7F8/WIEHiqqft8o1mkK+eBHpP+T68CABYU4WPuic8Qi8MXZ4seFA=="
+          },
+          "node_modules/@walkeros/collector/node_modules/arrify": {
+            "name": "arrify",
+            "version": "2.0.1",
+            "resolved": "https://registry.npmjs.org/arrify/-/arrify-2.0.1.tgz",
+            "integrity": "sha512-K+0acmWhgRChdY+f7fSgnqA3EQnRqUJuqmtBtBs7xeRZOlaq4xCB8EXKypz5bm7+FSzkKpHLZs0dU4RhJUzI2Q=="
+          },
+          "node_modules/string-width-cjs": {
+            "name": "string-width",
+            "version": "4.2.3",
+            "resolved": "https://registry.npmjs.org/string-width/-/string-width-4.2.3.tgz",
+            "integrity": "sha512-47EHUZ3FbpAJUZy1yzAQ8+cYr30ud/qYXBkZtu18LryniCKpraxPT1YWxqArsh9mZDjHOGoOKmyNXYosjyG0gA=="
+          }
+        }
+      }
+    },
+    {
+      "id": "valid tree resolved without a cutoff",
+      "verdict": "valid",
+      "digest": "9f51aeda42d30cac441a11b062b13664495f2525f4b65db04de186cd6e0d9a0d",
+      "tree": {
+        "version": 1,
+        "registry": "https://registry.npmjs.org/",
+        "before": null,
+        "packages": {
+          "node_modules/@walkeros/collector": {
+            "name": "@walkeros/collector",
+            "version": "4.9.0",
+            "resolved": "https://registry.npmjs.org/@walkeros/collector/-/collector-4.9.0.tgz",
+            "integrity": "sha512-X+/kH1HAXLMqs3MqnTYuxywONgp/Sw6nCcMV4Va7r6xOdgIFk76vY2WrBqoE7Gg89iKQMb51a/xbkzGHzCklRQ==",
+            "dependencies": {
+              "@walkeros/core": "4.9.0",
+              "arrify": "^2.0.0",
+              "string-width-cjs": "npm:string-width@^4.2.0"
+            }
+          },
+          "node_modules/@walkeros/core": {
+            "name": "@walkeros/core",
+            "version": "4.9.0",
+            "resolved": "https://registry.npmjs.org/@walkeros/core/-/core-4.9.0.tgz",
+            "integrity": "sha512-ygCGIXJCHKpaqpgRLPz7x/bXF+cBtr1c+rip2OImo1GKNuE4xRqIM9Wd+pcoTIRtr3NiEjy6dpt3UBwlHak7Og=="
+          },
+          "node_modules/arrify": {
+            "name": "arrify",
+            "version": "3.0.0",
+            "resolved": "https://registry.npmjs.org/arrify/-/arrify-3.0.0.tgz",
+            "integrity": "sha512-MQdmN1wNg6UKUFovDAjXUh832csuO265sw7F8/WIEHiqqft8o1mkK+eBHpP+T68CABYU4WPuic8Qi8MXZ4seFA=="
+          },
+          "node_modules/@walkeros/collector/node_modules/arrify": {
+            "name": "arrify",
+            "version": "2.0.1",
+            "resolved": "https://registry.npmjs.org/arrify/-/arrify-2.0.1.tgz",
+            "integrity": "sha512-K+0acmWhgRChdY+f7fSgnqA3EQnRqUJuqmtBtBs7xeRZOlaq4xCB8EXKypz5bm7+FSzkKpHLZs0dU4RhJUzI2Q=="
+          },
+          "node_modules/string-width-cjs": {
+            "name": "string-width",
+            "version": "4.2.3",
+            "resolved": "https://registry.npmjs.org/string-width/-/string-width-4.2.3.tgz",
+            "integrity": "sha512-47EHUZ3FbpAJUZy1yzAQ8+cYr30ud/qYXBkZtu18LryniCKpraxPT1YWxqArsh9mZDjHOGoOKmyNXYosjyG0gA=="
+          }
+        }
+      }
+    },
+    {
+      "id": "tree naming another registry",
+      "verdict": "invalid",
+      "tree": {
+        "version": 1,
+        "registry": "https://registry.evil.test/",
+        "before": "2026-11-03T12:00:00.000Z",
+        "packages": {
+          "node_modules/@walkeros/collector": {
+            "name": "@walkeros/collector",
+            "version": "4.9.0",
+            "resolved": "https://registry.npmjs.org/@walkeros/collector/-/collector-4.9.0.tgz",
+            "integrity": "sha512-X+/kH1HAXLMqs3MqnTYuxywONgp/Sw6nCcMV4Va7r6xOdgIFk76vY2WrBqoE7Gg89iKQMb51a/xbkzGHzCklRQ==",
+            "dependencies": {
+              "@walkeros/core": "4.9.0",
+              "arrify": "^2.0.0",
+              "string-width-cjs": "npm:string-width@^4.2.0"
+            }
+          },
+          "node_modules/@walkeros/core": {
+            "name": "@walkeros/core",
+            "version": "4.9.0",
+            "resolved": "https://registry.npmjs.org/@walkeros/core/-/core-4.9.0.tgz",
+            "integrity": "sha512-ygCGIXJCHKpaqpgRLPz7x/bXF+cBtr1c+rip2OImo1GKNuE4xRqIM9Wd+pcoTIRtr3NiEjy6dpt3UBwlHak7Og=="
+          },
+          "node_modules/arrify": {
+            "name": "arrify",
+            "version": "3.0.0",
+            "resolved": "https://registry.npmjs.org/arrify/-/arrify-3.0.0.tgz",
+            "integrity": "sha512-MQdmN1wNg6UKUFovDAjXUh832csuO265sw7F8/WIEHiqqft8o1mkK+eBHpP+T68CABYU4WPuic8Qi8MXZ4seFA=="
+          },
+          "node_modules/@walkeros/collector/node_modules/arrify": {
+            "name": "arrify",
+            "version": "2.0.1",
+            "resolved": "https://registry.npmjs.org/arrify/-/arrify-2.0.1.tgz",
+            "integrity": "sha512-K+0acmWhgRChdY+f7fSgnqA3EQnRqUJuqmtBtBs7xeRZOlaq4xCB8EXKypz5bm7+FSzkKpHLZs0dU4RhJUzI2Q=="
+          },
+          "node_modules/string-width-cjs": {
+            "name": "string-width",
+            "version": "4.2.3",
+            "resolved": "https://registry.npmjs.org/string-width/-/string-width-4.2.3.tgz",
+            "integrity": "sha512-47EHUZ3FbpAJUZy1yzAQ8+cYr30ud/qYXBkZtu18LryniCKpraxPT1YWxqArsh9mZDjHOGoOKmyNXYosjyG0gA=="
+          }
+        }
+      }
+    },
+    {
+      "id": "resolved on another host",
+      "verdict": "invalid",
+      "tree": {
+        "version": 1,
+        "registry": "https://registry.npmjs.org/",
+        "before": "2026-11-03T12:00:00.000Z",
+        "packages": {
+          "node_modules/@walkeros/collector": {
+            "name": "@walkeros/collector",
+            "version": "4.9.0",
+            "resolved": "https://registry.npmjs.org/@walkeros/collector/-/collector-4.9.0.tgz",
+            "integrity": "sha512-X+/kH1HAXLMqs3MqnTYuxywONgp/Sw6nCcMV4Va7r6xOdgIFk76vY2WrBqoE7Gg89iKQMb51a/xbkzGHzCklRQ==",
+            "dependencies": {
+              "@walkeros/core": "4.9.0",
+              "arrify": "^2.0.0",
+              "string-width-cjs": "npm:string-width@^4.2.0"
+            }
+          },
+          "node_modules/@walkeros/core": {
+            "name": "@walkeros/core",
+            "version": "4.9.0",
+            "resolved": "https://registry.npmjs.org/@walkeros/core/-/core-4.9.0.tgz",
+            "integrity": "sha512-ygCGIXJCHKpaqpgRLPz7x/bXF+cBtr1c+rip2OImo1GKNuE4xRqIM9Wd+pcoTIRtr3NiEjy6dpt3UBwlHak7Og=="
+          },
+          "node_modules/arrify": {
+            "name": "arrify",
+            "version": "3.0.0",
+            "resolved": "https://registry.evil.test/arrify/-/arrify-3.0.0.tgz",
+            "integrity": "sha512-MQdmN1wNg6UKUFovDAjXUh832csuO265sw7F8/WIEHiqqft8o1mkK+eBHpP+T68CABYU4WPuic8Qi8MXZ4seFA=="
+          },
+          "node_modules/@walkeros/collector/node_modules/arrify": {
+            "name": "arrify",
+            "version": "2.0.1",
+            "resolved": "https://registry.npmjs.org/arrify/-/arrify-2.0.1.tgz",
+            "integrity": "sha512-K+0acmWhgRChdY+f7fSgnqA3EQnRqUJuqmtBtBs7xeRZOlaq4xCB8EXKypz5bm7+FSzkKpHLZs0dU4RhJUzI2Q=="
+          },
+          "node_modules/string-width-cjs": {
+            "name": "string-width",
+            "version": "4.2.3",
+            "resolved": "https://registry.npmjs.org/string-width/-/string-width-4.2.3.tgz",
+            "integrity": "sha512-47EHUZ3FbpAJUZy1yzAQ8+cYr30ud/qYXBkZtu18LryniCKpraxPT1YWxqArsh9mZDjHOGoOKmyNXYosjyG0gA=="
+          }
+        }
+      }
+    },
+    {
+      "id": "resolved to another package tarball",
+      "verdict": "invalid",
+      "tree": {
+        "version": 1,
+        "registry": "https://registry.npmjs.org/",
+        "before": "2026-11-03T12:00:00.000Z",
+        "packages": {
+          "node_modules/@walkeros/collector": {
+            "name": "@walkeros/collector",
+            "version": "4.9.0",
+            "resolved": "https://registry.npmjs.org/@walkeros/collector/-/collector-4.9.0.tgz",
+            "integrity": "sha512-X+/kH1HAXLMqs3MqnTYuxywONgp/Sw6nCcMV4Va7r6xOdgIFk76vY2WrBqoE7Gg89iKQMb51a/xbkzGHzCklRQ==",
+            "dependencies": {
+              "@walkeros/core": "4.9.0",
+              "arrify": "^2.0.0",
+              "string-width-cjs": "npm:string-width@^4.2.0"
+            }
+          },
+          "node_modules/@walkeros/core": {
+            "name": "@walkeros/core",
+            "version": "4.9.0",
+            "resolved": "https://registry.npmjs.org/@walkeros/core/-/core-4.9.0.tgz",
+            "integrity": "sha512-ygCGIXJCHKpaqpgRLPz7x/bXF+cBtr1c+rip2OImo1GKNuE4xRqIM9Wd+pcoTIRtr3NiEjy6dpt3UBwlHak7Og=="
+          },
+          "node_modules/arrify": {
+            "name": "arrify",
+            "version": "3.0.0",
+            "resolved": "https://registry.npmjs.org/arrify/-/arrify-2.0.1.tgz",
+            "integrity": "sha512-MQdmN1wNg6UKUFovDAjXUh832csuO265sw7F8/WIEHiqqft8o1mkK+eBHpP+T68CABYU4WPuic8Qi8MXZ4seFA=="
+          },
+          "node_modules/@walkeros/collector/node_modules/arrify": {
+            "name": "arrify",
+            "version": "2.0.1",
+            "resolved": "https://registry.npmjs.org/arrify/-/arrify-2.0.1.tgz",
+            "integrity": "sha512-K+0acmWhgRChdY+f7fSgnqA3EQnRqUJuqmtBtBs7xeRZOlaq4xCB8EXKypz5bm7+FSzkKpHLZs0dU4RhJUzI2Q=="
+          },
+          "node_modules/string-width-cjs": {
+            "name": "string-width",
+            "version": "4.2.3",
+            "resolved": "https://registry.npmjs.org/string-width/-/string-width-4.2.3.tgz",
+            "integrity": "sha512-47EHUZ3FbpAJUZy1yzAQ8+cYr30ud/qYXBkZtu18LryniCKpraxPT1YWxqArsh9mZDjHOGoOKmyNXYosjyG0gA=="
+          }
+        }
+      }
+    },
+    {
+      "id": "resolved with a query string",
+      "verdict": "invalid",
+      "tree": {
+        "version": 1,
+        "registry": "https://registry.npmjs.org/",
+        "before": "2026-11-03T12:00:00.000Z",
+        "packages": {
+          "node_modules/@walkeros/collector": {
+            "name": "@walkeros/collector",
+            "version": "4.9.0",
+            "resolved": "https://registry.npmjs.org/@walkeros/collector/-/collector-4.9.0.tgz",
+            "integrity": "sha512-X+/kH1HAXLMqs3MqnTYuxywONgp/Sw6nCcMV4Va7r6xOdgIFk76vY2WrBqoE7Gg89iKQMb51a/xbkzGHzCklRQ==",
+            "dependencies": {
+              "@walkeros/core": "4.9.0",
+              "arrify": "^2.0.0",
+              "string-width-cjs": "npm:string-width@^4.2.0"
+            }
+          },
+          "node_modules/@walkeros/core": {
+            "name": "@walkeros/core",
+            "version": "4.9.0",
+            "resolved": "https://registry.npmjs.org/@walkeros/core/-/core-4.9.0.tgz",
+            "integrity": "sha512-ygCGIXJCHKpaqpgRLPz7x/bXF+cBtr1c+rip2OImo1GKNuE4xRqIM9Wd+pcoTIRtr3NiEjy6dpt3UBwlHak7Og=="
+          },
+          "node_modules/arrify": {
+            "name": "arrify",
+            "version": "3.0.0",
+            "resolved": "https://registry.npmjs.org/arrify/-/arrify-3.0.0.tgz?x=1",
+            "integrity": "sha512-MQdmN1wNg6UKUFovDAjXUh832csuO265sw7F8/WIEHiqqft8o1mkK+eBHpP+T68CABYU4WPuic8Qi8MXZ4seFA=="
+          },
+          "node_modules/@walkeros/collector/node_modules/arrify": {
+            "name": "arrify",
+            "version": "2.0.1",
+            "resolved": "https://registry.npmjs.org/arrify/-/arrify-2.0.1.tgz",
+            "integrity": "sha512-K+0acmWhgRChdY+f7fSgnqA3EQnRqUJuqmtBtBs7xeRZOlaq4xCB8EXKypz5bm7+FSzkKpHLZs0dU4RhJUzI2Q=="
+          },
+          "node_modules/string-width-cjs": {
+            "name": "string-width",
+            "version": "4.2.3",
+            "resolved": "https://registry.npmjs.org/string-width/-/string-width-4.2.3.tgz",
+            "integrity": "sha512-47EHUZ3FbpAJUZy1yzAQ8+cYr30ud/qYXBkZtu18LryniCKpraxPT1YWxqArsh9mZDjHOGoOKmyNXYosjyG0gA=="
+          }
+        }
+      }
+    },
+    {
+      "id": "resolved over http",
+      "verdict": "invalid",
+      "tree": {
+        "version": 1,
+        "registry": "https://registry.npmjs.org/",
+        "before": "2026-11-03T12:00:00.000Z",
+        "packages": {
+          "node_modules/@walkeros/collector": {
+            "name": "@walkeros/collector",
+            "version": "4.9.0",
+            "resolved": "https://registry.npmjs.org/@walkeros/collector/-/collector-4.9.0.tgz",
+            "integrity": "sha512-X+/kH1HAXLMqs3MqnTYuxywONgp/Sw6nCcMV4Va7r6xOdgIFk76vY2WrBqoE7Gg89iKQMb51a/xbkzGHzCklRQ==",
+            "dependencies": {
+              "@walkeros/core": "4.9.0",
+              "arrify": "^2.0.0",
+              "string-width-cjs": "npm:string-width@^4.2.0"
+            }
+          },
+          "node_modules/@walkeros/core": {
+            "name": "@walkeros/core",
+            "version": "4.9.0",
+            "resolved": "https://registry.npmjs.org/@walkeros/core/-/core-4.9.0.tgz",
+            "integrity": "sha512-ygCGIXJCHKpaqpgRLPz7x/bXF+cBtr1c+rip2OImo1GKNuE4xRqIM9Wd+pcoTIRtr3NiEjy6dpt3UBwlHak7Og=="
+          },
+          "node_modules/arrify": {
+            "name": "arrify",
+            "version": "3.0.0",
+            "resolved": "http://registry.npmjs.org/arrify/-/arrify-3.0.0.tgz",
+            "integrity": "sha512-MQdmN1wNg6UKUFovDAjXUh832csuO265sw7F8/WIEHiqqft8o1mkK+eBHpP+T68CABYU4WPuic8Qi8MXZ4seFA=="
+          },
+          "node_modules/@walkeros/collector/node_modules/arrify": {
+            "name": "arrify",
+            "version": "2.0.1",
+            "resolved": "https://registry.npmjs.org/arrify/-/arrify-2.0.1.tgz",
+            "integrity": "sha512-K+0acmWhgRChdY+f7fSgnqA3EQnRqUJuqmtBtBs7xeRZOlaq4xCB8EXKypz5bm7+FSzkKpHLZs0dU4RhJUzI2Q=="
+          },
+          "node_modules/string-width-cjs": {
+            "name": "string-width",
+            "version": "4.2.3",
+            "resolved": "https://registry.npmjs.org/string-width/-/string-width-4.2.3.tgz",
+            "integrity": "sha512-47EHUZ3FbpAJUZy1yzAQ8+cYr30ud/qYXBkZtu18LryniCKpraxPT1YWxqArsh9mZDjHOGoOKmyNXYosjyG0gA=="
+          }
+        }
+      }
+    },
+    {
+      "id": "sha1 integrity",
+      "verdict": "invalid",
+      "tree": {
+        "version": 1,
+        "registry": "https://registry.npmjs.org/",
+        "before": "2026-11-03T12:00:00.000Z",
+        "packages": {
+          "node_modules/@walkeros/collector": {
+            "name": "@walkeros/collector",
+            "version": "4.9.0",
+            "resolved": "https://registry.npmjs.org/@walkeros/collector/-/collector-4.9.0.tgz",
+            "integrity": "sha512-X+/kH1HAXLMqs3MqnTYuxywONgp/Sw6nCcMV4Va7r6xOdgIFk76vY2WrBqoE7Gg89iKQMb51a/xbkzGHzCklRQ==",
+            "dependencies": {
+              "@walkeros/core": "4.9.0",
+              "arrify": "^2.0.0",
+              "string-width-cjs": "npm:string-width@^4.2.0"
+            }
+          },
+          "node_modules/@walkeros/core": {
+            "name": "@walkeros/core",
+            "version": "4.9.0",
+            "resolved": "https://registry.npmjs.org/@walkeros/core/-/core-4.9.0.tgz",
+            "integrity": "sha512-ygCGIXJCHKpaqpgRLPz7x/bXF+cBtr1c+rip2OImo1GKNuE4xRqIM9Wd+pcoTIRtr3NiEjy6dpt3UBwlHak7Og=="
+          },
+          "node_modules/arrify": {
+            "name": "arrify",
+            "version": "3.0.0",
+            "resolved": "https://registry.npmjs.org/arrify/-/arrify-3.0.0.tgz",
+            "integrity": "sha1-EfatjsUqKYSrqv18O1FlA3hcIHI="
+          },
+          "node_modules/@walkeros/collector/node_modules/arrify": {
+            "name": "arrify",
+            "version": "2.0.1",
+            "resolved": "https://registry.npmjs.org/arrify/-/arrify-2.0.1.tgz",
+            "integrity": "sha512-K+0acmWhgRChdY+f7fSgnqA3EQnRqUJuqmtBtBs7xeRZOlaq4xCB8EXKypz5bm7+FSzkKpHLZs0dU4RhJUzI2Q=="
+          },
+          "node_modules/string-width-cjs": {
+            "name": "string-width",
+            "version": "4.2.3",
+            "resolved": "https://registry.npmjs.org/string-width/-/string-width-4.2.3.tgz",
+            "integrity": "sha512-47EHUZ3FbpAJUZy1yzAQ8+cYr30ud/qYXBkZtu18LryniCKpraxPT1YWxqArsh9mZDjHOGoOKmyNXYosjyG0gA=="
+          }
+        }
+      }
+    },
+    {
+      "id": "two integrity values",
+      "verdict": "invalid",
+      "tree": {
+        "version": 1,
+        "registry": "https://registry.npmjs.org/",
+        "before": "2026-11-03T12:00:00.000Z",
+        "packages": {
+          "node_modules/@walkeros/collector": {
+            "name": "@walkeros/collector",
+            "version": "4.9.0",
+            "resolved": "https://registry.npmjs.org/@walkeros/collector/-/collector-4.9.0.tgz",
+            "integrity": "sha512-X+/kH1HAXLMqs3MqnTYuxywONgp/Sw6nCcMV4Va7r6xOdgIFk76vY2WrBqoE7Gg89iKQMb51a/xbkzGHzCklRQ==",
+            "dependencies": {
+              "@walkeros/core": "4.9.0",
+              "arrify": "^2.0.0",
+              "string-width-cjs": "npm:string-width@^4.2.0"
+            }
+          },
+          "node_modules/@walkeros/core": {
+            "name": "@walkeros/core",
+            "version": "4.9.0",
+            "resolved": "https://registry.npmjs.org/@walkeros/core/-/core-4.9.0.tgz",
+            "integrity": "sha512-ygCGIXJCHKpaqpgRLPz7x/bXF+cBtr1c+rip2OImo1GKNuE4xRqIM9Wd+pcoTIRtr3NiEjy6dpt3UBwlHak7Og=="
+          },
+          "node_modules/arrify": {
+            "name": "arrify",
+            "version": "3.0.0",
+            "resolved": "https://registry.npmjs.org/arrify/-/arrify-3.0.0.tgz",
+            "integrity": "sha512-MQdmN1wNg6UKUFovDAjXUh832csuO265sw7F8/WIEHiqqft8o1mkK+eBHpP+T68CABYU4WPuic8Qi8MXZ4seFA== sha512-4lrDhF+MvhKAGi36WonUxV3EeQDztu3Jqe5ZDzwrkxL2ZdADnJOCi3tY8zlQvIF6CVWpxQAKjT4oBWnwh0XKaA=="
+          },
+          "node_modules/@walkeros/collector/node_modules/arrify": {
+            "name": "arrify",
+            "version": "2.0.1",
+            "resolved": "https://registry.npmjs.org/arrify/-/arrify-2.0.1.tgz",
+            "integrity": "sha512-K+0acmWhgRChdY+f7fSgnqA3EQnRqUJuqmtBtBs7xeRZOlaq4xCB8EXKypz5bm7+FSzkKpHLZs0dU4RhJUzI2Q=="
+          },
+          "node_modules/string-width-cjs": {
+            "name": "string-width",
+            "version": "4.2.3",
+            "resolved": "https://registry.npmjs.org/string-width/-/string-width-4.2.3.tgz",
+            "integrity": "sha512-47EHUZ3FbpAJUZy1yzAQ8+cYr30ud/qYXBkZtu18LryniCKpraxPT1YWxqArsh9mZDjHOGoOKmyNXYosjyG0gA=="
+          }
+        }
+      }
+    },
+    {
+      "id": "a range as version",
+      "verdict": "invalid",
+      "tree": {
+        "version": 1,
+        "registry": "https://registry.npmjs.org/",
+        "before": "2026-11-03T12:00:00.000Z",
+        "packages": {
+          "node_modules/@walkeros/collector": {
+            "name": "@walkeros/collector",
+            "version": "4.9.0",
+            "resolved": "https://registry.npmjs.org/@walkeros/collector/-/collector-4.9.0.tgz",
+            "integrity": "sha512-X+/kH1HAXLMqs3MqnTYuxywONgp/Sw6nCcMV4Va7r6xOdgIFk76vY2WrBqoE7Gg89iKQMb51a/xbkzGHzCklRQ==",
+            "dependencies": {
+              "@walkeros/core": "4.9.0",
+              "arrify": "^2.0.0",
+              "string-width-cjs": "npm:string-width@^4.2.0"
+            }
+          },
+          "node_modules/@walkeros/core": {
+            "name": "@walkeros/core",
+            "version": "4.9.0",
+            "resolved": "https://registry.npmjs.org/@walkeros/core/-/core-4.9.0.tgz",
+            "integrity": "sha512-ygCGIXJCHKpaqpgRLPz7x/bXF+cBtr1c+rip2OImo1GKNuE4xRqIM9Wd+pcoTIRtr3NiEjy6dpt3UBwlHak7Og=="
+          },
+          "node_modules/arrify": {
+            "name": "arrify",
+            "version": "^3.0.0",
+            "resolved": "https://registry.npmjs.org/arrify/-/arrify-3.0.0.tgz",
+            "integrity": "sha512-MQdmN1wNg6UKUFovDAjXUh832csuO265sw7F8/WIEHiqqft8o1mkK+eBHpP+T68CABYU4WPuic8Qi8MXZ4seFA=="
+          },
+          "node_modules/@walkeros/collector/node_modules/arrify": {
+            "name": "arrify",
+            "version": "2.0.1",
+            "resolved": "https://registry.npmjs.org/arrify/-/arrify-2.0.1.tgz",
+            "integrity": "sha512-K+0acmWhgRChdY+f7fSgnqA3EQnRqUJuqmtBtBs7xeRZOlaq4xCB8EXKypz5bm7+FSzkKpHLZs0dU4RhJUzI2Q=="
+          },
+          "node_modules/string-width-cjs": {
+            "name": "string-width",
+            "version": "4.2.3",
+            "resolved": "https://registry.npmjs.org/string-width/-/string-width-4.2.3.tgz",
+            "integrity": "sha512-47EHUZ3FbpAJUZy1yzAQ8+cYr30ud/qYXBkZtu18LryniCKpraxPT1YWxqArsh9mZDjHOGoOKmyNXYosjyG0gA=="
+          }
+        }
+      }
+    },
+    {
+      "id": "a third layout level",
+      "verdict": "invalid",
+      "tree": {
+        "version": 1,
+        "registry": "https://registry.npmjs.org/",
+        "before": "2026-11-03T12:00:00.000Z",
+        "packages": {
+          "node_modules/@walkeros/collector": {
+            "name": "@walkeros/collector",
+            "version": "4.9.0",
+            "resolved": "https://registry.npmjs.org/@walkeros/collector/-/collector-4.9.0.tgz",
+            "integrity": "sha512-X+/kH1HAXLMqs3MqnTYuxywONgp/Sw6nCcMV4Va7r6xOdgIFk76vY2WrBqoE7Gg89iKQMb51a/xbkzGHzCklRQ==",
+            "dependencies": {
+              "@walkeros/core": "4.9.0",
+              "arrify": "^2.0.0",
+              "string-width-cjs": "npm:string-width@^4.2.0"
+            }
+          },
+          "node_modules/@walkeros/core": {
+            "name": "@walkeros/core",
+            "version": "4.9.0",
+            "resolved": "https://registry.npmjs.org/@walkeros/core/-/core-4.9.0.tgz",
+            "integrity": "sha512-ygCGIXJCHKpaqpgRLPz7x/bXF+cBtr1c+rip2OImo1GKNuE4xRqIM9Wd+pcoTIRtr3NiEjy6dpt3UBwlHak7Og=="
+          },
+          "node_modules/arrify": {
+            "name": "arrify",
+            "version": "3.0.0",
+            "resolved": "https://registry.npmjs.org/arrify/-/arrify-3.0.0.tgz",
+            "integrity": "sha512-MQdmN1wNg6UKUFovDAjXUh832csuO265sw7F8/WIEHiqqft8o1mkK+eBHpP+T68CABYU4WPuic8Qi8MXZ4seFA=="
+          },
+          "node_modules/@walkeros/collector/node_modules/arrify": {
+            "name": "arrify",
+            "version": "2.0.1",
+            "resolved": "https://registry.npmjs.org/arrify/-/arrify-2.0.1.tgz",
+            "integrity": "sha512-K+0acmWhgRChdY+f7fSgnqA3EQnRqUJuqmtBtBs7xeRZOlaq4xCB8EXKypz5bm7+FSzkKpHLZs0dU4RhJUzI2Q=="
+          },
+          "node_modules/string-width-cjs": {
+            "name": "string-width",
+            "version": "4.2.3",
+            "resolved": "https://registry.npmjs.org/string-width/-/string-width-4.2.3.tgz",
+            "integrity": "sha512-47EHUZ3FbpAJUZy1yzAQ8+cYr30ud/qYXBkZtu18LryniCKpraxPT1YWxqArsh9mZDjHOGoOKmyNXYosjyG0gA=="
+          },
+          "node_modules/@walkeros/collector/node_modules/arrify/node_modules/x": {
+            "name": "x",
+            "version": "1.0.0",
+            "resolved": "https://registry.npmjs.org/x/-/x-1.0.0.tgz",
+            "integrity": "sha512-25JoNW+CIZc1x2LkPSJTKYdqOpSXHzFY9MTvJmOi3LDIwscDDYih/cNAd4euEzVpJw3kGHISXrO6YbYGW5gcCQ=="
+          }
+        }
+      }
+    },
+    {
+      "id": "a path that climbs out",
+      "verdict": "invalid",
+      "tree": {
+        "version": 1,
+        "registry": "https://registry.npmjs.org/",
+        "before": "2026-11-03T12:00:00.000Z",
+        "packages": {
+          "node_modules/@walkeros/collector": {
+            "name": "@walkeros/collector",
+            "version": "4.9.0",
+            "resolved": "https://registry.npmjs.org/@walkeros/collector/-/collector-4.9.0.tgz",
+            "integrity": "sha512-X+/kH1HAXLMqs3MqnTYuxywONgp/Sw6nCcMV4Va7r6xOdgIFk76vY2WrBqoE7Gg89iKQMb51a/xbkzGHzCklRQ==",
+            "dependencies": {
+              "@walkeros/core": "4.9.0",
+              "arrify": "^2.0.0",
+              "string-width-cjs": "npm:string-width@^4.2.0"
+            }
+          },
+          "node_modules/@walkeros/core": {
+            "name": "@walkeros/core",
+            "version": "4.9.0",
+            "resolved": "https://registry.npmjs.org/@walkeros/core/-/core-4.9.0.tgz",
+            "integrity": "sha512-ygCGIXJCHKpaqpgRLPz7x/bXF+cBtr1c+rip2OImo1GKNuE4xRqIM9Wd+pcoTIRtr3NiEjy6dpt3UBwlHak7Og=="
+          },
+          "node_modules/arrify": {
+            "name": "arrify",
+            "version": "3.0.0",
+            "resolved": "https://registry.npmjs.org/arrify/-/arrify-3.0.0.tgz",
+            "integrity": "sha512-MQdmN1wNg6UKUFovDAjXUh832csuO265sw7F8/WIEHiqqft8o1mkK+eBHpP+T68CABYU4WPuic8Qi8MXZ4seFA=="
+          },
+          "node_modules/@walkeros/collector/node_modules/arrify": {
+            "name": "arrify",
+            "version": "2.0.1",
+            "resolved": "https://registry.npmjs.org/arrify/-/arrify-2.0.1.tgz",
+            "integrity": "sha512-K+0acmWhgRChdY+f7fSgnqA3EQnRqUJuqmtBtBs7xeRZOlaq4xCB8EXKypz5bm7+FSzkKpHLZs0dU4RhJUzI2Q=="
+          },
+          "node_modules/string-width-cjs": {
+            "name": "string-width",
+            "version": "4.2.3",
+            "resolved": "https://registry.npmjs.org/string-width/-/string-width-4.2.3.tgz",
+            "integrity": "sha512-47EHUZ3FbpAJUZy1yzAQ8+cYr30ud/qYXBkZtu18LryniCKpraxPT1YWxqArsh9mZDjHOGoOKmyNXYosjyG0gA=="
+          },
+          "node_modules/../arrify": {
+            "name": "arrify",
+            "version": "3.0.0",
+            "resolved": "https://registry.npmjs.org/arrify/-/arrify-3.0.0.tgz",
+            "integrity": "sha512-MQdmN1wNg6UKUFovDAjXUh832csuO265sw7F8/WIEHiqqft8o1mkK+eBHpP+T68CABYU4WPuic8Qi8MXZ4seFA=="
+          }
+        }
+      }
+    },
+    {
+      "id": "an unknown entry key",
+      "verdict": "invalid",
+      "tree": {
+        "version": 1,
+        "registry": "https://registry.npmjs.org/",
+        "before": "2026-11-03T12:00:00.000Z",
+        "packages": {
+          "node_modules/@walkeros/collector": {
+            "name": "@walkeros/collector",
+            "version": "4.9.0",
+            "resolved": "https://registry.npmjs.org/@walkeros/collector/-/collector-4.9.0.tgz",
+            "integrity": "sha512-X+/kH1HAXLMqs3MqnTYuxywONgp/Sw6nCcMV4Va7r6xOdgIFk76vY2WrBqoE7Gg89iKQMb51a/xbkzGHzCklRQ==",
+            "dependencies": {
+              "@walkeros/core": "4.9.0",
+              "arrify": "^2.0.0",
+              "string-width-cjs": "npm:string-width@^4.2.0"
+            }
+          },
+          "node_modules/@walkeros/core": {
+            "name": "@walkeros/core",
+            "version": "4.9.0",
+            "resolved": "https://registry.npmjs.org/@walkeros/core/-/core-4.9.0.tgz",
+            "integrity": "sha512-ygCGIXJCHKpaqpgRLPz7x/bXF+cBtr1c+rip2OImo1GKNuE4xRqIM9Wd+pcoTIRtr3NiEjy6dpt3UBwlHak7Og=="
+          },
+          "node_modules/arrify": {
+            "name": "arrify",
+            "version": "3.0.0",
+            "resolved": "https://registry.npmjs.org/arrify/-/arrify-3.0.0.tgz",
+            "integrity": "sha512-MQdmN1wNg6UKUFovDAjXUh832csuO265sw7F8/WIEHiqqft8o1mkK+eBHpP+T68CABYU4WPuic8Qi8MXZ4seFA==",
+            "scripts": {
+              "postinstall": "x"
+            }
+          },
+          "node_modules/@walkeros/collector/node_modules/arrify": {
+            "name": "arrify",
+            "version": "2.0.1",
+            "resolved": "https://registry.npmjs.org/arrify/-/arrify-2.0.1.tgz",
+            "integrity": "sha512-K+0acmWhgRChdY+f7fSgnqA3EQnRqUJuqmtBtBs7xeRZOlaq4xCB8EXKypz5bm7+FSzkKpHLZs0dU4RhJUzI2Q=="
+          },
+          "node_modules/string-width-cjs": {
+            "name": "string-width",
+            "version": "4.2.3",
+            "resolved": "https://registry.npmjs.org/string-width/-/string-width-4.2.3.tgz",
+            "integrity": "sha512-47EHUZ3FbpAJUZy1yzAQ8+cYr30ud/qYXBkZtu18LryniCKpraxPT1YWxqArsh9mZDjHOGoOKmyNXYosjyG0gA=="
+          }
+        }
+      }
+    },
+    {
+      "id": "an unknown tree key",
+      "verdict": "invalid",
+      "tree": {
+        "version": 1,
+        "registry": "https://registry.npmjs.org/",
+        "before": "2026-11-03T12:00:00.000Z",
+        "packages": {
+          "node_modules/@walkeros/collector": {
+            "name": "@walkeros/collector",
+            "version": "4.9.0",
+            "resolved": "https://registry.npmjs.org/@walkeros/collector/-/collector-4.9.0.tgz",
+            "integrity": "sha512-X+/kH1HAXLMqs3MqnTYuxywONgp/Sw6nCcMV4Va7r6xOdgIFk76vY2WrBqoE7Gg89iKQMb51a/xbkzGHzCklRQ==",
+            "dependencies": {
+              "@walkeros/core": "4.9.0",
+              "arrify": "^2.0.0",
+              "string-width-cjs": "npm:string-width@^4.2.0"
+            }
+          },
+          "node_modules/@walkeros/core": {
+            "name": "@walkeros/core",
+            "version": "4.9.0",
+            "resolved": "https://registry.npmjs.org/@walkeros/core/-/core-4.9.0.tgz",
+            "integrity": "sha512-ygCGIXJCHKpaqpgRLPz7x/bXF+cBtr1c+rip2OImo1GKNuE4xRqIM9Wd+pcoTIRtr3NiEjy6dpt3UBwlHak7Og=="
+          },
+          "node_modules/arrify": {
+            "name": "arrify",
+            "version": "3.0.0",
+            "resolved": "https://registry.npmjs.org/arrify/-/arrify-3.0.0.tgz",
+            "integrity": "sha512-MQdmN1wNg6UKUFovDAjXUh832csuO265sw7F8/WIEHiqqft8o1mkK+eBHpP+T68CABYU4WPuic8Qi8MXZ4seFA=="
+          },
+          "node_modules/@walkeros/collector/node_modules/arrify": {
+            "name": "arrify",
+            "version": "2.0.1",
+            "resolved": "https://registry.npmjs.org/arrify/-/arrify-2.0.1.tgz",
+            "integrity": "sha512-K+0acmWhgRChdY+f7fSgnqA3EQnRqUJuqmtBtBs7xeRZOlaq4xCB8EXKypz5bm7+FSzkKpHLZs0dU4RhJUzI2Q=="
+          },
+          "node_modules/string-width-cjs": {
+            "name": "string-width",
+            "version": "4.2.3",
+            "resolved": "https://registry.npmjs.org/string-width/-/string-width-4.2.3.tgz",
+            "integrity": "sha512-47EHUZ3FbpAJUZy1yzAQ8+cYr30ud/qYXBkZtu18LryniCKpraxPT1YWxqArsh9mZDjHOGoOKmyNXYosjyG0gA=="
+          }
+        },
+        "lockfileVersion": 3
+      }
+    },
+    {
+      "id": "another tree version",
+      "verdict": "invalid",
+      "tree": {
+        "version": 2,
+        "registry": "https://registry.npmjs.org/",
+        "before": "2026-11-03T12:00:00.000Z",
+        "packages": {
+          "node_modules/@walkeros/collector": {
+            "name": "@walkeros/collector",
+            "version": "4.9.0",
+            "resolved": "https://registry.npmjs.org/@walkeros/collector/-/collector-4.9.0.tgz",
+            "integrity": "sha512-X+/kH1HAXLMqs3MqnTYuxywONgp/Sw6nCcMV4Va7r6xOdgIFk76vY2WrBqoE7Gg89iKQMb51a/xbkzGHzCklRQ==",
+            "dependencies": {
+              "@walkeros/core": "4.9.0",
+              "arrify": "^2.0.0",
+              "string-width-cjs": "npm:string-width@^4.2.0"
+            }
+          },
+          "node_modules/@walkeros/core": {
+            "name": "@walkeros/core",
+            "version": "4.9.0",
+            "resolved": "https://registry.npmjs.org/@walkeros/core/-/core-4.9.0.tgz",
+            "integrity": "sha512-ygCGIXJCHKpaqpgRLPz7x/bXF+cBtr1c+rip2OImo1GKNuE4xRqIM9Wd+pcoTIRtr3NiEjy6dpt3UBwlHak7Og=="
+          },
+          "node_modules/arrify": {
+            "name": "arrify",
+            "version": "3.0.0",
+            "resolved": "https://registry.npmjs.org/arrify/-/arrify-3.0.0.tgz",
+            "integrity": "sha512-MQdmN1wNg6UKUFovDAjXUh832csuO265sw7F8/WIEHiqqft8o1mkK+eBHpP+T68CABYU4WPuic8Qi8MXZ4seFA=="
+          },
+          "node_modules/@walkeros/collector/node_modules/arrify": {
+            "name": "arrify",
+            "version": "2.0.1",
+            "resolved": "https://registry.npmjs.org/arrify/-/arrify-2.0.1.tgz",
+            "integrity": "sha512-K+0acmWhgRChdY+f7fSgnqA3EQnRqUJuqmtBtBs7xeRZOlaq4xCB8EXKypz5bm7+FSzkKpHLZs0dU4RhJUzI2Q=="
+          },
+          "node_modules/string-width-cjs": {
+            "name": "string-width",
+            "version": "4.2.3",
+            "resolved": "https://registry.npmjs.org/string-width/-/string-width-4.2.3.tgz",
+            "integrity": "sha512-47EHUZ3FbpAJUZy1yzAQ8+cYr30ud/qYXBkZtu18LryniCKpraxPT1YWxqArsh9mZDjHOGoOKmyNXYosjyG0gA=="
+          }
+        }
+      }
+    },
+    {
+      "id": "declared root missing",
+      "verdict": "invalid",
+      "tree": {
+        "version": 1,
+        "registry": "https://registry.npmjs.org/",
+        "before": "2026-11-03T12:00:00.000Z",
+        "packages": {
+          "node_modules/@walkeros/core": {
+            "name": "@walkeros/core",
+            "version": "4.9.0",
+            "resolved": "https://registry.npmjs.org/@walkeros/core/-/core-4.9.0.tgz",
+            "integrity": "sha512-ygCGIXJCHKpaqpgRLPz7x/bXF+cBtr1c+rip2OImo1GKNuE4xRqIM9Wd+pcoTIRtr3NiEjy6dpt3UBwlHak7Og=="
+          },
+          "node_modules/arrify": {
+            "name": "arrify",
+            "version": "3.0.0",
+            "resolved": "https://registry.npmjs.org/arrify/-/arrify-3.0.0.tgz",
+            "integrity": "sha512-MQdmN1wNg6UKUFovDAjXUh832csuO265sw7F8/WIEHiqqft8o1mkK+eBHpP+T68CABYU4WPuic8Qi8MXZ4seFA=="
+          },
+          "node_modules/@walkeros/collector/node_modules/arrify": {
+            "name": "arrify",
+            "version": "2.0.1",
+            "resolved": "https://registry.npmjs.org/arrify/-/arrify-2.0.1.tgz",
+            "integrity": "sha512-K+0acmWhgRChdY+f7fSgnqA3EQnRqUJuqmtBtBs7xeRZOlaq4xCB8EXKypz5bm7+FSzkKpHLZs0dU4RhJUzI2Q=="
+          },
+          "node_modules/string-width-cjs": {
+            "name": "string-width",
+            "version": "4.2.3",
+            "resolved": "https://registry.npmjs.org/string-width/-/string-width-4.2.3.tgz",
+            "integrity": "sha512-47EHUZ3FbpAJUZy1yzAQ8+cYr30ud/qYXBkZtu18LryniCKpraxPT1YWxqArsh9mZDjHOGoOKmyNXYosjyG0gA=="
+          }
+        }
+      }
+    },
+    {
+      "id": "declared root at another version",
+      "verdict": "invalid",
+      "tree": {
+        "version": 1,
+        "registry": "https://registry.npmjs.org/",
+        "before": "2026-11-03T12:00:00.000Z",
+        "packages": {
+          "node_modules/@walkeros/collector": {
+            "name": "@walkeros/collector",
+            "version": "4.8.0",
+            "resolved": "https://registry.npmjs.org/@walkeros/collector/-/collector-4.8.0.tgz",
+            "integrity": "sha512-X+/kH1HAXLMqs3MqnTYuxywONgp/Sw6nCcMV4Va7r6xOdgIFk76vY2WrBqoE7Gg89iKQMb51a/xbkzGHzCklRQ==",
+            "dependencies": {
+              "@walkeros/core": "4.9.0",
+              "arrify": "^2.0.0",
+              "string-width-cjs": "npm:string-width@^4.2.0"
+            }
+          },
+          "node_modules/@walkeros/core": {
+            "name": "@walkeros/core",
+            "version": "4.9.0",
+            "resolved": "https://registry.npmjs.org/@walkeros/core/-/core-4.9.0.tgz",
+            "integrity": "sha512-ygCGIXJCHKpaqpgRLPz7x/bXF+cBtr1c+rip2OImo1GKNuE4xRqIM9Wd+pcoTIRtr3NiEjy6dpt3UBwlHak7Og=="
+          },
+          "node_modules/arrify": {
+            "name": "arrify",
+            "version": "3.0.0",
+            "resolved": "https://registry.npmjs.org/arrify/-/arrify-3.0.0.tgz",
+            "integrity": "sha512-MQdmN1wNg6UKUFovDAjXUh832csuO265sw7F8/WIEHiqqft8o1mkK+eBHpP+T68CABYU4WPuic8Qi8MXZ4seFA=="
+          },
+          "node_modules/@walkeros/collector/node_modules/arrify": {
+            "name": "arrify",
+            "version": "2.0.1",
+            "resolved": "https://registry.npmjs.org/arrify/-/arrify-2.0.1.tgz",
+            "integrity": "sha512-K+0acmWhgRChdY+f7fSgnqA3EQnRqUJuqmtBtBs7xeRZOlaq4xCB8EXKypz5bm7+FSzkKpHLZs0dU4RhJUzI2Q=="
+          },
+          "node_modules/string-width-cjs": {
+            "name": "string-width",
+            "version": "4.2.3",
+            "resolved": "https://registry.npmjs.org/string-width/-/string-width-4.2.3.tgz",
+            "integrity": "sha512-47EHUZ3FbpAJUZy1yzAQ8+cYr30ud/qYXBkZtu18LryniCKpraxPT1YWxqArsh9mZDjHOGoOKmyNXYosjyG0gA=="
+          }
+        }
+      }
+    },
+    {
+      "id": "an alias that borrows an exempt name",
+      "verdict": "invalid",
+      "tree": {
+        "version": 1,
+        "registry": "https://registry.npmjs.org/",
+        "before": "2026-11-03T12:00:00.000Z",
+        "packages": {
+          "node_modules/@walkeros/collector": {
+            "name": "@walkeros/collector",
+            "version": "4.9.0",
+            "resolved": "https://registry.npmjs.org/@walkeros/collector/-/collector-4.9.0.tgz",
+            "integrity": "sha512-X+/kH1HAXLMqs3MqnTYuxywONgp/Sw6nCcMV4Va7r6xOdgIFk76vY2WrBqoE7Gg89iKQMb51a/xbkzGHzCklRQ==",
+            "dependencies": {
+              "@walkeros/core": "4.9.0",
+              "arrify": "^2.0.0",
+              "string-width-cjs": "npm:string-width@^4.2.0"
+            }
+          },
+          "node_modules/@walkeros/core": {
+            "name": "evil",
+            "version": "1.0.0",
+            "resolved": "https://registry.npmjs.org/evil/-/evil-1.0.0.tgz",
+            "integrity": "sha512-B9pLQFdCXELKb3N7YXoJa8ZxY7KnLJ2bjm5yBX6URB3o0cxJS794IVwZ57u94b6xnbxngdPnXpD0ckkNYz9L8Q=="
+          },
+          "node_modules/arrify": {
+            "name": "arrify",
+            "version": "3.0.0",
+            "resolved": "https://registry.npmjs.org/arrify/-/arrify-3.0.0.tgz",
+            "integrity": "sha512-MQdmN1wNg6UKUFovDAjXUh832csuO265sw7F8/WIEHiqqft8o1mkK+eBHpP+T68CABYU4WPuic8Qi8MXZ4seFA=="
+          },
+          "node_modules/@walkeros/collector/node_modules/arrify": {
+            "name": "arrify",
+            "version": "2.0.1",
+            "resolved": "https://registry.npmjs.org/arrify/-/arrify-2.0.1.tgz",
+            "integrity": "sha512-K+0acmWhgRChdY+f7fSgnqA3EQnRqUJuqmtBtBs7xeRZOlaq4xCB8EXKypz5bm7+FSzkKpHLZs0dU4RhJUzI2Q=="
+          },
+          "node_modules/string-width-cjs": {
+            "name": "string-width",
+            "version": "4.2.3",
+            "resolved": "https://registry.npmjs.org/string-width/-/string-width-4.2.3.tgz",
+            "integrity": "sha512-47EHUZ3FbpAJUZy1yzAQ8+cYr30ud/qYXBkZtu18LryniCKpraxPT1YWxqArsh9mZDjHOGoOKmyNXYosjyG0gA=="
+          }
+        }
+      }
+    },
+    {
+      "id": "an edge alias that borrows an exempt name",
+      "verdict": "invalid",
+      "tree": {
+        "version": 1,
+        "registry": "https://registry.npmjs.org/",
+        "before": "2026-11-03T12:00:00.000Z",
+        "packages": {
+          "node_modules/@walkeros/collector": {
+            "name": "@walkeros/collector",
+            "version": "4.9.0",
+            "resolved": "https://registry.npmjs.org/@walkeros/collector/-/collector-4.9.0.tgz",
+            "integrity": "sha512-X+/kH1HAXLMqs3MqnTYuxywONgp/Sw6nCcMV4Va7r6xOdgIFk76vY2WrBqoE7Gg89iKQMb51a/xbkzGHzCklRQ==",
+            "dependencies": {
+              "@walkeros/core": "4.9.0",
+              "arrify": "^2.0.0",
+              "string-width-cjs": "npm:string-width@^4.2.0"
+            }
+          },
+          "node_modules/@walkeros/core": {
+            "name": "@walkeros/core",
+            "version": "4.9.0",
+            "resolved": "https://registry.npmjs.org/@walkeros/core/-/core-4.9.0.tgz",
+            "integrity": "sha512-ygCGIXJCHKpaqpgRLPz7x/bXF+cBtr1c+rip2OImo1GKNuE4xRqIM9Wd+pcoTIRtr3NiEjy6dpt3UBwlHak7Og=="
+          },
+          "node_modules/arrify": {
+            "name": "arrify",
+            "version": "3.0.0",
+            "resolved": "https://registry.npmjs.org/arrify/-/arrify-3.0.0.tgz",
+            "integrity": "sha512-MQdmN1wNg6UKUFovDAjXUh832csuO265sw7F8/WIEHiqqft8o1mkK+eBHpP+T68CABYU4WPuic8Qi8MXZ4seFA==",
+            "dependencies": {
+              "@walkeros/web-core": "npm:evil@1.0.0"
+            }
+          },
+          "node_modules/@walkeros/collector/node_modules/arrify": {
+            "name": "arrify",
+            "version": "2.0.1",
+            "resolved": "https://registry.npmjs.org/arrify/-/arrify-2.0.1.tgz",
+            "integrity": "sha512-K+0acmWhgRChdY+f7fSgnqA3EQnRqUJuqmtBtBs7xeRZOlaq4xCB8EXKypz5bm7+FSzkKpHLZs0dU4RhJUzI2Q=="
+          },
+          "node_modules/string-width-cjs": {
+            "name": "string-width",
+            "version": "4.2.3",
+            "resolved": "https://registry.npmjs.org/string-width/-/string-width-4.2.3.tgz",
+            "integrity": "sha512-47EHUZ3FbpAJUZy1yzAQ8+cYr30ud/qYXBkZtu18LryniCKpraxPT1YWxqArsh9mZDjHOGoOKmyNXYosjyG0gA=="
+          },
+          "node_modules/@walkeros/web-core": {
+            "name": "evil",
+            "version": "1.0.0",
+            "resolved": "https://registry.npmjs.org/evil/-/evil-1.0.0.tgz",
+            "integrity": "sha512-B9pLQFdCXELKb3N7YXoJa8ZxY7KnLJ2bjm5yBX6URB3o0cxJS794IVwZ57u94b6xnbxngdPnXpD0ckkNYz9L8Q=="
+          }
+        }
+      }
+    },
+    {
+      "id": "an edge with no target",
+      "verdict": "invalid",
+      "tree": {
+        "version": 1,
+        "registry": "https://registry.npmjs.org/",
+        "before": "2026-11-03T12:00:00.000Z",
+        "packages": {
+          "node_modules/@walkeros/collector": {
+            "name": "@walkeros/collector",
+            "version": "4.9.0",
+            "resolved": "https://registry.npmjs.org/@walkeros/collector/-/collector-4.9.0.tgz",
+            "integrity": "sha512-X+/kH1HAXLMqs3MqnTYuxywONgp/Sw6nCcMV4Va7r6xOdgIFk76vY2WrBqoE7Gg89iKQMb51a/xbkzGHzCklRQ==",
+            "dependencies": {
+              "@walkeros/core": "4.9.0",
+              "arrify": "^2.0.0",
+              "string-width-cjs": "npm:string-width@^4.2.0"
+            }
+          },
+          "node_modules/@walkeros/core": {
+            "name": "@walkeros/core",
+            "version": "4.9.0",
+            "resolved": "https://registry.npmjs.org/@walkeros/core/-/core-4.9.0.tgz",
+            "integrity": "sha512-ygCGIXJCHKpaqpgRLPz7x/bXF+cBtr1c+rip2OImo1GKNuE4xRqIM9Wd+pcoTIRtr3NiEjy6dpt3UBwlHak7Og=="
+          },
+          "node_modules/arrify": {
+            "name": "arrify",
+            "version": "3.0.0",
+            "resolved": "https://registry.npmjs.org/arrify/-/arrify-3.0.0.tgz",
+            "integrity": "sha512-MQdmN1wNg6UKUFovDAjXUh832csuO265sw7F8/WIEHiqqft8o1mkK+eBHpP+T68CABYU4WPuic8Qi8MXZ4seFA==",
+            "dependencies": {
+              "is-missing": "^1.0.0"
+            }
+          },
+          "node_modules/@walkeros/collector/node_modules/arrify": {
+            "name": "arrify",
+            "version": "2.0.1",
+            "resolved": "https://registry.npmjs.org/arrify/-/arrify-2.0.1.tgz",
+            "integrity": "sha512-K+0acmWhgRChdY+f7fSgnqA3EQnRqUJuqmtBtBs7xeRZOlaq4xCB8EXKypz5bm7+FSzkKpHLZs0dU4RhJUzI2Q=="
+          },
+          "node_modules/string-width-cjs": {
+            "name": "string-width",
+            "version": "4.2.3",
+            "resolved": "https://registry.npmjs.org/string-width/-/string-width-4.2.3.tgz",
+            "integrity": "sha512-47EHUZ3FbpAJUZy1yzAQ8+cYr30ud/qYXBkZtu18LryniCKpraxPT1YWxqArsh9mZDjHOGoOKmyNXYosjyG0gA=="
+          }
+        }
+      }
+    },
+    {
+      "id": "an edge whose target is another package",
+      "verdict": "invalid",
+      "tree": {
+        "version": 1,
+        "registry": "https://registry.npmjs.org/",
+        "before": "2026-11-03T12:00:00.000Z",
+        "packages": {
+          "node_modules/@walkeros/collector": {
+            "name": "@walkeros/collector",
+            "version": "4.9.0",
+            "resolved": "https://registry.npmjs.org/@walkeros/collector/-/collector-4.9.0.tgz",
+            "integrity": "sha512-X+/kH1HAXLMqs3MqnTYuxywONgp/Sw6nCcMV4Va7r6xOdgIFk76vY2WrBqoE7Gg89iKQMb51a/xbkzGHzCklRQ==",
+            "dependencies": {
+              "@walkeros/core": "4.9.0",
+              "arrify": "^2.0.0",
+              "string-width-cjs": "npm:string-width@^4.2.0"
+            }
+          },
+          "node_modules/@walkeros/core": {
+            "name": "@walkeros/core",
+            "version": "4.9.0",
+            "resolved": "https://registry.npmjs.org/@walkeros/core/-/core-4.9.0.tgz",
+            "integrity": "sha512-ygCGIXJCHKpaqpgRLPz7x/bXF+cBtr1c+rip2OImo1GKNuE4xRqIM9Wd+pcoTIRtr3NiEjy6dpt3UBwlHak7Og=="
+          },
+          "node_modules/arrify": {
+            "name": "arrify",
+            "version": "3.0.0",
+            "resolved": "https://registry.npmjs.org/arrify/-/arrify-3.0.0.tgz",
+            "integrity": "sha512-MQdmN1wNg6UKUFovDAjXUh832csuO265sw7F8/WIEHiqqft8o1mkK+eBHpP+T68CABYU4WPuic8Qi8MXZ4seFA==",
+            "dependencies": {
+              "string-width-cjs": "^4.0.0"
+            }
+          },
+          "node_modules/@walkeros/collector/node_modules/arrify": {
+            "name": "arrify",
+            "version": "2.0.1",
+            "resolved": "https://registry.npmjs.org/arrify/-/arrify-2.0.1.tgz",
+            "integrity": "sha512-K+0acmWhgRChdY+f7fSgnqA3EQnRqUJuqmtBtBs7xeRZOlaq4xCB8EXKypz5bm7+FSzkKpHLZs0dU4RhJUzI2Q=="
+          },
+          "node_modules/string-width-cjs": {
+            "name": "string-width",
+            "version": "4.2.3",
+            "resolved": "https://registry.npmjs.org/string-width/-/string-width-4.2.3.tgz",
+            "integrity": "sha512-47EHUZ3FbpAJUZy1yzAQ8+cYr30ud/qYXBkZtu18LryniCKpraxPT1YWxqArsh9mZDjHOGoOKmyNXYosjyG0gA=="
+          }
+        }
+      }
+    }
+  ]
+}

@@ -1,4 +1,5 @@
 import http from 'http';
+import { createCLILogger } from '@walkeros/core/node';
 import { createHealthServer } from '../health-server.js';
 import { createMockLogger } from './helpers/mock-logger.js';
 
@@ -82,16 +83,49 @@ describe('createHealthServer', () => {
     expect(res.body).not.toContain('/app/flow');
   });
 
-  it('logs the failure detail redacted', () => {
-    const secret = 'sk_live_abcdefghijklmnopqrstuvwxyz0123';
-    server.setFailed(`Auth failed with key ${secret}`);
-    const logged = jest
-      .mocked(mockLogger.error)
-      .mock.calls.map(([message]) => String(message))
-      .join('\n');
-    expect(logged).toContain('Readiness failed: Auth failed with key');
-    expect(logged).not.toContain(secret);
-  });
+  const KNOWN = 'known-value-1234';
+  const PATTERN = 'sk_live_abcdefghijklmnopqrstuvwxyz0123';
+  const words = 'word '.repeat(50);
+
+  it.each([
+    [
+      'a pattern secret',
+      `Auth failed with key ${PATTERN}`,
+      PATTERN,
+      'Readiness failed: Auth failed with key ***',
+    ],
+    [
+      'a known value that starts at character 250',
+      `${words}${KNOWN}`,
+      KNOWN,
+      `Readiness failed: ${words}***`,
+    ],
+  ])(
+    'logs the failure detail uncut, with %s masked whole by the handler',
+    async (_label, reason, secret, expected) => {
+      const errorSpy = jest
+        .spyOn(console, 'error')
+        .mockImplementation(() => undefined);
+      const lines: string[] = [];
+      const logged = await createHealthServer(
+        0,
+        createCLILogger({
+          silent: true,
+          knownSecrets: [KNOWN],
+          onLine: (_level, line) => lines.push(line.masked()),
+        }),
+      );
+      try {
+        logged.setFailed(reason);
+      } finally {
+        await logged.close();
+        errorSpy.mockRestore();
+      }
+
+      expect(lines).toContain(expected);
+      expect(lines.join('\n')).not.toContain(secret);
+    },
+  );
 
   it('clears the failure reason once setReady(true) is called', async () => {
     server.setFailed('transient failure');

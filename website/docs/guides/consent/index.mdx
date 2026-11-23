@@ -164,8 +164,8 @@ matches, on top of the destination's `config.consent`:
 Both must hold. Events the rule matches wait in the same queue and are
 delivered in queue order once both are granted (with an async `condition`, an
 event joins the queue when its condition settles); server flows built by the CLI
-skip them instead. Observe and `walkeros push --simulate` show the
-rule's key and the missing consent.
+skip them instead. `walkeros push --simulate` shows the rule's key and the
+missing consent.
 
 ### Gate a source with `consent`
 
@@ -396,8 +396,9 @@ initializes until initialization. The default mapping is:
 | `analytics`  | `analytics_storage`                                 |
 
 The Cookiebot, CookieFirst and CookiePro sources report measurement consent as
-`analytics` and advertising consent as `marketing`, so the default mapping
-follows the visitor's choices. The Usercentrics source reports your own
+`analytics` and advertising consent as `marketing`, and so does the
+CookieConsent source for the categories `analytics` and `ads` its docs use, so
+the default mapping follows the visitor's choices. The Usercentrics source reports your own
 category slugs: map your measurement category to `analytics` and your
 advertising category to `marketing` in its `categoryMap`, or `analytics_storage`
 stays denied.

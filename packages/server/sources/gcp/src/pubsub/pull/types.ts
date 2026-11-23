@@ -81,7 +81,8 @@ export interface Settings {
   };
   // Subscriber ack deadline in seconds. Default: 60.
   ackDeadline?: number;
-  // Graceful shutdown timeout in milliseconds. Default: 30000.
+  // How long a close waits for messages in flight, in milliseconds; the rest
+  // are nacked and redelivered. Default: 5000.
   shutdownTimeoutMs?: number;
   // Behavior on push errors: 'nack' (redeliver) or 'ack' (drop). Default: 'nack'.
   onPushError?: 'nack' | 'ack';

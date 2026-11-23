@@ -11,8 +11,6 @@ describe('local server instructions', () => {
     'project_manage',
     'deploy_manage',
     'secret_manage',
-    'observe_session',
-    'observe_journeys',
     'hub_manage',
     'frame_manage',
     'diagnostics',

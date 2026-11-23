@@ -160,6 +160,21 @@ example's `out` is a literal taken from the vendor's documented request, never
 the output of the code under test, otherwise the test passes by construction.
 See [using-step-examples](../walkeros-using-step-examples/SKILL.md).
 
+### Rule 3c: Expected Vendor Values Come From the Vendor
+
+A test whose expected request, response or hash was written from the same notes
+as the code proves only that the two agree. Where a step talks to a vendor (a
+destination's request, a source's webhook payload), its expected values come
+from the vendor's own published examples, recorded with their source in the
+package's `VENDOR.md` (see
+[create-destination, 1.5](../walkeros-create-destination/SKILL.md#15-pin-the-vendors-api-to-its-own-reference)):
+
+- Pin the vendor's example request or payload in the step example, verbatim.
+- Pin the vendor's example hashes, never a hash computed with the code under
+  test.
+- Where the vendor publishes no example, say so in `VENDOR.md`; the test-mode
+  check before release is then the only proof.
+
 ### Rule 4: Test First, Watch It Fail
 
 If you didn't see the test fail, you don't know it tests the right thing.
@@ -295,10 +310,8 @@ prints them with `formatPushResult`; programmatic `push()` does not simulate.
   step: `events`, `calls`, `mappingKey?`, `skipped?`, `error?`; `skipped` says
   why a destination sent nothing: `pending` on its `require`, or a `consent`
   skip)
-- Trace-mode limit: simulate injects the mock env before `init`, so a client
-  built in `init` is recorded. Runtime trace mode wraps the env per push only
-  (`collector/src/destination.ts`), so calls through a client built in `init`
-  are not recorded there.
+- Clients built in `init`: simulate injects the mock env before `init`, so a
+  client built in `init` is recorded.
 - The `mockEnv()` and env pattern examples above remain correct for unit testing
   individual step functions directly
 

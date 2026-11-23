@@ -16,8 +16,31 @@ import {
   resetClientContext,
   setClientContext,
 } from '../../../core/client-context.js';
+import { writeCredentials } from '../../../lib/credentials.js';
+import {
+  SERVICE_APP,
+  serviceAuthServer,
+  testCredential,
+} from '../../../__tests__/helpers/service-credential.js';
 
-const APP = 'https://app.example.test';
+/** The app the automation credential names; its requests carry `DPoP tok-<n>`. */
+const APP = SERVICE_APP;
+const AUTH = 'https://auth.example.test';
+
+/** A stored `walkeros login` for an app; its bearer is `wos_at_test`. */
+function login(app: string) {
+  return {
+    [AUTH]: {
+      issuer: AUTH,
+      resource: `${app}/api`,
+      client_id: `${AUTH}/oauth/walkeros-cli`,
+      token_endpoint: `${AUTH}/api/oauth/token`,
+      revocation_endpoint: `${AUTH}/api/oauth/revoke`,
+      access_token: 'wos_at_test',
+      expires_at: Date.now() + 3_600_000,
+    },
+  };
+}
 
 /** A writable that keeps what it got and says when the first chunk came. */
 function sink() {
@@ -64,15 +87,21 @@ function countRequests(): () => number {
 }
 
 const env = process.env;
+let credential: string;
+
+beforeAll(async () => {
+  credential = await testCredential();
+});
 
 beforeEach(() => {
   process.env = {
     ...env,
     WALKEROS_APP_URL: APP,
-    WALKEROS_TOKEN: 'wos_pat_test',
+    WALKEROS_CREDENTIAL: credential,
     XDG_CONFIG_HOME: mkdtempSync(join(tmpdir(), 'walkeros-api-')),
   };
   delete process.env.WALKEROS_PROJECT_ID;
+  server.use(...serviceAuthServer().handlers);
   setClientContext({ type: 'cli', version: '9.9.9' });
 });
 
@@ -83,6 +112,18 @@ afterEach(() => {
 });
 
 describe('walkeros api: exit codes by answer', () => {
+  let errorSpy: jest.SpyInstance;
+  beforeEach(() => {
+    errorSpy = jest.spyOn(console, 'error').mockImplementation(() => {});
+  });
+  afterEach(() => errorSpy.mockRestore());
+
+  /** The lines the credential's client wrote for the app's refusal. */
+  const refusedLines = () =>
+    errorSpy.mock.calls
+      .map((call) => call.map(String).join(' '))
+      .filter((text) => /refused this automation's credential/.test(text));
+
   it.each([
     [200, EXIT.ok],
     [201, EXIT.ok],
@@ -110,6 +151,10 @@ describe('walkeros api: exit codes by answer', () => {
     expect(out.text()).toBe(body ?? '');
     if (code === EXIT.ok) {
       expect(err.text()).toBe('');
+    } else if (status === 401 || status === 403) {
+      // One line per refusal: the credential's client wrote it.
+      expect(err.text()).toBe('');
+      expect(refusedLines()).toHaveLength(1);
     } else {
       expect(err.text().trim().split('\n')).toHaveLength(1);
       expect(err.text()).toContain(`HTTP ${status}`);
@@ -127,7 +172,7 @@ describe('walkeros api: exit codes by answer', () => {
   });
 
   it('exits 3 without a credential and sends nothing', async () => {
-    delete process.env.WALKEROS_TOKEN;
+    delete process.env.WALKEROS_CREDENTIAL;
     const calls = countRequests();
     const { io, err } = streams();
     expect(
@@ -135,7 +180,7 @@ describe('walkeros api: exit codes by answer', () => {
     ).toBe(EXIT.auth);
     expect(calls()).toBe(0);
     expect(err.text()).toBe(
-      'walkeros api: no token: set WALKEROS_TOKEN to a token from Account > Automation tokens in the walkerOS app\n',
+      'walkeros api: not signed in: run walkeros login, or set WALKEROS_CREDENTIAL to an automation from Account in the walkerOS app\n',
     );
   });
 
@@ -249,7 +294,9 @@ describe('walkeros api: usage errors exit 2 and send nothing', () => {
   });
 
   it('a credential bound for a plain http remote app', async () => {
+    delete process.env.WALKEROS_CREDENTIAL;
     process.env.WALKEROS_APP_URL = 'http://app.example.test';
+    writeCredentials(login('http://app.example.test'));
     const calls = countRequests();
     const { io, err } = streams();
     expect(
@@ -262,7 +309,6 @@ describe('walkeros api: usage errors exit 2 and send nothing', () => {
   it.each(['Authorization: Bearer x', 'authorization: Bearer x'])(
     'a token in a header: %s',
     async (header) => {
-      delete process.env.WALKEROS_TOKEN;
       const calls = countRequests();
       const { io, err } = streams();
       expect(
@@ -270,7 +316,7 @@ describe('walkeros api: usage errors exit 2 and send nothing', () => {
       ).toBe(EXIT.usage);
       expect(calls()).toBe(0);
       expect(err.text()).toBe(
-        'walkeros api: set the token with WALKEROS_TOKEN, not with an Authorization header\n',
+        'walkeros api: set the credential with WALKEROS_CREDENTIAL or walkeros login, not with an Authorization header\n',
       );
     },
   );
@@ -370,7 +416,7 @@ describe('walkeros api: the request', () => {
       expect(seen?.headers.get('content-type')).toBe('application/json');
       expect(seen?.headers.get('idempotency-key')).toBe('run-1');
       expect(seen?.headers.get('x-extra')).toBe('a: b');
-      expect(seen?.headers.get('authorization')).toBe('Bearer wos_pat_test');
+      expect(seen?.headers.get('authorization')).toBe('DPoP tok-1');
       expect(seen?.headers.get('x-walkeros-client')).toBe('cli');
       expect(seen?.headers.get('x-walkeros-client-version')).toBe('9.9.9');
     },

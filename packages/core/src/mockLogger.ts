@@ -13,6 +13,7 @@ export interface MockLogger extends Instance {
   throw: jest.Mock<never, [string | Error, unknown?]>;
   json: jest.Mock;
   scope: jest.Mock<MockLogger, [string]>;
+  mask: jest.Mock<string, [string]>;
 
   /**
    * Array of all scoped loggers created by this logger
@@ -62,6 +63,8 @@ export function createMockLogger(): MockLogger {
     throw: mockThrow,
     json: jest.fn(),
     scope: mockScope,
+    // A mock holds no known values, so it masks nothing.
+    mask: jest.fn((text: string) => text),
     scopedLoggers,
   };
 

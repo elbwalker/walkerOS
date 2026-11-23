@@ -6,6 +6,7 @@
  * exactly as they do without it.
  */
 import type { Logger } from '@walkeros/core';
+import { createKnownValues } from '@walkeros/core/node';
 import type { PipelineOptions } from '../pipeline.js';
 import { createMockLogger } from './helpers/mock-logger.js';
 
@@ -20,12 +21,7 @@ jest.mock('../health-server.js', () => ({
   }),
 }));
 
-jest.mock('../runner.js', () => ({
-  loadFlow: jest.fn().mockResolvedValue({
-    collector: { command: jest.fn(), status: undefined },
-    file: '/tmp/bundle.mjs',
-  }),
-}));
+jest.mock('../runner.js', () => ({ loadFlow: jest.fn() }));
 
 jest.mock('../heartbeat.js', () => ({
   createHeartbeat: jest.fn().mockReturnValue({
@@ -33,7 +29,6 @@ jest.mock('../heartbeat.js', () => ({
     stop: jest.fn(),
     sendOnce: jest.fn(),
   }),
-  getInstanceId: jest.fn().mockReturnValue('test-instance'),
 }));
 
 jest.mock('../secrets-fetcher.js', () => ({
@@ -44,6 +39,7 @@ jest.mock('../secrets-fetcher.js', () => ({
 jest.mock('../version.js', () => ({ VERSION: '0.0.0-test' }));
 
 import { createHeartbeat } from '../heartbeat.js';
+import { loadFlow } from '../runner.js';
 import { fetchSecrets } from '../secrets-fetcher.js';
 
 async function waitFor(cond: () => boolean, timeoutMs = 1000): Promise<void> {
@@ -69,6 +65,23 @@ describe('runPipeline with WALKEROS_CONFIG_FROZEN set', () => {
     jest.clearAllMocks();
     processOnMock = jest.spyOn(process, 'on').mockReturnValue(process);
     process.env.WALKEROS_CONFIG_FROZEN = '1';
+    // As loadBundle does: the pipeline's beforeStart runs, where the secrets
+    // are fetched, before the flow starts.
+    jest
+      .mocked(loadFlow)
+      .mockImplementation(
+        async (
+          _file,
+          _config,
+          _logger,
+          _loggerConfig,
+          _health,
+          beforeStart,
+        ) => {
+          await beforeStart?.(undefined);
+          return { collector: { command: jest.fn() }, file: '/tmp/bundle.mjs' };
+        },
+      );
   });
 
   afterEach(() => {
@@ -82,11 +95,14 @@ describe('runPipeline with WALKEROS_CONFIG_FROZEN set', () => {
       bundlePath: '/tmp/test-bundle.mjs',
       port: 8080,
       logger,
+      knownValues: createKnownValues(),
+      instanceId: '3f9a2b7c1d4e5f60',
       api: {
-        appUrl: 'https://app.walkeros.io',
-        token: 'test-token',
-        projectId: 'proj_123',
-        flowId: 'flow_456',
+        app: {
+          origin: 'https://app.walkeros.io',
+          authorize: async () => ({}),
+          answered: () => false,
+        },
         heartbeatIntervalMs: 60000,
         cacheDir: '/tmp/cache',
       },

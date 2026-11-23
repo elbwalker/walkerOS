@@ -230,42 +230,6 @@ export namespace Flow {
      * Consumed by the CLI bundler at build time.
      */
     bundle?: Bundle;
-
-    /**
-     * Observability configuration of a web flow: `url` and `binding` connect
-     * the bundle to an observer, `level` and `sample` set what it captures.
-     * Without both `url` and `binding` the bundle gets no observe wiring. A
-     * server flow's `observe` has no effect: the server bundle never receives
-     * it, and `runneros start` reads `WALKEROS_OBSERVE_LEVEL` instead.
-     */
-    observe?: Observe;
-  }
-
-  /**
-   * Observability configuration block.
-   *
-   * - `off` emits no records.
-   * - `standard` emits structural FlowState records (no inEvent/outEvent).
-   * - `trace` emits full payloads on every hop. Use only for short debug
-   *   windows.
-   */
-  export interface Observe {
-    level?: 'off' | 'standard' | 'trace';
-    /** Deterministic sample fraction in [0, 1]. Defaults to 1. */
-    sample?: number;
-    /**
-     * Observer base URL for the web connect form. Public, safe to commit.
-     * When `url` and `binding` are both set on a web flow, the bundler bakes
-     * exactly this pair into the generated startFlow config; the runtime
-     * attaches only when an out-of-band `elbObserve` credential is present.
-     * Secrets never live in flow config.
-     */
-    url?: string;
-    /**
-     * Public project binding a web observe credential must match. Paired
-     * with `url`; public, safe to commit.
-     */
-    binding?: string;
   }
 
   /**
@@ -340,6 +304,25 @@ export namespace Flow {
      * ```
      */
     env?: Record<string, string>;
+
+    /**
+     * Web flows this server flow serves.
+     *
+     * The key is a web flow's key in the same file, the value the path of its
+     * built file in the server's output folder: bare file names joined by
+     * `/`. Building the server flow builds each listed web flow there. The
+     * value is a file location, never a public path: the flow's own routes
+     * and its fs store decide how the file is served. Keys and values are
+     * read as written, never resolved as references.
+     *
+     * Server flows only.
+     *
+     * @example
+     * ```json
+     * { "casamoda": "casamoda/walker.js", "venti": "venti/track.js" }
+     * ```
+     */
+    flows?: Record<string, string>;
   }
 
   /**

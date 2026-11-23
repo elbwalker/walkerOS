@@ -1,10 +1,61 @@
 import {
+  HEARTBEAT_RELEASE_MAX,
   createHeartbeat,
   computeCounterDelta,
+  newInstanceId,
   type CounterSnapshot,
 } from '../heartbeat.js';
 import type { Collector, Logger } from '@walkeros/core';
-import type { DedupedError, RingEntry } from '../log-ring.js';
+import {
+  createCLILogger,
+  createKnownValues,
+  type KnownValues,
+} from '@walkeros/core/node';
+import {
+  LogRing,
+  ringTap,
+  type DedupedError,
+  type RingEntry,
+} from '../log-ring.js';
+import type { AppAuth } from '../credentials.js';
+
+const INSTANCE_ID = '3f9a2b7c1d4e5f60';
+
+/** The credential's client as the heartbeat sees it: fixed headers, every answer recorded. */
+function fakeApp(origin = 'http://localhost:3000') {
+  const answers: number[] = [];
+  const authorize = jest.fn<
+    ReturnType<AppAuth['authorize']>,
+    Parameters<AppAuth['authorize']>
+  >(async () => ({ Authorization: 'DPoP tok', DPoP: 'proof' }));
+  const app: AppAuth = {
+    origin,
+    authorize,
+    answered: ({ status }) => {
+      answers.push(status);
+      return false;
+    },
+  };
+  return { app, answers, authorize };
+}
+
+const APP = fakeApp().app;
+
+/** Ring entries as the runner's tap stores them, from a real silent logger. */
+function ringLines(
+  knownSecrets: KnownValues,
+  log: (logger: Logger.Instance) => void,
+): RingEntry[] {
+  const logRing = new LogRing(100);
+  log(
+    createCLILogger({
+      silent: true,
+      knownSecrets,
+      onLine: ringTap({ logRing }),
+    }),
+  );
+  return logRing.snapshot();
+}
 
 /**
  * A `Logger.Instance` whose methods are jest spies, so tests can both pass it to
@@ -21,6 +72,7 @@ function makeSpyLogger(): Logger.Instance {
       throw new Error(typeof message === 'string' ? message : message.message);
     },
     json: jest.fn(),
+    mask: jest.fn((text: string) => text),
     scope: (_name: string): Logger.Instance => logger,
   };
   return logger;
@@ -54,6 +106,8 @@ interface SerializedDestination {
 /** The shape of the JSON body the heartbeat POSTs (fields under test). */
 interface HeartbeatBody {
   instanceId?: string;
+  /** The release the runner reports it runs. */
+  release?: string;
   /** Configured heartbeat cadence in milliseconds. */
   intervalMs?: number;
   uptime?: number;
@@ -68,20 +122,21 @@ interface HeartbeatBody {
 }
 
 /**
- * Read and parse the JSON body of the first fetch call from a typed fetch mock,
+ * Read and parse the JSON body of one fetch call from a typed fetch mock,
  * without casts. The mock's `.mock.calls` are typed via `jest.fn<typeof fetch>`,
- * so the init arg is `RequestInit | undefined` and its `body` is narrowed to a
- * string before parsing.
+ * so the init arg is `RequestInit | undefined` and its `body` is narrowed to
+ * the bytes the heartbeat sends before parsing.
  */
 function readHeartbeatBody(
   mock: jest.Mock<ReturnType<typeof fetch>, Parameters<typeof fetch>>,
+  call = 0,
 ): HeartbeatBody {
-  const init = mock.mock.calls[0]?.[1];
+  const init = mock.mock.calls[call]?.[1];
   const body = init?.body;
-  if (typeof body !== 'string') {
-    throw new Error('expected a string request body');
+  if (!(body instanceof Uint8Array)) {
+    throw new Error('expected the request body as bytes');
   }
-  const parsed: HeartbeatBody = JSON.parse(body);
+  const parsed: HeartbeatBody = JSON.parse(new TextDecoder().decode(body));
   return parsed;
 }
 
@@ -108,48 +163,26 @@ describe('heartbeat', () => {
     jest.restoreAllMocks();
   });
 
-  it('logs error with expiry hint when heartbeat receives 401', async () => {
-    globalThis.fetch = jest.fn().mockResolvedValue({ status: 401, ok: false });
+  it.each([401, 403])(
+    'hands a %s to the credential client, which writes the refused line, and adds no line of its own',
+    async (status) => {
+      globalThis.fetch = jest
+        .fn()
+        .mockResolvedValue(new Response(null, { status }));
+      const { app, answers } = fakeApp();
 
-    const heartbeat = createHeartbeat(
-      {
-        appUrl: 'http://localhost:3000',
-        token: 'sk-walkeros-test',
-        projectId: 'proj_1',
-        intervalMs: 60000,
-      },
-      mockLogger,
-    );
+      const heartbeat = createHeartbeat(
+        { app, instanceId: INSTANCE_ID, intervalMs: 60000 },
+        mockLogger,
+      );
 
-    await heartbeat.sendOnce();
+      await heartbeat.sendOnce();
 
-    expect(mockLogger.error).toHaveBeenCalledWith(
-      expect.stringContaining('401'),
-    );
-    expect(mockLogger.error).toHaveBeenCalledWith(
-      expect.stringContaining('expired'),
-    );
-  });
-
-  it('logs error with expiry hint when heartbeat receives 403', async () => {
-    globalThis.fetch = jest.fn().mockResolvedValue({ status: 403, ok: false });
-
-    const heartbeat = createHeartbeat(
-      {
-        appUrl: 'http://localhost:3000',
-        token: 'sk-walkeros-test',
-        projectId: 'proj_1',
-        intervalMs: 60000,
-      },
-      mockLogger,
-    );
-
-    await heartbeat.sendOnce();
-
-    expect(mockLogger.error).toHaveBeenCalledWith(
-      expect.stringContaining('403'),
-    );
-  });
+      expect(answers).toEqual([status]);
+      expect(mockLogger.error).not.toHaveBeenCalled();
+      expect(mockLogger.warn).not.toHaveBeenCalled();
+    },
+  );
 
   it.each([500, 429, 400])(
     'warns, without an auth hint, when a beat is rejected with %s',
@@ -158,9 +191,8 @@ describe('heartbeat', () => {
 
       const heartbeat = createHeartbeat(
         {
-          appUrl: 'http://localhost:3000',
-          token: 'sk-walkeros-test',
-          projectId: 'proj_1',
+          app: APP,
+          instanceId: INSTANCE_ID,
           intervalMs: 60000,
         },
         mockLogger,
@@ -180,9 +212,8 @@ describe('heartbeat', () => {
 
     const heartbeat = createHeartbeat(
       {
-        appUrl: 'http://localhost:3000',
-        token: 'sk-walkeros-test',
-        projectId: 'proj_1',
+        app: APP,
+        instanceId: INSTANCE_ID,
         intervalMs: 60000,
       },
       mockLogger,
@@ -216,6 +247,7 @@ describe('heartbeat snapshot suppliers', () => {
         );
       },
       json: jest.fn(),
+      mask: jest.fn((text: string) => text),
       scope: (_name: string): Logger.Instance => logger,
     };
     return logger;
@@ -239,22 +271,19 @@ describe('heartbeat snapshot suppliers', () => {
       },
     ];
 
-    const logs: RingEntry[] = [
-      {
-        time: now - 1000,
-        level: 'warn',
-        message: `Warning: secret=${secret} detected`,
-      },
-    ];
+    const knownValues = createKnownValues([secret]);
+    const logs = ringLines(knownValues, (logger) =>
+      logger.warn(`Warning: secret=${secret} detected`),
+    );
 
     const heartbeat = createHeartbeat(
       {
-        appUrl: 'http://localhost:3000',
-        token: 'bearer-test',
-        projectId: 'proj_1',
+        app: APP,
+        instanceId: INSTANCE_ID,
         intervalMs: 60000,
         getErrors: () => errors,
         getLogs: () => logs,
+        knownValues,
       },
       typedLogger,
     );
@@ -286,15 +315,39 @@ describe('heartbeat snapshot suppliers', () => {
     expect(typeof recentLogs[0]?.time).toBe('string'); // ISO string
   });
 
+  it('sends a ringed INFO line masked when read, cut at 256, with a value learned after it was ringed', async () => {
+    const fetchMock = createFetchMock();
+    globalThis.fetch = fetchMock;
+    const knownValues = createKnownValues();
+    const logs = ringLines(knownValues, (logger) =>
+      logger.info(`export with late-salt-value ${'x'.repeat(300)}`),
+    );
+    knownValues.add(['late-salt-value']);
+
+    await createHeartbeat(
+      {
+        app: APP,
+        instanceId: INSTANCE_ID,
+        intervalMs: 60000,
+        getLogs: () => logs,
+        knownValues,
+      },
+      typedLogger,
+    ).sendOnce();
+
+    const message = readHeartbeatBody(fetchMock).recentLogs?.[0]?.message;
+    expect(message).toBe(`export with *** ${'x'.repeat(239)}…`);
+    expect(message).toHaveLength(256);
+  });
+
   it('always sends recentErrors (empty array) so the snapshot can clear, but omits empty recentLogs', async () => {
     const fetchMock = createFetchMock();
     globalThis.fetch = fetchMock;
 
     const heartbeat = createHeartbeat(
       {
-        appUrl: 'http://localhost:3000',
-        token: 'bearer-test',
-        projectId: 'proj_1',
+        app: APP,
+        instanceId: INSTANCE_ID,
         intervalMs: 60000,
         getErrors: () => [],
         getLogs: () => [],
@@ -318,9 +371,8 @@ describe('heartbeat snapshot suppliers', () => {
 
     const heartbeat = createHeartbeat(
       {
-        appUrl: 'http://localhost:3000',
-        token: 'bearer-test',
-        projectId: 'proj_1',
+        app: APP,
+        instanceId: INSTANCE_ID,
         intervalMs: 60000,
         // no getErrors, no getLogs
       },
@@ -356,6 +408,7 @@ describe('heartbeat per-destination breakdown (dlqSize + dropped)', () => {
         );
       },
       json: jest.fn(),
+      mask: jest.fn((text: string) => text),
       scope: (_name: string): Logger.Instance => logger,
     };
     return logger;
@@ -397,9 +450,8 @@ describe('heartbeat per-destination breakdown (dlqSize + dropped)', () => {
 
     const heartbeat = createHeartbeat(
       {
-        appUrl: 'http://localhost:3000',
-        token: 'bearer-test',
-        projectId: 'proj_1',
+        app: APP,
+        instanceId: INSTANCE_ID,
         intervalMs: 60000,
         getCounters: () => status,
       },
@@ -417,6 +469,30 @@ describe('heartbeat per-destination breakdown (dlqSize + dropped)', () => {
     expect(dest?.dlqSize).toBe(3);
     // dropped sums queue + dlq drops for the destination step (delta from 0).
     expect(dest?.dropped).toBe(3);
+  });
+
+  // The runner drains right after it starts the final beat, without
+  // awaiting it: the beat must carry the counters from before the drain.
+  it('takes its counters when sendOnce is called, not when its POST settles', async () => {
+    const fetchMock = createFetchMock();
+    globalThis.fetch = fetchMock;
+    const status = statusWith({}, {});
+    status.in = 5;
+    const heartbeat = createHeartbeat(
+      {
+        app: APP,
+        instanceId: INSTANCE_ID,
+        intervalMs: 60000,
+        getCounters: () => status,
+      },
+      typedLogger(),
+    );
+
+    const sent = heartbeat.sendOnce();
+    status.in = 9;
+    await sent;
+
+    expect(readHeartbeatBody(fetchMock).counters?.eventsIn).toBe(5);
   });
 });
 
@@ -445,6 +521,7 @@ describe('heartbeat flushSoon (debounced out-of-band beat)', () => {
         );
       },
       json: jest.fn(),
+      mask: jest.fn((text: string) => text),
       scope: (_name: string): Logger.Instance => logger,
     };
     return logger;
@@ -456,9 +533,8 @@ describe('heartbeat flushSoon (debounced out-of-band beat)', () => {
 
     const heartbeat = createHeartbeat(
       {
-        appUrl: 'http://localhost:3000',
-        token: 'bearer-test',
-        projectId: 'proj_1',
+        app: APP,
+        instanceId: INSTANCE_ID,
         intervalMs: 60000,
         flushDebounceMs: 1000,
       },
@@ -487,9 +563,8 @@ describe('heartbeat flushSoon (debounced out-of-band beat)', () => {
 
     const heartbeat = createHeartbeat(
       {
-        appUrl: 'http://localhost:3000',
-        token: 'bearer-test',
-        projectId: 'proj_1',
+        app: APP,
+        instanceId: INSTANCE_ID,
         intervalMs: 60000,
         flushDebounceMs: 1000,
       },
@@ -529,6 +604,7 @@ describe('heartbeat intervalMs (advertised cadence)', () => {
         );
       },
       json: jest.fn(),
+      mask: jest.fn((text: string) => text),
       scope: (_name: string): Logger.Instance => logger,
     };
     return logger;
@@ -540,9 +616,8 @@ describe('heartbeat intervalMs (advertised cadence)', () => {
 
     const heartbeat = createHeartbeat(
       {
-        appUrl: 'http://localhost:3000',
-        token: 'bearer-test',
-        projectId: 'proj_1',
+        app: APP,
+        instanceId: INSTANCE_ID,
         intervalMs: 60000,
       },
       typedLogger(),
@@ -552,6 +627,47 @@ describe('heartbeat intervalMs (advertised cadence)', () => {
 
     const body = readHeartbeatBody(fetchMock);
     expect(body.intervalMs).toBe(60000);
+  });
+});
+
+describe('heartbeat release', () => {
+  const originalFetch = globalThis.fetch;
+
+  afterEach(() => {
+    globalThis.fetch = originalFetch;
+  });
+
+  it.each<[string, string | undefined, string | undefined]>([
+    ['carries a release', '41', '41'],
+    [
+      'carries a release of the maximum length',
+      'r'.repeat(HEARTBEAT_RELEASE_MAX),
+      'r'.repeat(HEARTBEAT_RELEASE_MAX),
+    ],
+    [
+      'omits a release over the maximum length',
+      'r'.repeat(HEARTBEAT_RELEASE_MAX + 1),
+      undefined,
+    ],
+    ['omits an empty release', '', undefined],
+    ['omits an unknown release', undefined, undefined],
+  ])('%s and still sends the beat', async (_case, release, sent) => {
+    const fetchMock = createFetchMock();
+    globalThis.fetch = fetchMock;
+
+    const heartbeat = createHeartbeat(
+      {
+        app: APP,
+        instanceId: INSTANCE_ID,
+        intervalMs: 60000,
+        release,
+      },
+      makeSpyLogger(),
+    );
+    await heartbeat.sendOnce();
+
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+    expect(readHeartbeatBody(fetchMock).release).toBe(sent);
   });
 });
 
@@ -580,6 +696,7 @@ describe('heartbeat uptime (restart evidence)', () => {
         );
       },
       json: jest.fn(),
+      mask: jest.fn((text: string) => text),
       scope: (_name: string): Logger.Instance => logger,
     };
     return logger;
@@ -591,35 +708,33 @@ describe('heartbeat uptime (restart evidence)', () => {
 
     const heartbeat = createHeartbeat(
       {
-        appUrl: 'http://localhost:3000',
-        token: 'bearer-test',
-        projectId: 'proj_1',
+        app: APP,
+        instanceId: INSTANCE_ID,
         intervalMs: 60000,
       },
       typedLogger(),
     );
 
     await heartbeat.sendOnce();
-    const firstInit = fetchMock.mock.calls[0]?.[1];
-    const firstBodyRaw = firstInit?.body;
-    if (typeof firstBodyRaw !== 'string') {
-      throw new Error('expected a string request body');
-    }
-    const firstBody: HeartbeatBody = JSON.parse(firstBodyRaw);
+    const firstBody = readHeartbeatBody(fetchMock, 0);
 
     await jest.advanceTimersByTimeAsync(5000);
 
     await heartbeat.sendOnce();
-    const secondInit = fetchMock.mock.calls[1]?.[1];
-    const secondBodyRaw = secondInit?.body;
-    if (typeof secondBodyRaw !== 'string') {
-      throw new Error('expected a string request body');
-    }
-    const secondBody: HeartbeatBody = JSON.parse(secondBodyRaw);
+    const secondBody = readHeartbeatBody(fetchMock, 1);
 
     expect(firstBody.uptime).toBeDefined();
     expect(secondBody.uptime).toBeDefined();
     expect(secondBody.uptime ?? 0).toBeGreaterThan(firstBody.uptime ?? 0);
+  });
+});
+
+describe('newInstanceId', () => {
+  it('makes 16 lowercase hex characters, a new id per call', () => {
+    const first = newInstanceId();
+
+    expect(first).toMatch(/^[0-9a-f]{16}$/);
+    expect(newInstanceId()).not.toBe(first);
   });
 });
 
@@ -712,10 +827,8 @@ describe('computeCounterDelta', () => {
 describe('createHeartbeat basics', () => {
   const originalFetch = globalThis.fetch;
   const config = {
-    appUrl: 'https://app.example.com',
-    token: 'sk-walkeros-abc',
-    projectId: 'proj_123',
-    flowId: 'flow_456',
+    app: APP,
+    instanceId: INSTANCE_ID,
     intervalMs: 60_000,
   };
 
@@ -729,25 +842,43 @@ describe('createHeartbeat basics', () => {
     jest.restoreAllMocks();
   });
 
-  it('sends heartbeat with correct payload', async () => {
+  it('checks in at the credential origin with no id, its headers made over the bytes it sends', async () => {
+    const fetchMock = createFetchMock();
+    globalThis.fetch = fetchMock;
+    const { app, authorize } = fakeApp('https://app.example.com');
+
+    await createHeartbeat({ ...config, app }, mockLogger).sendOnce();
+
+    const url = 'https://app.example.com/api/runner/check-in';
+    expect(fetchMock).toHaveBeenCalledWith(
+      url,
+      expect.objectContaining({
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: 'DPoP tok',
+          DPoP: 'proof',
+        },
+      }),
+    );
+    expect(authorize).toHaveBeenCalledWith({
+      method: 'POST',
+      url,
+      body: fetchMock.mock.calls[0]?.[1]?.body,
+    });
+    const body = readHeartbeatBody(fetchMock);
+    expect(body.uptime).toBeGreaterThanOrEqual(0);
+    expect(body).not.toHaveProperty('flowId');
+    expect(body).not.toHaveProperty('deploymentId');
+  });
+
+  it('carries the instance id it was given', async () => {
     const fetchMock = createFetchMock();
     globalThis.fetch = fetchMock;
 
     await createHeartbeat(config, mockLogger).sendOnce();
 
-    expect(fetchMock).toHaveBeenCalledWith(
-      'https://app.example.com/api/projects/proj_123/runners/heartbeat',
-      expect.objectContaining({
-        method: 'POST',
-        headers: expect.objectContaining({
-          Authorization: 'Bearer sk-walkeros-abc',
-          'Content-Type': 'application/json',
-        }),
-      }),
-    );
-    const body = readHeartbeatBody(fetchMock);
-    expect(body.instanceId).toBeDefined();
-    expect(body.uptime).toBeGreaterThanOrEqual(0);
+    expect(readHeartbeatBody(fetchMock).instanceId).toBe(INSTANCE_ID);
   });
 
   it('does not throw on network error', async () => {
@@ -760,7 +891,7 @@ describe('createHeartbeat basics', () => {
     ).resolves.toBeUndefined();
   });
 
-  it('stop clears the interval', () => {
+  it('stop clears the interval', async () => {
     jest.useFakeTimers();
     const fetchMock = createFetchMock();
     globalThis.fetch = fetchMock;
@@ -768,7 +899,8 @@ describe('createHeartbeat basics', () => {
     const hb = createHeartbeat(config, mockLogger);
     hb.start();
     hb.stop();
-    jest.advanceTimersByTime(120_000);
+    // Async: the initial send awaits the credential's headers first.
+    await jest.advanceTimersByTimeAsync(120_000);
 
     // Only the initial send from start() happened.
     expect(fetchMock).toHaveBeenCalledTimes(1);

@@ -31,6 +31,11 @@ export async function collector(
     level: initConfig.logger?.level,
     handler: initConfig.logger?.handler,
   };
+  // The host's mask travels with it, so what the Observe reporter sends
+  // outside a log line is masked like a line. Only the reporter reads it, so
+  // a build without the reporter folds this out.
+  if (typeof __WALKEROS_OBSERVE__ === 'undefined' || __WALKEROS_OBSERVE__)
+    loggerConfig.mask = initConfig.logger?.mask;
   const logger = createLogger(loggerConfig);
 
   // Enhanced globals with static globals from config

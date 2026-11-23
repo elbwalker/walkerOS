@@ -46,7 +46,7 @@ npx walkeros --version`}
 | `setup` | Run the optional `setup()` lifecycle on one component | Provision external resources (BigQuery datasets, Pub/Sub topics, SQLite tables) |
 | `validate` | Validate events, flows, mappings, contracts, or entries | Check configuration before bundling |
 | `cache` | Manage CLI package and build caches | Clear stale caches, view cache statistics |
-| `auth` | Authentication and identity | Check who the token in `WALKEROS_TOKEN` belongs to |
+| `auth` | Authentication and identity | Check who the credential belongs to, or print a token for curl |
 | `api` | Send an authenticated request to the walkerOS app API, or list its operations | Manage projects, flows and deployments from scripts and CI |
 | `diagnostics` | Show the CLI version, the app URL and whether the app answers | See which app you are on and whether it is reachable |
 | `telemetry` | Show, enable or disable anonymous usage telemetry | See [Telemetry](/docs/apps/telemetry) |
@@ -57,7 +57,7 @@ The CLI uses types from `@walkeros/core`:
 
 - **`Flow.Json`** - Root config file format (`version`, `flows`, and optionally `$schema`, the JSON Schema URL for editor validation, plus `include`, `variables`, `contract`)
 - **`Flow`** - Single flow (has `config`, `sources`, `destinations`, `transformers`, `stores`, `collector`, `variables`)
-- **`Flow.Config`** - Per-flow config block (`platform`, `url`, `settings`, `bundle`, `observe`)
+- **`Flow.Config`** - Per-flow config block (`platform`, `url`, `settings`, `bundle`)
 - **`Collector.InitConfig`** - Runtime type passed to `startFlow()`
 
 The CLI transforms `Flow.Json` → `Flow` (per flow) → bundled code that uses `Collector.InitConfig` at runtime.
@@ -101,6 +101,8 @@ After tracing, the bundler checks every package in `bundle.packages` that the bu
 ```
 Package @walkeros/server-core is declared in bundle.packages but nothing imports it; it is not in the bundle. Remove it from bundle.packages if unused.
 ```
+
+When the declared package's installed copy has none of the entries its manifest names, the warning says that instead: `Package <name> is declared in bundle.packages, but its installed copy has no <entry>; it is not in the bundle.`
 
 ### Escape hatch: `traceInclude`
 
@@ -213,7 +215,8 @@ Add a `path` property to any package to use a local directory instead of npm:
 - **`path` takes precedence** - When both `path` and `version` are specified, `path` is used
 - **Relative paths** - Resolved relative to the config file's directory
 - **Absolute paths** - Used as-is
-- **dist folder** - If a `dist/` folder exists, it's used; otherwise the package root is used
+- **dist folder** - If a `dist/` folder exists, `package.json` and `dist/` are copied; otherwise the package root is used
+- **Entries outside `dist/`** - When the package's `main`, `module`, `exports` or `bin` points to a file outside `dist/` (a Node entry in `lib/`, for example), the package root is copied whole, so the entry arrives in the bundle. Links are followed, and `node_modules` and `.env` or `.env.*` files at any depth, plus `.turbo` and `.git` at the top, are left out. Type declarations (`.d.ts`, `types` and `typings` conditions) and `.json` files in `exports` do not count as entries, and `package.json` itself does not either
 
 ### Dependency Resolution
 
@@ -445,7 +448,7 @@ The bundle is now ready to deploy!
 
 When `--output` is a URL (e.g., a presigned S3 URL), the CLI bundles to a temp file and uploads it with an HTTP PUT. Today that upload fails with `Error: fetch failed` before any request reaches the server (seen on Node.js 22), so for a build that uploads its output use a [manifest build](#manifest-builds---manifest).
 
-For server flows, `-o` resolves to a directory: `dist/{flow.mjs, package.json, node_modules/}`. When `-o` ends in `.tar.gz` or `.tgz`, that same directory is packed into a single gzip archive instead (server flows only). For multi-flow `--all`, each flow gets its own subdirectory: `dist/<flowName>/...`.
+For server flows, `-o` resolves to a directory: `dist/{flow.mjs, package.json, node_modules/}`. When `-o` ends in `.tar.gz` or `.tgz`, that same directory is packed into a single gzip archive instead (server flows only). For multi-flow `--all`, each flow gets its own subdirectory: `dist/<flowName>/...`. A server flow that lists web flows in `config.bundle.flows` also gets each of them at its path in that directory, see [Serving files](/docs/apps/runtime#serving-files). With `--all --release r1`, `dist/casamoda/walker.js` carries `r1`, and `dist/server/casamoda/walker.js`, the copy the server flow serves, carries its own content release. With `--json` and no `-o`, the server flow's entry in the JSON result lists the flows left out in `servedLeftOut`.
 
 ### Multi-Flow Example
 
@@ -539,14 +542,92 @@ combine with it.
 | `flowConfig` | The `flow.json` content. Required when any bundle artifact is requested |
 | `flowName` | Flow to build in a multi-flow config |
 | `buildEnv` | Base values for web `$env`, beneath `config.bundle.env`. Never the CLI process's own environment |
-| `artifacts[]` | At least one. Each has a unique `outputName` (a bare file name), a `putUrl`, and optional `contentType` and `headers`. A bundle artifact sets `target` (`cdn`, `cdn-skeleton`, `runner`, `simulate` or `push`); a wrap artifact sets `target: "wrap"`, `platform` and `skeleton` |
+| `artifacts[]` | At least one. Each has a unique `outputName` (a bare file name), a `putUrl`, and optional `contentType` and `headers`. A bundle artifact sets `target` (`cdn`, `cdn-skeleton`, `runner`, `simulate` or `push`) and, on at most one artifact, `served`, see [served web flows](#served-web-flows); a wrap artifact sets `target: "wrap"`, `platform` and `skeleton` |
 | `resultPutUrl` | Presigned PUT URL for the result JSON |
+| `packages` | Optional. How bundle artifacts install their packages, see below |
 
-The result is `{ ok, toolchain, artifacts: [{ target, outputName, bytes, sha256 }], error? }`,
+The result is `{ ok, toolchain, artifacts: [{ target, outputName, bytes, sha256, served? }], packages?, error? }`,
 where `error` carries a `code`, a `message` and the `outputName` being built.
 Error codes: `INVALID_MANIFEST`, `TOOLCHAIN_MISMATCH`, `INVALID_CONFIG`,
 `MISSING_BUILD_ENV`, `WEB_SECRET_REF`, `UNSUPPORTED_PACKAGE_SPEC`,
-`LOCAL_PATH_NOT_ALLOWED`, `BUILD_FAILED`, `UPLOAD_FAILED`.
+`LOCAL_PATH_NOT_ALLOWED`, `BUILD_FAILED`, `PACKAGE_UNAVAILABLE`,
+`PACKAGE_TREE_INVALID`, `UPLOAD_FAILED`.
+
+#### Served web flows
+
+A server flow that lists web flows in `config.bundle.flows` builds them with
+every bundle artifact, as `walkeros bundle` does: each archive carries the web
+files at their paths. See [Serving files](/docs/apps/runtime#serving-files).
+Every listed web flow is loaded before any is built, so a missing
+`config.bundle.env` value or a local path in a listed web flow fails the
+manifest before anything is fetched.
+
+At most one bundle artifact may name the files as outputs of their own:
+
+<CodeSnippet
+  code={`"served": {
+  "casamoda": { "putUrl": "<presigned PUT URL>", "contentType": "application/javascript" }
+}`}
+  language="json"
+/>
+
+The keys are exactly the listed web flows. The CLI uploads each web file that
+artifact's build placed, and the artifact's result entry carries
+`served: [{ flow, path, bytes, sha256 }]`. A failed upload is `UPLOAD_FAILED`.
+
+The manifest is refused with `INVALID_MANIFEST` and one of these lines:
+
+- `Served outputs name "<key>", which flow "<flow>" does not serve`
+- `Served outputs leave out "<key>", which flow "<flow>" serves`
+- `Only one artifact may name served outputs`
+- `Package trees name "<key>", which flow "<flow>" does not serve`
+
+A listed path whose first part equals, ignoring case, a bundle artifact's `outputName` is
+refused with `INVALID_CONFIG`:
+`"<value>" collides with "<outputName>", which this manifest builds`. A local
+path in a listed web flow is `LOCAL_PATH_NOT_ALLOWED`, with the location
+prefixed by `flows.<key>.`.
+
+#### Recorded package trees (`packages`)
+
+Without `packages`, every bundle artifact resolves its packages fresh from the
+registry, as a local build does. With it, every bundle artifact of the manifest
+installs one tree, and the result reports that tree as
+`packages: { digest, tree }` (`digest` is the sha256 of the tree's canonical
+JSON). Each web flow a server flow lists installs a tree of its own, reported as
+`packages.served: { <key>: { digest, tree } }`:
+
+- `{ "resolve": { "before": "<ISO time>", "exempt": ["@walkeros/"] } }`
+  resolves once. Every pick takes only a version published at or before
+  `before`, except for a package whose registry name starts with an `exempt`
+  prefix and an exact version such a package declares. A pick whose registry
+  entry has no publish time is refused, and so is an `npm:` alias whose name
+  and target fall on different sides of an `exempt` prefix. When no version
+  satisfies a range under the cutoff, the build fails with `BUILD_FAILED`
+  naming the package, the range and the cutoff.
+- `{ "tree": <tree> }` installs exactly a tree an earlier build reported, and
+  resolves nothing: each entry is fetched from its recorded tarball URL and
+  checked against its recorded sha512. A tarball the registry no longer
+  serves, or serves with other bytes, fails with `PACKAGE_UNAVAILABLE` naming
+  the entry. A tree that names another registry, a tarball URL outside it, an
+  integrity that is not sha512, a version that is not exact, an install path
+  outside `node_modules/<name>` and `node_modules/<name>/node_modules/<name>`,
+  a missing declared package, or an edge with no package in the tree fails
+  with `PACKAGE_TREE_INVALID` before anything is fetched.
+
+With `{ "tree" }`, `packages.served` carries `{ <key>: <tree> }` for every listed web flow and for no other. A listed web flow without a recorded tree fails with `PACKAGE_TREE_INVALID`: `No recorded tree for served flow "<key>"`. With `resolve`, each listed web flow resolves under the same cutoff, and later artifacts install the trees the first one recorded.
+
+A tree is `{ version: 1, registry, before, packages }`, where `packages` maps
+each install path to `{ name, version, resolved, integrity, dependencies? }`.
+The schema and its check are exported as `PackageTreeSchema`,
+`packageTreeProblems` and `packageTreeDigest`.
+
+A browser wrap's `options` can carry `observe: { preview: { url, token } }`. It
+is the build's whole Observe config: it replaces the flow file's own
+`collector.observe` and turns the reporter on in that build alone, and a
+production bundle carries no reporter. Any other key (`usage` included) is
+refused, and so is `observe` on a node wrap or beside `preview`. The error names
+the option's keys only, never a value. See [Observe](/docs/getting-started/observe#web-flows).
 
 Unknown top-level fields are ignored, so an orchestrator can keep its own
 bookkeeping in the manifest. Artifact entries are strict. A manifest build
@@ -724,6 +805,8 @@ A value that is not JSON, not a readable file and not a URL is taken as an event
 | Real | (none) | Real HTTP requests (server), recorded requests (web) | Integration testing, production validation |
 | Simulate | `--simulate` | Mocked (captured) | Safe local testing |
 | Mock | `--mock` | Returns mock value | Controlled testing |
+
+`push` and every simulate send nothing to [Observe](/docs/getting-started/observe): they drop the flow's `collector.observe` before the flow starts, whether the input is a flow config or a prebuilt bundle.
 
 **Recommended workflow:**
 - Use `push --simulate` first to validate configuration without side effects
@@ -943,7 +1026,7 @@ success: true
 
 The browser source's example triggers apply their own `options.url` as a path: with `--page-url`, the `pageView` example keeps the `--page-url` origin and switches to its path (`https://shop.example.com/product/trail-runner`). `--page-url` is rejected for every other step, for a server source and for a real push: `--page-url sets the page of a simulated web source; for request context use --ingest.`
 
-**Simulate versus trace mode.** Simulate injects the mock env before the destination's `init`, so clients built in `init` (the BigQuery writer, the Pub/Sub client) are recorded. A running flow observed at trace level records calls per push only, so calls through a client built in `init` do not appear there.
+**Clients built in `init`.** Simulate injects the mock env before the destination's `init`, so clients built in `init` (the BigQuery writer, the Pub/Sub client) are recorded.
 
 **Secrets in simulate.** A `$secret.NAME` reference is read from the environment variable `NAME`, also in simulate. For a Sheets or GCS store the value must be a valid service-account JSON with a real-format RSA private key: the store signs its token request before the mocked `fetch` answers it, so a hand-made fake key fails at flow start with a key decoding error. A throwaway key is fine, it is never sent anywhere:
 
@@ -1232,7 +1315,7 @@ Output (valid):
 ```
 Validating flow...
 
-Scope: flows default; 11 check(s): file:schema, flow:schema, flow:steps, flow:package-versions, flow:structure, flow:routes, flow:examples, flow:contract-examples, flow:mapping-keys, flow:resolve, flow:package-settings
+Scope: flows default; 12 check(s): file:schema, flow:schema, flow:steps, flow:package-versions, flow:structure, flow:served, flow:routes, flow:examples, flow:contract-examples, flow:mapping-keys, flow:resolve, flow:package-settings
 
 Validation Results:
   ✓ All checks passed
@@ -1295,7 +1378,7 @@ With `--strict`, warnings and skipped checks fail the run (exit 2), and the verd
 ```
 Validating flow...
 
-Scope: flows server; 11 check(s): file:schema, flow:schema, flow:steps, flow:package-versions, flow:structure, flow:routes, flow:examples, flow:contract-examples, flow:mapping-keys, flow:resolve, flow:package-settings
+Scope: flows server; 12 check(s): file:schema, flow:schema, flow:steps, flow:package-versions, flow:structure, flow:served, flow:routes, flow:examples, flow:contract-examples, flow:mapping-keys, flow:resolve, flow:package-settings
 
 Validation Results:
   ⚠ flows.server.config.bundle.packages.@walkeros/destination-demo: Package "@walkeros/destination-demo" has no version specified
@@ -1433,7 +1516,7 @@ JSON output format for the file of step 4 (`details.context`, the IntelliSense c
     "connectionsChecked": 0,
     "scope": {
       "flows": ["server"],
-      "checks": ["file:schema", "flow:schema", "flow:steps", "flow:package-versions", "flow:structure", "flow:routes", "flow:examples", "flow:contract-examples", "flow:mapping-keys", "flow:resolve", "flow:package-settings"]
+      "checks": ["file:schema", "flow:schema", "flow:steps", "flow:package-versions", "flow:structure", "flow:served", "flow:routes", "flow:examples", "flow:contract-examples", "flow:mapping-keys", "flow:resolve", "flow:package-settings"]
     },
     "skipped": [
       {
@@ -1467,7 +1550,7 @@ Codes group as follows (the full list is exported as `VALIDATE_CODES` from `@wal
 | Group | Codes |
 |-------|-------|
 | Scope and options | `FLOW_NOT_FOUND`, `ENTRY_NOT_FOUND`, `AMBIGUOUS_ENTRY`, `OPTION_NOT_APPLICABLE` |
-| Structure and resolution | `SCHEMA_VALIDATION`, `INVALID_COMPONENT_NAME`, `INVALID_REFERENCE`, `STORE_REFERENCE_NOT_FOUND`, `STATE_STORE_UNKNOWN`, `STATE_STORE_FILE`, `UNRESOLVED_REFERENCE`, `FLOW_CYCLE`, `VAR_CYCLE`, `UNKNOWN_KEY`, `DEPRECATED_PACKAGE`, `MAPPING_NO_OP`, `MAPPING_VALUE_NO_OPERATOR`, `MAPPING_VALUE_PRODUCERS`, `BATCH_WITHOUT_PUSH_BATCH`, `MALFORMED_REFERENCE`, `WEB_LOGGER_FORMAT` |
+| Structure and resolution | `SCHEMA_VALIDATION`, `INVALID_COMPONENT_NAME`, `INVALID_REFERENCE`, `STORE_REFERENCE_NOT_FOUND`, `STATE_STORE_UNKNOWN`, `STATE_STORE_FILE`, `UNRESOLVED_REFERENCE`, `FLOW_CYCLE`, `VAR_CYCLE`, `UNKNOWN_KEY`, `DEPRECATED_PACKAGE`, `MAPPING_NO_OP`, `MAPPING_VALUE_NO_OPERATOR`, `MAPPING_VALUE_PRODUCERS`, `BATCH_WITHOUT_PUSH_BATCH`, `MALFORMED_REFERENCE`, `WEB_LOGGER_FORMAT`, `SERVED_FLOWS_NOT_SERVER`, `SERVED_FLOW_NOT_WEB`, `SERVED_PATH_INVALID`, `SERVED_PATH_CONFLICT` |
 | Settings | `ENTRY_SCHEMA` |
 | Contracts | `NO_CONTRACT_SECTION`, `INVALID_EXTENDS`, `CIRCULAR_EXTENDS`, `UNRESOLVED_CONTRACT` |
 | Skips | `GATED_BY_ERRORS`, `CONTRACT_NOT_STATIC`, `NO_PACKAGE`, `NO_SETTINGS_SCHEMA`, `SCHEMA_UNAVAILABLE` |
@@ -1588,24 +1671,87 @@ The entry validator:
 
 ## Authentication
 
-The CLI authenticates to the walkerOS app with one credential: the `WALKEROS_TOKEN` environment variable. Create a token in the app under Account > Automation tokens.
+People sign the CLI in with `walkeros login`; scripts, CI and other unattended runs use an automation's credential in the `WALKEROS_CREDENTIAL` environment variable. The commands that call the app (`walkeros api`, `walkeros auth whoami`) send whichever credential is in place.
+
+### Sign in with walkeros login
 
 <CodeSnippet
-  code={`read -rs WALKEROS_TOKEN; export WALKEROS_TOKEN
+  code={`walkeros login
 walkeros auth whoami`}
   language="bash"
 />
 
-- In a shell, read the token without echoing it, as above. Never type it inline: an inline value lands in your shell history.
-- In CI, set `WALKEROS_TOKEN` to your automation token from the secret store.
-- Set it only for the commands that call the app (`walkeros api`, `walkeros auth whoami`). `push` and `setup` run step package code in the same process.
-- Without a token, a command that calls the app stops with `no token: set WALKEROS_TOKEN to a token from Account > Automation tokens in the walkerOS app`.
+`walkeros login` opens the walkerOS sign-in on `auth.walkeros.io` in your browser. Sign in, check what the consent screen asks for, and Allow: the browser returns to the CLI on `127.0.0.1` and the sign-in finishes by itself, with nothing to copy. If the browser shows a connection error instead (the CLI runs in a container or on another machine), run `walkeros login --no-browser`.
+
+The app URL (`WALKEROS_APP_URL`, default `https://app.walkeros.io`) stays the one address you set, an origin with no path. The CLI asks the app where to sign in: against `https://stage.app.walkeros.io` the sign-in opens on `auth.stage.walkeros.io`.
+
+**No browser on this machine.** `walkeros login --no-browser` prints an address. Open it on any device, sign in and Allow, and the page shows a one-time code. Paste it at the prompt in the terminal. The code works once, within 5 minutes of Allow, and only in the terminal that started the sign-in. Paste it only into a terminal you started yourself.
+
+**No prompt (Remote Control, an agent).** Without a terminal to ask in, `walkeros login --no-browser` keeps the sign-in waiting for 15 minutes and exits. Finish it with the code the page shows:
+
+<CodeSnippet
+  code={`walkeros login --no-browser
+walkeros login --code <code>`}
+  language="bash"
+/>
+
+A code passed this way lands in your shell history; it works once, so it is spent there. The prompt stays the default way.
+
+| Option | Description |
+|--------|-------------|
+| `--no-browser` | Print an address to open on any device; the page after Allow shows a code to paste |
+| `--code <code>` | Finish a sign-in started with `--no-browser` where no prompt could ask for the code |
+| `--port <n>` | The loopback port the browser returns to (default: `WALKEROS_LOGIN_PORT`, else any free port) |
+
+What the CLI keeps, and where:
+
+- The sign-in is stored in `~/.config/walkeros/credentials.json` (or under `XDG_CONFIG_HOME`), readable only by you, one sign-in per app URL. Signed in to two apps (say a staging app and `https://app.walkeros.io`), the CLI keeps both and uses the one for the app URL in place.
+- A sign-in is used only for its own app: with `WALKEROS_APP_URL` pointing elsewhere, a command sends nothing and says where you are signed in.
+- The CLI renews the sign-in by itself while you use it. When the sign-in ends, a command says `your sign-in to https://auth.walkeros.io ended: run walkeros login`. It ends when:
+  - you disconnected walkerOS CLI in the app;
+  - it went unused too long;
+  - a renewal timed out on this computer after the app had already renewed it: once the app's 10-second window for repeating a renewal has passed, the next renewal ends the sign-in.
+- The CLI gets read and write access to the app's REST API, never to the hosted MCP server. Each sign-in sends you a notice email.
+- walkerOS CLI shows up once under Account, Connected apps, however many computers are signed in. `walkeros logout` signs this computer out and leaves it listed there; Disconnect there signs the CLI out on every computer.
+
+`walkeros logout` revokes the sign-in for the app URL and removes it from this computer. If the app cannot be reached, the CLI removes it anyway and says so: the sign-in then still works until you disconnect walkerOS CLI under Account, Connected apps, which signs the CLI out on every computer.
+
+### Automation for scripts and CI
+
+In the app, under Account, click **New automation**, name it and pick its access. Confirm with your passkey or a code, and the auth host shows its credential (`wos_cred_...`) once: set it as `WALKEROS_CREDENTIAL`. While it is set, it is used instead of a `walkeros login`; `login` and `logout` say so.
+
+<CodeSnippet
+  code={`read -rs WALKEROS_CREDENTIAL; export WALKEROS_CREDENTIAL
+walkeros auth whoami`}
+  language="bash"
+/>
+
+- In a shell, read the credential without echoing it, as above. Never type it inline: an inline value lands in your shell history.
+- In CI, set `WALKEROS_CREDENTIAL` from the secret store.
+- Set it only for the commands that call the app (`walkeros api`, `walkeros auth whoami`, `walkeros auth token`). `push` and `setup` run step package code in the same process.
+- The credential names its own app and is sent only there, so `WALKEROS_APP_URL` is not needed. If `WALKEROS_APP_URL` or `appUrl` in the config names another app, a command sends nothing and stops with `WALKEROS_CREDENTIAL is for <its app>, and WALKEROS_APP_URL names <the other>`.
+- The credential itself is never sent: each run buys a short-lived token with it. When no token can be bought, the command stops with the auth server's answer.
+- A credential that is never used lapses after 7 days. Once used, it lasts until you revoke it under Account, where each automation shows when and from where it was last used.
+
+Without either credential, a command that calls the app stops with `not signed in: run walkeros login, or set WALKEROS_CREDENTIAL to an automation from Account in the walkerOS app`.
+
+### A token for curl
+
+`walkeros auth token` prints one bearer token of the automation in `WALKEROS_CREDENTIAL` on stdout, and nothing else. It lasts 1 hour.
+
+<CodeSnippet
+  code={`curl -H "Authorization: Bearer $(walkeros auth token)" \\
+  https://app.walkeros.io/api/projects`}
+  language="bash"
+/>
+
+Only an automation's credential buys this token. With no credential set, the command exits 1 with `WALKEROS_CREDENTIAL is not set`; with a runner's credential it exits 1 with the auth server's answer, `This credential buys bound tokens only`.
 
 The CLI reads no credential from its config file, `~/.config/walkeros/config.json`. If that file holds `token`, `accessToken`, `accessTokenExpiresAt`, `refreshToken` or `email` fields, delete them.
 
 ### Whoami
 
-Show who the token belongs to: email and user ID.
+Show who the credential belongs to (email and user ID), and where it comes from.
 
 <CodeSnippet
   code={`walkeros auth whoami`}
@@ -1616,7 +1762,10 @@ Output:
 ```
 user@example.com
 User: usr_abc123
+Credential: signed in to https://auth.walkeros.io
 ```
+
+With `WALKEROS_CREDENTIAL` set, the last line reads `Credential: WALKEROS_CREDENTIAL`.
 
 | Option | Description |
 |--------|-------------|
@@ -1627,7 +1776,7 @@ User: usr_abc123
 
 ## API command
 
-`walkeros api` sends one authenticated request to the walkerOS app API and prints the answer. It reaches every operation of the app's public API (projects, flows, deployments, previews, secrets, Observe sessions and more) without a command of its own for each: you name the method and the path. The app validates every request; the CLI never does.
+`walkeros api` sends one authenticated request to the walkerOS app API and prints the answer. It reaches every operation of the app's public API (projects, flows, deployments, previews, secrets, Observe and more) without a command of its own for each: you name the method and the path. The app validates every request; the CLI never does.
 
 <CodeSnippet
   code={`walkeros api <METHOD> <path> [--data <json|@file|->] [--header 'Name: value']... [--project <id>] [--yes]`}
@@ -1639,7 +1788,7 @@ User: usr_abc123
 - Query parameters ride in the path: `'/api/projects/{projectId}/flows?limit=10'`.
 - `{projectId}` is filled from `--project`, else from `WALKEROS_PROJECT_ID`. Any other `{...}` left in the path is a usage error.
 - `DELETE` needs `--yes`, because a command run through a shell skips an agent host's per-tool approval.
-- The request is sent with the token from `WALKEROS_TOKEN` (see [Authentication](#authentication)).
+- The request is sent with the credential in place, `WALKEROS_CREDENTIAL` first, else the `walkeros login` (see [Authentication](#authentication)).
 
 | Option | Description |
 |--------|-------------|
@@ -1653,9 +1802,9 @@ User: usr_abc123
 | Code | Meaning |
 |------|---------|
 | `0` | The app answered with any 2xx status |
-| `1` | The app answered with any other HTTP status. The error body is still printed on stdout, and one line on stderr names the status and the app's message |
+| `1` | The app answered with any other HTTP status. The error body is still printed on stdout, and one line on stderr names the status and the app's message; for a 401 or 403 to `WALKEROS_CREDENTIAL` that one line is the credential's own (`The app refused this automation's credential ...`). Also: `WALKEROS_CREDENTIAL` is for another app than the app URL set, and nothing is sent |
 | `2` | Usage error (unknown method, `DELETE` without `--yes`, an unfilled placeholder, an unreadable `--data` file). Nothing is sent |
-| `3` | No credential, or the app answered 401 |
+| `3` | No usable credential (none, an unreadable `WALKEROS_CREDENTIAL`, or no token for it), or the app answered 401 |
 | `4` | The app could not be reached, or the connection broke while the answer was arriving |
 
 ### List operations
@@ -1991,7 +2140,8 @@ Two options work everywhere:
 
 | Variable | Purpose |
 |----------|---------|
-| `WALKEROS_TOKEN` | The token for `walkeros api` and `walkeros auth whoami` (an automation token, `wos_pat_...`) |
+| `WALKEROS_CREDENTIAL` | An automation's credential (`wos_cred_...`) for `walkeros api`, `walkeros auth whoami` and `walkeros auth token`; used instead of a `walkeros login` while set, and sent to the app it names |
+| `WALKEROS_LOGIN_PORT` | The loopback port `walkeros login` listens on, when `--port` is not given |
 | `WALKEROS_PROJECT_ID` | Fills `{projectId}` in a `walkeros api` path |
 | `WALKEROS_APP_URL` | Base URL override (default: `https://app.walkeros.io`) |
 | `BUILD_MANIFEST_URL` | Manifest location read by a bare `walkeros bundle --manifest` |
@@ -2004,9 +2154,10 @@ The runtime reads its own variables, see the [runtime environment variables](/do
 ## Diagnostics command
 
 `walkeros diagnostics` reports the CLI version, the app URL and where it comes
-from (`env`, `config` or `default`), and whether the app answers its public
-health route. It sends no credential, so it works without a token, and it exits 0
-whether or not the app answers.
+from (`env`, `config` or `default`, or `credential`: with `WALKEROS_CREDENTIAL`
+set it is the credential's own app), whether the app answers its public health
+route, and whether a command would be signed in there. It sends no credential,
+so it works without a token, and it exits 0 whether or not the app answers.
 
 <CodeSnippet
   code={`walkeros diagnostics
@@ -2018,9 +2169,10 @@ walkeros diagnostics --json`}
 cli 4.x.y
 app https://app.walkeros.io (default)
 health reachable, status ok, app 3f2a91c
+signed in to https://auth.walkeros.io
 ```
 
-When the app cannot be reached, the health line reads `health unreachable (fetch failed (ECONNREFUSED))`. `--json` prints the same report as one object, `{ cli, appUrl, app }`.
+When the app cannot be reached, the health line reads `health unreachable (fetch failed (ECONNREFUSED))`. The last line reads `not signed in`, `Credential: WALKEROS_CREDENTIAL, for <app>` (or, when the app URL set names another app, `WALKEROS_CREDENTIAL is for <its app>, and WALKEROS_APP_URL names <the other>`), or names where you are signed in instead; it never shows a token or a credential. `--json` prints the same report as one object, `{ cli, appUrl, app, signIn }`.
 
 ## Minimum client version
 
@@ -2068,29 +2220,37 @@ jobs:
 
 ### Deploy from CI
 
-A CI job deploys a flow saved in the walkerOS app with `walkeros api` and an automation token in `WALKEROS_TOKEN`. The deploy request answers a `deploymentId`; the job then reads the deployment until its status is `published` (a web flow), `active` (a server flow) or `failed`:
+A CI job deploys a flow saved in the walkerOS app with `walkeros api` and an automation's credential in `WALKEROS_CREDENTIAL`. The deploy request answers a `deploymentId` and a `release` (`versionId`, `versionNumber`, `state`, `confirmed`, `url`, `parts`). The job then reads that release until its `state` is `waiting`, `live`, `failed` or `replaced`:
 
 <CodeSnippet
   code={`- name: Deploy the flow
   env:
-    WALKEROS_TOKEN: \${{ secrets.WALKEROS_TOKEN }}
+    WALKEROS_CREDENTIAL: \${{ secrets.WALKEROS_CREDENTIAL }}
     WALKEROS_PROJECT_ID: proj_x7y8z9
     FLOW_ID: flow_a1b2c3d4
   run: |
     set -euo pipefail
-    DEPLOYMENT=$(walkeros api POST "/api/projects/{projectId}/flows/$FLOW_ID/deploy" \\
-      --header "Idempotency-Key: $GITHUB_RUN_ID-$GITHUB_RUN_ATTEMPT" | jq -r .deploymentId)
+    ANSWER=$(walkeros api POST "/api/projects/{projectId}/flows/$FLOW_ID/deploy" \\
+      --header "Idempotency-Key: $GITHUB_RUN_ID-$GITHUB_RUN_ATTEMPT")
+    DEPLOYMENT=$(echo "$ANSWER" | jq -r .deploymentId)
+    RELEASE=$(echo "$ANSWER" | jq -r '.release.versionId // empty')
+    QUERY=\${RELEASE:+?release=$RELEASE}
     for attempt in $(seq 1 72); do
-      STATUS=$(walkeros api GET "/api/projects/{projectId}/deployments/$DEPLOYMENT" | jq -r .status)
-      case "$STATUS" in
-        published|active) echo "Deployed: $STATUS"; exit 0 ;;
-        failed) walkeros api GET "/api/projects/{projectId}/deployments/$DEPLOYMENT" | jq .error; exit 1 ;;
+      ANSWER=$(walkeros api GET "/api/projects/{projectId}/deployments/$DEPLOYMENT$QUERY")
+      case "$(echo "$ANSWER" | jq -r '.release.state // empty')" in
+        waiting)
+          echo "A person confirms this release in the app: $(echo "$ANSWER" | jq -r .release.url)"
+          exit 0 ;;
+        live) echo "Live"; exit 0 ;;
+        failed|replaced) echo "$ANSWER" | jq .release; exit 1 ;;
       esac
       sleep 10
     done
-    echo "Deployment $DEPLOYMENT did not finish within 12 minutes"; exit 1`}
+    echo "Deployment $DEPLOYMENT did not settle within 12 minutes"; exit 1`}
   language="yaml"
 />
+
+`waiting` is a release that a person confirms in the app before it goes out. The job prints the link to confirm it and ends with exit 0. `live` is a release that is out already, a web release to the CDN or a release confirmed before the job read it. `failed` and `replaced` end with exit 1 and the release on the log. The `release` query is the deploy answer's `release.versionId`, so the job reads its own release even after a newer one replaced it. A deploy request sent again with the same `Idempotency-Key` answers `status: already_created` with no `release`, and the job then reads the deployment without the query.
 
 The `Idempotency-Key` stays the same within one workflow attempt, so a deploy request sent again in that attempt answers the same deployment instead of starting a second one; a re-run of the workflow is a new attempt and deploys again. A non-2xx answer makes `walkeros api` exit 1, which fails the step through `set -e`, with the server's error on the log. A flow with several named settings answers `400 AMBIGUOUS_CONFIG`; deploy one of them with `POST /api/projects/{projectId}/flows/{flowId}/settings/{settingsId}/deploy`.
 
@@ -2158,16 +2318,19 @@ lsof -ti:8080 | xargs kill`}
 
 ### Authentication Issues
 
-If `walkeros api` exits 3, it has no credential or the app answered 401:
+If `walkeros api` exits 3, it has no credential, the sign-in ended or belongs to another app URL, or the app answered 401:
 
 <CodeSnippet
-  code={`# Check who the token belongs to
+  code={`# Check who the credential belongs to and where it comes from
 walkeros auth whoami
+walkeros diagnostics
 
-# Set a token from Account > Automation tokens, without echoing it
-read -rs WALKEROS_TOKEN; export WALKEROS_TOKEN`}
+# Sign in again (or, in CI, set WALKEROS_CREDENTIAL to an automation from Account)
+walkeros login`}
   language="bash"
 />
+
+If `walkeros login` says the port it listens on is in use, choose another with `--port <n>` or `WALKEROS_LOGIN_PORT`. If the browser shows a connection error after Allow, run `walkeros login --no-browser`.
 
 ### nft cannot trace a runtime asset
 

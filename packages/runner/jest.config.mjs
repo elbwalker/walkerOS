@@ -4,6 +4,11 @@ const config = {
   testTimeout: 30000,
   // chalk is pure ESM; @walkeros packages resolve to their TypeScript source.
   transformIgnorePatterns: ['node_modules/(?!(@walkeros|chalk)/)'],
+  // The process suite runs by its own command (jest.processes.config.mjs).
+  testPathIgnorePatterns: [
+    ...baseConfig.testPathIgnorePatterns,
+    '/__tests__/processes/',
+  ],
   moduleNameMapper: {
     ...baseConfig.moduleNameMapper,
     // ESM: map .js imports to .ts files (sources use .js extensions for Node ESM)

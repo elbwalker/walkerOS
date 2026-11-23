@@ -40,6 +40,7 @@
         "examples/index.ts",
         "examples/minimal.ts",
         "examples/step.ts",
+        "templates/VENDOR.md",
         "templates/simple/conformance.test.ts",
         "templates/simple/index.test.ts",
         "templates/simple/index.ts",

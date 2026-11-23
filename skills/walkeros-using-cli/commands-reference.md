@@ -157,8 +157,6 @@ bundle: a local flow config is refused, one fed by URL or stdin fails at import.
 runneros start [artifact] [options]
 
 Options:
-  --flow-id <id>        App flow ID (enables heartbeat and secrets)
-  --project <id>        Project ID (default WALKEROS_PROJECT_ID; required with --flow-id)
   -p, --port <number>   Port (default: 8080)
   --env-file <path>     Load a dotenv file first (existing env wins; a group- or other-readable file is refused)
   --json                JSON output
@@ -178,6 +176,25 @@ walkeros bundle flow.json -o flow.tar.gz
 runneros start flow.tar.gz
 ```
 
+### Remote mode
+
+```bash
+runneros remote --cache <dir> [options]
+
+Options:
+  --cache <dir>         Release cache folder (required)
+  --no-heartbeat        Send no counters, errors or lines in the check-in
+  --heap <MB>           Heap of the flow in MB (default: from the memory granted)
+  -p, --port <number>   Port (default: 8080)
+  --json                JSON output
+  -v, --verbose         Verbose output
+  -s, --silent          Silent mode
+```
+
+Takes releases from the walkerOS app with `WALKEROS_CREDENTIAL` (a paired
+deployment's credential), no `--env-file`. See
+https://www.walkeros.io/docs/apps/remote.
+
 ---
 
 ## api
@@ -185,7 +202,7 @@ runneros start flow.tar.gz
 Send one authenticated request to the walkerOS app API and print the answer. The
 CLI knows no app operation of its own: name the method and the path, and the app
 validates the request. Projects, flows, deployments, previews, secrets and
-Observe sessions are all reached this way.
+Observe are all reached this way.
 
 ### Usage
 
@@ -242,21 +259,45 @@ To deploy a saved flow from CI, see "Deploy from CI" in the
 
 ---
 
+## login and logout
+
+`walkeros login` signs a person in with the walkerOS app (code plus PKCE). In a
+browser on this machine it returns to a loopback listener on `127.0.0.1` and
+finishes by itself. With `--no-browser` it prints an address to open on any
+device, and the page after Allow shows a one-time code (it works once, within 5
+minutes of Allow): pasted at the prompt, or, with no terminal to prompt in
+(Remote Control, an agent), passed as `walkeros login --code <code>` within 15
+minutes. `--port <n>` (or `WALKEROS_LOGIN_PORT`) fixes the loopback port, for a
+container that forwards it. If the browser shows a connection error after Allow,
+run `walkeros login --no-browser`.
+
+The sign-in lives in `~/.config/walkeros/credentials.json` (0600), one per app
+URL, used only for its own app URL and renewed by itself. walkerOS CLI shows up
+once under Account, Connected apps. `walkeros logout` revokes this computer's
+sign-in and removes it, and leaves the CLI listed there; Disconnect there signs
+the CLI out on every computer. Offline, logout removes the sign-in anyway and
+says it still works until the CLI is disconnected there.
+
 ## auth
 
-The CLI authenticates with `WALKEROS_TOKEN` only: a token from Account >
-Automation tokens in the app (`wos_pat_...`). Read it without echoing it
-(`read -rs WALKEROS_TOKEN; export WALKEROS_TOKEN`), never inline; in CI set it
-from the secret store; set it only for the commands that call the app. Without
-it, `walkeros api` exits 3 with
-`no token: set WALKEROS_TOKEN to a token from Account > Automation tokens in the walkerOS app`.
+The CLI sends `WALKEROS_CREDENTIAL` when it is set (an automation made under
+Account in the app, `wos_cred_...`, shown once on the auth host), else the
+`walkeros login` for the app URL. The credential names its own app and is sent
+only there; an app URL set to another app stops the command with both named. It
+buys a short-lived token for each run and is itself never sent. In CI, set
+`WALKEROS_CREDENTIAL` from the secret store; in a shell, read it without echoing
+it (`read -rs WALKEROS_CREDENTIAL; export WALKEROS_CREDENTIAL`), never inline;
+set it only for the commands that call the app. Without either, `walkeros api`
+exits 3 with
+`not signed in: run walkeros login, or set WALKEROS_CREDENTIAL to an automation from Account in the walkerOS app`.
 The CLI reads no credential from its config file,
 `~/.config/walkeros/config.json`. If that file holds `token`, `accessToken`,
 `accessTokenExpiresAt`, `refreshToken` or `email` fields, delete them.
 
-| Subcommand | Purpose                       |
-| ---------- | ----------------------------- |
-| `whoami`   | Show who the token belongs to |
+| Subcommand | Purpose                                                                                                                                                                                              |
+| ---------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `whoami`   | Show who the credential belongs to, and its source (`WALKEROS_CREDENTIAL` or `signed in to <app>`)                                                                                                   |
+| `token`    | Print one bearer token of the automation in `WALKEROS_CREDENTIAL`, valid 1 hour, for `curl`; exits 1 with the fact without a credential, and with the auth server's answer for a runner's credential |
 
 ---
 

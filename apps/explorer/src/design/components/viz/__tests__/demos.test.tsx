@@ -71,7 +71,7 @@ describe('first frames, on the server and in the first client frame', () => {
       ),
     ).toEqual([`1article open${json}`, `2article impression${json}`]);
     expect(
-      container.querySelector('.elb-viz-hero__card--tagged'),
+      container.querySelector('.elb-viz-tagging__card--tagged'),
     ).not.toBeNull();
     expect(container.querySelector('.elb-viz-caret')).toBeNull();
   });

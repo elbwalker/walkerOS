@@ -35,22 +35,6 @@
     gap: var(--space-3);
   }
 
-  .elb-quickstart__num {
-    flex: none;
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    box-sizing: border-box;
-    width: 32px;
-    height: 32px;
-    border: 1px solid var(--primary);
-    border-radius: var(--radius-full);
-    color: var(--link);
-    font-family: var(--font-mono);
-    font-size: var(--type-small-size);
-    font-weight: 600;
-  }
-
   .elb-quickstart__title {
     margin: 0;
     color: var(--fg);

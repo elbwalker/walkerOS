@@ -1,0 +1,398 @@
+---
+title: Remote releases
+description: Run a self-hosted walkerOS server flow that takes its releases from the walkerOS app, with no image rebuild
+sidebar_position: 4
+package: '@walkeros/runner'
+---
+
+# Remote releases
+
+`runneros remote` is a self-hosted runner that takes its releases from the
+walkerOS app. You release a server flow in the app, confirm it, and the runner
+fetches it, checks it and swaps to it. You never rebuild or redeploy an image.
+
+It ships in `@walkeros/runner`, next to [`runneros start`](/docs/apps/runtime).
+Start mode runs one artifact you built. Remote mode runs whatever release the
+app hands it, one release at a time, each checked before any of its code runs.
+
+## Set it up
+
+1. Pair a runner on the flow part's Self-hosted tab in the app. The credential
+   is shown once, see
+   [Connecting to the walkerOS app](/docs/apps/runtime#connecting-to-the-walkeros-app).
+2. On the same tab, choose Released from walkerOS as the way releases reach
+   your runners. An admin makes this choice.
+3. Release the part and confirm the release in the app.
+4. Start the runner with the credential and a cache folder:
+
+<CodeSnippet
+  code={`runneros remote --cache /app/cache`}
+  language="bash"
+/>
+
+`WALKEROS_CREDENTIAL` is the one variable that connects the runner. It names
+the app, the runner's deployment and the key the app seals secrets to. No other
+variable names the app, the deployment or a token. The runner reads it once and
+removes it from its environment. Unset, it exits 1 with
+`WALKEROS_CREDENTIAL is not set`. A credential of another kind, such as an
+automation's, exits 1 with
+`WALKEROS_CREDENTIAL is not a deployment's credential (kind automation)`.
+
+## Options
+
+| Option | Default | Description |
+|---|---|---|
+| `--cache <dir>` | none, required | The release cache folder, see [The cache](#the-cache) |
+| `--no-heartbeat` | off | Send no counters, errors or lines in the check-in. The check-in still carries the instance, the version, the interval and the release report |
+| `--heap <MB>` | from the memory granted | The flow's heap, at least 64 MB |
+| `-p, --port <number>` | `PORT`, else `8080` | The port the flow listens on |
+| `--json` | off | Output as JSON |
+| `-v, --verbose` | off | Verbose output |
+| `-s, --silent` | off | Suppress output |
+
+There is no `--env-file`. A walkerOS secret comes from the app with its
+release, and your own server secrets come from the platform's environment, one
+source per name, see [Secrets](#secrets).
+
+## How a boot goes
+
+The runner holds its port from the start. While no flow holds it, `/health`
+answers 200 and every other path, `/ready` included, answers 503.
+
+1. It checks in with the app. With a release in the cache it waits at most 5
+   seconds for the answer. With an empty cache it waits at most 10 seconds.
+2. With releases in the cache, it starts the highest good one, which needs no
+   call to the app. If the answer names a newer release, it takes that one next
+   and swaps to it.
+3. With an empty cache, it takes the release the answer names. When the app
+   names no release, or does not answer, the runner writes
+   `No release to run: the cache is empty and the app names no release` (or
+   `the app did not answer`) and exits 1.
+
+A release that cannot start leaves the runner answering 503 and checking in.
+A release refused on this instance is not tried again until the runner
+restarts or the app names a newer one. That includes a release whose flow would
+get a heap below 64 MB, which is refused as `not-ready`. A failed download, or a
+fault of this instance such as its disk, is tried again at the next check-in.
+
+## Checks before a release runs
+
+Every check runs before any code of the release runs, on every download and on
+every load from the cache. A refused release never runs, and the serving
+release is untouched. The check-in reports the refusal with its check name.
+
+| Check | A release is refused when |
+|---|---|
+| `document-size` | the release document is larger than 64 KiB |
+| `document-format` | the document is not the shape the runner reads, or lists web parts in a form it does not take |
+| `document-version` | the document's version is not one the runner knows |
+| `deployment` | the document names another deployment than the runner's |
+| `sequence` | its sequence is below the highest the runner took, or equals it with other bytes |
+| `release-id` | its release id is not a version id of the app |
+| `artifact-bytes` | the archive's size is not the document's, or is over 512 MiB |
+| `artifact-sha256` | the archive's bytes do not hash to the document's sha256 |
+| `archive-entry` | the archive is over 512 MiB or 100,000 entries when extracted, an entry leaves its folder, a served path would overwrite the server build, pass through a link or a file, or land on a folder |
+| `secret-set` | the sealed walkerOS secrets do not open, or do not match the deployment and the release |
+| `secret-in-env` | a walkerOS secret's name is already set in the environment |
+| `secret-reserved` | a secret's name is reserved, such as `PATH`, `NODE_OPTIONS`, `PORT` or a name starting with `WALKEROS_`, `NODE_`, `NPM_`, `LD_` or `DYLD_` |
+| `secret-missing` | a server secret the release lists is not set in the environment |
+
+The secret checks name the variables in the refusal and never a value. One more
+state is not a check of the document: `not-ready` is a release whose flow did
+not become ready within 60 seconds, exited before it did, or would get a heap
+below 64 MB at its checks. It is refused on
+this instance only.
+
+## Secrets
+
+A release lists two kinds of secret names.
+
+**walkerOS secrets** are stored in the app. The app seals the values of a
+release to the encryption key of the runner's credential, and the runner opens
+them in memory. In its cache it keeps them only as they arrived, sealed, filed
+under that key's thumbprint. A copy of the cache, a shared volume or its backup
+reveals no value, and an altered blob is refused.
+
+When you pair the runner again, the new credential has a new key. Sets sealed
+to the old key stay in the cache and are never read. A cold boot of a release
+with walkerOS secrets then waits for the app, with the line
+`No release can run: the walkerOS secrets of v17 need the app; /ready answers 503`,
+until the app answers and seals the set again.
+
+**Your server secrets** are values you keep on your own platform. The release
+lists their names and the runner reads them from its environment. A name that
+is not set refuses the release as `secret-missing`. A name has one source: a
+walkerOS secret that is also set in the environment is refused as
+`secret-in-env`.
+
+A value in either kind is masked in the runner's lines, the flow's lines and
+the check-in, whatever its source, see
+[the runtime page](/docs/apps/runtime).
+
+## Swaps and restarts
+
+A new release is fetched and checked while the old one serves. Only then does
+the runner stop the old flow and start the new one in a fresh child process.
+Each release gets clean memory.
+
+The gap is the old flow's drain, at most 8 seconds, plus the new flow's start.
+Measured swaps took about 100 to 250 milliseconds.
+
+During the drain `/ready` answers 503, and the old flow still answers its
+routes. A synchronous POST gets a 500. A POST that responds first gets a 200,
+and its event can be lost. After the drain the runner answers 503 until the new
+flow listens, except in two short windows that refuse the connection: from the
+old flow's exit until the runner holds the port again, and from the new flow's
+start until it listens.
+
+A flow that crashes after it was ready starts again, the same release, never
+another, after a back-off of 1 second that doubles up to 60 seconds. A flow that
+stayed ready for 60 seconds starts the next back-off at 1 second again. A
+restart that cannot start backs off the same way. The counters a crashed flow
+gathered since its last report are lost.
+
+A release that does not become ready at a swap is refused on this instance. The
+runner starts the highest good release below it. It never goes back across a
+release that changed secret values: a secret change is fixed forward with a new
+release. The line
+`No release can run: v17 changed secret values and did not start; /ready answers 503`
+says so.
+
+### A cold boot falls back per instance
+
+Each instance decides for itself. When the newest cached release does not
+become ready at a cold boot, that instance starts the highest good release
+below it and serves it until the next release. Instances of one deployment can
+therefore run different releases until the next one. The app shows the newer
+release as refused on the instance that fell back.
+
+A release that was ready and then crashed is a crash, not a refusal: it starts
+again after its back-off.
+
+## The flow's memory
+
+The flow runs in a child process with its own heap. By default the heap is
+three quarters of the memory granted, less what the supervisor holds. The memory
+granted is the container's limit when it sets one below the machine's memory,
+else the machine's memory. The runner logs how the figure came about, as
+`Heap 1356 MB for the flow: three quarters of 2048 MB granted, less 180 MB for the supervisor`.
+`--heap <MB>` sets it instead. Below 64 MB the runner does not start.
+
+## The cache
+
+The cache folder holds what a boot needs, so a restarted runner serves with no
+call to the app:
+
+- `documents/<sha256>.json`, the release documents.
+- `artifacts/<sha256>.tgz`, a server release's archive, and
+  `artifacts/<sha256>.js`, a web file a release serves.
+- `secrets/<key id>/<sequence>.jwe`, the sealed walkerOS secrets.
+
+Objects are content-addressed and written under a temporary name, then renamed.
+Every load checks them again. A few things follow:
+
+- Several instances can share one cache on a volume, and so can runners of
+  several deployments. A document of another deployment is skipped with no
+  line. Sealed sets are filed by key, and an instance reads only its own key's.
+- A damaged document is skipped with one WARN line and stays on disk, since
+  another runner on the volume may read it. A damaged archive or web file is
+  removed with a line.
+- The cache is never pruned. Remove old objects yourself when its volume fills.
+- A download that was killed leaves its temporary file, named `.tmp-` and 16
+  hexadecimal characters. It is never read.
+
+Whoever can write the cache folder chooses what the runner runs. Releases carry
+no signature, so a release document and its archive found there are taken as the
+app's, after the checks above, which an author of both can satisfy. The flow runs
+as the runner's user and can write the folder too. Share a cache only between
+runners whose flows you trust alike, such as the instances of one deployment,
+and where the host allows it, give the flow no write access to it. A shared
+volume still reveals no secret value, since values are only ever sealed there.
+
+The runner extracts each release into a folder of its own, under a private
+folder in the system's temporary directory, one per process. The runner
+removes every extraction but the running one's once it is ready, and removes
+the private folder when it exits. A process that was killed leaves its folder
+behind.
+
+The flow runs with that release folder as its working directory, so a relative
+path in the flow resolves against it.
+
+## The flow's environment
+
+The flow's environment is the runner's without any name starting with
+`WALKEROS_`. The credential never reaches the flow, and a flow's own
+`$env.WALKEROS_...` reads nothing. The release's walkerOS secrets reach it as
+environment variables the runner sets for the names the flow reads.
+
+The child runs as the runner's own user. Flow code can read the runner's
+credential from `/proc`, which the supervisor cannot prevent. A release can
+also misreport its own readiness and counters to its supervisor. Run only flows
+you trust.
+
+## Signed ingest writes
+
+The flow holds no credential. A step that sends to the hosted ingest, such as
+the ClickHouse destination with `settings.signed: true`, asks the supervisor to
+sign each request. The supervisor signs only a POST over https, or over http to
+a loopback or private host, and never a request to the app or its auth server.
+The step sends the method, the URL and the digest of its body, never the body.
+A step waits at most 5 seconds for the signature, and at most 64 requests wait
+at once. A refused sign is the step's own error.
+
+## The check-in
+
+The runner checks in with the app every 30 seconds, with 10 percent jitter. A
+check-in reports the instance, the running release, the newest release it tried
+and how that went, and with the heartbeat on, the counters, recent errors and
+lines.
+
+The answer names the newest release, the newest sequence of each web part the
+release serves, and may ask for a longer interval, up to one hour. The runner
+takes nothing else from it. A failed check-in backs off up to 5 minutes, and a
+refused one waits 5 minutes. A new distinct error sends the next check-in early,
+at most every 10 seconds. A failed check-in never stops the flow.
+
+## Served web files
+
+A server release can list web flows it serves. The listing names each web
+part, the path of its file in the release's folder, and the web release whose
+file the release's archive holds there.
+
+- At a swap, the runner fetches each listed web part whose newest release the
+  answer names above the cached one, before the new flow starts. A fetch that
+  fails never refuses the server release.
+- A boot with an empty cache fetches them before the flow starts too, for at
+  most 3 seconds in all. A web file that has not arrived by then is placed
+  right after the start, and until then the flow serves the archive's copy.
+- Every other start, which is a boot from the cache, a fallback and a crash
+  restart, starts at once with the web file the archive holds or the cache
+  holds. The runner then fetches a newer web release and places it right after
+  the start.
+- A web release arrives with its own document and file, checked the same way,
+  and is placed into the running release's folder by a copy to a temporary name
+  and a rename. A request in flight finishes on the old file, the flow serves
+  the new one at its next request, and nothing restarts.
+- A web release that fails its fetch or its checks leaves the served file as it
+  was. A failed fetch is tried again at the next check-in. A web release
+  refused by a check is not fetched again.
+- The runner never puts an older cached file over the newer copy the server
+  release carries. It places a cached web release only at or above the
+  release's own.
+- A cold boot places the newest cached web release at each listed path.
+
+From a web release to a changed file: one check-in, a download, and then the
+flow's own `Cache-Control`, since a browser keeps what the flow told it to keep.
+The listing itself is set in the server flow, see
+[Web flows a server flow serves](/docs/apps/runtime#web-flows-a-server-flow-serves).
+
+## Host recipes
+
+### Docker
+
+<CodeSnippet
+  code={`docker run -d --name flow -p 8080:8080 \\
+  -v walkeros-cache:/app/cache \\
+  -e WALKEROS_CREDENTIAL \\
+  -e STRIPE_KEY \\
+  walkeros/flow:<version> \\
+  runneros remote --cache /app/cache`}
+  language="bash"
+/>
+
+The named volume keeps the cache across restarts. `STRIPE_KEY` stands for one of
+your own server secrets. In Docker Compose:
+
+<CodeSnippet
+  code={`services:
+  flow:
+    image: walkeros/flow:<version>
+    command: ['runneros', 'remote', '--cache', '/app/cache']
+    ports: ['8080:8080']
+    volumes: ['cache:/app/cache']
+    environment:
+      WALKEROS_CREDENTIAL: \${WALKEROS_CREDENTIAL}
+volumes:
+  cache:`}
+  language="yaml"
+/>
+
+### Cloud Run
+
+Use instance-based billing (CPU always allocated), so the runner can check in
+between requests, and a Cloud Storage volume mounted at the cache folder, so
+its instances share one cache:
+
+<CodeSnippet
+  code={`gcloud run deploy walkeros-flow \\
+  --image walkeros/flow:<version> \\
+  --args=runneros,remote,--cache,/app/cache \\
+  --no-cpu-throttling \\
+  --add-volume=name=cache,type=cloud-storage,bucket=my-flow-cache \\
+  --add-volume-mount=volume=cache,mount-path=/app/cache \\
+  --set-secrets WALKEROS_CREDENTIAL=walkeros-credential:latest`}
+  language="bash"
+/>
+
+Without a volume, Cloud Run's file system is memory. The extraction, the
+served files and the cache then count against the instance's memory, and every
+new instance starts with an empty cache, so it needs the app's answer within
+10 seconds of its boot, else it exits 1.
+
+### Lightsail
+
+On a Lightsail instance with Docker, run the Docker recipe with a restart
+policy, `--restart unless-stopped`, and the platform's own settings for your
+server secrets.
+
+## Lines
+
+Every line is built once and passes the redactor unchanged. A release is
+`v17`, an artifact `sha256` and 12 hexadecimal characters, and a check sits in
+parentheses.
+
+| Line | Meaning |
+|---|---|
+| `runneros remote v<version>`, `Instance <id>` | The runner's start |
+| `Heap 384 MB for the flow, from --heap` | The flow's heap |
+| `Release v17 starting (sha256 3f9a2b7c1d4e, flow orders)` | A release is forked |
+| `Release v17 running (sha256 3f9a2b7c1d4e, flow orders, was v16)` | A release is ready, and the one it replaced |
+| `Release v17 starting again` | A release that started before starts again |
+| `Release v17 refused (artifact-sha256)` | A check refused it. Secret checks add the names, as `(secret-missing: STRIPE_KEY)`. A `secret-set` refusal adds the fact, as `(secret-set: The sealed set's header names another sequence)` |
+| `Release document refused (document-version)` | A check refused a document whose sequence did not read |
+| `Release v17 not ready within 60 s, refused on this instance` | The flow did not become ready |
+| `Release v17 exited before it was ready (code 1), refused on this instance` | The flow ended before it was ready |
+| `Release v17 exited (code 1), starting it again in 1 s` | A crash and its back-off |
+| `Release v17 not ready within 60 s after a restart, starting it again in 2 s` | A restart that did not become ready |
+| `Release v17 not started on this instance: <reason>` | A fact of this instance stopped it, such as its disk. A heap below 64 MB is refused as `not-ready` instead. After a crash it ends in `; starting it again in 4 s` |
+| `Release v17 skipped (the app does not serve its walkerOS secrets)` | The app answered 404 for the sealed set |
+| `Release v17 skipped (its archive is not in the cache)` | A cold boot or a fallback asks the app for nothing |
+| `No release can run: <reason>; /ready answers 503` | Reasons: `v17 changed secret values and did not start`, `the walkerOS secrets of v17 need the app`, `no good release in the cache` |
+| `No release to run: the cache is empty and the app names no release` | The boot exits 1. The other form ends `the app did not answer` |
+| `Release step failed: <message>` | A fault of this instance, such as its disk or its cache. The next check-in tries again |
+| `Release document not fetched (timeout)` | A request failed or answered with a status. Written once per change of state |
+| `Release document refused by the app (403)` | The app refused the request |
+| `Release v17 archive not fetched (timeout)`, `Release v17 walkerOS secrets not fetched (404)` | The same for an archive and for sealed secrets |
+| `Release v17 archive refused by the app (401)`, `Release v17 walkerOS secrets refused by the app (403)` | The same for an archive and for sealed secrets. `refused by storage` names the archive's redirect host |
+| `Check-in refused (401), serving on; next check-in in 5 min` | The app refused the credential |
+| `Check-in failed (timeout), serving on; next check-in in 30 s` | The app did not answer or its answer did not read |
+| `Check-in answered again` | A check-in worked after a failure |
+| `Cached release document sha256 3f9a2b7c1d4e skipped (document-format)` | A cached document failed a check. It stays on disk |
+| `Cached release document sha256 3f9a2b7c1d4e not read: EACCES` | This instance cannot read it. It stays on disk |
+| `Cached artifact sha256 3f9a2b7c1d4e failed its check and was removed` | A cached object no longer matches its hash |
+| `Cached walkerOS secrets of v17 did not open and were removed` | A cached set under this runner's key did not open, or lacks a name the release reads. It is removed, and the app is asked next |
+| `Cached walkerOS secrets of v17 not read: EIO`, `Cached walkerOS secrets of v17 did not open and were not removed: EACCES` | The cache's fault counts as not cached. The app is asked next |
+| `Release v17 walkerOS secrets not cached: ENOSPC` | The set could not be written. The release goes on with the values it holds |
+| `Served file casamoda/walker.js v4 placed (sha256 3f9a2b7c1d4e)` | A web file is in place. A swap of a web release adds `, was v3` |
+| `Served file casamoda/walker.js v5 refused (artifact-sha256)` | A web document or file failed a check |
+| `Served file casamoda/walker.js v5 not fetched (timeout)`, `Served file casamoda/walker.js v5 refused by the app (403)` | A web fetch failed. One line per change of state per web part |
+| `Served file casamoda/walker.js v5 not placed: EACCES` | This instance's disk or cache kept the file out, and the copy there stays. `not placed (archive-entry)` and `not placed: not in the cache` are the other two forms |
+| `Received SIGTERM, stopping the flow`, `Received SIGTERM during shutdown, the drain goes on` | The runner stops |
+
+A path segment of 20 or more high-entropy characters can print as `***`, so the
+check-in's `remote.served` carries the same facts keyed by deployment.
+
+## Next steps
+
+- [Runtime](/docs/apps/runtime): `runneros start`, secrets, health checks and serving files
+- [CLI](/docs/apps/cli#deploy-from-ci): release a flow from CI

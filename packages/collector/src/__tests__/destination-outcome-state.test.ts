@@ -1,4 +1,4 @@
-import { assembleJourneys, Level, StepError } from '@walkeros/core';
+import { Level, StepError } from '@walkeros/core';
 import type {
   Collector,
   Destination,
@@ -73,7 +73,7 @@ describe('destination states, consent first', () => {
     expect(at(Level.ERROR)).toHaveLength(errorsBefore);
   });
 
-  it('(b) consentDenied skip: counted, DEBUG, Observe skip, nothing queued, ok without queued', async () => {
+  it('(b) consentDenied skip: counted, DEBUG, observer skip record, nothing queued, ok without queued', async () => {
     const { at, logger } = capture();
     const { states, observer } = observe();
     const push = jest.fn();
@@ -143,7 +143,7 @@ describe('destination states, consent first', () => {
       message: 'a state delivery to the destination is running or failed',
     });
     expect(held.failed).toBeUndefined();
-    // Held is a waiting state: no Observe record until its out or error.
+    // Held is a waiting state: no observer record until its out or error.
     expect(
       states.some(
         (state) => state.stepId === 'destination.d' && state.phase === 'skip',
@@ -406,7 +406,7 @@ describe('destination states, consent first', () => {
     expect(r.queued?.h.reason?.code).toBe('held');
     expect(pushBatch).not.toHaveBeenCalled();
 
-    // Observe: the batch-stamped out stays the batch signal (no skip for a
+    // Observer records: the batch-stamped out stays the batch signal (no skip for a
     // batch); a held event is waiting too: no record until its out or error.
     const eventId = r.event?.id;
     const ofEvent = states.filter((state) => state.eventId === eventId);
@@ -418,18 +418,20 @@ describe('destination states, consent first', () => {
     expect(ofEvent.some((state) => state.stepId === 'destination.h')).toBe(
       false,
     );
-    const hopOf = () =>
-      assembleJourneys(states)
-        .journeys.find((journey) => journey.id === eventId)
-        ?.hops.find((hop) => hop.stepId === 'destination.d');
-    expect(hopOf()).toMatchObject({ terminalPhase: 'out', batched: true });
+    const ofD = () =>
+      states.filter(
+        (state) =>
+          state.eventId === eventId && state.stepId === 'destination.d',
+      );
+    expect(ofD().find((state) => state.phase === 'out')?.batch).toBeDefined();
+    expect(ofD().some((state) => state.phase === 'flush')).toBe(false);
 
     await elb('walker flush');
     expect(pushBatch).toHaveBeenCalledTimes(1);
-    expect(hopOf()).toMatchObject({ batched: true, flushConfirmed: true });
+    expect(ofD().some((state) => state.phase === 'flush')).toBe(true);
   });
 
-  it('(h) an ignored event is a skip at a destination, not a delivery', async () => {
+  it('(h) an ignored event counts in ignored at a destination, not in skipped or as a delivery', async () => {
     const { at, logger } = capture();
     const { states, observer } = observe();
     const push = jest.fn();
@@ -450,7 +452,8 @@ describe('destination states, consent first', () => {
     expect(r.ok).toBe(true);
     expect(r.done).toBeUndefined();
     expect(push).not.toHaveBeenCalled();
-    expect(collector.status.destinations.d.skipped).toBe(1);
+    expect(collector.status.destinations.d.ignored).toBe(1);
+    expect(collector.status.destinations.d.skipped).toBeUndefined();
     expect(collector.status.destinations.d.count).toBe(0);
     expect(collector.status.out).toBe(outBefore);
     expect(

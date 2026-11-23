@@ -24,10 +24,32 @@
  *
  * Local paths: a manifest build refuses every config-chosen filesystem input
  * (local step packages, `bundle.packages.<name>.path`, `bundle.traceInclude`,
- * `include`) with `LOCAL_PATH_NOT_ALLOWED`, before anything is fetched.
+ * `include`) with `LOCAL_PATH_NOT_ALLOWED`, in the named flow and in each web
+ * flow it serves, before anything is fetched.
+ *
+ * Served flows: a server flow that lists web flows in `config.bundle.flows`
+ * builds them into every bundle artifact's output, as `walkeros bundle` does.
+ * One bundle artifact may also name them as `served` outputs, keyed by
+ * exactly the listed web flows: the CLI PUTs each web file that artifact's
+ * build placed and reports its path, bytes and sha256 on its result entry.
+ * Every output is written into one folder, so a listed path whose first part
+ * is a bundle artifact's `outputName` (case-folded) is `INVALID_CONFIG`.
+ *
+ * Packages: without `packages` every bundle artifact resolves its packages
+ * fresh. `{ tree }` installs exactly that recorded tree for every bundle
+ * artifact and resolves nothing. `{ resolve }` resolves once, taking only
+ * versions published at or before `before` for every spec but the exempt ones,
+ * and installs that tree for every later artifact. Either way the result
+ * carries the installed tree and its digest. Each served web flow installs a
+ * tree of its own under the same rule: `{ tree }` takes it from
+ * `served.<key>`, one for each listed web flow and none for another;
+ * `{ resolve }` resolves it once under the same cutoff; the result reports
+ * it under `packages.served.<key>`.
  */
 
+import { BARE_FILE_NAME_PATTERN } from '@walkeros/core';
 import { z } from '@walkeros/core/dev';
+import { PackageTreeSchema } from '../core/package-tree.js';
 import type { BundleTarget } from '../commands/bundle/targets.js';
 import type { WrapSkeletonOptions } from '../commands/bundle/wrap.js';
 
@@ -37,12 +59,26 @@ export const BUILD_MANIFEST_VERSION = 1;
 const HttpUrlSchema = z.url({ protocol: /^https?$/ });
 
 /**
+ * The wrap's Observe option: the preview route and its token, baked as
+ * written (nothing resolves a reference here, so the url is the literal
+ * endpoint). Strict: `usage` or any other key fails. `wrapSkeleton` parses a
+ * direct caller's option with it too.
+ */
+export const BuildWrapObserveSchema = z
+  .object({
+    preview: z
+      .object({ url: HttpUrlSchema, token: z.string().min(1) })
+      .strict(),
+  })
+  .strict();
+
+/**
  * A bare file name: the output is written inside the build's own temp dir, so
  * path separators and leading dots are refused.
  */
 const OutputNameSchema = z
   .string()
-  .regex(/^[A-Za-z0-9][A-Za-z0-9._-]*$/, 'Must be a bare file name')
+  .regex(BARE_FILE_NAME_PATTERN, 'Must be a bare file name')
   .describe('Output file name; its extension picks the format (.tar.gz packs)');
 
 const BUNDLE_TARGET_NAMES = [
@@ -69,8 +105,8 @@ const RESERVED_HEADERS: ReadonlySet<string> = new Set([
   'host',
 ]);
 
-const OutputFields = {
-  outputName: OutputNameSchema,
+/** Where and how one output is PUT. */
+const PutFields = {
   putUrl: HttpUrlSchema.describe('Presigned PUT for exactly this output'),
   contentType: z
     .string()
@@ -92,10 +128,18 @@ const OutputFields = {
     ),
 };
 
+const OutputFields = { outputName: OutputNameSchema, ...PutFields };
+
 export const BuildBundleArtifactSchema = z
   .object({
     target: z.enum(BUNDLE_TARGET_NAMES).describe('Named bundle target'),
     ...OutputFields,
+    served: z
+      .record(z.string().min(1), z.object(PutFields).strict())
+      .optional()
+      .describe(
+        'The web files this build places, PUT as outputs of their own: each web flow its config.bundle.flows lists, by key',
+      ),
   })
   .strict();
 
@@ -117,22 +161,14 @@ export const BuildWrapOptionsSchema = z
       })
       .strict()
       .optional(),
-    previewGrantTargets: z.array(z.string()).optional(),
-    observe: z
-      .object({
-        url: z.string(),
-        binding: z.string(),
-        flowId: z.string().optional(),
-        level: z.enum(['off', 'standard', 'trace']).optional(),
-        sample: z.number().min(0).max(1).optional(),
-      })
-      .strict()
-      .optional(),
     moin: z
       .object({ app: z.string(), base: z.string() })
       .strict()
       .optional()
       .describe('Tag Mode loader target; absent, the production app'),
+    observe: BuildWrapObserveSchema.optional().describe(
+      "Browser only: Observe preview reporting, the preview route and its token. It replaces the flow's own collector.observe; a browser build never carries usage",
+    ),
     minify: z.boolean().optional(),
     minifyOptions: z
       .object({
@@ -151,6 +187,11 @@ export const BuildWrapOptionsSchema = z
   .strict()
   .describe('Options forwarded to wrapSkeleton');
 
+/** The refusals the wrap and the manifest share. */
+export const OBSERVE_NOT_ON_NODE = 'observe is a browser wrap option';
+export const OBSERVE_NOT_WITH_PREVIEW =
+  'observe is refused beside preview, which makes a host build';
+
 export const BuildWrapArtifactSchema = z
   .object({
     target: z.literal('wrap'),
@@ -166,12 +207,58 @@ export const BuildWrapArtifactSchema = z
     options: BuildWrapOptionsSchema.optional(),
     ...OutputFields,
   })
-  .strict();
+  .strict()
+  .refine(
+    (artifact) =>
+      artifact.platform === 'browser' ||
+      artifact.options?.observe === undefined,
+    { path: ['options', 'observe'], message: OBSERVE_NOT_ON_NODE },
+  )
+  .refine(
+    (artifact) =>
+      artifact.options?.observe === undefined ||
+      artifact.options.preview === undefined,
+    { path: ['options', 'observe'], message: OBSERVE_NOT_WITH_PREVIEW },
+  );
 
 export const BuildArtifactSchema = z.union([
   BuildBundleArtifactSchema,
   BuildWrapArtifactSchema,
 ]);
+
+export const BuildPackagesSchema = z
+  .union([
+    z
+      .object({
+        tree: PackageTreeSchema.describe(
+          'Install exactly this tree for every bundle artifact',
+        ),
+        served: z
+          .record(z.string().min(1), PackageTreeSchema)
+          .optional()
+          .describe(
+            'The tree each served web flow installs, by its key: one for every listed web flow and none for another',
+          ),
+      })
+      .strict(),
+    z
+      .object({
+        resolve: z
+          .object({
+            before: z.iso
+              .datetime({ offset: true })
+              .describe('Only versions published at or before this time'),
+            exempt: z
+              .array(z.string().min(1))
+              .describe(
+                'Name prefixes the cutoff skips, with the exact versions packages under them declare',
+              ),
+          })
+          .strict(),
+      })
+      .strict(),
+  ])
+  .describe('How bundle artifacts install their packages');
 
 export const BuildManifestSchema = z
   .object({
@@ -193,11 +280,13 @@ export const BuildManifestSchema = z
       ),
     artifacts: z.array(BuildArtifactSchema).min(1),
     resultPutUrl: HttpUrlSchema.describe('Presigned PUT for the result JSON'),
+    packages: BuildPackagesSchema.optional(),
   })
   .loose()
   .superRefine((manifest, ctx) => {
     const seen = new Set<string>();
     const bundled = new Set<string>();
+    let servedNamed = false;
     manifest.artifacts.forEach((artifact, index) => {
       if (seen.has(artifact.outputName)) {
         ctx.addIssue({
@@ -216,6 +305,16 @@ export const BuildManifestSchema = z
             message: 'flowConfig is required for bundle artifacts',
           });
         }
+        if (artifact.served) {
+          if (servedNamed) {
+            ctx.addIssue({
+              code: 'custom',
+              path: ['artifacts', index, 'served'],
+              message: 'Only one artifact may name served outputs',
+            });
+          }
+          servedNamed = true;
+        }
       } else if (
         'artifact' in artifact.skeleton &&
         !bundled.has(artifact.skeleton.artifact)
@@ -231,6 +330,7 @@ export const BuildManifestSchema = z
   .meta({ id: 'BuildManifest', title: 'walkeros bundle --manifest input' });
 
 export type BuildManifest = z.infer<typeof BuildManifestSchema>;
+export type BuildPackages = z.infer<typeof BuildPackagesSchema>;
 export type BuildArtifact = z.infer<typeof BuildArtifactSchema>;
 export type BuildWrapOptions = z.infer<typeof BuildWrapOptionsSchema>;
 
@@ -250,6 +350,20 @@ const wrapOptionsComplete: [UnreachableWrapOption] extends [never]
   : never = true;
 void wrapOptionsComplete;
 
+// Compile-time: the wrap's observe option is exactly the preview part of
+// Collector.Observe, so a usage block can never be typed into a browser build.
+type WrapObserve = NonNullable<BuildWrapOptions['observe']>;
+const wrapObserveIsPreviewOnly: [
+  Exclude<keyof WrapObserve, 'preview'>,
+] extends [never]
+  ? true
+  : never = true;
+void wrapObserveIsPreviewOnly;
+const wrapObserveFits = (
+  observe: WrapObserve,
+): NonNullable<WrapSkeletonOptions['observe']> => observe;
+void wrapObserveFits;
+
 /**
  * Error codes a result can carry. User-config codes first, then build and
  * infrastructure codes.
@@ -263,6 +377,8 @@ export const BUILD_ERROR_CODES = [
   'UNSUPPORTED_PACKAGE_SPEC',
   'LOCAL_PATH_NOT_ALLOWED',
   'BUILD_FAILED',
+  'PACKAGE_UNAVAILABLE',
+  'PACKAGE_TREE_INVALID',
   'UPLOAD_FAILED',
 ] as const;
 
@@ -279,9 +395,34 @@ export const BuildResultSchema = z
           outputName: z.string(),
           bytes: z.number().int().nonnegative(),
           sha256: z.string(),
+          served: z
+            .array(
+              z.object({
+                flow: z.string(),
+                path: z.string(),
+                bytes: z.number().int().nonnegative(),
+                sha256: z.string(),
+              }),
+            )
+            .optional()
+            .describe("The served outputs PUT from this artifact's build"),
         }),
       )
       .describe('Outputs PUT successfully, in manifest order'),
+    packages: z
+      .object({
+        digest: z.string().describe('sha256 of the canonical tree'),
+        tree: PackageTreeSchema,
+        served: z
+          .record(
+            z.string(),
+            z.object({ digest: z.string(), tree: PackageTreeSchema }),
+          )
+          .optional()
+          .describe('The tree each served web flow installed, by its key'),
+      })
+      .optional()
+      .describe('The tree the bundle artifacts installed, when asked for'),
     error: z
       .object({
         code: z.enum(BUILD_ERROR_CODES),

@@ -188,8 +188,7 @@ and runs on a server too, so it uses neither platform's APIs.
   errors assign `cause` themselves.
 - **Needing the other platform.** A neutral package that needs something only
   the web has defines a small interface in `@walkeros/core` (a port), web-core
-  implements it, and the web caller passes it in explicitly. Examples:
-  `ObserveSlot` (`pageObserveSlot()` from `@walkeros/web-core`) and
+  implements it, and the web caller passes it in explicitly. Example:
   `Flow.StepPage` (`page` from `@walkeros/web-core/dev`). Node-only code of core
   lives in `@walkeros/core/node`.
 - **Check.** `npm run check:platform` from the walkerOS root fails for any drift

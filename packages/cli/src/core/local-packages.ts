@@ -87,13 +87,88 @@ export async function resolveLocalPackage(
   );
 }
 
+/** Top-level entries a copy of a package root leaves out. */
+const ROOT_COPY_EXCLUDED = ['.turbo', '.git'];
+
+/**
+ * Whether a copy of a package root leaves a path out: `node_modules` at any
+ * depth (links are followed, so a nested one would pull in a whole tree) and
+ * `.env` files, which hold secrets and are never code a flow loads.
+ */
+function excludedFromCopy(root: string, file: string): boolean {
+  const relative = path.relative(root, file);
+  if (relative === '') return false;
+  const parts = relative.split(path.sep);
+  if (ROOT_COPY_EXCLUDED.includes(parts[0])) return true;
+  if (parts.includes('node_modules')) return true;
+  const name = parts[parts.length - 1];
+  return name === '.env' || name.startsWith('.env.');
+}
+
+/** Copies a package root, links resolved: a workspace's relative symlinks break once copied. */
+async function copyPackageRoot(source: string, target: string): Promise<void> {
+  await fs.copy(source, target, {
+    dereference: true,
+    filter: (file) => !excludedFromCopy(source, file),
+  });
+}
+
+/** Every string a manifest field holds, at any depth (`exports` conditions). */
+export function stringLeaves(value: unknown, into: string[] = []): string[] {
+  if (typeof value === 'string') into.push(value);
+  else if (value && typeof value === 'object')
+    for (const inner of Object.values(value)) stringLeaves(inner, into);
+  return into;
+}
+
+/** Condition keys of `exports` that name type declarations, never code. */
+const TYPE_CONDITIONS = ['types', 'typings'];
+
+/** The code leaves of an `exports` value: no type conditions, declarations or JSON. */
+function codeExports(value: unknown, into: string[] = []): string[] {
+  if (typeof value === 'string') {
+    if (!/\.d\.[cm]?ts$/.test(value) && !value.endsWith('.json'))
+      into.push(value);
+  } else if (value && typeof value === 'object') {
+    for (const [key, inner] of Object.entries(value))
+      if (!TYPE_CONDITIONS.includes(key)) codeExports(inner, into);
+  }
+  return into;
+}
+
+/**
+ * Whether a manifest's entry points (`main`, `module`, the code leaves of
+ * `exports`, `bin`) name a file outside `dist/`. A package without them
+ * resolves nothing outside it either; type declarations and JSON a package
+ * exports are no code to load.
+ */
+export function entriesOutsideDist(manifest: unknown): boolean {
+  if (!manifest || typeof manifest !== 'object') return false;
+  const fields = [
+    ...['main', 'module', 'bin'].flatMap((field) =>
+      stringLeaves(Reflect.get(manifest, field)),
+    ),
+    ...codeExports(Reflect.get(manifest, 'exports')),
+  ];
+  return fields.some((entry) => {
+    const relative = path.posix.normalize(entry.replace(/^\.\//, ''));
+    return (
+      relative !== 'package.json' &&
+      relative !== 'dist' &&
+      !relative.startsWith('dist/')
+    );
+  });
+}
+
 /**
  * Copy local package to target node_modules directory.
  *
  * Handles three cases:
  * - file: Copy as index.{ext} with generated package.json
  * - directory: Copy contents with generated package.json
- * - package: Existing behavior (copy package.json + dist/)
+ * - package: package.json plus dist/, or the package root when it has no
+ *   dist/ or an entry point outside it (a `main` in `lib/` beside a browser
+ *   build in `dist/`)
  */
 export async function copyLocalPackage(
   localPkg: LocalPackageInfo,
@@ -124,16 +199,8 @@ export async function copyLocalPackage(
   if (localPkg.type === 'directory') {
     await fs.ensureDir(path.dirname(packageDir));
 
-    // Copy directory contents (excluding node_modules etc.)
-    const entries = await fs.readdir(localPkg.absolutePath);
-    for (const entry of entries) {
-      if (!['node_modules', '.turbo', '.git'].includes(entry)) {
-        await fs.copy(
-          path.join(localPkg.absolutePath, entry),
-          path.join(packageDir, entry),
-        );
-      }
-    }
+    // Copy directory contents (without node_modules, .env files etc.)
+    await copyPackageRoot(localPkg.absolutePath, packageDir);
 
     // Generate minimal package.json for module resolution
     await fs.writeJson(path.join(packageDir, 'package.json'), {
@@ -156,20 +223,16 @@ export async function copyLocalPackage(
     path.join(packageDir, 'package.json'),
   );
 
-  // Copy dist folder AS dist folder (preserving structure for exports like ./dist/index.mjs)
-  if (localPkg.hasDistFolder) {
+  // Copy dist folder AS dist folder (preserving structure for exports like
+  // ./dist/index.mjs), unless an entry point names a file outside it: then
+  // dist/ alone would leave the package without the file it resolves to.
+  const manifest: unknown = await fs
+    .readJson(path.join(localPkg.absolutePath, 'package.json'))
+    .catch(() => undefined);
+  if (localPkg.hasDistFolder && !entriesOutsideDist(manifest)) {
     await fs.copy(localPkg.distPath, path.join(packageDir, 'dist'));
   } else {
-    // No dist folder - copy package root contents (excluding node_modules, etc.)
-    const entries = await fs.readdir(localPkg.absolutePath);
-    for (const entry of entries) {
-      if (!['node_modules', '.turbo', '.git'].includes(entry)) {
-        await fs.copy(
-          path.join(localPkg.absolutePath, entry),
-          path.join(packageDir, entry),
-        );
-      }
-    }
+    await copyPackageRoot(localPkg.absolutePath, packageDir);
   }
 
   logger.info(`📦 Using local: ${localPkg.name} from ${localPkg.absolutePath}`);

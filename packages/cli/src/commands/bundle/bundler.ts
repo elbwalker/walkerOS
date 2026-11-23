@@ -3,14 +3,16 @@ import { builtinModules } from 'module';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import fs from 'fs-extra';
-import type { Flow, MoinTarget, ObserveWeb, PreviewKey } from '@walkeros/core';
+import type { Collector, Flow, MoinTarget, PreviewKey } from '@walkeros/core';
 import {
   getPlatform,
   packageNameToVariable,
   getStepRuntimeProps,
+  DECLARED_ENV_EXPORT,
   ENV_MARKER_PREFIX,
   SECRET_MARKER_PREFIX,
   STEP_FUNCTION_KEYS,
+  declaredEnvOf,
   isPathStepEntry,
   isObject,
 } from '@walkeros/core';
@@ -123,11 +125,13 @@ function generateInlineCode(
 import type { BuildOptions } from '../../types/bundle.js';
 import {
   downloadPackagesWithResolution,
+  installPackageTree,
   loadNpmConfigForPacote,
 } from '../../core/package-manager.js';
 import {
   traceAndCopy,
   assertDepsTraced,
+  missingEntry,
   collectImportedPackages,
 } from './nft-trace.js';
 import { assertConsumerDepsSatisfied } from './assert-consumer-deps.js';
@@ -149,6 +153,7 @@ import type { CodeCacheKeyInputs } from '../../core/build-cache.js';
 import { assertWindowCollector } from '../../config/window-collector.js';
 import { hashInstalledDir, releaseDigest } from '../../core/content-digest.js';
 import { VERSION } from '../../version.js';
+import { treeVersionLines } from '../../core/package-tree.js';
 
 export interface BundleStats {
   totalSize: number;
@@ -198,12 +203,14 @@ export async function copyIncludes(
  * Generate cache key content from flow config and build options.
  * Excludes non-deterministic fields (tempDir, output) from cache key.
  *
- * Hashes pacote's resolved top-level set as the dependency-version signal:
- * a version bump in `flow.<name>.config.bundle.packages` (or any transitive re-resolution
- * pacote performs) produces a new `versionsHash`, which produces a new
- * cache key, which produces a new traced `node_modules/`. The user does
- * NOT maintain a `package-lock.json` for step packages in the zero-setup
- * design, so pacote's resolution is the authoritative version signal.
+ * Hashes the installed top-level set as the dependency-version signal: a
+ * version bump in `flow.<name>.config.bundle.packages` (or any transitive
+ * re-resolution) produces a new `versionsHash`, which produces a new cache
+ * key, which produces a new traced `node_modules/`. A local zero-setup build
+ * keeps no lockfile for step packages, so the resolution of that build is the
+ * version signal there. A manifest build can instead install a recorded tree
+ * exactly, or resolve under a release-age cutoff and report the tree it
+ * installed (`BuildOptions.packageInstall`, `core/package-tree.ts`).
  */
 export function generateCacheKeyContent(
   flowSettings: Flow,
@@ -282,6 +289,64 @@ export async function resolvedVersionLines(
   return lines;
 }
 
+/**
+ * Install the build's packages by `buildOptions.packageInstall`: exactly a
+ * recorded tree, resolved under a cutoff with the tree reported, or (absent)
+ * resolved fresh. Returns the installed top-level paths and the sorted
+ * `name@version` lines the cache key and the default release hash.
+ */
+async function installPackages(
+  packagesArray: Array<{ name: string; version: string; path?: string }>,
+  targetDir: string,
+  cacheDir: string,
+  buildOptions: BuildOptions,
+  npmConfig: Awaited<ReturnType<typeof loadNpmConfigForPacote>>,
+  logger: Logger.Instance,
+): Promise<{ packagePaths: Map<string, string>; versionLines: string[] }> {
+  const install = buildOptions.packageInstall;
+  if (install && 'tree' in install) {
+    const packagePaths = await installPackageTree(
+      install.tree,
+      targetDir,
+      logger,
+      {
+        npmConfig,
+        tmpDir: cacheDir,
+        declared: Object.fromEntries(
+          packagesArray.map((pkg) => [pkg.name, pkg.version]),
+        ),
+      },
+    );
+    return { packagePaths, versionLines: treeVersionLines(install.tree) };
+  }
+  // downloadPackagesWithResolution adds 'node_modules' subdirectory
+  // automatically and returns the underlying ResolutionResult so the
+  // install pipeline can pin extracted versions to the same graph the
+  // bundler resolved (no second resolve, no version drift).
+  const { packagePaths, resolution, tree } =
+    await downloadPackagesWithResolution(
+      packagesArray,
+      targetDir,
+      logger,
+      // A recorded tree is built from what was extracted, never a cache copy.
+      install ? false : buildOptions.cache,
+      buildOptions.configDir, // For resolving relative local paths
+      cacheDir,
+      buildOptions.overrides,
+      npmConfig,
+      install?.resolve,
+    );
+  if (install) {
+    if (!tree) throw new Error('A resolve under a cutoff returned no tree');
+    install.onTree(tree);
+    return { packagePaths, versionLines: treeVersionLines(tree) };
+  }
+  return {
+    packagePaths,
+    versionLines: await resolvedVersionLines(resolution.topLevel, packagePaths),
+  };
+}
+
 export async function bundleCore(
   flowSettings: Flow,
   buildOptions: BuildOptions,
@@ -346,21 +411,14 @@ export async function bundleCore(
         path: packageConfig.path, // Pass local path if defined
       }),
     );
-    // downloadPackagesWithResolution adds 'node_modules' subdirectory
-    // automatically and returns the underlying ResolutionResult so the
-    // install pipeline can pin extracted versions to the same graph the
-    // bundler resolved (no second resolve, no version drift).
-    const { packagePaths, resolution: resolutionResult } =
-      await downloadPackagesWithResolution(
-        packagesArray,
-        TEMP_DIR,
-        logger,
-        buildOptions.cache,
-        buildOptions.configDir, // For resolving relative local paths
-        CACHE_DIR,
-        buildOptions.overrides,
-        npmConfig,
-      );
+    const { packagePaths, versionLines } = await installPackages(
+      packagesArray,
+      TEMP_DIR,
+      CACHE_DIR,
+      buildOptions,
+      npmConfig,
+      logger,
+    );
 
     // Fix @walkeros packages to have proper ESM exports and scan every
     // resolved package's manifest for the legacy `walkerOS.bundle` field.
@@ -429,10 +487,7 @@ export async function bundleCore(
     // produces a new hash, which produces a new cache key, which forces a
     // fresh trace + esbuild. This is the right invalidation signal because
     // pacote (not the user's package-lock.json) is the install layer.
-    const sortedVersions = await resolvedVersionLines(
-      resolutionResult.topLevel,
-      packagePaths,
-    );
+    const sortedVersions = versionLines;
     const versionsHash = await getHashServer(sortedVersions.join('\n'), 12);
 
     // Collector defaults, for every call shape (`walkeros push` and simulate
@@ -626,9 +681,9 @@ export async function bundleCore(
     );
 
     // The skeleton is the build-once, introspectable currency every downstream
-    // consumer shares: it exports wireConfig/startFlow/__configData (+__devExports)
-    // so simulate and preview can introspect and re-wire it, while web/server
-    // deploy wrap or run it. One artifact, many targets, so do NOT collapse it into
+    // consumer shares: it exports wireConfig/startFlow/__configData (+__devExports,
+    // and __walkerosEnv for node) so simulate and preview can introspect and
+    // re-wire it, while web/server deploy wrap or run it. One artifact, many targets, so do NOT collapse it into
     // a finished bundle here. For node, step packages stay EXTERNAL on purpose so
     // nft materializes them into a sibling node_modules/ the host resolves on disk
     // (the only way native addons like sqlite .node files can ship); inlining here
@@ -662,7 +717,6 @@ export async function bundleCore(
               windowCollector: buildOptions.windowCollector,
               windowElb: buildOptions.windowElb,
               platform: buildOptions.platform as 'browser' | 'node',
-              observe: readObserveConnect(flowSettings, logger),
             })
           : generateServerEntry(stage1Path, dataPayload);
 
@@ -703,11 +757,12 @@ export async function bundleCore(
         // never from a copy in TEMP_DIR, which may predate it.
         stage2Options.plugins = [cliPackagesPlugin()];
         // Every build flag is defined from the flow's needs, so a feature the
-        // flow does not use folds out (see build-flags.ts).
+        // flow does not use folds out (see build-flags.ts). A production
+        // bundle never carries the reporter.
         stage2Options.define = {
           'process.env.NODE_ENV': '"production"',
           global: 'globalThis',
-          ...buildFlagDefines(flowNeeds(flowSettings)),
+          ...buildFlagDefines(flowNeeds(flowSettings), false),
         };
         stage2Options.target = resolveTarget(buildOptions);
       } else {
@@ -1098,8 +1153,14 @@ async function runNftServerPath(
       importedPackages: await collectImportedPackages(outputPath),
     });
     for (const name of unused) {
+      // A copy without its entry traces as nothing, used or not.
+      const entry = await missingEntry(
+        path.join(tempDir, 'node_modules', name),
+      );
       logger.warn(
-        `Package ${name} is declared in bundle.packages but nothing imports it; it is not in the bundle. Remove it from bundle.packages if unused.`,
+        entry
+          ? `Package ${name} is declared in bundle.packages, but its installed copy has no ${entry}; it is not in the bundle.`
+          : `Package ${name} is declared in bundle.packages but nothing imports it; it is not in the bundle. Remove it from bundle.packages if unused.`,
       );
     }
   }
@@ -1535,8 +1596,17 @@ export async function createEntryPoint(
       : '\nexport const __packageExports = {};'
     : '';
 
+  // The names a server flow reads from its environment, for the runner to
+  // read after importing the artifact and before starting the flow. A
+  // browser flow reads none at runtime: its `$env` values are baked.
+  const declaredEnvBlock =
+    buildOptions.platform === 'node'
+      ? `\nexport const ${DECLARED_ENV_EXPORT} = ${JSON.stringify(declaredEnvOf(flowSettings))};`
+      : '';
+
   // Return ESM module (imports + wireConfig + startFlow re-export + optional devExports)
-  const fullModule = wireConfigModule + devExportsBlock + packageExportsBlock;
+  const fullModule =
+    wireConfigModule + devExportsBlock + packageExportsBlock + declaredEnvBlock;
   const codeEntry = importsCode
     ? `${importsCode}\n\n${fullModule}`
     : fullModule;
@@ -1902,6 +1972,29 @@ const HOST_LOGGER_MERGE = `  // The host's logger (masking, its error ring) join
   }`;
 
 /**
+ * The runner contract's signer, emitted into every server factory entry: a
+ * host that holds a deployment credential (`runneros` start mode) passes
+ * `context.authorize`, the door signer of its credential. The entry hands it
+ * to the usage part when the flow names no token there, and to every
+ * destination entry's env that names no `authorize` of its own. Only a step
+ * whose own config asks for it signs (the ClickHouse destination with
+ * `settings.signed: true`); the others never read it. The function travels
+ * in the context the host passes, never through a global.
+ */
+const HOST_AUTHORIZE = `  // A paired runner hands its signer to the steps: the usage part takes it
+  // when the flow names no token, and each destination env that names no
+  // authorize of its own gets it. A step signs only when its config says so.
+  if (typeof context.authorize === 'function') {
+    const usage = config.observe && config.observe.usage;
+    if (usage && usage.token === undefined) usage.authorize = context.authorize;
+    for (const destination of Object.values(config.destinations || {})) {
+      if (!destination) continue;
+      const env = destination.env || (destination.env = {});
+      if (env.authorize === undefined) env.authorize = context.authorize;
+    }
+  }`;
+
+/**
  * Generate a stage 2 entry file for server bundles.
  * Imports startFlow and wireConfig from the stage 1 .mjs file,
  * embeds the data payload, and exports a factory function.
@@ -1912,6 +2005,7 @@ export function generateServerEntry(
 ): string {
   const stage1Specifier = toFileImportSpecifier(stage1Path);
   return `import { startFlow, wireConfig } from '${stage1Specifier}';
+export { ${DECLARED_ENV_EXPORT} } from '${stage1Specifier}';
 
 const __configData = ${dataPayload};
 
@@ -1928,105 +2022,15 @@ ${HOST_LOGGER_MERGE}
     }
   }
 
+${HOST_AUTHORIZE}
+
   const result = await startFlow(config);
-
-  // Telemetry observer installation: the host (pipeline.ts) builds the
-  // observer functions via createTelemetryObserver + createBatchedPoster
-  // and forwards them through context. Added to collector.observers so the
-  // runtime self-emission loop drives them.
-  if (context.observers) {
-    for (const observer of context.observers) {
-      result.collector.observers.add(observer);
-    }
-  }
-
-  // The host forwards the level supplier beside the observers; the collector
-  // capture path reads it to decide destination call capture at trace.
-  if (context.observeLevel) result.collector.observeLevel = context.observeLevel;
 
   const httpSource = Object.values(result.collector.sources || {})
     .find(s => 'httpHandler' in s && typeof s.httpHandler === 'function');
 
   return { ...result, httpHandler: httpSource ? httpSource.httpHandler : undefined };
 }`;
-}
-
-/**
- * Read the STATIC observe connect config from a flow's `config.observe`.
- * Returns the public `{ url, binding }` pair (trimmed) plus the optional
- * `level`/`sample` controls only when both pair members are non-empty
- * strings; anything else yields undefined so the web entry emits zero
- * observe wiring bytes. Every carried field is public; dropping `level`
- * here would silently override an explicit `level: 'off'` with the
- * runtime's `standard` default once a credential attaches. A block that
- * names `url` or `binding` but does not form a usable pair (missing,
- * empty, or whitespace-only member) warns at build time, because silent
- * zero-wiring in a minified bundle is invisible to the author. A pure
- * level/sample block is valid managed-telemetry config, not a failed
- * connect pair, and stays silent. Secrets never live in flow config: the
- * runtime connect module reads the per-session credential out-of-band at
- * boot.
- */
-export function readObserveConnect(
-  flowSettings: Flow,
-  logger?: Logger.Instance,
-): ObserveWeb | undefined {
-  const observe = flowSettings.config?.observe;
-  if (!observe) return undefined;
-  const { url, binding, level, sample } = observe;
-  if (url === undefined && binding === undefined) return undefined;
-  const trimmedUrl = typeof url === 'string' ? url.trim() : '';
-  const trimmedBinding = typeof binding === 'string' ? binding.trim() : '';
-  if (trimmedUrl !== '' && trimmedBinding !== '') {
-    return {
-      url: trimmedUrl,
-      binding: trimmedBinding,
-      // Same JSON-borne prudence as the pair: only known-shaped public
-      // values reach the emitted literal.
-      ...(level === 'off' || level === 'standard' || level === 'trace'
-        ? { level }
-        : {}),
-      // Sample is a fraction in [0, 1] per the Flow.Observe contract; the
-      // range test also drops NaN and the infinities.
-      ...(typeof sample === 'number' && sample >= 0 && sample <= 1
-        ? { sample }
-        : {}),
-    };
-  }
-  const missing = [
-    ...(trimmedUrl === '' ? ['url'] : []),
-    ...(trimmedBinding === '' ? ['binding'] : []),
-  ].join(' and ');
-  logger?.warn(
-    `config.observe has no effect: missing or empty ${missing}. Observe connect wiring was skipped; set both config.observe.url and config.observe.binding to non-empty public values.`,
-  );
-  return undefined;
-}
-
-/** Imports the page's Observe credential slot into a browser entry. */
-const OBSERVE_SLOT_IMPORT =
-  "import { pageObserveSlot } from '@walkeros/web-core';\n";
-
-/**
- * Emit the STATIC observe connect assignment for a generated entry: bake
- * ONLY the public connect values (`url` + `binding`, plus the optional
- * `flowId`/`level`/`sample` scoping) onto the startFlow config, beside the
- * page slot the web arm reads its credential through. The runtime connect
- * module inside startFlow does the credential work at boot (the per-session
- * secret arrives out-of-band via the `elbObserve` companion); no emitted
- * byte here is ever secret. The entry imports the slot with
- * `OBSERVE_SLOT_IMPORT`.
- */
-function emitObserveAssignment(observe: ObserveWeb): string {
-  const literal: ObserveWeb = {
-    url: observe.url,
-    binding: observe.binding,
-    ...(observe.flowId !== undefined ? { flowId: observe.flowId } : {}),
-    ...(observe.level !== undefined ? { level: observe.level } : {}),
-    ...(observe.sample !== undefined ? { sample: observe.sample } : {}),
-  };
-  return `
-  config.observe = { ...${JSON.stringify(literal)}, slot: pageObserveSlot() };`;
 }
 
 /** Imports the Tag Mode loader into a browser entry. */
@@ -2089,13 +2093,6 @@ export function generateWebEntry(
     windowElb?: string;
     /** Runtime platform. 'browser' emits env.window/env.document injection; 'node' omits it. Default 'browser' for backward compat. */
     platform?: 'browser' | 'node';
-    /**
-     * STATIC observe connect config baked onto the startFlow config. PUBLIC
-     * values only (url + binding); the runtime connect module reads the
-     * per-session credential out-of-band at boot. Absent = zero observe
-     * wiring bytes in the emitted entry.
-     */
-    observe?: ObserveWeb;
   } = {},
 ): string {
   const assignments: string[] = [];
@@ -2128,20 +2125,15 @@ export function generateWebEntry(
 
   const stage1Specifier = toFileImportSpecifier(stage1Path);
 
-  const observeImport = options.observe ? OBSERVE_SLOT_IMPORT : '';
-  const observeBlock = options.observe
-    ? emitObserveAssignment(options.observe)
-    : '';
-
   const loaderImport = platform === 'browser' ? MOIN_IMPORT : '';
   const loaderCall = platform === 'browser' ? emitMoinCall() : '';
 
-  return `${loaderImport}${observeImport}import { startFlow, wireConfig } from '${stage1Specifier}';
+  return `${loaderImport}import { startFlow, wireConfig } from '${stage1Specifier}';
 
 const __configData = ${dataPayload};
 
 (async () => {${loaderCall}
-  const config = wireConfig(__configData);${envBlock}${observeBlock}
+  const config = wireConfig(__configData);${envBlock}
   const { collector, elb } = await startFlow(config);${assignmentCode}
 })();`;
 }
@@ -2174,6 +2166,14 @@ export interface WrapEntryPreview {
   previewOrigin: string;
 }
 
+/**
+ * Observe reporting baked into a preview build: the preview part only. A
+ * browser build is public, so it never carries a usage token.
+ */
+export interface WrapEntryObserve {
+  preview: NonNullable<Collector.Observe['preview']>;
+}
+
 export function generateWrapEntry(
   stage1Path: string,
   options: {
@@ -2186,30 +2186,12 @@ export function generateWrapEntry(
      */
     preview?: WrapEntryPreview;
     /**
-     * Preview-ARTIFACT wiring (the third wrap variant). When set, the emitted
-     * entry reads the session-forwarding grant from
-     * `localStorage['elbPreviewSession']` (the companion slot the activator
-     * persists alongside the activation grant) at boot and stamps it as the
-     * `X-Walkeros-Preview` header on each named server-bound destination
-     * (`config.destinations[k].config.settings.headers`), before `startFlow`.
-     * The grant is never baked into the artifact.
-     *
-     * Mutually exclusive with `preview`: a host bundle ACTIVATES a preview, an
-     * artifact INJECTS its grant. An artifact that also baked the activator
-     * would re-verify the stored grant and re-inject itself (infinite
-     * recursion), so setting both throws.
+     * Observe reporting of a preview build. Present, it is the collector's
+     * whole `observe`: the flow file's own block never runs in the build.
      */
-    previewGrantTargets?: string[];
+    observe?: WrapEntryObserve;
     /** Runtime platform. 'browser' emits env.window/env.document injection; 'node' omits it. Default 'browser' for backward compat. */
     platform?: 'browser' | 'node';
-    /**
-     * STATIC observe connect config baked onto the startFlow config. PUBLIC
-     * values only (`url` + `binding`, plus optional `flowId`/`level`/`sample`
-     * scoping); the runtime connect module reads the per-session credential
-     * out-of-band at boot via the `elbObserve` slot. This is the
-     * preview-artifact observation wiring: it bakes no ingest token.
-     */
-    observe?: ObserveWeb;
     /**
      * The Tag Mode loader target, internal deploy data like the preview
      * keyring. Absent, the loader trusts the production app.
@@ -2228,21 +2210,6 @@ export function generateWrapEntry(
   const assignmentCode =
     assignments.length > 0 ? '\n' + assignments.join('\n') : '';
 
-  // A host bundle activates a preview; a preview artifact injects its grant.
-  // Baking both would let an activated artifact re-verify the stored grant and
-  // re-inject itself (infinite recursion), so refuse the combination loudly
-  // rather than pick a silent precedence that hides a caller bug.
-  if (
-    options.preview !== undefined &&
-    options.previewGrantTargets !== undefined
-  ) {
-    throw new Error(
-      'generateWrapEntry: `preview` (host activator) and `previewGrantTargets` ' +
-        '(preview-artifact injection) are mutually exclusive. A host bundle ' +
-        'activates a preview; an artifact injects its grant. Pass at most one.',
-    );
-  }
-
   const preview = options.preview;
   const previewEnabled = !!preview?.enabled;
 
@@ -2251,46 +2218,6 @@ export function generateWrapEntry(
   const previewImport = previewEnabled
     ? `import { browserSwapActivator } from '@walkeros/web-core';\n`
     : '';
-
-  // Preview-artifact variant: read the SESSION-FORWARDING grant (the
-  // companion the activator persists to localStorage['elbPreviewSession'])
-  // at boot and stamp it as the X-Walkeros-Preview header on each named
-  // server-bound destination, before startFlow. Never the activation grant
-  // in 'elbPreview': the session container only accepts session-bound
-  // grants, so that value could only ever be rejected (sb-mismatch). The
-  // grant value never appears as a literal — only the runtime localStorage
-  // read. localStorage access is wrapped in try/catch (Safari private mode
-  // throws) and an absent key skips injection entirely so a plain page
-  // boots normally.
-  const grantTargets = options.previewGrantTargets ?? [];
-  const previewGrantBlock =
-    grantTargets.length > 0
-      ? `
-  // --- Preview grant injection ---
-  try {
-    const __previewGrant =
-      typeof localStorage !== 'undefined'
-        ? localStorage.getItem('elbPreviewSession')
-        : null;
-    if (__previewGrant && config.destinations) {
-${grantTargets
-  .map((key) => {
-    const ref = `config.destinations[${singleQuoteLiteral(key)}]`;
-    return `      if (${ref}) {
-        const __dest = ${ref};
-        const __cfg = __dest.config || (__dest.config = {});
-        const __settings = __cfg.settings || (__cfg.settings = {});
-        const __headers = __settings.headers || (__settings.headers = {});
-        __headers['X-Walkeros-Preview'] = __previewGrant;
-      }`;
-  })
-  .join('\n')}
-    }
-  } catch (__err) {
-    // localStorage can throw (Safari private mode); boot without the grant.
-  }
-  // --- End preview grant injection ---`
-      : '';
 
   const previewBlock =
     previewEnabled && preview
@@ -2323,37 +2250,32 @@ ${grantTargets
   }`
       : '';
 
-  const stage1Specifier = toFileImportSpecifier(stage1Path);
-
-  // STATIC observe connect wiring (see emitObserveAssignment): baked inside
-  // the IIFE AFTER the activator's early return, so an activated page (the
-  // artifact swapped in) never also installs the host's connect module.
-  const observeImport = options.observe ? OBSERVE_SLOT_IMPORT : '';
-  const observeBlock = options.observe
-    ? emitObserveAssignment(options.observe)
+  // Replaced, never merged: a web flow's own usage or preview block must not
+  // report from a preview build. Only the url and the token are baked.
+  const observe = options.observe && {
+    preview: {
+      url: options.observe.preview.url,
+      token: options.observe.preview.token,
+    },
+  };
+  const observeBlock = observe
+    ? `
+  config.observe = ${JSON.stringify(observe)};`
     : '';
+
+  const stage1Specifier = toFileImportSpecifier(stage1Path);
 
   // The loader runs first, before the activator: host and artifact both call
   // it, and its page guard keeps the first one.
   const loaderImport = platform === 'browser' ? MOIN_IMPORT : '';
   const loaderCall = platform === 'browser' ? emitMoinCall(options.moin) : '';
 
-  return `${loaderImport}${previewImport}${observeImport}import { startFlow, wireConfig, __configData } from '${stage1Specifier}';
+  return `${loaderImport}${previewImport}import { startFlow, wireConfig, __configData } from '${stage1Specifier}';
 
 (async () => {${loaderCall}${previewBlock}
-  const config = wireConfig(__configData);${envBlock}${previewGrantBlock}${observeBlock}
+  const config = wireConfig(__configData);${envBlock}${observeBlock}
   const { collector, elb } = await startFlow(config);${assignmentCode}
 })();`;
-}
-
-/**
- * Emit a single-quoted JS string literal for a destination key. Destination
- * keys come from a validated flow config, but escaping backslash and single
- * quote keeps the emitted codegen well-formed for any key and matches the
- * single-quote convention the preview-injection tests pin.
- */
-function singleQuoteLiteral(value: string): string {
-  return `'${value.replace(/\\/g, '\\\\').replace(/'/g, "\\'")}'`;
 }
 
 /**
@@ -2367,7 +2289,11 @@ function singleQuoteLiteral(value: string): string {
  */
 export function generateWrapEntryServer(stage1Path: string): string {
   const stage1Specifier = toFileImportSpecifier(stage1Path);
+  // The declared env is read through the namespace: a skeleton built by an
+  // earlier CLI has no such export, and its wrap exports undefined.
   return `import { startFlow, wireConfig, __configData } from '${stage1Specifier}';
+import * as stage1 from '${stage1Specifier}';
+export const ${DECLARED_ENV_EXPORT} = stage1.${DECLARED_ENV_EXPORT};
 
 export default async function(context = {}) {
   const config = wireConfig(__configData);
@@ -2382,21 +2308,9 @@ ${HOST_LOGGER_MERGE}
     }
   }
 
+${HOST_AUTHORIZE}
+
   const result = await startFlow(config);
-
-  // Telemetry observer installation: the host (pipeline.ts) builds the
-  // observer functions via createTelemetryObserver + createBatchedPoster
-  // and forwards them through context. Added to collector.observers so the
-  // runtime self-emission loop drives them.
-  if (context.observers) {
-    for (const observer of context.observers) {
-      result.collector.observers.add(observer);
-    }
-  }
-
-  // The host forwards the level supplier beside the observers; the collector
-  // capture path reads it to decide destination call capture at trace.
-  if (context.observeLevel) result.collector.observeLevel = context.observeLevel;
 
   const httpSource = Object.values(result.collector.sources || {})
     .find(s => 'httpHandler' in s && typeof s.httpHandler === 'function');

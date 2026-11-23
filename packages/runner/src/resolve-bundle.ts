@@ -6,11 +6,17 @@
  *    - `.tar.gz`/`.tgz` archives are extracted (gzip is not ESM)
  *    - everything else is imported directly
  * 2. URL                - BUNDLE is an http(s) URL
+ *    - on the app's origin it carries the runner credential's headers, and
+ *      its redirect to the storage is followed with none
  *    - the body is buffered once; gzip magic bytes (or an archive suffix or
  *      content-type hint) route it to extraction
- *    - text content is written to writePath
+ *    - text content is written as flow.mjs
  * 3. Stdin              - data piped into the process (empty stdin is skipped)
  * 4. File path (fallback) - BUNDLE path that doesn't exist yet
+ *
+ * An extracted, fetched or piped bundle lands in the flow folder: /app/flow in
+ * the image, else `flow/` in a private folder this process makes (see
+ * `intoFlowFolder`).
  */
 
 import {
@@ -24,20 +30,24 @@ import { dirname, join } from 'path';
 import { Readable } from 'stream';
 import { x as tarExtract } from 'tar';
 import { isStdinPiped, readStdin } from './stdin.js';
+import { SERVER_OUTPUT_ENTRIES } from '@walkeros/core';
+import { sendWithServiceAuth } from '@walkeros/server-core';
+import { attemptHeaders } from './auth-headers.js';
+import type { AppAuth } from './credentials.js';
 import { fetchWithRetry } from './fetch-retry.js';
-
-/** Entry the runtime expects at the root of an extracted archive. */
-const ARCHIVE_ENTRY = 'flow.mjs';
+import {
+  createInstanceFolder,
+  removeInstanceFolder,
+} from './instance-folder.js';
 
 /**
- * Determine where to write fetched/stdin bundles.
- * In Docker: /app/flow/ exists → write there (module resolution works naturally).
- * Local dev: falls back to /tmp/.
+ * The file the runtime imports: the entry at the root of an extracted
+ * archive, and the name a fetched or piped text bundle is written as.
  */
-function getDefaultWritePath(): string {
-  if (existsSync('/app/flow')) return '/app/flow/flow.mjs';
-  return '/tmp/walkeros-flow.mjs';
-}
+const FLOW_ENTRY = 'flow.mjs';
+
+/** The image's flow folder: each container runs one flow from it. */
+const IMAGE_FLOW_DIR = '/app/flow';
 
 export type BundleSource = 'stdin' | 'url' | 'file' | 'archive';
 
@@ -46,6 +56,11 @@ export interface ResolvedBundle {
   path: string;
   /** How the bundle was provided */
   source: BundleSource;
+  /**
+   * The private folder this call made for the bundle (outside the image
+   * only); the caller removes it when the process exits.
+   */
+  folder?: string;
 }
 
 /**
@@ -98,12 +113,37 @@ export function isArchive(value: string, contentType?: string | null): boolean {
 /**
  * Write bundle content to disk, ensuring parent directory exists.
  */
-function writeBundleToDisk(writePath: string, content: string): void {
+function writeBundleToDisk(writePath: string, content: string): string {
   const dir = dirname(writePath);
   if (!existsSync(dir)) {
     mkdirSync(dir, { recursive: true });
   }
   writeFileSync(writePath, content, 'utf-8');
+  return writePath;
+}
+
+/**
+ * Put a bundle into the folder it runs from and say where it landed. In the
+ * image that is /app/flow (module resolution works naturally there).
+ * Elsewhere it is `flow/` in a new private folder, so nothing outside that
+ * folder is read, wiped or overwritten, and two runners on one host never
+ * share one. A failed write removes the private folder again, since no
+ * caller learns of it.
+ */
+async function intoFlowFolder(
+  source: BundleSource,
+  write: (dir: string) => Promise<string> | string,
+): Promise<ResolvedBundle> {
+  if (existsSync(IMAGE_FLOW_DIR)) {
+    return { path: await write(IMAGE_FLOW_DIR), source };
+  }
+  const folder = await createInstanceFolder();
+  try {
+    return { path: await write(join(folder, 'flow')), source, folder };
+  } catch (error) {
+    removeInstanceFolder(folder);
+    throw error;
+  }
 }
 
 /**
@@ -116,8 +156,14 @@ function writeBundleToDisk(writePath: string, content: string): void {
  * hard-fails the boot. A non-retryable status (e.g. a 404) comes back as a
  * Response and is turned into the precise error below.
  */
-async function fetchOk(url: string): Promise<Response> {
-  const response = await fetchWithRetry(url);
+async function fetchOk(
+  url: string,
+  app: AppAuth | undefined,
+): Promise<Response> {
+  const response =
+    app && new URL(url).origin === app.origin
+      ? await fetchFromApp(url, app)
+      : await fetchWithRetry(url);
 
   if (!response.ok) {
     throw new Error(
@@ -128,18 +174,45 @@ async function fetchOk(url: string): Promise<Response> {
   return response;
 }
 
+function isRedirect(status: number): boolean {
+  return status >= 300 && status < 400;
+}
+
 /**
- * Write a fetched text body to disk as the bundle.
+ * The app's bundle route: the request carries the credential's headers and
+ * takes no redirect by itself. Its redirect to the storage is followed with
+ * no header, so no credential reaches another host; the storage address
+ * carries its own signature and is never named in an error.
  */
-function writeTextBundle(body: Buffer, writePath: string): string {
+async function fetchFromApp(url: string, app: AppAuth): Promise<Response> {
+  const request = { method: 'GET', url };
+  const response = await sendWithServiceAuth(app, request, (headers) =>
+    fetchWithRetry(url, {
+      headers: attemptHeaders(app, request, headers),
+      init: { redirect: 'manual' },
+    }),
+  );
+  if (!isRedirect(response.status)) return response;
+  const location = response.headers.get('location');
+  await response.body?.cancel();
+  if (!location)
+    throw new Error(
+      `Failed to fetch bundle from ${url}: ${response.status} with no Location`,
+    );
+  return fetchWithRetry(new URL(location, url).toString());
+}
+
+/**
+ * A fetched body as a text bundle; an empty one is refused.
+ */
+function textBundle(body: Buffer): string {
   const content = body.toString('utf-8');
 
   if (!content.trim()) {
     throw new Error(`Bundle is empty`);
   }
 
-  writeBundleToDisk(writePath, content);
-  return writePath;
+  return content;
 }
 
 /**
@@ -161,12 +234,13 @@ async function extractToDir(
     mkdirSync(destDir, { recursive: true });
   }
 
-  // destDir is stable across runs (e.g. /app/flow in a long-lived container).
-  // Wipe the full extracted footprint first so a prior run's node_modules/ or
-  // package.json can't shadow the new archive, and the post-extract existence
-  // check proves THIS archive delivered flow.mjs, not a leftover.
-  const entryPath = join(destDir, ARCHIVE_ENTRY);
-  for (const member of [ARCHIVE_ENTRY, 'node_modules', 'package.json']) {
+  // In the image destDir is /app/flow, stable across runs of a long-lived
+  // container. Wipe the full extracted footprint first so a prior run's
+  // node_modules/ or package.json can't shadow the new archive, and the
+  // post-extract existence check proves THIS archive delivered flow.mjs, not
+  // a leftover. A private folder is new, so the wipe finds nothing there.
+  const entryPath = join(destDir, FLOW_ENTRY);
+  for (const member of SERVER_OUTPUT_ENTRIES) {
     rmSync(join(destDir, member), { recursive: true, force: true });
   }
 
@@ -183,7 +257,7 @@ async function extractToDir(
 
   if (!existsSync(entryPath)) {
     throw new Error(
-      `Archive did not contain ${ARCHIVE_ENTRY} after extraction to ${destDir}`,
+      `Archive did not contain ${FLOW_ENTRY} after extraction to ${destDir}`,
     );
   }
 
@@ -205,24 +279,22 @@ async function readBody(response: Response): Promise<Buffer> {
  * Resolve the bundle to a local file path
  *
  * @param bundleEnv - Value of the BUNDLE env var (path or URL)
+ * @param options.app - The app, when the runner holds a credential: a URL on
+ *   its origin is fetched with the credential's headers
  * @returns Resolved bundle with file path and source type
  */
 export async function resolveBundle(
   bundleEnv: string,
+  options: { app?: AppAuth } = {},
 ): Promise<ResolvedBundle> {
-  const writePath = getDefaultWritePath();
-  const archiveDestDir = dirname(writePath);
-
   // 1. If BUNDLE points to an existing local file, use it directly.
   //    This prevents false stdin detection in Docker detached mode.
   //    A local archive must be extracted (gzip is not ESM), not imported.
   if (!isUrl(bundleEnv) && existsSync(bundleEnv)) {
     if (isArchive(bundleEnv)) {
-      const path = await extractToDir(
-        createReadStream(bundleEnv),
-        archiveDestDir,
+      return intoFlowFolder('archive', (dir) =>
+        extractToDir(createReadStream(bundleEnv), dir),
       );
-      return { path, source: 'archive' };
     }
     return { path: bundleEnv, source: 'file' };
   }
@@ -230,7 +302,7 @@ export async function resolveBundle(
   // 2. URL: check before stdin to avoid false stdin detection in containers
   //    (process.stdin.isTTY is undefined in non-interactive shells/Docker)
   if (isUrl(bundleEnv)) {
-    const response = await fetchOk(bundleEnv);
+    const response = await fetchOk(bundleEnv, options.app);
     const body = await readBody(response);
 
     // The body decides: gzip magic bytes route to extraction even at a URL
@@ -241,12 +313,15 @@ export async function resolveBundle(
       isGzip(body) ||
       isArchive(bundleEnv, response.headers.get('content-type'))
     ) {
-      const path = await extractToDir(Readable.from(body), archiveDestDir);
-      return { path, source: 'archive' };
+      return intoFlowFolder('archive', (dir) =>
+        extractToDir(Readable.from(body), dir),
+      );
     }
 
-    const path = writeTextBundle(body, writePath);
-    return { path, source: 'url' };
+    const content = textBundle(body);
+    return intoFlowFolder('url', (dir) =>
+      writeBundleToDisk(join(dir, FLOW_ENTRY), content),
+    );
   }
 
   // 3. Stdin pipe (only when BUNDLE is not a file or URL). An EMPTY stdin is
@@ -256,8 +331,9 @@ export async function resolveBundle(
   if (isStdinPiped()) {
     const content = await readStdin();
     if (content.trim()) {
-      writeBundleToDisk(writePath, content);
-      return { path: writePath, source: 'stdin' };
+      return intoFlowFolder('stdin', (dir) =>
+        writeBundleToDisk(join(dir, FLOW_ENTRY), content),
+      );
     }
   }
 

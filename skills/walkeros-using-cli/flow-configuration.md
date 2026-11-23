@@ -19,9 +19,9 @@ Complete reference for Flow.Json JSON configuration format.
           "packages": {},
           "overrides": {},
           "traceInclude": [],
-          "env": {}
-        },
-        "observe": {}
+          "env": {},
+          "flows": {}
+        }
       },
       "sources": {},
       "destinations": {},
@@ -35,12 +35,9 @@ Complete reference for Flow.Json JSON configuration format.
 ```
 
 Mappings live on each step (`config.mapping`), not at the flow level. Validate
-drops an unknown key at the file root, on a flow or in its `config` without a
-message, so a misspelt `"destinaitons"` passes.
-
-`config.observe` (`url` + `binding`, `level`, `sample`) applies to web flows
-only. A server flow ignores it; the runner reads its level from
-`WALKEROS_OBSERVE_LEVEL` instead.
+drops an unknown key at the file root or on a flow without a message, so a
+misspelt `"destinaitons"` passes; an unknown key in a flow's `config` fails with
+`UNKNOWN_KEY`.
 
 ---
 
@@ -147,6 +144,41 @@ code: a step runs its package's default export, or the export its `import` names
 }
 ```
 
+A local package whose `main`, `module`, `exports` or `bin` points outside
+`dist/` is copied whole; one with every entry in `dist/` is copied as
+`package.json` plus `dist/`. A whole copy leaves out `node_modules` and `.env`
+or `.env.*` files at any depth and a top-level `.turbo` and `.git`; type
+declarations and `.json` leaves of `exports` do not trigger it.
+
+### Collector observe
+
+`collector.observe` starts the Observe reporter. It takes `usage` and `preview`,
+each `{ url, token }` with `usage` also `interval` (10 to 300 seconds, default
+60). `url` is an absolute http or https URL, or a `$env.` or `$var.` reference;
+the token is sent as a Bearer header, so back it with `$secret.NAME`. Any other
+key fails validate at its path. The usage part may leave `token` out under a
+paired `runneros`, which signs each report with its credential's key; without
+either, the part logs one ERROR line naming `observe.usage.token`.
+
+```json
+{
+  "collector": {
+    "observe": {
+      "usage": {
+        "url": "https://ingest.example.com/usage",
+        "token": "$secret.USAGE_TOKEN"
+      }
+    }
+  }
+}
+```
+
+A production web bundle carries no reporter and ignores the block (with its
+token in the bundle bytes), a preview build takes `observe.preview` from the
+wrap, and `push` and simulate send nothing. The complete example has no
+`collector.observe` section: its reporter needs an ingest endpoint and a token,
+and the example posts to none.
+
 ### Overrides
 
 `flow.<name>.config.bundle.overrides` pins transitive dependency versions
@@ -184,6 +216,26 @@ globs both work, resolved against the install root (where pacote put files):
         "node_modules/some-pkg/data/*.json",
         "node_modules/another-pkg/lib/runtime-loaded.js"
       ]
+    }
+  }
+}
+```
+
+### flows (server flows only)
+
+A server flow lists the web flows it serves under
+`flow.<name>.config.bundle.flows`: the key is a web flow of the same file, the
+value is the file's path in the server's output folder. One `walkeros bundle`
+builds the server and writes each web file at its path (or packs it into the
+archive). Routes and stores stay in the server flow, see
+[Serving files](https://www.walkeros.io/docs/apps/runtime#serving-files).
+
+```json
+{
+  "config": {
+    "platform": "server",
+    "bundle": {
+      "flows": { "casamoda": "casamoda/walker.js" }
     }
   }
 }

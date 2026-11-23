@@ -1,4 +1,4 @@
-import { createIngest, createMockContext, observeEnv } from '@walkeros/core';
+import { createIngest, createMockContext, recordEnv } from '@walkeros/core';
 import { expectSimulationResolves } from '@walkeros/core/dev';
 import type { Source } from '@walkeros/core';
 import { sourceSqs } from '../index';
@@ -9,26 +9,26 @@ it('declares simulation paths that resolve', () =>
   expectSimulationResolves(env));
 
 it('records the send calls of the example client', async () => {
-  const observed = observeEnv(env.push, env.simulation);
+  const recorded = recordEnv(env.push, env.simulation);
   const context: Source.Context<Types> = {
     ...createMockContext<Types>({
       config: { settings: { queueName: 'walkeros-events' } },
-      env: observed.env,
+      env: recorded.env,
     }),
     id: 'sqs',
     withScope: async (_raw, respond, body) =>
-      body({ ...observed.env, ingest: createIngest('sqs'), respond }),
+      body({ ...recorded.env, ingest: createIngest('sqs'), respond }),
   };
   const instance = await sourceSqs(context);
   await instance.on?.('run');
   await instance.destroy?.({
     id: 'sqs',
     config: instance.config,
-    env: observed.env,
+    env: recorded.env,
     logger: context.logger,
   });
 
-  const inputs = observed.calls.map(({ fn, args }) => {
+  const inputs = recorded.calls.map(({ fn, args }) => {
     const [command] = args;
     const input =
       typeof command === 'object' && command !== null && 'input' in command

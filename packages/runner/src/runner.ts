@@ -6,24 +6,21 @@
  */
 
 import { resolve, dirname } from 'path';
-import type {
-  Collector,
-  Logger,
-  ObserverFn,
-  TelemetryLevel,
-} from '@walkeros/core';
+import type { Authorize, Collector, DeclaredEnv, Logger } from '@walkeros/core';
 import type { HealthServer } from './health-server.js';
 import { loadBundle } from './load-bundle.js';
 import type { FlowLogger } from './runtime-logging.js';
 
 /**
  * What the runner hands the bundle factory as its context, beside the logger
- * config: the server settings and the flow logger contract (`logLevel`,
- * `onLogger`).
+ * config: the server settings, the flow logger contract (`logLevel`,
+ * `onLogger`) and, when the runner signs for its steps, `authorize`.
  */
 export interface RuntimeConfig extends Partial<FlowLogger> {
   port?: number;
   host?: string;
+  /** The steps' signer, handed on by the bundle entry. */
+  authorize?: Authorize;
 }
 
 export interface FlowHandle {
@@ -56,13 +53,9 @@ function isCollectorStatus(value: unknown): value is Collector.Status {
 
 /**
  * Load a pre-built flow bundle, mount its HTTP handler onto the health server,
- * and return a handle for managing it.
- *
- * `observers` is the telemetry observer array built by `pipeline.ts`;
- * `observeLevel` is the matching level supplier. The generated bundle factory
- * (see `generateServerEntry` in the CLI's bundler) installs each observer onto
- * `collector.observers` and the supplier onto `collector.observeLevel` after
- * `startFlow` returns.
+ * and return a handle for managing it. `beforeStart` runs after the import and
+ * before the flow starts, with the names the artifact declares (see
+ * {@link loadBundle}).
  */
 export async function loadFlow(
   file: string,
@@ -70,8 +63,7 @@ export async function loadFlow(
   logger: Logger.Instance,
   loggerConfig?: Logger.Config,
   healthServer?: HealthServer,
-  observers?: Array<ObserverFn>,
-  observeLevel?: () => TelemetryLevel,
+  beforeStart?: (declared: DeclaredEnv | undefined) => Promise<void>,
 ): Promise<FlowHandle> {
   const absolutePath = resolve(file);
   const flowDir = dirname(absolutePath);
@@ -81,11 +73,14 @@ export async function loadFlow(
     ...config,
     ...(loggerConfig ? { logger: loggerConfig } : {}),
     ...(healthServer ? { sourceSettings: { port: undefined } } : {}),
-    ...(observers ? { observers } : {}),
-    ...(observeLevel ? { observeLevel } : {}),
   };
 
-  const result = await loadBundle(absolutePath, flowContext, logger);
+  const result = await loadBundle(
+    absolutePath,
+    flowContext,
+    logger,
+    beforeStart,
+  );
   const { status, name, release } = result.collector;
 
   const handle: FlowHandle = {

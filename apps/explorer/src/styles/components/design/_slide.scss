@@ -1,0 +1,28 @@
+// Slide (@walkeros/explorer/design/components): a headline and its body, with
+// an optional visual in a second column that stacks when narrow.
+@layer components {
+  // Fills and centres through .elb-full-frame; the text keeps a reading
+  // measure, the visual takes the second column.
+  .elb-slide {
+    gap: var(--split-gap);
+    align-items: center;
+    color: var(--fg);
+  }
+
+  .elb-slide--visual {
+    grid-template-columns: repeat(auto-fit, minmax(min(100%, 420px), 1fr));
+  }
+
+  .elb-slide__copy {
+    display: flex;
+    flex-direction: column;
+    gap: 24px;
+    min-width: 0;
+    max-width: var(--container-3xl);
+  }
+
+  .elb-slide__body,
+  .elb-slide__visual {
+    min-width: 0;
+  }
+}

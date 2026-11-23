@@ -1,6 +1,12 @@
 import type { Destination, Logger } from '@walkeros/core';
-import { isObject, StepError } from '@walkeros/core';
-import { adviceFor, classify, errnoOf, errorCode } from './classify';
+import { clockOffsetNote, isObject, StepError } from '@walkeros/core';
+import {
+  AnswerError,
+  adviceFor,
+  classify,
+  errnoOf,
+  errorCode,
+} from './classify';
 import { resolveSettings } from './config';
 import { eventToRow } from './eventToRow';
 import type { InsertEntry } from './insert';
@@ -57,7 +63,12 @@ export async function deliver(
   const settings = resolveSettings(config);
 
   try {
-    await insertRows(entries.map(toInsertEntry), settings, logger);
+    await insertRows(
+      entries.map(toInsertEntry),
+      settings,
+      logger,
+      config.timeout,
+    );
   } catch (error) {
     throw insertError(error);
   }
@@ -67,23 +78,61 @@ export async function deliver(
   logger.debug('ClickHouse insert ok', { rows: entries.length });
 }
 
+/** The longest answer line a failure message quotes. */
+const ANSWER_LINE_MAX = 200;
+
+/** How every answer of the walkerOS data proxy in front of ClickHouse begins. */
+const PROXY_PREFIX = 'walkerOS data proxy';
+
+/**
+ * The first line of an answer from the walkerOS data proxy, cut short.
+ *
+ * The client turns a failed answer into an error whose message is the answer
+ * body, and reads a ClickHouse code from it only when the body is
+ * ClickHouse's. A proxy's refusal therefore arrives with no code and no Node
+ * errno, and its first line is the one place the reason is named. Only the
+ * walkerOS proxy's own fixed lines are quoted: any other body, ClickHouse's
+ * included, can echo the rows or the event it refused.
+ */
+function proxyLine(error: unknown): string | undefined {
+  if (typeof error !== 'object' || error === null) return undefined;
+  if (!('message' in error) || typeof error.message !== 'string')
+    return undefined;
+
+  const [line = ''] = error.message.trim().split(/\r?\n/, 1);
+
+  return line.startsWith(PROXY_PREFIX)
+    ? line.slice(0, ANSWER_LINE_MAX)
+    : undefined;
+}
+
 /**
  * A failed insert as the package's StepError. The message names the ClickHouse
  * code, or the Node errno of a rejection that never reached the server
  * (`ECONNRESET` is the commonest retryable failure there is), plus the advice
- * for the terminal codes that need one. Never the server's own text: it can
- * quote the rows it could not parse. The original error stays the cause.
+ * for the terminal codes that need one, or else the walkerOS data proxy's
+ * reason. Never the server's own text: it can quote the rows it could not
+ * parse. The original error stays the cause.
+ *
+ * A signed insert the data server refused (403) is code `auth`, terminal,
+ * and names the clock offset when it is more than 5 s either way, since a
+ * clock that is off is the one cause the runner's own host can fix. A
+ * StepError the insert threw (a signature that was not made) passes as it is.
  */
 function insertError(error: unknown): StepError {
+  if (error instanceof StepError) return error;
+  if (error instanceof AnswerError && error.status === 403)
+    return new StepError(
+      `The data server refused the insert: 403${clockOffsetNote(error.clockOffset)}`,
+      { code: 'auth', status: 403, retryable: false, cause: error },
+    );
   const code = errorCode(error);
   const reason = code ? `code ${code}` : errnoOf(error);
-  return new StepError(
-    adviceFor(code) ??
-      `ClickHouse insert failed${reason ? ` (${reason})` : ''}`,
-    {
-      code: 'transport',
-      retryable: classify(error) === 'retryable',
-      cause: error,
-    },
-  );
+  const line = reason ? undefined : proxyLine(error);
+  const detail = reason ? ` (${reason})` : line ? `: ${line}` : '';
+  return new StepError(adviceFor(code) ?? `ClickHouse insert failed${detail}`, {
+    code: 'transport',
+    retryable: classify(error) === 'retryable',
+    cause: error,
+  });
 }

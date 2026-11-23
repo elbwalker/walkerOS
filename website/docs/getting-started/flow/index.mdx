@@ -134,6 +134,8 @@ Build-time configuration lives under `flows.<name>.config.bundle`. The `packages
 - **`imports`** - Array of named exports to import
 - **`path`** - Local filesystem path (takes precedence over `version`)
 
+**`flows`** (server flows only) maps the key of a web flow in the same file to the path of its built file in the server's output folder. See [Serving files](/docs/apps/runtime#serving-files).
+
 **`overrides`** is a `Record<string, string>`: for each named package, the version to use for any transitive reference. Direct package specs always win over overrides; overrides only substitute transitive dependencies during resolution.
 
 For development or custom packages, use `path` to reference a local directory:
@@ -495,6 +497,7 @@ The collector processes events from sources and routes them to destinations:
 - **`globals`** - Properties added to every event
 - **`consent`** - Default consent state
 - **`next`** - Collector chain: a `Route` that runs once per event, after the collector completed it and before the destination fan-out. Every destination receives what it produces; a `stop` here reaches no destination, and each `many` copy is delivered to the destinations on its own. Per-destination work stays on `destination.before`
+- **`observe`** - The reporter's endpoints: `usage` (counters and issues) and `preview` (one row per event), each with a `url` and a `token`. Nothing runs without it. See [Observe](/docs/getting-started/observe)
 
 See [Collector documentation](/docs/collector/) for complete options.
 
@@ -663,7 +666,7 @@ walkerOS uses this type hierarchy:
                               ▼
 ┌─────────────────────────────────────────────────────────────────┐
 │  Flow (resolved flow)                                           │
-│  ├── config: { platform, url?, settings?, bundle?, observe? }   │
+│  ├── config: { platform, url?, settings?, bundle? }             │
 │  ├── sources: { ... }                                           │
 │  ├── transformers: { ... }                                      │
 │  ├── destinations: { ... }                                      │
@@ -681,7 +684,7 @@ walkerOS uses this type hierarchy:
 
 - **`Flow.Json`** - Root config file format for CLI
 - **`Flow`** - Single flow configuration (with optional `config`, `sources`, `destinations`, etc.)
-- **`Flow.Config`** - Per-flow config block (`platform`, `url`, `settings`, `bundle`, `observe`)
+- **`Flow.Config`** - Per-flow config block (`platform`, `url`, `settings`, `bundle`)
 - **`Collector.InitConfig`** - Runtime type passed to `startFlow()`
 
 ## Complete example

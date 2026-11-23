@@ -1,0 +1,34 @@
+// Captions (@walkeros/explorer/design/components): burned-in captions on a
+// surface box. The current word reads by weight and underline, not by colour.
+@layer components {
+  .elb-captions {
+    display: inline-flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 2px;
+    padding: 12px 20px;
+    color: var(--fg);
+    background: var(--surface);
+    border: 1px solid var(--border-strong);
+    border-radius: var(--radius-md);
+    text-align: center;
+    font-family: var(--type-title-card-family);
+    font-size: var(--type-title-card-size);
+    line-height: var(--type-title-card-line-height);
+    font-weight: var(--type-title-card-weight);
+  }
+
+  .elb-captions__line {
+    margin: 0;
+    text-wrap: balance;
+  }
+
+  .elb-captions__word--current {
+    font-weight: 800;
+    text-decoration: underline;
+    text-decoration-color: var(--primary);
+    text-decoration-thickness: 2px;
+    text-decoration-skip-ink: none;
+    text-underline-offset: 0.18em;
+  }
+}

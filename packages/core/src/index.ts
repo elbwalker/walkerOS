@@ -3,6 +3,7 @@ export * from './types';
 export * from './branch';
 export * from './anonymizeIP';
 export * from './flow';
+export * from './served-flows';
 export * from './assign';
 export * from './byPath';
 export * from './include';
@@ -49,6 +50,7 @@ export type {
   StepErrorOptions,
 } from './stepError';
 export { createCauseLog, reportCause } from './causeLog';
+export { LATENCY_BOUNDS_MS, latencyBucket } from './latency';
 export {
   DEFAULT_DESTINATION_TIMEOUT_MS,
   resolveDestinationTimeout,
@@ -58,15 +60,14 @@ export type {
   CauseLog,
   CauseLogOptions,
   CauseLogger,
+  CauseSnapshot,
+  CauseSnapshotEntry,
 } from './causeLog';
+export { redactLine } from './redactLine';
 export * from './useHooks';
-export * from './telemetry';
-export * from './telemetryResolver';
 export * from './preview';
 export { MOIN_PARAM, MOIN_PRODUCTION } from './moin';
 export type { MoinTarget } from './moin';
-export * from './journey';
-export { getTraceUntil, setTraceUntil } from './traceState';
 export { emitStep } from './emitStep';
 export * from './batchedPoster';
 export * from './userAgent';
@@ -76,8 +77,9 @@ export { createTimer, type Timer } from './timer';
 export { getErrorMessage } from './getErrorMessage';
 export * from './cdn';
 export * from './contract';
-export * from './observeEnv';
-export * from './observeConnect';
+export * from './recordEnv';
+export * from './runtime';
+export * from './service-auth';
 export * from './mcpHelpers';
 export * from './respond';
 export * from './scope';

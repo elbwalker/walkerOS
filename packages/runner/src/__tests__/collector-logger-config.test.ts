@@ -1,6 +1,12 @@
 import { createLogger, Level } from '@walkeros/core';
-import { createCLILoggerConfig } from '@walkeros/core/node';
+import {
+  createCLILoggerConfig,
+  createKnownValues,
+  redactLine,
+  type TappedLine,
+} from '@walkeros/core/node';
 import { ErrorRing, LogRing } from '../log-ring.js';
+import { createRuntimeLogging } from '../runtime-logging.js';
 
 /**
  * D1: the collector logger config must feed the SAME ring tap the runner CLI
@@ -29,9 +35,9 @@ describe('createCLILoggerConfig (collector ring tap)', () => {
     const config = createCLILoggerConfig({
       verbose: false,
       silent: true,
-      onLine: (level, message) => {
-        if (level === Level.ERROR) errorRing.add(message);
-        logRing.add({ time: Date.now(), level: 'error', message });
+      onLine: (level, line) => {
+        if (level === Level.ERROR) errorRing.add(line.masked());
+        logRing.add({ time: line.time, level: 'error', line });
       },
     });
 
@@ -62,10 +68,10 @@ describe('createCLILoggerConfig (collector ring tap)', () => {
     const config = createCLILoggerConfig({
       verbose: true,
       silent: false,
-      onLine: (level, message) => {
-        if (level === Level.ERROR) errorRing.add(message);
+      onLine: (level, line) => {
+        if (level === Level.ERROR) errorRing.add(line.masked());
         logRing.add({
-          time: Date.now(),
+          time: line.time,
           level:
             level === Level.ERROR
               ? 'error'
@@ -74,7 +80,7 @@ describe('createCLILoggerConfig (collector ring tap)', () => {
                 : level === Level.INFO
                   ? 'info'
                   : 'debug',
-          message,
+          line,
         });
       },
     });
@@ -91,7 +97,7 @@ describe('createCLILoggerConfig (collector ring tap)', () => {
 
     // Non-error levels still reach the log ring (existing behavior).
     const logs = logRing.snapshot();
-    expect(logs.map((l) => l.message)).toEqual([
+    expect(logs.map((l) => l.line.masked())).toEqual([
       'just info',
       'a warning',
       'a real error',
@@ -102,8 +108,8 @@ describe('createCLILoggerConfig (collector ring tap)', () => {
     // The config's handler IS the same function the CLI logger uses, so a
     // single onLine tap feeds both runner-process logs and collector logs.
     const lines: Array<{ level: Level; message: string }> = [];
-    const onLine = (level: Level, message: string) => {
-      lines.push({ level, message });
+    const onLine = (level: Level, line: TappedLine) => {
+      lines.push({ level, message: line.masked() });
     };
 
     const config = createCLILoggerConfig({ verbose: false, onLine });
@@ -111,5 +117,24 @@ describe('createCLILoggerConfig (collector ring tap)', () => {
     collectorLogger.scope('gtag').error('boom');
 
     expect(lines).toEqual([{ level: Level.ERROR, message: '[gtag] boom' }]);
+  });
+
+  it('masks a value added after the collector logger exists in an Observe message', () => {
+    // The Observe reporter masks what it posts with
+    // `redactLine(collector.logger.mask(text))`.
+    const knownValues = createKnownValues();
+    const { collectorConfig } = createRuntimeLogging({
+      silent: true,
+      knownSecrets: knownValues,
+    });
+    const collectorLogger = createLogger(collectorConfig);
+
+    knownValues.add(['fetched-at-startup']);
+
+    expect(
+      redactLine(
+        collectorLogger.mask('destination failed: fetched-at-startup'),
+      ),
+    ).toBe('destination failed: ***');
   });
 });

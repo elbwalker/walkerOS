@@ -120,13 +120,7 @@ describe('verifyActivation', () => {
     return `${header}.${payload}.${b64urlBytes(sig)}`;
   }
 
-  type WebVerifyParams = Extract<VerifyParams, { origin: string }>;
-  type ContainerVerifyParams = Extract<
-    VerifyParams,
-    { expectSession: { ses: string; sb: string } }
-  >;
-
-  function params(overrides: Partial<WebVerifyParams> = {}): VerifyParams {
+  function params(overrides: Partial<VerifyParams> = {}): VerifyParams {
     return {
       keyring: [{ kid: 'pk_stage_abc12345', spki: publicSpki }],
       iss: 'app:stage',
@@ -135,24 +129,6 @@ describe('verifyActivation', () => {
       source: 'url',
       now: NOW,
       crypto,
-      ...overrides,
-    };
-  }
-
-  // Container mode: no origin, session-bound instead. Mirrors the real
-  // caller (the runner's health-server gate), which has no page origin and
-  // verifies by `ses`/`sb` alone.
-  function containerParams(
-    overrides: Partial<ContainerVerifyParams> = {},
-  ): VerifyParams {
-    return {
-      keyring: [{ kid: 'pk_stage_abc12345', spki: publicSpki }],
-      iss: 'app:stage',
-      pb: 'pb_project_a',
-      source: 'url',
-      now: NOW,
-      crypto,
-      expectSession: { ses: 'ses_1', sb: 'sb_one' },
       ...overrides,
     };
   }
@@ -337,47 +313,6 @@ describe('verifyActivation', () => {
     expect(result).toEqual({ ok: false, reason: 'aud-mismatch' });
   });
 
-  it('enforces the demo single-origin aud rule even without an origin to check', async () => {
-    // Container-side callers may omit `origin` entirely. acceptForeign's
-    // allowlist gate must not be skippable just because origin is absent.
-    const multi = {
-      ...base,
-      pb: 'pb_project_b',
-      aud: ['https://shop.example.com', 'https://two.example.com'],
-    };
-    const result = await verifyActivation(
-      await sign(multi),
-      containerParams({
-        pb: 'pb_demo',
-        acceptForeign: true,
-        demoAllowlist: ['https://shop.example.com', 'https://two.example.com'],
-      }),
-    );
-    expect(result).toEqual({ ok: false, reason: 'aud-mismatch' });
-  });
-
-  it('cross-arm: an activation/forwarding pair each verify ONLY on their own arm', async () => {
-    // The invariant the two-grant design rests on: ONE observe-session URL
-    // carries a non-session activation grant (web arm) plus a session-bound
-    // forwarding grant (container arm), and neither passes the other's arm.
-    const activation = await sign(base);
-    const forwarding = await sign({ ...base, ses: 'ses_1', sb: 'sb_one' });
-
-    const webOk = await verifyActivation(activation, params());
-    expect(webOk.ok).toBe(true);
-    expect(await verifyActivation(forwarding, params())).toEqual({
-      ok: false,
-      reason: 'sb-mismatch',
-    });
-
-    const containerOk = await verifyActivation(forwarding, containerParams());
-    expect(containerOk.ok).toBe(true);
-    expect(await verifyActivation(activation, containerParams())).toEqual({
-      ok: false,
-      reason: 'sb-mismatch',
-    });
-  });
-
   it('fails closed when crypto.subtle is unavailable', async () => {
     const result = await verifyActivation(
       await sign(base),
@@ -386,68 +321,18 @@ describe('verifyActivation', () => {
     expect(result).toEqual({ ok: false, reason: 'no-subtle' });
   });
 
-  it('rejects a session-bound grant whose sb does not match', async () => {
-    const bound = { ...base, ses: 'ses_1', sb: 'sb_one' };
-    const result = await verifyActivation(
-      await sign(bound),
-      containerParams({ expectSession: { ses: 'ses_1', sb: 'sb_two' } }),
-    );
-    expect(result).toEqual({ ok: false, reason: 'sb-mismatch' });
-  });
-
-  it('rejects a session-bound grant whose ses does not match', async () => {
-    const bound = { ...base, ses: 'ses_1', sb: 'sb_one' };
-    const result = await verifyActivation(
-      await sign(bound),
-      containerParams({ expectSession: { ses: 'ses_other', sb: 'sb_one' } }),
-    );
-    expect(result).toEqual({ ok: false, reason: 'sb-mismatch' });
-  });
-
-  it('rejects a session-bound grant whose sb is empty on both sides', async () => {
-    // Restores the dropped `!grant.sb` truthiness guard: an empty string is
-    // never a legitimate binding secret, so it must not trivially equal
-    // itself across a misconfigured caller and a malformed grant.
-    const bound = { ...base, ses: 'ses_1', sb: '' };
-    const result = await verifyActivation(
-      await sign(bound),
-      containerParams({ expectSession: { ses: 'ses_1', sb: '' } }),
-    );
-    expect(result).toEqual({ ok: false, reason: 'sb-mismatch' });
-  });
-
-  it('rejects a session-scoped grant when no session binding is expected', async () => {
-    // Symmetric with the check above: a grant minted for one session must not
-    // silently pass at a host that never asked for a session binding.
-    const bound = { ...base, ses: 'ses_1', sb: 'sb_one' };
-    const result = await verifyActivation(await sign(bound), params());
-    expect(result).toEqual({ ok: false, reason: 'sb-mismatch' });
-  });
-
-  it('accepts a session-bound grant whose ses and sb both match (legitimate container arm)', async () => {
-    const bound = { ...base, ses: 'ses_1', sb: 'sb_one' };
-    const result = await verifyActivation(
-      await sign(bound),
-      containerParams({ expectSession: { ses: 'ses_1', sb: 'sb_one' } }),
-    );
-    expect(result).toEqual({ ok: true, grant: bound });
-  });
-
-  it('cannot express a web-mode call that omits both origin and session binding (compile-time proof)', () => {
-    // The only two arms are `{ origin: string }` and `{ expectSession: {...} }`.
-    // A shape lacking both is the exact caller mistake that used to skip the
-    // aud check silently; it must not satisfy VerifyParams. If it ever did,
-    // the assignment below stops compiling: there is no ts-expect-error
-    // hiding it, so a regression here breaks `tsc`, not just this assertion.
-    type OmitsOriginAndSession = {
+  it('cannot express a call that omits the origin (compile-time proof)', () => {
+    // Without `origin` the aud check would have nothing to compare; such a
+    // shape must not satisfy VerifyParams. If it ever did, the assignment
+    // below stops compiling: there is no ts-expect-error hiding it, so a
+    // regression here breaks `tsc`, not just this assertion.
+    type OmitsOrigin = {
       keyring: PreviewKey[];
       iss: string;
       source: 'url';
       now: number;
     };
-    type WouldRegress = OmitsOriginAndSession extends VerifyParams
-      ? true
-      : false;
+    type WouldRegress = OmitsOrigin extends VerifyParams ? true : false;
     const stillRejected: WouldRegress = false;
     expect(stillRejected).toBe(false);
   });
@@ -476,9 +361,8 @@ describe('verifyActivation', () => {
 
 describe('FlowState release provenance', () => {
   it('carries an optional release provenance string', () => {
-    // Compile-time contract: `release` is stamped by the wiring layer (like
-    // `seq` is stamped by the poster), never by emitting sites, so the field
-    // must exist on FlowState and stay optional.
+    // Compile-time contract: the field exists on FlowState and stays
+    // optional.
     const state: FlowState = {
       flowId: 'flow_1',
       stepId: 'collector.push',

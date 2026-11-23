@@ -27,13 +27,7 @@ const FLAGS: BuildFlag[] = [
 
 /** Strings only the code behind each flag carries. */
 const MARKERS: Record<BuildFlag, string[]> = {
-  __WALKEROS_OBSERVE__: [
-    'credential binding mismatch',
-    '/ingest/',
-    'X-Walkeros-Binding',
-    'new Proxy',
-    '[unreadable]',
-  ],
+  __WALKEROS_OBSERVE__: ['report failed', 'not an observe option'],
   __WALKEROS_STORES__: ['caches with namespace', 'Cycle in cache.store chain'],
   __WALKEROS_STATE__: ['[state] operation failed'],
   __WALKEROS_VALIDATE__: ['OBSOLETE_CODE_STRING'],

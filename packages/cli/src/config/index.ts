@@ -37,8 +37,12 @@ export {
   loadAllFlows,
   getAvailableFlows,
   loadFlowConfig,
+  assertNoConfigErrors,
 } from './loader.js';
 export type { LoadConfigResult, LoadConfigOptions } from './loader.js';
+
+// Served web flows
+export { servedFlowErrors } from './served-flows.js';
 
 // Type re-exports
 export type {

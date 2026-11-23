@@ -1,3 +1,4 @@
+import type { AppAuth } from '../credentials.js';
 import { fetchSecrets } from '../secrets-fetcher';
 import { RunnerAuthError } from '../runner-auth-error.js';
 
@@ -23,14 +24,19 @@ async function runWithTimers<T>(promise: Promise<T>): Promise<T> {
 }
 
 describe('fetchSecrets', () => {
-  const opts = {
-    appUrl: 'https://app.test',
-    token: 'tok_123',
-    projectId: 'proj_abc',
-    flowId: 'flow_xyz',
+  let proofs = 0;
+  /** The credential's client as the fetcher sees it: a fresh proof per request. */
+  const app: AppAuth = {
+    origin: 'https://app.test',
+    authorize: async () => {
+      proofs += 1;
+      return { Authorization: 'DPoP tok_123', DPoP: `proof-${proofs}` };
+    },
+    answered: () => false,
   };
+  const opts = { app };
 
-  it('fetches and returns name→value map', async () => {
+  it('reads the runner family path with the credential headers and returns the name→value map', async () => {
     mockFetch.mockResolvedValue({
       ok: true,
       status: 200,
@@ -39,11 +45,12 @@ describe('fetchSecrets', () => {
     const result = await fetchSecrets(opts);
     expect(result).toEqual({ API_KEY: 'secret123' });
     expect(mockFetch).toHaveBeenCalledWith(
-      'https://app.test/api/projects/proj_abc/flows/flow_xyz/secrets/values',
+      'https://app.test/api/runner/secrets',
       expect.objectContaining({
-        headers: expect.objectContaining({
-          Authorization: 'Bearer tok_123',
-        }),
+        headers: {
+          Authorization: 'DPoP tok_123',
+          DPoP: expect.stringMatching(/^proof-/),
+        },
       }),
     );
   });
@@ -97,7 +104,7 @@ describe('fetchSecrets', () => {
     );
   });
 
-  it('retries a transient 503 then succeeds', async () => {
+  it('retries a transient 503 with fresh headers, then succeeds', async () => {
     jest.useFakeTimers();
     try {
       mockFetch
@@ -114,6 +121,12 @@ describe('fetchSecrets', () => {
       const result = await runWithTimers(fetchSecrets(opts));
       expect(result).toEqual({ API_KEY: 'secret123' });
       expect(mockFetch).toHaveBeenCalledTimes(2);
+      // A proof is good for one request: the retry carries its own.
+      const sent = mockFetch.mock.calls.map(
+        ([, init]: [string, { headers: Record<string, string> }]) =>
+          init.headers.DPoP,
+      );
+      expect(new Set(sent).size).toBe(2);
     } finally {
       jest.useRealTimers();
     }
@@ -137,18 +150,5 @@ describe('fetchSecrets', () => {
     });
     await expect(fetchSecrets(opts)).rejects.toBeInstanceOf(RunnerAuthError);
     expect(mockFetch).toHaveBeenCalledTimes(1);
-  });
-
-  it('URL-encodes path parameters', async () => {
-    mockFetch.mockResolvedValue({
-      ok: true,
-      status: 200,
-      json: async () => ({ values: {} }),
-    });
-    await fetchSecrets({ ...opts, projectId: 'proj/special' });
-    expect(mockFetch).toHaveBeenCalledWith(
-      expect.stringContaining('proj%2Fspecial'),
-      expect.anything(),
-    );
   });
 });

@@ -1,5 +1,14 @@
 import type { Collector, FlowState, Ingest, WalkerOS } from '@walkeros/core';
 import { emitStep, StepError, stepId, toFailureReason } from '@walkeros/core';
+import { bumpDropped } from './report-error';
+
+/**
+ * Whether anything reads FlowState records. Every build site checks it first,
+ * so a collector without observers builds no record at all.
+ */
+export function observed(collector: Collector.Instance): boolean {
+  return collector.observers.size > 0;
+}
 
 /** Journey-correlation trio shared by every FlowState-stamping site. */
 export interface JourneyFields {
@@ -129,6 +138,7 @@ export function emit(
   collector: Collector.Instance,
   args: BuildBaseStateArgs,
 ): void {
+  if (!observed(collector)) return;
   emitStep(collector, buildBaseState(collector, args));
 }
 
@@ -145,6 +155,7 @@ export function emitDestinationState(
   ingest: Ingest | undefined,
   fill?: (state: FlowState) => void,
 ): void {
+  if (!observed(collector)) return;
   const state = stepState(
     collector,
     stepId('destination', destId),
@@ -187,7 +198,9 @@ export type CollectorDrop =
  * happened. A chain drop names what dropped it (`meta.by`); a consent drop
  * carries the gate's record the way a destination consent skip does
  * (`meta.required` and the checked `consent`). The event counts as received
- * (`status.in`), with no `out` and no counter of its own.
+ * (`status.in`), with no `out`, and as dropped at its position:
+ * `status.dropped[at]` counts `consent`, `ignored` or `stopped` (a chain or
+ * route drop).
  */
 export function emitCollectorDrop(
   collector: Collector.Instance,
@@ -196,6 +209,13 @@ export function emitCollectorDrop(
   drop: CollectorDrop,
 ): void {
   collector.status.in++;
+  bumpDropped(
+    collector.status,
+    drop.at,
+    drop.reason === 'dropped' ? 'stopped' : drop.reason,
+    1,
+  );
+  if (!observed(collector)) return;
   const state = stepState(
     collector,
     'collector.push',

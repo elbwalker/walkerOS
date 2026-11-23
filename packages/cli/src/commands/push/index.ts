@@ -29,6 +29,7 @@ import type {
   Source,
   WalkerOS,
 } from '@walkeros/core';
+import { createKnownValues } from '@walkeros/core/node';
 import { tmpRunDir } from '../../core/tmp-names.js';
 import { scrubJson, scrubSecrets } from '../../core/redact-line.js';
 import { toPrintable } from '../../core/to-printable.js';
@@ -218,13 +219,13 @@ async function pushCore(
     knownSecrets?: readonly string[];
   } = {},
 ): Promise<PushResult> {
-  // Known once the config is read; the logger reads the list per line.
-  let known: readonly string[] = options.knownSecrets ?? [];
+  // Known once the config is read; the logger reads the set per line.
+  const known = createKnownValues(options.knownSecrets ?? []);
   const logger = createCLILogger({
     silent: options.silent,
     verbose: options.verbose,
     stderr: options.json,
-    knownSecrets: () => known,
+    knownSecrets: known,
   });
   const startTime = Date.now();
   let tempDir: string | undefined;
@@ -263,7 +264,7 @@ async function pushCore(
       const knownSecrets =
         options.knownSecrets ??
         (isFlowJson(raw) ? collectKnownSecrets(raw) : []);
-      known = knownSecrets;
+      known.add(knownSecrets);
       result = await executeConfigPush(
         {
           config: inputPath,
@@ -721,7 +722,7 @@ interface CollectorStatusView {
   status?: {
     destinations?: Record<string, { failed?: number; count?: number }>;
   };
-  destinations?: Record<string, { type?: string }>;
+  destinations?: Record<string, { type?: string; config?: { id?: string } }>;
 }
 
 /**
@@ -751,9 +752,12 @@ function buildFailureSummary(failedIds: string[], collector: unknown): string {
   const view = (
     collector !== null && typeof collector === 'object' ? collector : {}
   ) as CollectorStatusView;
-  const dests = view.destinations ?? {};
+  const dests = Object.entries(view.destinations ?? {});
+  // The status keys a destination by its `config.id`, else its key.
   const labels = failedIds.map((id) => {
-    const type = dests[id]?.type;
+    const type = dests.find(
+      ([key, dest]) => (dest.config?.id || key) === id,
+    )?.[1].type;
     return type ? `${id} (${type})` : id;
   });
   const noun = failedIds.length === 1 ? 'destination' : 'destinations';

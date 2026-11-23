@@ -2,9 +2,22 @@ import { once } from 'node:events';
 import { readFile } from 'node:fs/promises';
 import type { Command, CommanderError } from 'commander';
 import { z } from 'zod';
-import { appErrorMessage, appFetch } from '../../core/app-fetch.js';
+import {
+  appErrorMessage,
+  appFetch,
+  appRequestUrl,
+} from '../../core/app-fetch.js';
 import { APP_PATHS } from '../../core/app-paths.js';
-import { resolveAccessToken } from '../../core/auth.js';
+import {
+  CredentialAppError,
+  CredentialError,
+  credentialAppUrl,
+  refusalWritten,
+  resolveCredential,
+  sendWithCredential,
+  type Credential,
+} from '../../core/auth.js';
+import { SignInError } from '../../core/oauth-login.js';
 import { fetchFailureReason } from '../../core/fetch-failure.js';
 import { readStdin } from '../../core/stdin.js';
 import { resolveAppUrl } from '../../lib/config-file.js';
@@ -46,7 +59,7 @@ export interface ApiRequestOptions {
 
 /** Shown when there is no credential to send. */
 export const NOT_SIGNED_IN =
-  'no token: set WALKEROS_TOKEN to a token from Account > Automation tokens in the walkerOS app';
+  'not signed in: run walkeros login, or set WALKEROS_CREDENTIAL to an automation from Account in the walkerOS app';
 
 const METHODS = new Set(['GET', 'POST', 'PUT', 'PATCH', 'DELETE']);
 /** Error bodies are read back for the stderr line; a bigger one is not parsed. */
@@ -112,7 +125,7 @@ function parseHeaders(values: readonly string[]): Record<string, string> {
     const name = value.slice(0, colon).trim();
     if (name.toLowerCase() === 'authorization')
       throw new UsageError(
-        'set the token with WALKEROS_TOKEN, not with an Authorization header',
+        'set the credential with WALKEROS_CREDENTIAL or walkeros login, not with an Authorization header',
       );
     headers[name] = value.slice(colon + 1).trim();
   }
@@ -182,8 +195,15 @@ async function prepare(
   return { method, path, headers, body };
 }
 
-/** Copy the answer to stdout as it arrives; keep an error body for the stderr line. */
-async function relay(response: Response, io: ApiCommandIO): Promise<ApiExit> {
+/**
+ * Copy the answer to stdout as it arrives; keep an error body for the stderr
+ * line. `quiet` writes no stderr line: the credential's client wrote it.
+ */
+async function relay(
+  response: Response,
+  io: ApiCommandIO,
+  quiet: boolean,
+): Promise<ApiExit> {
   const kept: Uint8Array[] = [];
   let keptBytes = 0;
   try {
@@ -206,6 +226,7 @@ async function relay(response: Response, io: ApiCommandIO): Promise<ApiExit> {
     return EXIT.unreachable;
   }
   if (response.ok) return EXIT.ok;
+  if (quiet) return response.status === 401 ? EXIT.auth : EXIT.http;
   const message = appErrorMessage(
     parseJson(Buffer.concat(kept).toString('utf-8')),
   );
@@ -217,10 +238,18 @@ async function relay(response: Response, io: ApiCommandIO): Promise<ApiExit> {
   return response.status === 401 ? EXIT.auth : EXIT.http;
 }
 
+/** A stored login that gives no token: say why, exit 4 when its app was unreachable, else 3. */
+function signInFailure(error: SignInError, io: ApiCommandIO): ApiExit {
+  line(io.stderr, error.message);
+  return error.reason === 'unreachable' ? EXIT.unreachable : EXIT.auth;
+}
+
 /**
  * Send one request to the app and print its answer. Exit 0 for 2xx, 1 for any
- * other status, 2 for a usage error (nothing sent), 3 without a credential or
- * on 401, 4 when the app cannot be reached or the answer breaks off.
+ * other status or for WALKEROS_CREDENTIAL of another app than the app URL set
+ * (nothing sent), 2 for a usage error (nothing sent), 3 without a usable
+ * credential or on 401, 4 when the app cannot be reached or the answer breaks
+ * off.
  */
 export async function runApi(
   options: ApiRequestOptions,
@@ -235,13 +264,23 @@ export async function runApi(
     return EXIT.usage;
   }
 
-  const token = resolveAccessToken();
-  if (!token) {
+  let credential: Credential | null;
+  try {
+    credential = await resolveCredential(resolveAppUrl());
+  } catch (error) {
+    if (error instanceof SignInError) return signInFailure(error, io);
+    line(io.stderr, messageOf(error));
+    // A credential for another app than the app URL set: nothing is sent.
+    if (error instanceof CredentialAppError) return EXIT.http;
+    // WALKEROS_CREDENTIAL holds no walkerOS credential: the fact, no value.
+    return EXIT.auth;
+  }
+  if (!credential) {
     line(io.stderr, NOT_SIGNED_IN);
     return EXIT.auth;
   }
+  const appUrl = credentialAppUrl(credential, resolveAppUrl());
 
-  const appUrl = resolveAppUrl();
   try {
     requireSecureUrl(`${appUrl.replace(/\/+$/, '')}${request.path}`);
   } catch (error) {
@@ -251,21 +290,39 @@ export async function runApi(
 
   let response: Response;
   try {
-    response = await appFetch(request.path, {
-      method: request.method,
-      baseUrl: appUrl,
-      token,
-      headers: request.headers,
-      body: request.body,
-    });
+    response = await sendWithCredential(
+      credential,
+      {
+        method: request.method,
+        url: appRequestUrl(request.path, appUrl),
+        body:
+          request.body === undefined
+            ? undefined
+            : new TextEncoder().encode(request.body),
+      },
+      (headers, redirect) =>
+        appFetch(request.path, {
+          method: request.method,
+          baseUrl: appUrl,
+          headers: { ...headers, ...request.headers },
+          body: request.body,
+          redirect,
+        }),
+    );
   } catch (error) {
+    if (error instanceof SignInError) return signInFailure(error, io);
+    if (error instanceof CredentialError) {
+      line(io.stderr, error.message);
+      return EXIT.auth;
+    }
     line(
       io.stderr,
       `could not reach ${originOf(appUrl)}: ${fetchFailureReason(error)}`,
     );
     return EXIT.unreachable;
   }
-  return relay(response, io);
+  // One line per refusal: the credential's client writes a 401 or 403.
+  return relay(response, io, refusalWritten(credential, response.status));
 }
 
 export interface ApiOperation {

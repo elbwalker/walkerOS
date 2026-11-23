@@ -14,11 +14,24 @@
 import os from 'os';
 import path from 'path';
 import { createLogger } from './logger';
-import { maskKnownValues, scrubSecrets } from './redactLine';
-import { maskKnownNumbers } from './node/scrubJson';
+import {
+  asCompiled,
+  maskKnownValues,
+  scrubSecrets,
+  type CompiledKnown,
+  type KnownValues,
+} from './redactLine';
+import { knownNumberForms, maskKnownNumbers } from './node/scrubJson';
 
-export { scrubSecrets, redactLine } from './redactLine';
-export type { ScrubOptions } from './redactLine';
+export {
+  compileKnown,
+  createKnownValues,
+  cutLine,
+  maskKnownValues,
+  redactLine,
+  scrubSecrets,
+} from './redactLine';
+export type { CompiledKnown, KnownValues, ScrubOptions } from './redactLine';
 export { scrubJson } from './node/scrubJson';
 export { toPrintable } from './node/toPrintable';
 export {
@@ -82,8 +95,8 @@ export function getDefaultTmpRoot(): string {
 }
 
 /**
- * One log line as a structured entry: the shape a JSON line prints and the
- * `onLine` tap receives, masked like the text line. `message` is
+ * One log line as a structured entry: the shape a JSON line prints and
+ * `TappedLine.entry()` returns, masked like the text line. `message` is
  * `[scope] message` without the context; `scope` and `context` are omitted
  * when empty. When the line would pass {@link MAX_JSON_LINE_BYTES}, a
  * message above half the cap keeps a prefix (`messageTruncated`), then
@@ -105,6 +118,27 @@ export interface LogEntry {
  */
 export const MAX_JSON_LINE_BYTES = 32 * 1024;
 
+/**
+ * One line as the `onLine` tap receives it. It is masked when first read, at
+ * most once per known set: a line nobody prints or reads is never masked, and
+ * a line read after the set grew is masked again with the new values. Its
+ * unmasked text stays inside the object, captured as text when it was
+ * logged, so a later change to the logged context does not reach it.
+ */
+export interface TappedLine {
+  readonly level: Level;
+  /** When the line was logged, in ms since the epoch. */
+  readonly time: number;
+  /** The masked text line. Never throws. */
+  masked(): string;
+  /** The masked structured entry, built when read. Never throws. */
+  entry(): LogEntry;
+}
+
+/** What a line shows when masking it throws: never its unmasked text. */
+const MASK_FAILED = '[line not shown: masking failed]';
+const UNSERIALIZABLE = '[unserializable context]';
+
 export interface CLILoggerOptions {
   /**
    * Opens the DEBUG gate. A function is read per line, so a host can open
@@ -115,17 +149,18 @@ export interface CLILoggerOptions {
   json?: boolean;
   stderr?: boolean;
   /**
-   * Taps every line before any visibility gate: the masked text line, and
-   * the same line as a structured entry (scope, and the context with fields
-   * such as code, status, retryable and suppressed) for forwarding.
+   * Taps every ERROR, WARN and INFO line before any visibility gate, and a
+   * DEBUG line only with `verbose`: the masked text line and the same line
+   * as a structured entry (scope, and the context with fields such as code,
+   * status, retryable and suppressed), each masked when read.
    */
-  onLine?: (level: Level, message: string, entry: LogEntry) => void;
+  onLine?: (level: Level, line: TappedLine) => void;
   /**
    * Exact secret values masked in every line (see `scrubSecrets`). An array is
-   * copied at creation; a function is read per line, so values learned after
-   * the logger exists (secrets fetched at startup) are masked too.
+   * compiled at creation; a `KnownValues` is read per line, so values learned
+   * after the logger exists (secrets fetched at startup) are masked too.
    */
-  knownSecrets?: readonly string[] | (() => readonly string[]);
+  knownSecrets?: readonly string[] | KnownValues;
   /**
    * Output format (`text` by default): `json` prints one JSON object per
    * line, ERROR and WARN to stderr, INFO and DEBUG to stdout, without
@@ -185,44 +220,46 @@ function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null && !Array.isArray(value);
 }
 
+/** A line's message and context JSON, masked with one compiled set. */
+interface MaskedParts {
+  compiled: CompiledKnown;
+  /** `[scope] message`, masked. */
+  message: string;
+  /** The context JSON, masked; absent when the line has no context. */
+  context?: string;
+}
+
 /**
- * The structured entry of one line and its JSON text, masked in the text
- * line's order: numbers that print a known value become `'***'` before
- * serializing (masking inside serialized JSON would break it), then known
- * values, the temp root label and the pattern rules, applied to the message
- * and to the serialized context. A context that cannot serialize, or whose
- * masked form no longer parses, becomes `"[unserializable context]"`. A
- * line above {@link MAX_JSON_LINE_BYTES} keeps a prefix of its masked
- * message (when that is above half the cap) and of its masked context JSON,
- * so a cut never splits a secret.
+ * The structured entry of one line and its JSON text, built from its masked
+ * parts. A context that could not serialize, or whose masked form no longer
+ * parses, becomes `"[unserializable context]"`. A line above
+ * {@link MAX_JSON_LINE_BYTES} keeps a prefix of its masked message (when that
+ * is above half the cap) and of its masked context JSON, so a cut never
+ * splits a secret.
  */
 function buildLogEntry(
   level: Level,
-  message: string,
-  context: LogContext,
-  scope: string[],
-  mask: (text: string) => string,
-  known: readonly string[] | undefined,
+  scopeName: string,
+  parts: MaskedParts,
+  unserializable: boolean,
+  time: number,
 ): { entry: LogEntry; line: string } {
-  const scopeName = scope.join(':');
   const entry: LogEntry = {
     severity: SEVERITY[level],
-    message: mask(`${scopeName ? `[${scopeName}] ` : ''}${message}`),
-    time: new Date().toISOString(),
+    message: parts.message,
+    time: new Date(time).toISOString(),
   };
   if (scopeName) entry.scope = scopeName;
 
-  let contextJson: string | undefined;
-  if (Object.keys(context).length > 0) {
+  let contextJson = parts.context;
+  if (unserializable) entry.context = UNSERIALIZABLE;
+  else if (contextJson !== undefined) {
     try {
-      contextJson = mask(
-        JSON.stringify(maskKnownNumbers(context, known ?? [])),
-      );
       const parsed: unknown = JSON.parse(contextJson);
-      entry.context = isRecord(parsed) ? parsed : '[unserializable context]';
+      entry.context = isRecord(parsed) ? parsed : UNSERIALIZABLE;
     } catch {
       contextJson = undefined;
-      entry.context = '[unserializable context]';
+      entry.context = UNSERIALIZABLE;
     }
   }
 
@@ -251,6 +288,131 @@ function buildLogEntry(
     } while (Buffer.byteLength(line) > MAX_JSON_LINE_BYTES && size > 0);
   }
   return { entry, line };
+}
+
+/** Masks a text with one compiled set, in the text line's order. */
+type Masker = (text: string, compiled: CompiledKnown) => string;
+
+interface LoggedLine {
+  line: TappedLine;
+  /** The JSON console line, from the same masked parts. Never throws. */
+  json(): string;
+  /** Ends the handler call: a read after it checks the known set again. */
+  settle(): void;
+}
+
+/**
+ * Capture one line as text at log time and mask it lazily. The masked parts
+ * are kept with the compiled set they used; a read after the handler call
+ * masks again only when the set changed. Within the handler call the set is
+ * read once, so printing and tapping a line masks it once.
+ */
+function logLine(
+  level: Level,
+  message: string,
+  context: LogContext,
+  scope: string[],
+  readCompiled: () => CompiledKnown,
+  mask: Masker,
+): LoggedLine {
+  const time = Date.now();
+  const scopeName = scope.join(':');
+  const scoped = `${scopeName ? `[${scopeName}] ` : ''}${message}`;
+  // The context is kept as its JSON text only: the object may be a live
+  // event or response that changes or holds memory after this call.
+  let rawContext: string | undefined;
+  let unserializable = false;
+  if (Object.keys(context).length > 0) {
+    try {
+      rawContext = JSON.stringify(context);
+    } catch {
+      unserializable = true;
+    }
+  }
+
+  let inCall = true;
+  let parts: MaskedParts | undefined;
+  let built: { parts: MaskedParts; entry: LogEntry; line: string } | undefined;
+
+  const maskParts = (): MaskedParts => {
+    if (parts && inCall) return parts;
+    const compiled = readCompiled();
+    if (parts && parts.compiled === compiled) return parts;
+    let maskedContext: string | undefined;
+    if (rawContext !== undefined) {
+      // A number that prints a known value becomes "***" before the known
+      // pass, which would otherwise leave an unquoted *** in the JSON.
+      const json =
+        knownNumberForms(compiled).length > 0
+          ? JSON.stringify(maskKnownNumbers(JSON.parse(rawContext), compiled))
+          : rawContext;
+      maskedContext = mask(json, compiled);
+    }
+    parts = { compiled, message: mask(scoped, compiled) };
+    if (maskedContext !== undefined) parts.context = maskedContext;
+    return parts;
+  };
+
+  const build = (): { entry: LogEntry; line: string } => {
+    const current = maskParts();
+    if (!built || built.parts !== current)
+      built = {
+        parts: current,
+        ...buildLogEntry(level, scopeName, current, unserializable, time),
+      };
+    return built;
+  };
+
+  const failedEntry = (): LogEntry => ({
+    severity: SEVERITY[level],
+    message: MASK_FAILED,
+    time: new Date(time).toISOString(),
+  });
+
+  return {
+    line: {
+      level,
+      time,
+      masked: () => {
+        try {
+          const current = maskParts();
+          if (current.context !== undefined)
+            return `${current.message} ${current.context}`;
+          return unserializable
+            ? `${current.message} ${UNSERIALIZABLE}`
+            : current.message;
+        } catch {
+          return MASK_FAILED;
+        }
+      },
+      entry: () => {
+        try {
+          return build().entry;
+        } catch {
+          return failedEntry();
+        }
+      },
+    },
+    json: () => {
+      try {
+        return build().line;
+      } catch {
+        return JSON.stringify(failedEntry());
+      }
+    },
+    settle: () => {
+      inCall = false;
+    },
+  };
+}
+
+/** The compiled set a logger masks with: read per line for a `KnownValues`. */
+function knownReader(
+  known: readonly string[] | KnownValues | undefined,
+): () => CompiledKnown {
+  if (known && 'compiled' in known) return () => known.compiled();
+  const fixed = asCompiled(known);
+  return () => fixed;
 }
 
 /**
@@ -283,14 +445,7 @@ export function createCLILoggerConfig(
     knownSecrets,
     format,
   } = options;
-  const knownCopy =
-    typeof knownSecrets === 'function'
-      ? undefined
-      : knownSecrets
-        ? [...knownSecrets]
-        : undefined;
-  const readKnown = (): readonly string[] | undefined =>
-    typeof knownSecrets === 'function' ? knownSecrets() : knownCopy;
+  const readCompiled = knownReader(knownSecrets);
   const tmpRoot = os.tmpdir();
   const out = stderr ? console.error : console.log;
   const errorColor = colors.error ?? identity;
@@ -302,11 +457,15 @@ export function createCLILoggerConfig(
     (typeof format === 'function' ? format() : format) ?? 'text';
   const readVerbose = (): boolean =>
     typeof verbose === 'function' ? verbose() : verbose;
-  // The text line's masking order, shared by the JSON entry: known values
-  // first, so the label can never split one; then the temp root label; then
-  // the pattern rules.
-  const mask = (text: string): string =>
-    scrubSecrets(labelTmpRoot(maskKnownValues(text, readKnown()), tmpRoot));
+  // The masking order of every line: known values first, so the label can
+  // never split one (a `sqlite:/tmp/...` URL, or a value that only touches
+  // the root at its edge); then the temp root label, since a long per-user
+  // root (macOS `/var/folders/...`) would otherwise read as a token; then the
+  // pattern rules. Masking runs here, in the handler, for the console and
+  // the tap alike: stderr is shipped directly by the log collector, so no
+  // later egress step may be the only one that masks a line.
+  const mask: Masker = (text, compiled) =>
+    scrubSecrets(labelTmpRoot(maskKnownValues(text, compiled), tmpRoot));
 
   return {
     // Let handler control visibility: pass everything through. With the gate
@@ -315,88 +474,64 @@ export function createCLILoggerConfig(
     level: Level.DEBUG,
     handler: (level, message, context, scope) => {
       // Machine output (`json`) prints only its result; silent keeps errors;
-      // DEBUG needs verbose. A line nobody prints and no tap reads costs
-      // nothing more.
-      const shown =
-        !json &&
-        (level === Level.ERROR || !silent) &&
-        (level !== Level.DEBUG || readVerbose());
-      const tap = options.onLine;
+      // DEBUG needs verbose, for the console and the tap alike. A line nobody
+      // prints and no tap reads costs nothing more: it returns before the
+      // line is captured.
+      const debugOpen = level !== Level.DEBUG || readVerbose();
+      const shown = !json && (level === Level.ERROR || !silent) && debugOpen;
+      const tap = debugOpen ? options.onLine : undefined;
       if (!shown && !tap) return;
-      const asJson = shown && readFormat() === 'json';
 
-      // Build formatted message
-      const scopePath = scope.length > 0 ? `[${scope.join(':')}] ` : '';
-      // Serialize the structured context into the line so error details (gRPC
-      // status codes, row counts, target tables) reach stderr and the ring.
-      // Serialization happens BEFORE scrubSecrets so redaction covers context
-      // values too; the heartbeat path's 256-char cap stays as the wire
-      // backstop. A context that cannot stringify (circular) must never break
-      // logging.
-      const textLine = (): string => {
-        let meta = '';
-        if (Object.keys(context).length > 0) {
+      // The structured context is serialized into the line so error details
+      // (gRPC status codes, row counts, target tables) reach stderr and the
+      // ring; a context that cannot stringify (circular) never breaks
+      // logging. The line masks itself when read, at most once here.
+      const logged = logLine(
+        level,
+        message,
+        context,
+        scope,
+        readCompiled,
+        mask,
+      );
+      try {
+        // The tap reads every line it is open for, before the console gate,
+        // so ERROR, WARN and INFO reach it even when nothing prints.
+        if (tap) {
           try {
-            meta = ` ${JSON.stringify(context)}`;
+            tap(level, logged.line);
           } catch {
-            meta = ' [unserializable context]';
+            // Swallow: a throwing consumer must never break logging (and we
+            // must not call logger methods here to avoid infinite recursion).
           }
         }
-        // Redact secrets ONCE here, before BOTH the onLine ring tap and the
-        // console.* output. stderr is shipped directly by the log collector,
-        // so the heartbeat-egress redactor alone would miss it; doing it in
-        // the handler scrubs every line routed through this logger (collector
-        // and steps) on both paths. Length is preserved here (no truncation);
-        // the heartbeat path applies the 256-char wire cap separately as a
-        // backstop on already-redacted text.
-        // Order: known values first, so the label can never split one (a
-        // `sqlite:/tmp/...` URL, or a value that only touches the root at its
-        // edge); then the temp root label, since a long per-user root (macOS
-        // `/var/folders/...`) would otherwise read as a token; then the
-        // pattern rules.
-        return mask(`${scopePath}${message}${meta}`);
-      };
-      // The structured entry only where it is used: a JSON line, or the tap.
-      const built =
-        asJson || tap
-          ? buildLogEntry(level, message, context, scope, mask, readKnown())
-          : undefined;
-      const fullMessage = tap || !asJson ? textLine() : '';
 
-      // Tap every line before the gate so no level is dropped from capture.
-      if (tap && built) {
-        try {
-          tap(level, fullMessage, built.entry);
-        } catch {
-          // Swallow: a throwing consumer must never break logging (and we
-          // must not call logger methods here to avoid infinite recursion).
+        if (!shown) return;
+
+        // JSON lines: one object per line, no colour; ERROR and WARN on
+        // stderr (where platforms that ship only stderr still see them), INFO
+        // and DEBUG on stdout.
+        if (readFormat() === 'json') {
+          if (level === Level.ERROR || level === Level.WARN)
+            console.error(logged.json());
+          else out(logged.json());
+          return;
         }
+
+        const text = logged.line.masked();
+        if (level === Level.ERROR) console.error(errorColor(text));
+        else if (level === Level.DEBUG) out(`  ${debugColor(text)}`);
+        else out(level === Level.WARN ? warnColor(text) : infoColor(text));
+      } finally {
+        logged.settle();
       }
-
-      if (!shown) return;
-
-      // JSON lines: one object per line, no colour; ERROR and WARN on stderr
-      // (where platforms that ship only stderr still see them), INFO and
-      // DEBUG on stdout.
-      if (asJson && built) {
-        if (level === Level.ERROR || level === Level.WARN)
-          console.error(built.line);
-        else out(built.line);
-        return;
-      }
-
-      if (level === Level.ERROR) console.error(errorColor(fullMessage));
-      else if (level === Level.DEBUG) out(`  ${debugColor(fullMessage)}`);
-      else
-        out(
-          level === Level.WARN
-            ? warnColor(fullMessage)
-            : infoColor(fullMessage),
-        );
     },
     jsonHandler: (data) => {
       if (!silent) out(JSON.stringify(data, null, 2));
     },
+    // A logger built from this config masks the same known values in text
+    // that leaves outside a line; the handler above masks the lines.
+    mask: (text) => maskKnownValues(text, readCompiled()),
   };
 }
 

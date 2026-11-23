@@ -173,6 +173,33 @@ describe('failure', () => {
     });
   });
 
+  // The walkerOS data proxy refuses before ClickHouse sees the request, so its
+  // answer carries no ClickHouse code (the wire test shows one): its first
+  // line names the reason, bounded, and the failure keeps the retry class of
+  // a codeless rejection. Any other answer can echo what it refused and stays
+  // out.
+  const refusal = `walkerOS data proxy refused the request: ${'x'.repeat(250)}`;
+
+  it.each([
+    [
+      "the proxy's reason, cut at 200 characters",
+      refusal,
+      `ClickHouse insert failed: ${refusal.slice(0, 200)}`,
+    ],
+    [
+      'no line of any other answer',
+      'Request failed: alice@example.com',
+      'ClickHouse insert failed',
+    ],
+  ])('names %s', async (_name, answer, message) => {
+    const config = await bootstrap({ settings: { url, maxRetries: 0 } });
+    __failInsert(1, { message: answer });
+
+    await expect(
+      destination.push(getEvent('page view'), pushContext(config)),
+    ).rejects.toMatchObject({ message, retryable: true });
+  });
+
   it('carries the advice for a terminal code that needs one', async () => {
     const config = await bootstrap();
     __failInsert(1, { code: '60' });

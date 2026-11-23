@@ -314,54 +314,13 @@ In Integrated mode you check events where the flow runs, in your console. For an
 
 ---
 
-## Observe a running flow
-
-The console loop above is local. To watch a running flow's events live, add
-the public connect pair to `startFlow` once:
-
-<CodeSnippet
-  code={`import { pageObserveSlot } from '@walkeros/web-core';
-
-const { elb } = await startFlow({
-  // url and binding are public and safe to commit
-  observe: {
-    url: 'https://observer.example.com',
-    binding: 'pb_x',
-    slot: pageObserveSlot(), // web only: keeps the credential in this browser
-  },
-  // ...your sources and destinations
-});`}
-  language="typescript"
-/>
-
-In a browser `slot` is required; without it one error line names
-`pageObserveSlot` and Observe stays off.
-
-Nothing is sent yet: the per-session credential arrives out-of-band as a
-`?elbObserve=` URL parameter, so committed code never contains a secret. On
-the server, read the connect config from the environment instead:
-
-<CodeSnippet
-  code={`import { observeFromEnv } from '@walkeros/core';
-
-const { elb } = await startFlow({
-  observe: observeFromEnv(process.env),
-  // ...your sources and destinations
-});`}
-  language="typescript"
-/>
-
-See [Observe](/docs/getting-started/observe) for the full setup, the
-environment variables, and the credential lifecycle.
-
----
-
 ## Next steps
 
 - [**Event Model**](/docs/getting-started/event-model): How events are structured
 - [**Mapping**](/docs/mapping): Transform events for destinations
 - [**Browser Source**](/docs/sources/web/browser): DOM-based automatic tracking
 - [**Destinations**](/docs/destinations): Available destination packages
+- [**Observe**](/docs/getting-started/observe): Report a running flow's counters, issues and events
 
 ---
 

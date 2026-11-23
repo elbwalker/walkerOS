@@ -63,7 +63,12 @@ import {
   reportCause,
   toFailureReason,
 } from '@walkeros/core';
-import { journeyFields, observerStepError, stepState } from './observerEmit';
+import {
+  journeyFields,
+  observed,
+  observerStepError,
+  stepState,
+} from './observerEmit';
 import { getCacheStore } from './cache';
 import { buildReportError, errorMeta } from './report-error';
 import { compileStepState, runStepState, warnStateOff } from './state';
@@ -411,19 +416,23 @@ export async function transformerPush(
   transformerLogger.debug('push', { event: (event as { name?: string }).name });
 
   const eventId = typeof event.id === 'string' ? event.id : '';
-  const journey = journeyFields(event, ingest, collector);
+  const journey = observed(collector)
+    ? journeyFields(event, ingest, collector)
+    : undefined;
   const started = Date.now();
-  const inState = stepState(
-    collector,
-    stepId('transformer', transformerId),
-    'transformer',
-    'in',
-    eventId,
-    started,
-    journey,
-  );
-  inState.inEvent = event;
-  emitStep(collector, inState);
+  if (journey) {
+    const inState = stepState(
+      collector,
+      stepId('transformer', transformerId),
+      'transformer',
+      'in',
+      eventId,
+      started,
+      journey,
+    );
+    inState.inEvent = event;
+    emitStep(collector, inState);
+  }
 
   try {
     const result = await withTransformerTimeout(
@@ -438,37 +447,41 @@ export async function transformerPush(
       )(event, context),
     );
 
-    const finished = Date.now();
-    const outState = stepState(
-      collector,
-      stepId('transformer', transformerId),
-      'transformer',
-      'out',
-      eventId,
-      finished,
-      journey,
-    );
-    outState.durationMs = finished - started;
-    outState.outEvent = result;
-    emitStep(collector, outState);
+    if (observed(collector)) {
+      const finished = Date.now();
+      const outState = stepState(
+        collector,
+        stepId('transformer', transformerId),
+        'transformer',
+        'out',
+        eventId,
+        finished,
+        journey ?? journeyFields(event, ingest, collector),
+      );
+      outState.durationMs = finished - started;
+      outState.outEvent = result;
+      emitStep(collector, outState);
+    }
 
     transformerLogger.debug('push done');
 
     return result;
   } catch (err) {
-    const finished = Date.now();
-    const errState = stepState(
-      collector,
-      stepId('transformer', transformerId),
-      'transformer',
-      'error',
-      eventId,
-      finished,
-      journey,
-    );
-    errState.durationMs = finished - started;
-    errState.error = observerStepError(err, 'transformer');
-    emitStep(collector, errState);
+    if (observed(collector)) {
+      const finished = Date.now();
+      const errState = stepState(
+        collector,
+        stepId('transformer', transformerId),
+        'transformer',
+        'error',
+        eventId,
+        finished,
+        journey ?? journeyFields(event, ingest, collector),
+      );
+      errState.durationMs = finished - started;
+      errState.error = observerStepError(err, 'transformer');
+      emitStep(collector, errState);
+    }
     throw err;
   }
 }

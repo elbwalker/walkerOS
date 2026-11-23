@@ -1,0 +1,230 @@
+import { ENV_MARKER_PREFIX, SECRET_MARKER_PREFIX } from './flow';
+import { REF_CODE_PREFIX } from './references';
+
+/**
+ * Runtime contracts between a server artifact and the runner that starts it.
+ */
+
+/**
+ * How long the collector's `shutdown` command may take, counted from its
+ * start: every phase and the last Observe report share it. Under Cloud Run's
+ * 10 s grace, with a second left for the runner to exit.
+ */
+export const SHUTDOWN_DEADLINE_MS = 8000;
+
+/** The named export of a server artifact that lists the names its flow reads. */
+export const DECLARED_ENV_EXPORT = '__walkerosEnv';
+
+/**
+ * The environment names a server flow reads: every deferred `$secret` name
+ * and every deferred `$env` name, each list sorted and unique.
+ */
+export interface DeclaredEnv {
+  secrets: string[];
+  env: string[];
+}
+
+function isStringArray(value: unknown): value is string[] {
+  return (
+    Array.isArray(value) && value.every((item) => typeof item === 'string')
+  );
+}
+
+export function isDeclaredEnv(value: unknown): value is DeclaredEnv {
+  return (
+    typeof value === 'object' &&
+    value !== null &&
+    'secrets' in value &&
+    isStringArray(value.secrets) &&
+    'env' in value &&
+    isStringArray(value.env)
+  );
+}
+
+/**
+ * Collect the deferred markers of a resolved flow config (`getFlowSettings`
+ * with `deferred: true`), read the way the bundler turns them into
+ * `process.env` reads: a secret marker is a whole string, env markers may sit
+ * anywhere in a string, and a `$code:` value is emitted as code, so a marker
+ * in it is never read. Object keys are emitted as written and hold none.
+ */
+export function declaredEnvOf(config: unknown): DeclaredEnv {
+  const secrets = new Set<string>();
+  const env = new Set<string>();
+  // Built per call, not at module load, so a bundle that never calls this
+  // keeps no regex construction from it.
+  const envMarker = new RegExp(
+    ENV_MARKER_PREFIX.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') +
+      '([a-zA-Z_][a-zA-Z0-9_]*)',
+    'g',
+  );
+
+  const visit = (value: unknown): void => {
+    if (typeof value === 'string') {
+      if (value.startsWith(REF_CODE_PREFIX)) return;
+      if (value.startsWith(SECRET_MARKER_PREFIX)) {
+        secrets.add(value.slice(SECRET_MARKER_PREFIX.length));
+        return;
+      }
+      for (const match of value.matchAll(envMarker)) env.add(match[1]);
+      return;
+    }
+    if (Array.isArray(value)) {
+      value.forEach(visit);
+      return;
+    }
+    if (typeof value === 'object' && value !== null)
+      Object.values(value).forEach(visit);
+  };
+  visit(config);
+
+  return { secrets: [...secrets].sort(), env: [...env].sort() };
+}
+
+/**
+ * Names the runner never sets from a delivered secret: the process, the shell,
+ * Node, the dynamic loader, the network path (proxies, TLS trust) and the
+ * runner's own settings.
+ */
+export const RESERVED_ENV_NAMES: readonly string[] = [
+  'NODE_ENV',
+  'NODE_OPTIONS',
+  'PATH',
+  'HOME',
+  'USER',
+  'HOSTNAME',
+  'SHELL',
+  'LANG',
+  'TERM',
+  'TZ',
+  'TMPDIR',
+  'PORT',
+  'BUNDLE',
+  'CACHE_DIR',
+  'HEARTBEAT_INTERVAL',
+  'XDG_CACHE_HOME',
+  'HTTP_PROXY',
+  'HTTPS_PROXY',
+  'NO_PROXY',
+  'ALL_PROXY',
+  'http_proxy',
+  'https_proxy',
+  'no_proxy',
+  'all_proxy',
+  'SSL_CERT_FILE',
+  'SSL_CERT_DIR',
+];
+
+/**
+ * Prefixes of reserved names, matched case-sensitively. `LD_` and `DYLD_`
+ * steer the dynamic loader of every process a step spawns.
+ */
+export const RESERVED_ENV_PREFIXES: readonly string[] = [
+  'WALKEROS_',
+  'NODE_',
+  'NPM_',
+  'LD_',
+  'DYLD_',
+];
+
+export function isReservedEnvName(name: string): boolean {
+  return (
+    RESERVED_ENV_NAMES.includes(name) ||
+    RESERVED_ENV_PREFIXES.some((prefix) => name.startsWith(prefix))
+  );
+}
+
+/**
+ * The headers one request to the app needs. The runner's channel takes it as
+ * a function, so the way a request is signed stays outside the channel.
+ */
+export type Authorize = (request: {
+  method: string;
+  url: string;
+  body?: Uint8Array;
+}) => Promise<Record<string, string>>;
+
+/** The version of the release document a remote runner reads. */
+export const RELEASE_DOCUMENT_VERSION = 1;
+
+/** One web part a server release serves: its deployment, its file's path in the release's folder, and the web sequence whose file the release's archive holds there. */
+export interface ServedDeployment {
+  deployment: string;
+  path: string;
+  sequence: number;
+}
+
+/**
+ * What the app serves a remote runner about one release of its deployment.
+ * The app writes it and the runner reads and checks it before any code of
+ * the release runs.
+ */
+export interface ReleaseDocument {
+  version: 1;
+  deployment: string;
+  sequence: number;
+  release: string;
+  flowName: string;
+  artifact: { sha256: string; bytes: number };
+  secrets: { app: string[]; server: string[] };
+  secretsSince: number;
+  releasedAt: string;
+  /** A server release whose config lists web flows; absent when nothing is listed, never empty. */
+  served?: ServedDeployment[];
+}
+
+/**
+ * The checks a remote runner refuses a release by. The names travel in the
+ * runner's check-in, so the app reads them as written here.
+ */
+export const REFUSAL_CHECKS = [
+  'document-size',
+  'document-format',
+  'document-version',
+  'deployment',
+  'sequence',
+  'release-id',
+  'artifact-bytes',
+  'artifact-sha256',
+  'archive-entry',
+  'secret-set',
+  'secret-in-env',
+  'secret-reserved',
+  'secret-missing',
+] as const;
+
+export type RefusalCheck = (typeof REFUSAL_CHECKS)[number];
+
+/** The newest release a remote runner tried, and how it went. */
+export type RemoteLast =
+  | { sequence: number; state: 'starting' }
+  | {
+      sequence: number;
+      state: 'refused';
+      check: RefusalCheck;
+      /** Only for the secret checks: the names, never a value. */
+      names?: string[];
+    }
+  | { sequence: number; state: 'failed'; check: 'not-ready' };
+
+/** The `remote` part of a runner's check-in. */
+export interface RemoteState {
+  running: number | null;
+  last: RemoteLast | null;
+}
+
+/** The `remote` part of a check-in body: the server release, and each web part it serves. */
+export interface RemoteReport extends RemoteState {
+  /** Per web deployment; absent when the running release lists none. */
+  served?: Record<string, RemoteState>;
+}
+
+/** The check-in's answer as the app writes it. */
+export interface CheckInAnswer {
+  /** The deployment's newest released sequence; null when none or when it is not remote. */
+  release: number | null;
+  /** Taken only as an integer from 30 000 to 3 600 000. */
+  intervalMs?: number;
+  /** The newest sequence of each web part the live version lists; {} when it lists none. */
+  served: Record<string, number>;
+}

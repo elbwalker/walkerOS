@@ -1,9 +1,15 @@
 import { appendFileSync } from 'fs';
+import { Level } from '@walkeros/core';
+import type { TappedLine } from '@walkeros/core/node';
 
+/**
+ * One ringed log line. It holds the tapped line, masked only when the
+ * heartbeat reads it, so a line no heartbeat sends is never masked.
+ */
 export interface RingEntry {
   time: number;
   level: 'error' | 'warn' | 'info' | 'debug';
-  message: string;
+  line: TappedLine;
 }
 
 export interface DedupedError {
@@ -147,4 +153,28 @@ export class ErrorRing {
       // Best-effort: a failed append must never break `add`.
     }
   }
+}
+
+const RING_LEVEL = {
+  [Level.ERROR]: 'error',
+  [Level.WARN]: 'warn',
+  [Level.INFO]: 'info',
+  [Level.DEBUG]: 'debug',
+} as const;
+
+/**
+ * The logger tap that fills the rings the heartbeat reads. An ERROR line is
+ * masked at once: the error ring keeps its text and writes a first-seen error
+ * to its sink. The log ring keeps every line itself, masked when the
+ * heartbeat reads it. A ring left out is not filled.
+ */
+export function ringTap(rings: {
+  errorRing?: ErrorRing;
+  logRing?: LogRing;
+}): (level: Level, line: TappedLine) => void {
+  const { errorRing, logRing } = rings;
+  return (level, line) => {
+    if (level === Level.ERROR) errorRing?.add(line.masked());
+    logRing?.add({ time: line.time, level: RING_LEVEL[level], line });
+  };
 }

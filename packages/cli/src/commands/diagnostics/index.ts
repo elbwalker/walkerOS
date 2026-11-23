@@ -3,12 +3,16 @@ import { VERSION } from '../../version.js';
 import { appFetch } from '../../core/app-fetch.js';
 import { APP_PATHS } from '../../core/app-paths.js';
 import { fetchFailureReason } from '../../core/fetch-failure.js';
+import { credentialStatus, type CredentialStatus } from '../../core/auth.js';
 import { writeResult } from '../../core/output.js';
 
 // === Programmatic API ===
 
-/** Where the app URL comes from, in `resolveAppUrl()` order. */
-export type AppUrlSource = 'env' | 'config' | 'default';
+/**
+ * Where the app URL comes from: WALKEROS_CREDENTIAL's own app when it is set,
+ * else in `resolveAppUrl()` order.
+ */
+export type AppUrlSource = 'credential' | 'env' | 'config' | 'default';
 
 export interface HealthResult {
   reachable: boolean;
@@ -24,6 +28,8 @@ export interface Diagnostics {
   cli: { version: string };
   appUrl: { resolved: string; source: AppUrlSource };
   app: HealthResult;
+  /** Which credential a command would send to this app URL; never the token. */
+  signIn: CredentialStatus;
 }
 
 const HEALTH_TIMEOUT_MS = 5000;
@@ -68,20 +74,45 @@ export async function fetchHealth(baseUrl?: string): Promise<HealthResult> {
 }
 
 /**
- * This CLI's version, the app it talks to and where that URL comes from, and
- * whether the app answers its health route. Sends no credential, so it works
- * logged out.
+ * This CLI's version, the app it talks to and where that URL comes from,
+ * whether the app answers its health route, and whether a command would be
+ * signed in there. With WALKEROS_CREDENTIAL that app is the credential's own.
+ * Sends no credential, so it works logged out.
  */
 export async function diagnostics(): Promise<Diagnostics> {
-  const resolved = resolveAppUrl().replace(/\/+$/, '');
+  const configured = resolveAppUrl().replace(/\/+$/, '');
+  const signIn = credentialStatus(configured);
+  const appUrl: Diagnostics['appUrl'] =
+    signIn.kind === 'credential'
+      ? { resolved: signIn.app, source: 'credential' }
+      : { resolved: configured, source: appUrlSource() };
   return {
     cli: { version: VERSION },
-    appUrl: { resolved, source: appUrlSource() },
-    app: await fetchHealth(resolved),
+    appUrl,
+    app: await fetchHealth(appUrl.resolved),
+    signIn,
   };
 }
 
-/** The report as three text lines: cli, app, health. */
+function signInLine(report: Diagnostics): string {
+  const { signIn } = report;
+  switch (signIn.kind) {
+    case 'credential':
+      return (
+        signIn.conflict ?? `Credential: WALKEROS_CREDENTIAL, for ${signIn.app}`
+      );
+    case 'unreadable':
+      return signIn.reason;
+    case 'login':
+      return `signed in to ${signIn.issuer}`;
+    case 'elsewhere':
+      return `not signed in to ${report.appUrl.resolved} (signed in to ${signIn.issuers.join(', ')})`;
+    case 'none':
+      return 'not signed in';
+  }
+}
+
+/** The report as four text lines: cli, app, health, sign-in. */
 export function formatDiagnostics(report: Diagnostics): string[] {
   const { app } = report;
   const health = app.reachable
@@ -96,6 +127,7 @@ export function formatDiagnostics(report: Diagnostics): string[] {
     `cli ${report.cli.version}`,
     `app ${report.appUrl.resolved} (${report.appUrl.source})`,
     health,
+    signInLine(report),
   ];
 }
 

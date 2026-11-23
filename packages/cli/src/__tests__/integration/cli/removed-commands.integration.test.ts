@@ -16,8 +16,6 @@ const REMOVED = [
   'deployments',
   'previews',
   'secrets',
-  'observe',
-  'journeys',
   'hub',
   'frames',
   'feedback',

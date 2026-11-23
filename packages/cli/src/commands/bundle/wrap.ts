@@ -25,11 +25,16 @@ import {
   generateWrapEntryServer,
   getNodeExternals,
 } from './bundler.js';
-import type { MoinTarget, ObserveWeb } from '@walkeros/core';
+import type { MoinTarget } from '@walkeros/core';
 import { tmpRunDir } from '../../core/tmp-names.js';
 import { buildFlagDefines, readNeedsMarker } from './build-flags.js';
-import type { WrapEntryPreview } from './bundler.js';
+import type { WrapEntryObserve, WrapEntryPreview } from './bundler.js';
 import type { MinifyOptions } from '../../types/bundle.js';
+import {
+  BuildWrapObserveSchema,
+  OBSERVE_NOT_ON_NODE,
+  OBSERVE_NOT_WITH_PREVIEW,
+} from '../../schemas/build-manifest.js';
 
 export interface WrapSkeletonOptions {
   /**
@@ -64,23 +69,12 @@ export interface WrapSkeletonOptions {
   preview?: WrapEntryPreview;
 
   /**
-   * Browser-only: preview-ARTIFACT grant injection. The preview-artifact wrap
-   * sets this to the server-bound destination keys that should receive the
-   * `X-Walkeros-Preview` header read from `localStorage['elbPreviewSession']` at boot.
-   * Mutually exclusive with `preview` (a host activates, an artifact injects);
-   * passing both throws.
+   * Browser-only: Observe preview reporting, the preview route and its token.
+   * Present, it replaces the flow's own `collector.observe` and turns the
+   * reporter on; absent, the build carries no reporter. A node wrap refuses
+   * it: a server flow reads `collector.observe` from its own config.
    */
-  previewGrantTargets?: string[];
-
-  /**
-   * Browser-only: STATIC observe connect config baked onto the startFlow
-   * config. PUBLIC values only (`url` + `binding`, plus optional
-   * `flowId`/`level`/`sample` scoping); the runtime connect module reads the
-   * per-session credential out-of-band at boot via the `elbObserve` slot.
-   * This is the preview-artifact observation wiring: it bakes no ingest
-   * token into the emitted bytes.
-   */
-  observe?: ObserveWeb;
+  observe?: WrapEntryObserve;
 
   /**
    * Browser-only: the Tag Mode loader target, internal deploy data the stage
@@ -140,6 +134,25 @@ function getNodeResolutionPaths(): string[] {
   return candidates;
 }
 
+/**
+ * Why a wrap cannot bake an `observe` option, or undefined when it can. A
+ * direct caller skips the manifest, so the wrap parses the option with the
+ * manifest's own schema. The message names keys only: the option's values
+ * carry a token.
+ */
+export function observeProblem(
+  observe: unknown,
+  wrap: { platform: WrapSkeletonOptions['platform']; preview: boolean },
+): string | undefined {
+  if (wrap.platform !== 'browser') return OBSERVE_NOT_ON_NODE;
+  if (wrap.preview) return OBSERVE_NOT_WITH_PREVIEW;
+  const parsed = BuildWrapObserveSchema.safeParse(observe);
+  if (parsed.success) return undefined;
+  const issue = parsed.error.issues[0];
+  const at = ['observe', ...(issue?.path ?? []).map(String)].join('.');
+  return `Invalid ${at}: ${issue?.message ?? 'not an observe option'}`;
+}
+
 export async function wrapSkeleton(
   options: WrapSkeletonOptions,
 ): Promise<void> {
@@ -153,17 +166,6 @@ export async function wrapSkeleton(
     minify = true,
     minifyOptions,
   } = options;
-
-  // A host bundle activates a preview; a preview artifact injects its grant.
-  // Refuse the combination at the app-facing boundary (generateWrapEntry
-  // enforces the same invariant) so a caller wiring both surfaces a clear error
-  // here rather than a codegen-time throw.
-  if (options.preview && options.previewGrantTargets) {
-    throw new Error(
-      'wrapSkeleton: `preview` (host activator) and `previewGrantTargets` ' +
-        '(preview-artifact injection) are mutually exclusive. Pass at most one.',
-    );
-  }
 
   // previewOrigin is non-optional on WrapEntryPreview: an empty string is
   // still a config error (it bakes a broken `https:///preview/<art>.js` URL
@@ -181,6 +183,14 @@ export async function wrapSkeleton(
     throw new Error(
       `Invalid previewOrigin "${options.preview.previewOrigin}". Must be a bare hostname matching /^[a-z0-9.-]+$/.`,
     );
+  }
+
+  if (options.observe !== undefined) {
+    const problem = observeProblem(options.observe, {
+      platform,
+      preview: options.preview !== undefined,
+    });
+    if (problem) throw new Error(problem);
   }
 
   if (!(await fs.pathExists(skeletonPath))) {
@@ -206,11 +216,8 @@ export async function wrapSkeleton(
           ...(windowCollector ? { windowCollector } : {}),
           ...(windowElb ? { windowElb } : {}),
           ...(options.preview ? { preview: options.preview } : {}),
-          ...(options.previewGrantTargets
-            ? { previewGrantTargets: options.previewGrantTargets }
-            : {}),
-          platform,
           ...(options.observe ? { observe: options.observe } : {}),
+          platform,
           ...(options.moin ? { moin: options.moin } : {}),
         })
       : generateWrapEntryServer(absoluteSkeletonPath);
@@ -263,18 +270,14 @@ export async function wrapSkeleton(
       // activator) come from the CLI's own web-core, never from a copy above
       // the temp dir.
       esbuildOptions.plugins = [cliPackagesPlugin()];
-      // Build flags from the needs the skeleton carries. Only a baked observe
-      // config adds to them: the recorder runs only for a collector that has
-      // one. A skeleton without needs (an older CLI) keeps every flag on.
-      const needs = readNeedsMarker(skeletonText);
+      // Build flags from the needs the skeleton carries; the reporter only
+      // in a wrap given `observe` (see build-flags.ts).
       esbuildOptions.define = {
         'process.env.NODE_ENV': '"production"',
         global: 'globalThis',
         ...buildFlagDefines(
-          needs && {
-            ...needs,
-            observe: needs.observe || options.observe !== undefined,
-          },
+          readNeedsMarker(skeletonText),
+          options.observe !== undefined,
         ),
       };
       // Externalize `<pkg>/dev` so the wrap skips resolving the lazy registry's

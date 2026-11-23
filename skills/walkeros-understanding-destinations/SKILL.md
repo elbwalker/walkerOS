@@ -78,15 +78,14 @@ expect(calls).toContainEqual({
 });
 ```
 
-### The env as observability seam
+### The env as the simulation seam
 
-The env pattern is also the interception seam for trace-level vendor-call
-capture. At `trace` level the collector may attach an `observe` recorder under
-the `observe` key of the env, and `@walkeros/web-core`'s `getEnv` wraps the
-callables the destination declared as observable, recording each call. A
-destination that reaches its vendor through `getEnv(env)` is automatically
-observable; one that reaches a global directly, bypassing `env`, is not. This is
-one more reason to route every external call through `env`.
+The env pattern is also the interception seam for simulation:
+`walkeros push --simulate` and the conformance kit record the calls a
+destination makes on the paths its `examples.env.simulation` names. A
+destination that reaches its vendor through `env` is recorded; one that reaches
+a global directly, bypassing `env`, is not. This is one more reason to route
+every external call through `env`.
 
 Rules that keep the seam intact:
 
@@ -96,11 +95,10 @@ Rules that keep the seam intact:
   `env.<key>` in `src`.
 - **`simulation` names the request call** (`sendServer`,
   `call:PubSub.topic.publishMessage`, `call:JSONWriter.appendRows`), not a
-  constructor. The one recorder is `observeEnv` in `@walkeros/core`; it
-  navigates constructors, factories and Promises, and records only the leaf.
-- **Trace-mode limit.** CLI and MCP simulate inject the mock env before `init`,
-  so a client built in `init` is recorded. Runtime trace mode wraps the env per
-  push only, so calls through a client built in `init` are not recorded there.
+  constructor. The one recorder is `recordEnv` in `@walkeros/core`; it navigates
+  constructors, factories and Promises, and records only the leaf.
+- **Clients built in `init`.** CLI and MCP simulate inject the mock env before
+  `init`, so a client built in `init` is recorded.
 - **Client IP and user agent.** Server conversion-API destinations (Meta,
   TikTok, Snapchat, Pinterest, Bing, Reddit, Criteo, X, Data Manager, Piwik PRO)
   expose `ip` and `userAgent` settings (`Mapping.Value | false`), defaulting to
@@ -108,7 +106,13 @@ Rules that keep the seam intact:
   `['ingest.userAgent', 'event.user.userAgent']`, resolved with
   `getMappingValue(createMappingRoot(ingest, event), setting, { collector })`.
   `false` disables, an explicit mapped vendor field wins, each package carries
-  its own few lines (no shared helper).
+  its own few lines (no shared helper). Data Manager fills them by default only
+  when an entry of `settings.destinations` is `GOOGLE_ADS`; a Google
+  Analytics-only step sends neither unless `ip` or `userAgent` is set or the
+  field is mapped. Matomo, an analytics server destination, fills neither
+  (ruling analytics-destinations-no-ip-autofill): Matomo has `ip` and
+  `userAgent` settings without a default, and its `init` refuses `ip` without
+  `credentials.token`, since Matomo rejects `cip` without a token.
 
 ## Destination Config
 
@@ -155,9 +159,10 @@ are both counted lost and actually written. Derive the client's per-attempt
 timeout from `config.timeout` minus what the retry delays can take, split across
 the attempts, so the last attempt finishes before the race does.
 
-The same bound applies at shutdown, where the collector races each pending batch
-flush against a fixed 5000 ms step timeout before destroying the destination. A
-destination whose retries need longer than that loses them on shutdown.
+The same bound applies at shutdown, where the whole shutdown has one 8 second
+deadline and each pending batch flush and each destination's `destroy` takes
+what is left of it. A destination whose retries need longer than that loses them
+on shutdown, and the shutdown result names it.
 
 ## Outcomes and failure reasons
 
@@ -181,7 +186,9 @@ resend (`acknowledge(result)` from `@walkeros/core`: `ack`, `retry` or
 `queued` with the reason `consent`; a server flow built by the CLI skips a
 consent-denied event instead (`consentDenied: 'skip'`, counted in
 `status.destinations[id].skipped`, a `debug` line). A rule with `ignore: true`
-is a skip as well, not a delivery.
+is not a delivery either, and lands in `status.destinations[id].ignored`.
+`count` counts delivered events, one per event for a single push and a batch
+alike, and the destination's counts sit under `config.id`, else its key.
 
 **Failed means thrown.** A destination reports a failure only by throwing a
 `StepError`; it never returns early, never returns `false` from `init`, never

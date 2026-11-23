@@ -23,10 +23,11 @@ function isInitSettings(value: unknown): value is InitSettings {
 }
 
 function isCredentials(value: unknown): value is Credentials {
+  if (!isRecord(value)) return false;
+  if (typeof value.token === 'string') return true;
+
   return (
-    isRecord(value) &&
-    typeof value.username === 'string' &&
-    typeof value.password === 'string'
+    typeof value.username === 'string' && typeof value.password === 'string'
   );
 }
 
@@ -45,12 +46,35 @@ function toConfig(raw: unknown, name: string): PartialConfig {
     throw new Error(`The ${name} example \`in\` must be a config object`);
   if (!isInitSettings(raw.settings))
     throw new Error(`The ${name} example settings must carry a url`);
+  if (raw.credentials === undefined) return { settings: raw.settings };
   if (!isCredentials(raw.credentials))
     throw new Error(
-      `The ${name} example credentials must carry a username and a password`,
+      `The ${name} example credentials must carry a token, or a username and a password`,
     );
 
   return { settings: raw.settings, credentials: raw.credentials };
+}
+
+/** The url's query values, if it parses. */
+function queryValues(url: string | undefined): string[] {
+  if (!url || !URL.canParse(url)) return [];
+  return [...new URL(url).searchParams.values()];
+}
+
+/**
+ * The url, its query values and every credential value a config carries,
+ * none of them empty.
+ */
+function secretsOf(config: PartialConfig): string[] {
+  const url = config.settings?.url;
+  const values = [
+    url,
+    ...queryValues(url),
+    ...Object.values(config.credentials ?? {}),
+  ];
+  return values.filter(
+    (value): value is string => typeof value === 'string' && value !== '',
+  );
 }
 
 describe('clickhouse destination -- step examples', () => {
@@ -64,9 +88,28 @@ describe('clickhouse destination -- step examples', () => {
     // An example whose `in` is a config rather than an event exercises the
     // bootstrap on its own: init on that config, compare what it produced.
     if (!isEvent(example.in)) {
-      await destination.init(
-        createMockContext({ config: toConfig(example.in, name), env, id }),
-      );
+      const config = toConfig(example.in, name);
+      // init may answer synchronously; the async wrapper makes it a promise.
+      const initialize = async () =>
+        destination.init(createMockContext({ config, env, id }));
+
+      // A refused config fails init with the declared code before any client
+      // exists; the collector then fails every event with that reason. The
+      // reason names places, never the url or a credential value.
+      if (example.outcome) {
+        const refusal: unknown = await initialize().then(
+          () => undefined,
+          (error: unknown) => error,
+        );
+        expect(refusal).toMatchObject({
+          name: 'StepError',
+          code: example.outcome.code,
+          retryable: example.outcome.retryable,
+        });
+        const message = refusal instanceof Error ? refusal.message : '';
+        for (const secret of secretsOf(config))
+          expect(message).not.toContain(secret);
+      } else await initialize();
 
       expect(__getCalls()).toEqual(example.out);
       return;

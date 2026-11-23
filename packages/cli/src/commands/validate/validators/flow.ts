@@ -38,6 +38,7 @@ import type {
   ValidationError,
   ValidationWarning,
 } from '../types.js';
+import { servedFlowErrors } from '../../../config/served-flows.js';
 import { validateContract } from './contract.js';
 import { resolveFlow, type FlowResolution } from './resolve.js';
 import {
@@ -405,6 +406,13 @@ function runFlowChecks(input: unknown, options: FlowValidateOptions): FlowRun {
     });
     errors.push(...structure.errors);
     warnings.push(...structure.warnings);
+  });
+
+  // The bundle preflight's served-flow checks, on the whole file: a key of
+  // config.bundle.flows must be a web flow of the same file, also when
+  // --flow narrows the scope to the server flow.
+  perFlow(['flow:served'], (name, _flow, file) => {
+    errors.push(...servedFlowErrors(file, name).errors);
   });
 
   // 10b. Route checks on every chain field, read through core's

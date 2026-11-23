@@ -145,13 +145,23 @@ neither.
 | Stdin | `cat flow.mjs \| docker run -i ... walkeros/flow:<version>` | Read only when the given path does not exist. An empty stdin is ignored. Stdin carries one file and no `node_modules/`, so a server flow built by `walkeros bundle` fails to start with `Cannot find package '@walkeros/collector'` |
 
 A fetched, extracted or piped artifact is written to `/app/flow/` when that
-directory exists (in the image it does), otherwise to `/tmp/`. Outside a
-container an archive is extracted into `/tmp/` itself, replacing any
-`flow.mjs`, `package.json` and `node_modules/` there. A local path
+directory exists (in the image it does). Outside a container it goes to a
+private folder under the system temp directory, one per runtime process, and
+nothing is written to the temp directory itself. The folder is removed at a
+clean exit and left behind by a killed process. The archive carries every
+package its flow imports. A package it lacks is resolved from the folder's
+parent folders (Node's module resolution), up to the temp directory's
+`node_modules/`, so on a shared host build complete archives. A local path
 with any other extension, a `.json` flow config above all, is refused before
 anything loads. Content from a URL or stdin is checked only by what it is
 written as: a flow config delivered that way is written as `flow.mjs` and then
 fails to import with a syntax error. Either way nothing is bundled.
+
+At start the runtime prints `Instance <id>`, a random 16-character hex id that
+the heartbeat carries too. Recent errors are persisted to `errors-<port>.jsonl`
+in the cache folder. That folder is the instance's own: do not share it between
+instances, for example on one volume, since instances that listen on the same
+port would write the same file.
 
 ### Options
 
@@ -159,8 +169,6 @@ fails to import with a syntax error. Either way nothing is bundled.
 |---|---|---|
 | `[artifact]` | `BUNDLE` | Artifact path or URL |
 | `-p, --port <number>` | `PORT` | Port to listen on (default `8080`) |
-| `--flow-id <id>` | `WALKEROS_FLOW_ID` | Flow ID in the walkerOS app. Enables the heartbeat and secret injection |
-| `--project <id>` | `WALKEROS_PROJECT_ID` | Project ID, required with `--flow-id` |
 | `--env-file <path>` | none | Load a dotenv file first. Existing variables win; a group- or other-readable file is refused |
 | `--json` | none | JSON output |
 | `-v, --verbose` | none | Verbose output |
@@ -172,80 +180,130 @@ fails to import with a syntax error. Either way nothing is bundled.
 |---|---|---|
 | `BUNDLE` | `/app/flow/flow.mjs` in the image | Artifact path or URL |
 | `PORT` | `8080` | Port for the health server and the flow's HTTP handler. A source's own `port` setting has no effect under the runtime, and nothing logs that |
-| `WALKEROS_FLOW_ID` | none | Flow ID in the walkerOS app (same as `--flow-id`) |
-| `WALKEROS_PROJECT_ID` | none | Project ID (same as `--project`) |
-| `WALKEROS_DEPLOYMENT_ID` | none | Deployment ID, sent with every heartbeat. The app accepts a heartbeat only with the deployment its runner token belongs to; without it, every beat logs `Heartbeat rejected (404)` at WARN. With the observer variables it also names where telemetry goes |
-| `WALKEROS_FLOW_RELEASE` | none | Release the loaded flow must carry, or the runtime refuses to start. The walkerOS app sets it when it deploys a flow |
-| `WALKEROS_FLOW_NAME` | none | Flow name the loaded flow must carry, checked only together with `WALKEROS_FLOW_RELEASE`. The walkerOS app sets it |
-| `WALKEROS_DEPLOY_TOKEN` | none | Runner token. Takes precedence over `WALKEROS_TOKEN` |
-| `WALKEROS_TOKEN` | none | Runner token (`wos_run_...`) from the flow's self-hosted settings in the app. A person's automation token is refused by the runner routes |
-| `WALKEROS_APP_URL` | `https://app.walkeros.io` | App API base URL |
+| `WALKEROS_CREDENTIAL` | none | The runner's credential (`wos_cred_...`), shown once when you pair a runner in the app. It names the app and the deployment, so no other variable is needed. Read once at start and removed from the environment. Unset, the runtime calls no app |
 | `WALKEROS_HEARTBEAT_INTERVAL` | `60` | Seconds between heartbeats. Values below `10`, or not a number, are clamped to `10` |
 | `WALKEROS_CACHE_DIR` | `$XDG_CACHE_HOME/walkeros`, else `~/.cache/walkeros` | Where the runtime persists recent errors between restarts. `CACHE_DIR` is read as a fallback |
-| `WALKEROS_OBSERVE_LEVEL` | unset (`standard`) | Baseline telemetry level: `off`, `standard` or `trace`. See [Observe](/docs/getting-started/observe#server) |
-| `WALKEROS_OBSERVER_URL`, `WALKEROS_INGEST_TOKEN` | none | Observer base URL and ingest token. With `WALKEROS_DEPLOYMENT_ID`, all three turn on telemetry to `<WALKEROS_OBSERVER_URL>/ingest/<WALKEROS_DEPLOYMENT_ID>`. An Observe session in the walkerOS app hands out all three, its session ID as the deployment ID |
 | `NODE_OPTIONS` | `--max-old-space-size=384 --no-warnings` in the image | Heap cap sized for a 512 MB container. Raise it with the container's memory, and keep `--no-warnings`: the runtime logs Node's process warnings itself |
 
-Every start logs the loaded flow as `Flow: <name> release <release>`. With
-`WALKEROS_FLOW_RELEASE` set, a runtime that loaded any other artifact, or one
-without a release, never reports ready: it exits with
-`Artifact mismatch: expected <name>@<release>, loaded <name>@<release>`.
-
-Credentials come from the environment only. The runtime reads no config file
-and no CLI login, so a token in `~/.walkeros/config.json` does not reach it:
-export `WALKEROS_DEPLOY_TOKEN` (or `WALKEROS_TOKEN`) instead.
+The credential comes from the environment only, or from the `--env-file` you
+name. The runtime reads no config file and no CLI login.
 
 ## Connecting to the walkerOS app
 
-A flow runs on its own with no account. Setting a flow ID, a project ID, a
-deployment ID and a runner token connects it to the app:
+A flow runs on its own with no account. One variable connects it to the app:
+the runner's credential. On the flow part's Self-hosted tab in the app, click
+**Pair a runner** and confirm with your passkey or a code. The auth host then
+shows the start config once, with the credential in it. Run it as shown, or
+set `WALKEROS_CREDENTIAL` in your shell and pass it on:
 
 <CodeSnippet
   code={`docker run --rm -p 8080:8080 \\
   -v "$PWD/dist:/app/flow:ro" \\
-  -e WALKEROS_TOKEN="wos_run_xxx" \\
-  -e WALKEROS_PROJECT_ID="proj_xxx" \\
-  -e WALKEROS_FLOW_ID="flow_xxx" \\
-  -e WALKEROS_DEPLOYMENT_ID="dep_xxx" \\
+  -e WALKEROS_CREDENTIAL \\
   walkeros/flow:<version>`}
   language="bash"
 />
 
-The self-hosted tab of a flow in the app prints this command with the values
-filled in, including the deployment ID and, once you generate it there, a
-runner token bound to that deployment. A flow ID without a
-token or without a project ID stops the runtime at boot with an error naming
-the missing value.
+Keep the credential in your platform's secret store and hand it to the
+container as `WALKEROS_CREDENTIAL`, never in the image or a committed file. In
+Docker Compose, from a `.env` file next to the compose file:
+
+<CodeSnippet
+  code={`services:
+  flow:
+    image: walkeros/flow:<version>
+    ports: ['8080:8080']
+    volumes: ['./dist:/app/flow:ro']
+    environment:
+      WALKEROS_CREDENTIAL: \${WALKEROS_CREDENTIAL}`}
+  language="yaml"
+/>
+
+On Cloud Run, from Secret Manager:
+
+<CodeSnippet
+  code={`gcloud run deploy walkeros-flow \\
+  --image registry.example.com/my-flow:1.0.0 \\
+  --set-secrets WALKEROS_CREDENTIAL=walkeros-credential:latest`}
+  language="bash"
+/>
+
+A credential that is never used lapses after 7 days. Once connected it lasts
+until you revoke it on the Self-hosted tab, pair the part again, or the
+deployment ends. Pairing again ends the earlier credential when the new runner
+first connects, so the old runner keeps checking in until then. The tab shows
+when the credential last bought a token and from which address. A managed
+deployment gets its credential from the app, with nothing to paste.
 
 When connected, the runtime:
 
-- **Fetches secrets once at boot** and injects them into the environment before
-  the flow loads, so `$env.NAME` references in a server flow resolve to them.
-  From then on every log line masks the fetched values (6 characters or
-  longer) as `***`: the runtime's own lines, the flow's lines, the recent
-  errors and log lines a heartbeat carries, and the `--json` error output.
-- **Sends a heartbeat** to `POST /api/projects/:projectId/runners/heartbeat`
-  every `WALKEROS_HEARTBEAT_INTERVAL` seconds with its instance ID, flow and
-  deployment IDs, version, uptime, event counters, and recent errors and log
-  lines (secrets are redacted before they leave the process). A failed
-  heartbeat is logged and never stops the flow.
+- **Fetches secrets once at boot** from `GET /api/runner/secrets` and sets them
+  in the environment after the artifact is imported and before the flow
+  starts, so `$env.NAME` references in a server flow resolve to them. It sets
+  only the names the artifact reads through `$secret` or `$env`; other names
+  are not set, and one INFO line names them. A reserved name (such as `PATH`,
+  `NODE_OPTIONS`, `PORT` or any name starting with `WALKEROS_`, `NODE_`,
+  `NPM_`, `LD_` or `DYLD_`) stops the boot with `secret-reserved`, and a name
+  that is already in the environment stops it with `secret-in-env`. Each
+  refusal is named in the error. A fetch that fails for a reason other than
+  authentication logs a warning and the flow starts. A name the flow reads
+  only from code is not set.
+- **Checks in** at `POST /api/runner/check-in` every
+  `WALKEROS_HEARTBEAT_INTERVAL` seconds with its instance ID, version, uptime,
+  event counters, recent errors and log lines (secrets are redacted before
+  they leave the process), and the release it runs. A failed check-in is
+  logged and never stops the flow.
+- **Fetches an artifact URL on the app's origin** with its credential. The
+  redirect to the storage carries no credential, and a URL on any other host
+  is fetched without one.
+- **Signs its flow's ingest writes** when the credential belongs to a
+  deployment. The flow's steps get a signer: the usage report signs each report
+  when it names no token, and the ClickHouse destination signs each insert
+  when its config sets `settings.signed: true` (see
+  [Signed inserts](/docs/destinations/server/clickhouse#signed-inserts-to-walkeros-hosted-ingest)).
+  Each request gets a fresh signature over its exact bytes, with the
+  credential's key, and works without the auth server. The signer never signs
+  a request to the app or its auth server, so no step obtains headers for
+  them, and no step ever sees the credential. Under
+  [`runneros remote`](/docs/apps/remote#signed-ingest-writes) the flow runs in
+  a child process that holds no credential, and its supervisor signs each write.
+
+The credential itself is never sent. With it the runtime buys a token that
+lasts 24 hours and works only together with the credential's key, and renews
+it every hour. It buys the first one at start, before the flow serves, and
+waits at most 2.5 seconds per attempt: when the token endpoint cannot be
+reached, the flow starts anyway. When the auth server cannot be reached, the
+runtime signs each request to the app with the credential's key instead and
+keeps serving; one ERROR line says so, and one more when a token is bought
+again. A credential the app
+refuses (replaced by a new pairing, revoked, or its deployment ended) writes
+one ERROR line, `The app refused this runner's credential (replaced, revoked
+or ended); a self-hosted runner is paired again on its Self-hosted tab`, and
+the flow keeps serving. When the auth server refuses a token request, the line
+names how far this machine's clock is off from the server's.
 
 The artifact itself never changes while the runtime runs. To ship a new
-version, bundle again and redeploy.
+version, bundle again and redeploy. To take new versions from the app with no
+redeploy, run [`runneros remote`](/docs/apps/remote) instead.
 
-Values from `--env-file`, or already set in the container's environment, are
-not known to the runtime as secrets. The pattern rules still catch them where
-they have a recognizable shape (known token prefixes, private keys,
-credential-named fields, long high-entropy strings), but they are not masked
-by exact value. Prefer app-managed secrets for anything that must never reach
-a log.
+Every value the flow reads through `$secret` or `$env` is masked by exact
+value (6 characters or longer) as `***`, whatever its source: the app, an
+`--env-file` or the container's environment. This covers the runtime's own
+lines, the flow's lines, the recent errors and log lines a heartbeat carries,
+and the `--json` error output. The runtime cannot tell a credential from
+config, so a config value of 6 or more characters set in the environment for an
+`$env` name (a region, a host, a table name such as `events`) shows as `***`
+too. Defaults and shorter values are not masked. The pattern rules also catch
+values with a recognizable shape (known token prefixes, private keys,
+credential-named fields, long high-entropy strings).
 
 The runtime prints text lines by default. A flow that sets
 `collector.logger.format` to `json` prints one JSON object per line instead,
 errors and warnings on stderr, which log collectors such as Cloud Run read as
 structured logs (see [Logger](/docs/collector/logger#log-format)). The lines
 before the flow loads, up to `Health server listening on port <port>`, print
-as text, because the runtime learns the format from the flow. The flow's
+as text, because the runtime learns the format from the flow. Every start then
+logs the loaded flow as `Flow: <name> release <release>`. The flow's
 `logger.level` applies to the collector's lines, and `--verbose` still forces
 `DEBUG`.
 
@@ -257,7 +315,7 @@ directory (usually `/tmp`).
 
 | Response | Behavior |
 |---|---|
-| **401 or 403** | Fatal: the runtime exits. The token is missing, revoked or not bound to this flow |
+| **401 or 403** | Fatal: the runtime exits. The app refused the credential: replaced, revoked or ended |
 | **404** (no secrets configured) | Warning, the runtime continues |
 | **Any other error** | Warning, the runtime continues without secrets |
 
@@ -359,6 +417,195 @@ Never include the output directory itself (`include: ["./dist"]` with output
 directory that holds credentials. `include` applies to server builds only: a
 web build copies nothing and logs that it ignored `include`.
 
+### Web flows a server flow serves
+
+A server flow lists the web flows it serves in `config.bundle.flows`. Each key
+is a web flow of the same file. Each value is the path of that flow's file in
+the server's output folder: bare file names joined by `/`, such as
+`casamoda/walker.js`. It is never a `$flow` reference and never a public URL
+path. The file's routes stay in the server flow, as in the example above.
+
+A remote runner fetches and replaces these files as the app releases them, see
+[Served web files](/docs/apps/remote#served-web-files).
+
+One `walkeros bundle --flow <server> -o dist/` writes `dist/flow.mjs` and each
+listed web flow at its path. With a `.tar.gz` output, the archive packs the
+server files and exactly the listed paths. Without `-o`, and with a URL
+output, the CLI builds the server alone and logs
+`Served flows left out (stdout): casamoda, venti` (or `(URL upload)`) as a
+warning. `walkeros validate` checks the listing, see
+[the validate codes](/docs/apps/cli#validate-command).
+
+A path inside `flow.mjs`, `package.json` or `node_modules` is refused. So are
+two paths that are equal or nest, compared without case. At build time, a path
+the output file or an include copy takes is refused too. `--flow <server>`
+checks the listing. A whole-file `walkeros validate` also checks each listed
+web flow.
+
+A served file is the finished walker.js, the same as
+`walkeros bundle --flow <web>` writes. `--release` stamps the flow the command
+names. Each served flow keeps its own release, or the `collector.release` it
+authors.
+
+<CodeSnippet
+  code={`{
+  "version": 4,
+  "include": ["./public"],
+  "flows": {
+    "casamoda": {
+      "config": {
+        "platform": "web",
+        "settings": {
+          "windowCollector": "casamoda"
+        }
+      },
+      "destinations": {
+        "probe": {
+          "code": {
+            "push": "$code:(event) => event.name"
+          }
+        }
+      }
+    },
+    "venti": {
+      "config": {
+        "platform": "web",
+        "settings": {
+          "windowCollector": "venti"
+        }
+      },
+      "destinations": {
+        "probe": {
+          "code": {
+            "push": "$code:(event) => event.name"
+          }
+        }
+      }
+    },
+    "server": {
+      "config": {
+        "platform": "server",
+        "bundle": {
+          "flows": {
+            "casamoda": "casamoda/walker.js",
+            "venti": "public/track.js"
+          }
+        }
+      },
+      "stores": {
+        "casamoda": {
+          "package": "@walkeros/server-store-fs",
+          "config": {
+            "settings": {
+              "basePath": "./casamoda"
+            },
+            "file": true
+          }
+        },
+        "public": {
+          "package": "@walkeros/server-store-fs",
+          "config": {
+            "settings": {
+              "basePath": "./public"
+            },
+            "file": true
+          }
+        }
+      },
+      "sources": {
+        "http": {
+          "package": "@walkeros/server-source-express",
+          "config": {
+            "settings": {
+              "paths": ["/collect", "/walker.js", "/s/*path"]
+            },
+            "ingest": {
+              "map": {
+                "method": {
+                  "key": "method"
+                },
+                "path": {
+                  "key": "path"
+                }
+              }
+            }
+          },
+          "next": {
+            "one": [
+              {
+                "match": {
+                  "and": [
+                    {
+                      "key": "ingest.method",
+                      "operator": "eq",
+                      "value": "GET"
+                    },
+                    {
+                      "key": "ingest.path",
+                      "operator": "eq",
+                      "value": "/walker.js"
+                    }
+                  ]
+                },
+                "next": "casamodaFile"
+              },
+              {
+                "match": {
+                  "and": [
+                    {
+                      "key": "ingest.method",
+                      "operator": "eq",
+                      "value": "GET"
+                    },
+                    {
+                      "key": "ingest.path",
+                      "operator": "prefix",
+                      "value": "/s/"
+                    }
+                  ]
+                },
+                "next": "publicFile"
+              }
+            ]
+          }
+        }
+      },
+      "transformers": {
+        "casamodaFile": {
+          "package": "@walkeros/server-transformer-file",
+          "env": {
+            "store": "$store.casamoda"
+          }
+        },
+        "publicFile": {
+          "package": "@walkeros/server-transformer-file",
+          "config": {
+            "settings": {
+              "prefix": "/s"
+            }
+          },
+          "env": {
+            "store": "$store.public"
+          }
+        }
+      }
+    }
+  }
+}`}
+  language="json"
+/>
+
+A `bundle.flows` path and a relative `basePath` resolve against the same
+folder: the one the server bundle runs in. That is the output folder, the
+image's `/app/flow`, or the folder an archive extracts into. See
+[File paths at runtime](#file-paths-at-runtime).
+
+Point a store at a folder of its own for each web file, as `casamoda` does
+above. A store on the output root serves the server bundle and its include
+copies too. To serve several files through one store, give the file
+transformer a `prefix`, as `publicFile` does above: a request inside the prefix
+that the store does not find answers `404`, and a request outside it passes on.
+
 ## File paths at runtime
 
 Before loading a flow, the runtime changes its working directory to the
@@ -384,8 +631,10 @@ does not find there gets the express source's default answer, `200` with a
   Without a writable cache directory, recent errors are not persisted across
   restarts, and the flow still runs.
 - **Architecture.** The image is `linux/amd64` only.
-- **Signals.** The image runs under tini and shuts the flow down gracefully on
-  SIGTERM.
+- **Signals.** The image runs under tini and shuts the flow down on SIGTERM. The
+  shutdown drains within 8 seconds and exits 1 when events were lost or a
+  destination did not close cleanly. Set the platform's grace period to at
+  least 10 seconds.
 - **In-memory default store.** A `state` operation that names no `store` uses
   the collector's in-memory `__cache` store, which lives inside one process.
   Anything relying on it across events (state, deduplication, a rate limiter
@@ -421,6 +670,9 @@ spec:
           env:
             - name: WALKEROS_CACHE_DIR
               value: /app/cache
+            - name: WALKEROS_CREDENTIAL
+              valueFrom:
+                secretKeyRef: { name: walkeros-credential, key: credential }
           livenessProbe:
             httpGet: { path: /health, port: 8080 }
             periodSeconds: 30
@@ -452,16 +704,17 @@ its archive.
 has no default export (the AWS and GCP sources, for example). Name the export
 in the step's [`import`](/docs/apps/cli#named-export-selection-with-import).
 
-**`--flow-id requires --project or WALKEROS_PROJECT_ID`**, or
-**`Remote flow requires authentication`**: a flow ID was set without its
-project ID or token. Set both, or unset the flow ID to run unconnected.
+**`WALKEROS_CREDENTIAL is not a walkerOS credential`**: the variable holds
+something other than the credential the app showed. Copy it again from the
+start config, or pair the runner again.
 
-**Exits with a 401 or 403 on secrets**: the token is invalid, revoked or bound
-to a different flow. Mint a new one in the app.
+**Exits with a 401 or 403 on secrets**, or **`The app refused this runner's
+credential`**: the credential was replaced by a newer pairing, revoked, or its
+deployment ended. Pair the runner again on its Self-hosted tab.
 
 ## Next steps
 
 - [CLI](/docs/apps/cli): build, validate and simulate flows
 - [Deploy](/docs/getting-started/deploy): the build-then-run path end to end
-- [Observe](/docs/getting-started/observe): watch a running flow's records
+- [Observe](/docs/getting-started/observe): report a running flow's counters and issues
 - [Bundled mode](/docs/getting-started/modes/bundled): the `flow.json` format

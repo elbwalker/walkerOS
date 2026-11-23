@@ -350,7 +350,7 @@ Two consequences for testing a source:
   on the registration: it receives the event exactly as the source emitted it,
   and the entire pipeline is skipped (no `before`/`next` chains, no `cache`, no
   `state`, no `mapping`, no minted span id, no ingest, no `respond`, no
-  `status.sources` counting, no Observe records).
+  `status.sources` counting, no observer records).
 - A `next`/`before` chain adds `await` hops between the emit and delivery. For a
   fire-and-forget emit, settle microtasks before asserting.
 

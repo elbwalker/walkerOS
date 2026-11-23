@@ -12,7 +12,9 @@ const DEFAULT_REGION = 'eu-central-1';
 const DEFAULT_DECODER = 'json' as const;
 const DEFAULT_MAX_MESSAGES = 10;
 const DEFAULT_WAIT_TIME = 20;
-const DEFAULT_SHUTDOWN_TIMEOUT_MS = 30000;
+// How long a close waits for messages in flight. It fits inside the
+// collector's 8 s shutdown deadline, which also covers the batch flush.
+export const DEFAULT_SHUTDOWN_TIMEOUT_MS = 5000;
 const DEFAULT_ON_PUSH_ERROR = 'nack' as const;
 
 /**

@@ -1,7 +1,9 @@
 import React, { type ReactElement } from 'react';
 import { BrowserFrame } from '../BrowserFrame';
+import { Captions } from '../Captions';
 import { CaseCard } from '../CaseCard';
 import { CheckList } from '../CheckList';
+import { EndCard } from '../EndCard';
 import { EventLog } from '../EventLog';
 import { FaqItem } from '../FaqItem';
 import { FeatureItem } from '../FeatureItem';
@@ -10,6 +12,10 @@ import { PlanCard } from '../PlanCard';
 import { ProblemCard } from '../ProblemCard';
 import { QuickstartSteps } from '../QuickstartSteps';
 import { SectionHeading } from '../SectionHeading';
+import { Slide } from '../Slide';
+import { StepMarker } from '../StepMarker';
+import { Terminal } from '../Terminal';
+import { TitleCover } from '../TitleCover';
 import {
   PROBE,
   RouterLink,
@@ -82,6 +88,16 @@ it.each<[string, ReactElement, string]>([
     <QuickstartSteps steps={[{ title: 'T', text: 'Text' }]} {...PROBE} />,
     'div',
   ],
+  ['TitleCover', <TitleCover title="T" {...PROBE} />, 'div'],
+  ['Slide', <Slide headline="H" {...PROBE} />, 'div'],
+  ['EndCard', <EndCard title="T" url="https://demo.test" {...PROBE} />, 'div'],
+  ['Captions', <Captions lines={['Line']} {...PROBE} />, 'div'],
+  [
+    'StepMarker',
+    <StepMarker n={1} surface="page" title="T" {...PROBE} />,
+    'div',
+  ],
+  ['Terminal', <Terminal lines={[]} {...PROBE} />, 'div'],
 ])(
   '%s passes every attribute it does not own to its root',
   (_name, element, tagName) => {

@@ -17,6 +17,14 @@ export class AuthError extends Error {
   }
 }
 
+/** Where a credential came from, as the error names it. */
+type CredentialSource = 'config.credentials' | 'settings.credentials';
+
+type Credential = string | ServiceAccount;
+
+const ADC =
+  'Application Default Credentials (GOOGLE_APPLICATION_CREDENTIALS, gcloud auth application-default login or the Google Cloud metadata server)';
+
 /**
  * Resolves credentials with precedence `config.credentials ?? settings.credentials`.
  * Warns once (per instance) when the deprecated `settings.credentials` path is used.
@@ -24,21 +32,20 @@ export class AuthError extends Error {
 function resolveCredentials(
   config: Partial<Config>,
   logger: Logger.Instance,
-): Credential | undefined {
-  if (config.credentials !== undefined) return config.credentials;
+): { credential: Credential; source: CredentialSource } | undefined {
+  if (config.credentials !== undefined)
+    return { credential: config.credentials, source: 'config.credentials' };
 
   const settingsCredentials = config.settings?.credentials;
   if (settingsCredentials !== undefined) {
     logger.warn(
       'settings.credentials is deprecated, use config.credentials instead',
     );
-    return settingsCredentials;
+    return { credential: settingsCredentials, source: 'settings.credentials' };
   }
 
   return undefined;
 }
-
-type Credential = string | ServiceAccount;
 
 /**
  * Normalizes a credential into the object form GoogleAuth expects.
@@ -47,9 +54,12 @@ type Credential = string | ServiceAccount;
  * `$env` reference). GoogleAuth requires a parsed object, so parse-if-string
  * here before handing it over.
  *
- * @throws AuthError if a string credential is not valid JSON
+ * @throws AuthError naming the source if a string credential is not valid JSON
  */
-function parseCredentials(credentials: Credential): ServiceAccount {
+function parseCredentials(
+  credentials: Credential,
+  source: CredentialSource,
+): ServiceAccount {
   if (typeof credentials !== 'string') return credentials;
 
   try {
@@ -57,7 +67,7 @@ function parseCredentials(credentials: Credential): ServiceAccount {
     return parsed;
   } catch (error) {
     throw new AuthError(
-      'Invalid credentials: expected a service account object or a JSON string',
+      `Data Manager credentials in ${source} are neither a service account object nor its JSON string`,
       error instanceof Error ? error : undefined,
     );
   }
@@ -77,70 +87,70 @@ function parseCredentials(credentials: Credential): ServiceAccount {
  *
  * @param config - Validated config with auth options
  * @param logger - Logger instance for deprecation warnings
- * @returns Auth client for token retrieval
- * @throws AuthError if authentication fails
+ * @returns Auth client for request headers
+ * @throws AuthError naming the credential path if authentication fails
  */
 export async function createAuthClient(
   config: Partial<Config>,
   logger: Logger.Instance,
 ): Promise<AuthClient> {
   const { keyFilename, scopes = DEFAULT_SCOPES } = config.settings || {};
-  const credentials = resolveCredentials(config, logger);
+  const resolved = resolveCredentials(config, logger);
 
   // Parse before the try so an invalid-JSON error surfaces with its own
-  // message rather than being wrapped as a generic auth failure.
-  const parsedCredentials = credentials
-    ? parseCredentials(credentials)
+  // message rather than being wrapped as a client failure.
+  const credentials = resolved
+    ? parseCredentials(resolved.credential, resolved.source)
     : undefined;
 
+  const source = resolved
+    ? resolved.source
+    : keyFilename
+      ? 'settings.keyFilename'
+      : ADC;
+  const options = credentials
+    ? { credentials, scopes }
+    : keyFilename
+      ? { keyFilename, scopes }
+      : { scopes };
+
   try {
-    if (parsedCredentials) {
-      const auth = new GoogleAuth({
-        credentials: parsedCredentials,
-        scopes,
-      });
-      return await auth.getClient();
-    }
-
-    if (keyFilename) {
-      const auth = new GoogleAuth({
-        keyFilename,
-        scopes,
-      });
-      return await auth.getClient();
-    }
-
-    const auth = new GoogleAuth({ scopes });
-    return await auth.getClient();
+    return await new GoogleAuth(options).getClient();
   } catch (error) {
     throw new AuthError(
-      'Failed to create auth client. Check credentials configuration or ensure GOOGLE_APPLICATION_CREDENTIALS is set.',
+      `Data Manager could not create an auth client from ${source}`,
       error instanceof Error ? error : undefined,
     );
   }
 }
 
 /**
- * Gets access token from auth client
- * Automatically returns cached token if valid or refreshes if expired
+ * The request headers of an auth client as a plain object: the authorization
+ * header and any the library adds, like x-goog-user-project. The client
+ * returns a cached token while it is valid and refreshes it when not.
  *
- * @param authClient - OAuth2 client from createAuthClient()
- * @returns Fresh access token
- * @throws AuthError if token retrieval fails
+ * @param authClient - Client from createAuthClient()
+ * @throws AuthError if the client fails or returns no authorization header
  */
-export async function getAccessToken(authClient: AuthClient): Promise<string> {
+export async function getAuthHeaders(
+  authClient: AuthClient,
+): Promise<Record<string, string>> {
+  let headers: Headers;
   try {
-    const tokenResponse = await authClient.getAccessToken();
-
-    if (!tokenResponse.token) {
-      throw new AuthError('Auth client returned empty token');
-    }
-
-    return tokenResponse.token;
+    headers = await authClient.getRequestHeaders();
   } catch (error) {
     throw new AuthError(
-      'Failed to obtain access token',
+      'Auth client could not provide request headers',
       error instanceof Error ? error : undefined,
     );
   }
+
+  if (!headers.has('authorization'))
+    throw new AuthError('Auth client returned no authorization header');
+
+  const plain: Record<string, string> = {};
+  headers.forEach((value, key) => {
+    plain[key] = value;
+  });
+  return plain;
 }

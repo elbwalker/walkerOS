@@ -1,12 +1,19 @@
 import { c as tarCreate } from 'tar';
 
+/** Recognizes the packed-archive output extensions. */
+export function isArchiveOutput(output: string): boolean {
+  const lower = output.toLowerCase();
+  return lower.endsWith('.tar.gz') || lower.endsWith('.tgz');
+}
+
 /**
  * Pack a node-platform bundle directory into a gzip tarball.
  *
  * The directory is expected to be shaped like `runNftServerPath` leaves it:
  * `flow.mjs` (the factory), an optional sibling `node_modules/`, and
- * `package.json`. Entries are added relative to `dir` (`cwd`), so the resulting
- * archive holds them at its root with no absolute paths.
+ * `package.json`, plus the web files a server flow serves at the paths its
+ * `config.bundle.flows` lists. Entries are added relative to `dir` (`cwd`), so
+ * the resulting archive holds them at its root with no absolute paths.
  *
  * The caller passes the exact `entries` to pack (relative to `dir`). The
  * caller is responsible for filtering to entries that exist on disk: when a

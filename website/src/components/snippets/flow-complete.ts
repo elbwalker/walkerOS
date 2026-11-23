@@ -28,7 +28,7 @@ export const GUIDE_CHAPTERS: Record<ChapterId, string> = {
   'state-stores': 'State, stores and first-party walker.js',
   delivery: 'Reliable delivery and the warehouse',
   'build-run': 'Build and run',
-  operate: 'Observe, CI and deploy',
+  operate: 'logs, CI and deploy',
 };
 
 export function guideHeading(chapter: ChapterId): string {

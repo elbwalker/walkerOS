@@ -9,16 +9,42 @@
  *
  * Messages are written for the orchestrator to show a user, so they never
  * carry a URL query string (presigned credentials live there).
+ *
+ * With `packages`, every bundle artifact of the manifest installs one tree
+ * per flow: the recorded one (`tree`), or the one the first bundle artifact
+ * resolves under the cutoff (`resolve`). Each web flow the named flow serves
+ * has a tree of its own. The result then reports each tree.
+ *
+ * A server flow's bundle artifacts carry the web files it serves, as
+ * `bundle()` builds them; the one artifact that names `served` outputs PUTs
+ * each of them from its own build.
  */
 
 import crypto from 'crypto';
 import path from 'path';
 import fs from 'fs-extra';
-import { FlowReferenceError } from '@walkeros/core';
+import {
+  FlowReferenceError,
+  firstPathPartIs,
+  servedFlowPath,
+  type ServedFlow,
+} from '@walkeros/core';
+import type { ValidationError } from '@walkeros/core/dev';
 import { getErrorMessage } from '../../core/index.js';
 import { createCLILogger } from '../../core/cli-logger.js';
 import { UnsupportedPackageSpecError } from '../../core/package-spec.js';
-import { loadBundleConfig, type LoadConfigResult } from '../../config/index.js';
+import { PackageUnavailableError } from '../../core/package-manager.js';
+import {
+  PackageTreeError,
+  packageTreeDigest,
+  type PackageInstall,
+  type PackageTree,
+} from '../../core/package-tree.js';
+import {
+  assertNoConfigErrors,
+  loadBundleConfig,
+  type LoadConfigResult,
+} from '../../config/index.js';
 import { tmpRunDir } from '../../core/tmp-names.js';
 import { VERSION } from '../../version.js';
 import {
@@ -28,8 +54,9 @@ import {
   type BuildManifest,
   type BuildResult,
 } from '../../schemas/build-manifest.js';
-import { bundle } from './index.js';
+import { bundle, type BundleOptions } from './index.js';
 import { includeApplies } from './bundler.js';
+import { loadServedFlow, type BuiltServedFlow } from './served.js';
 import { wrapSkeleton } from './wrap.js';
 import { fetchWithRetry, type FetchRetryOptions } from './fetch-retry.js';
 
@@ -60,17 +87,18 @@ const STEP_SECTIONS = [
  * those read the user's own disk; in a build job they would read the job's
  * filesystem into the artifact. Checked
  * on the RESOLVED flow, so a `$var` cannot smuggle a path past it. The
- * message names locations only, never the path values.
+ * message names locations only, never the path values; a served web flow's
+ * locations carry `prefix` (`flows.<key>.`).
  */
-function assertNoLocalPaths(loaded: LoadConfigResult): void {
+function assertNoLocalPaths(loaded: LoadConfigResult, prefix = ''): void {
   const locations: string[] = [];
   for (const [name, pkg] of Object.entries(loaded.buildOptions.packages)) {
     if (pkg.path !== undefined) {
-      locations.push(`config.bundle.packages.${name}.path`);
+      locations.push(`${prefix}config.bundle.packages.${name}.path`);
     }
   }
   if (loaded.buildOptions.traceInclude?.length) {
-    locations.push('config.bundle.traceInclude');
+    locations.push(`${prefix}config.bundle.traceInclude`);
   }
   // The default `./shared` probe resolves inside the empty work dir, so a
   // non-empty list here always came from the config's own `include`. A web
@@ -79,7 +107,7 @@ function assertNoLocalPaths(loaded: LoadConfigResult): void {
     loaded.buildOptions.include?.length &&
     includeApplies(loaded.buildOptions)
   ) {
-    locations.push('include');
+    locations.push(`${prefix}include`);
   }
   for (const section of STEP_SECTIONS) {
     for (const [id, step] of Object.entries(
@@ -90,7 +118,7 @@ function assertNoLocalPaths(loaded: LoadConfigResult): void {
         typeof pkg === 'string' &&
         (pkg.startsWith('.') || pkg.startsWith('/'))
       ) {
-        locations.push(`${section}.${id}.package`);
+        locations.push(`${prefix}${section}.${id}.package`);
       }
     }
   }
@@ -102,8 +130,8 @@ function assertNoLocalPaths(loaded: LoadConfigResult): void {
   }
 }
 
-/** Map an error thrown while loading or building to a result code. */
-function classify(error: unknown, phase: 'config' | 'build'): BuildErrorCode {
+/** The result code an error's own class carries, if any. */
+function codeOf(error: unknown): BuildErrorCode | undefined {
   if (error instanceof BuildError) return error.code;
   if (error instanceof FlowReferenceError) {
     return error.code === 'MISSING_ENV'
@@ -113,7 +141,121 @@ function classify(error: unknown, phase: 'config' | 'build'): BuildErrorCode {
   if (error instanceof UnsupportedPackageSpecError) {
     return 'UNSUPPORTED_PACKAGE_SPEC';
   }
+  if (error instanceof PackageTreeError) return 'PACKAGE_TREE_INVALID';
+  if (error instanceof PackageUnavailableError) return 'PACKAGE_UNAVAILABLE';
+  return undefined;
+}
+
+/**
+ * Map an error thrown while loading or building to a result code. An error
+ * with no class of its own is classified by its cause: a served flow's
+ * failure wraps the error that names it.
+ */
+function classify(error: unknown, phase: 'config' | 'build'): BuildErrorCode {
+  const code = codeOf(error);
+  if (code) return code;
+  if (error instanceof Error && error.cause !== undefined) {
+    return classify(error.cause, phase);
+  }
   return phase === 'config' ? 'INVALID_CONFIG' : 'BUILD_FAILED';
+}
+
+/** The served outputs an artifact names, if it names any. */
+function servedOutputsOf(artifact: BuildArtifact) {
+  return artifact.target === 'wrap' ? undefined : artifact.served;
+}
+
+/**
+ * What the manifest keys by served web flow names only flows the named flow
+ * lists: its served outputs (exactly those flows; the schema allows them on
+ * one artifact only) and its recorded package trees.
+ */
+function assertServedKeys(
+  manifest: BuildManifest,
+  loaded: LoadConfigResult,
+): void {
+  const listed = new Set(loaded.served.map(({ flow }) => flow));
+  const notServed = (what: string, keys: readonly string[]): string[] =>
+    keys
+      .filter((key) => !listed.has(key))
+      .map(
+        (key) =>
+          `${what} name "${key}", which flow "${loaded.flowName}" does not serve`,
+      );
+  const lines: string[] = [];
+  const outputs = manifest.artifacts.map(servedOutputsOf).find(Boolean);
+  if (outputs) {
+    const named = new Set(Object.keys(outputs));
+    lines.push(...notServed('Served outputs', [...named]));
+    for (const key of listed) {
+      if (!named.has(key)) {
+        lines.push(
+          `Served outputs leave out "${key}", which flow "${loaded.flowName}" serves`,
+        );
+      }
+    }
+  }
+  const packages = manifest.packages;
+  if (packages && 'tree' in packages && packages.served) {
+    lines.push(...notServed('Package trees', Object.keys(packages.served)));
+  }
+  if (lines.length > 0) {
+    throw new BuildError('INVALID_MANIFEST', lines.join('; '));
+  }
+}
+
+/**
+ * Every artifact is written into one output folder, where a served path
+ * whose first part is a bundle artifact's output name collides with that
+ * output. Refused up front, before anything is fetched, rather than at that
+ * artifact's build.
+ */
+function outputCollisionErrors(
+  artifacts: readonly BuildArtifact[],
+  loaded: LoadConfigResult,
+): ValidationError[] {
+  const outputNames = artifacts
+    .filter((artifact) => artifact.target !== 'wrap')
+    .map(({ outputName }) => outputName);
+  const errors: ValidationError[] = [];
+  for (const { flow, path: servedPath } of loaded.served) {
+    const outputName = outputNames.find((name) =>
+      firstPathPartIs(servedPath, name),
+    );
+    if (outputName) {
+      errors.push({
+        path: servedFlowPath(loaded.flowName, flow),
+        code: 'SERVED_PATH_CONFLICT',
+        message: `"${servedPath}" collides with "${outputName}", which this manifest builds`,
+        value: servedPath,
+      });
+    }
+  }
+  return errors;
+}
+
+/** A recorded tree installs every flow, so each served flow needs its own. */
+function assertServedTrees(
+  packages: BuildManifest['packages'],
+  served: readonly ServedFlow[],
+): void {
+  if (!packages || !('tree' in packages)) return;
+  const recorded = new Set(Object.keys(packages.served ?? {}));
+  const lines = served
+    .filter(({ flow }) => !recorded.has(flow))
+    .map(({ flow }) => `No recorded tree for served flow "${flow}"`);
+  if (lines.length > 0) {
+    throw new BuildError('PACKAGE_TREE_INVALID', lines.join('; '));
+  }
+}
+
+/** One served output as the result reports it. */
+type ServedResult = NonNullable<
+  BuildResult['artifacts'][number]['served']
+>[number];
+
+function sha256Of(content: Buffer): string {
+  return crypto.createHash('sha256').update(content).digest('hex');
 }
 
 function isHttpUrl(source: string): boolean {
@@ -192,6 +334,14 @@ async function download(
   await fs.writeFile(dest, Buffer.from(await response.arrayBuffer()));
 }
 
+/** How one bundle artifact installs its packages and hands its served files. */
+interface ArtifactBuild extends Pick<
+  BundleOptions,
+  'servedPackageInstall' | 'onServed'
+> {
+  packageInstall?: PackageInstall;
+}
+
 async function buildArtifact(
   manifest: BuildManifest,
   configPath: string,
@@ -200,6 +350,7 @@ async function buildArtifact(
   index: number,
   outputs: Map<string, string>,
   retry: BuildRetryOptions,
+  build: ArtifactBuild = {},
 ): Promise<string> {
   const output = path.join(workDir, 'out', artifact.outputName);
   await fs.ensureDir(path.dirname(output));
@@ -241,7 +392,13 @@ async function buildArtifact(
     cache: false,
     // The base env is the manifest's, NEVER this process's own.
     buildEnv: manifest.buildEnv ?? {},
-    buildOverrides: { output, tempDir: scratch },
+    buildOverrides: {
+      output,
+      tempDir: scratch,
+      ...(build.packageInstall ? { packageInstall: build.packageInstall } : {}),
+    },
+    servedPackageInstall: build.servedPackageInstall,
+    ...(build.onServed ? { onServed: build.onServed } : {}),
   });
   return output;
 }
@@ -309,17 +466,31 @@ export async function runBuildManifest(
   const workDir = await tmpRunDir('build');
   try {
     // Load once up front so a config error is reported as one, before any
-    // package is fetched.
+    // package is fetched: the named flow, then each web flow it serves.
     const configPath = path.join(workDir, 'flow.json');
+    let served: ServedFlow[] = [];
     if (manifest.flowConfig) {
       try {
         await fs.writeJson(configPath, manifest.flowConfig);
+        const buildEnv = manifest.buildEnv ?? {};
         const loaded = loadBundleConfig(manifest.flowConfig, {
           configPath,
           flowName: manifest.flowName,
-          buildEnv: manifest.buildEnv ?? {},
+          buildEnv,
         });
         assertNoLocalPaths(loaded);
+        for (const { flow } of loaded.served) {
+          const web = await loadServedFlow(flow, {
+            rawConfig: manifest.flowConfig,
+            configPath,
+            buildEnv,
+          });
+          assertNoLocalPaths(web, `flows.${flow}.`);
+        }
+        assertNoConfigErrors(outputCollisionErrors(manifest.artifacts, loaded));
+        assertServedKeys(manifest, loaded);
+        assertServedTrees(manifest.packages, loaded.served);
+        served = loaded.served;
       } catch (error) {
         fail(classify(error, 'config'), getErrorMessage(error));
         return {
@@ -330,7 +501,75 @@ export async function runBuildManifest(
     }
 
     const outputs = new Map<string, string>();
+    // One tree per flow for every bundle artifact: the recorded one, or the
+    // one the first bundle artifact installs under the cutoff.
+    let tree: PackageTree | undefined =
+      manifest.packages && 'tree' in manifest.packages
+        ? manifest.packages.tree
+        : undefined;
+    const servedTrees = new Map<string, PackageTree>(
+      manifest.packages && 'tree' in manifest.packages
+        ? Object.entries(manifest.packages.served ?? {})
+        : [],
+    );
+    const resolve =
+      manifest.packages && 'resolve' in manifest.packages
+        ? manifest.packages.resolve
+        : undefined;
+    const installFrom = (
+      recorded: PackageTree | undefined,
+      onTree: (installed: PackageTree) => void,
+    ): PackageInstall | undefined => {
+      if (recorded) return { tree: recorded };
+      if (!resolve) return undefined;
+      return {
+        resolve: { before: new Date(resolve.before), exempt: resolve.exempt },
+        onTree,
+      };
+    };
+    const installFor = () =>
+      installFrom(tree, (installed) => {
+        tree = installed;
+      });
+    const servedPackageInstall = (flow: string) =>
+      installFrom(servedTrees.get(flow), (installed) => {
+        servedTrees.set(flow, installed);
+      });
     for (const [index, artifact] of manifest.artifacts.entries()) {
+      const servedOutputs = servedOutputsOf(artifact);
+      const servedResult: ServedResult[] = [];
+      // Every key is a listed flow (assertServedKeys), so each placed
+      // file has its output.
+      const onServed = servedOutputs
+        ? async (built: readonly BuiltServedFlow[]) => {
+            for (const { flow, path: servedPath, file } of built) {
+              const target = servedOutputs[flow];
+              const content = await fs.readFile(file);
+              // Reported with the artifact's outputName, so the message names
+              // the served output, not the artifact's own PUT.
+              try {
+                await put(
+                  target.putUrl,
+                  content,
+                  target.contentType ?? contentTypeFor(servedPath),
+                  target.headers ?? {},
+                  retry,
+                );
+              } catch (error) {
+                throw new BuildError(
+                  'UPLOAD_FAILED',
+                  `Served output ${flow}: ${getErrorMessage(error)}`,
+                );
+              }
+              servedResult.push({
+                flow,
+                path: servedPath,
+                bytes: content.length,
+                sha256: sha256Of(content),
+              });
+            }
+          }
+        : undefined;
       try {
         const output = await buildArtifact(
           manifest,
@@ -340,6 +579,13 @@ export async function runBuildManifest(
           index,
           outputs,
           retry,
+          artifact.target === 'wrap'
+            ? undefined
+            : {
+                packageInstall: installFor(),
+                servedPackageInstall,
+                onServed,
+              },
         );
         outputs.set(artifact.outputName, output);
         const content = await fs.readFile(output);
@@ -354,7 +600,8 @@ export async function runBuildManifest(
           target: artifact.target,
           outputName: artifact.outputName,
           bytes: content.length,
-          sha256: crypto.createHash('sha256').update(content).digest('hex'),
+          sha256: sha256Of(content),
+          ...(servedOutputs ? { served: servedResult } : {}),
         });
       } catch (error) {
         fail(
@@ -369,6 +616,26 @@ export async function runBuildManifest(
       }
     }
 
+    if (manifest.packages && tree) {
+      const servedPackages: Record<
+        string,
+        { digest: string; tree: PackageTree }
+      > = {};
+      for (const { flow } of served) {
+        const installed = servedTrees.get(flow);
+        if (installed) {
+          servedPackages[flow] = {
+            digest: packageTreeDigest(installed),
+            tree: installed,
+          };
+        }
+      }
+      result.packages = {
+        digest: packageTreeDigest(tree),
+        tree,
+        ...(served.length > 0 ? { served: servedPackages } : {}),
+      };
+    }
     result.ok = true;
     return { result, reported: await report(manifest.resultPutUrl, result) };
   } finally {

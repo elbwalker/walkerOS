@@ -5,15 +5,22 @@
  * snapshot before the POST). A pattern added here covers all of them.
  *
  * Two entry points:
- * - `scrubSecrets(line, { known })`: mask secrets (and the exact known values), keep the message length intact (for
- *   console/stderr legibility).
- * - `redactLine(line)`: `scrubSecrets` plus truncation to the 256-char
- *   heartbeat wire contract.
+ * - `scrubSecrets(line, { known })`: mask secrets (and the exact known
+ *   values), keep the message length intact (for console/stderr legibility).
+ * - `redactLine(line, { known })`: `scrubSecrets`, then `cutLine` to the
+ *   256-char heartbeat wire contract.
+ *
+ * Known values are compiled once per set (`compileKnown`); a set that grows
+ * while a process runs is a `KnownValues`, recompiled only when it changes.
  *
  * All regex are linear (single unambiguous quantifiers, no nested quantifiers),
  * so there is no catastrophic backtracking even on a BEGIN-marker-with-no-END
- * input or a long no-space line. Exported from `@walkeros/core/node` only: no
- * browser consumer needs it, and it must not ride into web bundles.
+ * input or a long no-space line. It imports nothing and uses no Node API, so
+ * it runs in neutral code too: `@walkeros/core` exports `redactLine` for the
+ * Observe reporter, which masks issue and outcome messages with it, and
+ * `@walkeros/core/node` exports both entry points. A web bundle carries it
+ * only behind `__WALKEROS_OBSERVE__` (a preview build of an observed flow),
+ * since nothing else in web code calls it and its patterns are built lazily.
  */
 
 const MAX_LENGTH = 256;
@@ -35,6 +42,9 @@ const FORCE_MASK_PREFIXES = [
   'xoxb-',
   'xoxp-',
   'AKIA',
+  // Every walkerOS token begins with it, a preview token (wos_preview_...)
+  // as much as any other.
+  'wos_',
 ];
 
 // ── Regex constants (all linear, no nested quantifiers) ─────────────────────
@@ -67,14 +77,26 @@ const RE_JSON_SA_FIELD =
 const SECRET_FIELD_NAMES =
   '(?:x-)?(?:password|passwd|secret|client[-_]?secret|secret[-_]?access[-_]?key|api[-_]?key|api[-_]?secret|access[-_]?token|refresh[-_]?token|auth[-_]?token|id[-_]?token|session[-_]?token|private[-_]?key|token|authorization)';
 
+/*
+ * The patterns built from strings are made on first use, each in its own
+ * function: core's main entry exports this module, and a bundler keeps any
+ * top-level `new RegExp` of a built string. With nothing but declarations at
+ * the top, a bundle that never redacts carries none of them.
+ */
+
 // Plain `"key": value`: a string value runs to its closing quote (an escaped
 // char is consumed as a pair; the alternatives start on different chars, so
 // the scan is linear), a numeric value to its last digit. The mask is a
 // string, so the JSON stays valid.
-const RE_JSON_SECRET_FIELD = new RegExp(
-  `("(?:${SECRET_FIELD_NAMES})"\\s*:\\s*)(?:"(?:[^"\\\\]|\\\\.)*"|-?\\d[\\d.eE+-]*)`,
-  'gi',
-);
+let builtJsonSecretField: RegExp | undefined;
+function jsonSecretField(): RegExp {
+  if (!builtJsonSecretField)
+    builtJsonSecretField = new RegExp(
+      `("(?:${SECRET_FIELD_NAMES})"\\s*:\\s*)(?:"(?:[^"\\\\]|\\\\.)*"|-?\\d[\\d.eE+-]*)`,
+      'gi',
+    );
+  return builtJsonSecretField;
+}
 
 // Escaped `\"key\":\"value\"`, the form a serialized request body carries
 // inside a JSON string. A string value ends at the escaped closing quote; a
@@ -82,22 +104,41 @@ const RE_JSON_SECRET_FIELD = new RegExp(
 // `\\` pair is consumed together with the escape it carries. Every
 // alternative starts on a different char pair, so the scan is linear. A
 // numeric value runs to its last digit.
-const RE_JSON_SECRET_FIELD_ESCAPED = new RegExp(
-  `(\\\\"(?:${SECRET_FIELD_NAMES})\\\\"\\s*:\\s*)(?:(\\\\")(?:[^"\\\\]|\\\\[^"\\\\]|\\\\\\\\(?:\\\\\\\\|\\\\"|[^"\\\\]))*|-?\\d[\\d.eE+-]*)`,
-  'gi',
-);
+let builtJsonSecretFieldEscaped: RegExp | undefined;
+function jsonSecretFieldEscaped(): RegExp {
+  if (!builtJsonSecretFieldEscaped)
+    builtJsonSecretFieldEscaped = new RegExp(
+      `(\\\\"(?:${SECRET_FIELD_NAMES})\\\\"\\s*:\\s*)(?:(\\\\")(?:[^"\\\\]|\\\\[^"\\\\]|\\\\\\\\(?:\\\\\\\\|\\\\"|[^"\\\\]))*|-?\\d[\\d.eE+-]*)`,
+      'gi',
+    );
+  return builtJsonSecretFieldEscaped;
+}
 
 // A credential-named URL query parameter (`?api_secret=...`,
 // `&access_token=...`): the value runs to the next `&`, `#`, quote, backslash
 // or whitespace.
-const RE_QUERY_SECRET = new RegExp(
-  `([?&]${SECRET_FIELD_NAMES}=)[^&#\\s"\\\\]+`,
-  'gi',
-);
+let builtQuerySecret: RegExp | undefined;
+function querySecret(): RegExp {
+  if (!builtQuerySecret)
+    builtQuerySecret = new RegExp(
+      `([?&]${SECRET_FIELD_NAMES}=)[^&#\\s"\\\\]+`,
+      'gi',
+    );
+  return builtQuerySecret;
+}
 
 // A PEM private key inline in one line (a JSON string with escaped newlines),
 // under any field name: marker and body up to the END marker's dashes.
 const RE_PEM_INLINE = /-----BEGIN [A-Z ]*PRIVATE KEY-----[^-]*/gi;
+
+// An HTTP auth scheme and its credential: `Bearer <token>`, `Basic <base64>`,
+// `DPoP <token>`, in any case, after a word boundary. Linear: a literal
+// scheme, whitespace and one class run. The callback keeps an ordinary word
+// after the scheme (`basic auth`, `Basic Auth failed`), so prose stays as
+// written.
+const RE_AUTH_SCHEME =
+  /(^|[^A-Za-z0-9_])(bearer|basic|dpop)(\s+)([A-Za-z0-9+/._~-]+=*)/gi;
+const RE_ORDINARY_WORD = /^[A-Za-z][a-z]*$/;
 
 // PEM block boundaries (structural removal, not regex masking).
 // Case-insensitive, tolerate leading whitespace so a lowercase or indented
@@ -112,15 +153,25 @@ const RE_PEM_END = /-----END[A-Z -]*-----/i;
 // tokens are captured whole. Two capture groups are preserved in the
 // replacement: the leading (^|\s) boundary and the key=.
 const TOKEN_VALUE_CLASS = '[A-Za-z0-9+/._-]';
-const RE_KV_SECRET = new RegExp(
-  `(^|\\s)([A-Za-z_][A-Za-z0-9_.]{0,63}\\s*[=:]\\s*)(${TOKEN_VALUE_CLASS}{12,}={0,2})`,
-  'g',
-);
+let builtKvSecret: RegExp | undefined;
+function kvSecret(): RegExp {
+  if (!builtKvSecret)
+    builtKvSecret = new RegExp(
+      `(^|\\s)([A-Za-z_][A-Za-z0-9_.]{0,63}\\s*[=:]\\s*)(${TOKEN_VALUE_CLASS}{12,}={0,2})`,
+      'g',
+    );
+  return builtKvSecret;
+}
 
 // Standalone candidate runs: any run of token chars (incl. - and .) ≥ 20.
 // The decision to mask happens in the callback (shouldMaskToken), keeping the
 // regex itself trivial and linear.
-const RE_TOKEN_RUN = new RegExp(`${TOKEN_VALUE_CLASS}{${MIN_TOKEN_LEN},}`, 'g');
+let builtTokenRun: RegExp | undefined;
+function tokenRun(): RegExp {
+  if (!builtTokenRun)
+    builtTokenRun = new RegExp(`${TOKEN_VALUE_CLASS}{${MIN_TOKEN_LEN},}`, 'g');
+  return builtTokenRun;
+}
 
 // Force-mask prefix detector for runs that carry a known secret prefix.
 // Matches a known prefix followed by token chars (any length), so e.g.
@@ -131,14 +182,25 @@ const RE_TOKEN_RUN = new RegExp(`${TOKEN_VALUE_CLASS}{${MIN_TOKEN_LEN},}`, 'g');
 function escapeRegex(s: string): string {
   return s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 }
-const PREFIX_ALTERNATION = [...FORCE_MASK_PREFIXES]
-  .sort((a, b) => b.length - a.length)
-  .map(escapeRegex)
-  .join('|');
-const RE_PREFIXED_TOKEN = new RegExp(
-  `(?:${PREFIX_ALTERNATION})${TOKEN_VALUE_CLASS}*`,
-  'g',
-);
+let builtPrefixedToken: RegExp | undefined;
+function prefixedToken(): RegExp {
+  if (!builtPrefixedToken) {
+    const alternation = [...FORCE_MASK_PREFIXES]
+      .sort((a, b) => b.length - a.length)
+      .map(escapeRegex)
+      .join('|');
+    // The prefix starts a word: inside one (`task_queue`, `disk-full`,
+    // `twos_complement`) it is ordinary text. A JSON escape (`\n`, `\t`,
+    // `\u00e9`) or a percent escape (`%20`) ends a word too, as in serialized
+    // JSON or a URL. A group, not a lookbehind, so Safari before 16.4 can parse
+    // it; the replacement keeps it.
+    builtPrefixedToken = new RegExp(
+      `(^|[^A-Za-z0-9_]|\\\\(?:u[0-9a-fA-F]{4}|[bfnrt])|%[0-9A-Fa-f]{2})(?:${alternation})${TOKEN_VALUE_CLASS}*`,
+      'g',
+    );
+  }
+  return builtPrefixedToken;
+}
 
 // A run right after a backslash starts with that escape's letters (`\n`, `\t`,
 // `\u00e9` in serialized JSON). Masking keeps them so the text stays valid JSON.
@@ -293,10 +355,23 @@ function maskLine(line: string): string {
   s = s.replace(RE_URL_CREDS, '$1***$2');
 
   // 1a. Credential-named query parameters, whatever the value's shape.
-  s = s.replace(RE_QUERY_SECRET, '$1***');
+  s = s.replace(querySecret(), '$1***');
 
   // 1b. A PEM private key inline (a JSON string), whatever its field name.
   s = s.replace(RE_PEM_INLINE, '***');
+
+  // 1c. The credential after an auth scheme, whatever its length.
+  s = s.replace(
+    RE_AUTH_SCHEME,
+    (
+      match: string,
+      boundary: string,
+      scheme: string,
+      space: string,
+      value: string,
+    ) =>
+      RE_ORDINARY_WORD.test(value) ? match : `${boundary}${scheme}${space}***`,
+  );
 
   // 2. KEY=secret / KEY: secret (anchored, bounded key, ReDoS-safe).
   // Mask the value only when it is secret-shaped. This stops `scheme://host/...`
@@ -304,26 +379,23 @@ function maskLine(line: string): string {
   // URLs/paths, while real `TOKEN=secret` values still mask. The `/`-aware
   // shouldMaskToken keeps path-shaped values legible.
   s = s.replace(
-    RE_KV_SECRET,
+    kvSecret(),
     (match: string, boundary: string, keyPart: string, value: string) =>
       shouldMaskToken(value, true) ? `${boundary}${keyPart}***` : match,
   );
 
   // 3. Known-prefix tokens (force-mask regardless of length/entropy)
-  s = s.replace(RE_PREFIXED_TOKEN, '***');
+  s = s.replace(prefixedToken(), '$1***');
 
   // 4. Standalone candidate runs ≥ 20 chars, mask by shape/entropy
-  s = s.replace(
-    RE_TOKEN_RUN,
-    (match: string, offset: number, input: string) => {
-      if (!shouldMaskToken(match)) return match;
-      const head =
-        offset > 0 && input[offset - 1] === '\\'
-          ? RE_ESCAPE_HEAD.exec(match)?.[0]
-          : undefined;
-      return head ? `${head}***` : '***';
-    },
-  );
+  s = s.replace(tokenRun(), (match: string, offset: number, input: string) => {
+    if (!shouldMaskToken(match)) return match;
+    const head =
+      offset > 0 && input[offset - 1] === '\\'
+        ? RE_ESCAPE_HEAD.exec(match)?.[0]
+        : undefined;
+    return head ? `${head}***` : '***';
+  });
 
   return s;
 }
@@ -333,30 +405,36 @@ function maskLine(line: string): string {
 // Shorter values are too likely to occur in ordinary text to mask on sight.
 export const MIN_KNOWN_LEN = 6;
 
+/**
+ * Every form a set of known values takes in a line, longest first, so a value
+ * containing another is masked whole. Built once per set and reused for every
+ * line masked with it.
+ */
+export interface CompiledKnown {
+  readonly forms: readonly string[];
+}
+
 export interface ScrubOptions {
   /**
    * Exact secret values to mask wherever they occur (e.g. the resolved
-   * `$secret.NAME` values of a flow). Values under 6 characters are ignored.
+   * `$secret.NAME` values of a flow), or their compiled forms. Values under
+   * 6 characters are ignored.
    */
-  known?: readonly string[];
+  known?: readonly string[] | CompiledKnown;
 }
 
 /**
- * Mask every exact occurrence of each known value, raw, JSON-escaped (the
- * form it takes inside serialized JSON), escaped twice (a JSON string
- * serialized again, e.g. a request body inside JSON output) and URL-encoded
- * (a URL, or a form body where a space is `+`), longest first so
- * a value containing another is masked whole. Literal split/join, never a regex built from the
- * value.
+ * Build the forms of each known value of 6 or more characters: raw,
+ * JSON-escaped (the form it takes inside serialized JSON), escaped twice (a
+ * JSON string serialized again, e.g. a request body inside JSON output) and
+ * URL-encoded (a URL, or a form body where a space is `+`). A value that is
+ * not a string has no form, and no form is empty: a value read from an
+ * inherited name (`__proto__` of an environment) must not stall masking.
  */
-export function maskKnownValues(
-  line: string,
-  known?: readonly string[],
-): string {
-  if (!known || known.length === 0) return line;
+export function compileKnown(values: readonly unknown[]): CompiledKnown {
   const forms = new Set<string>();
-  for (const value of known) {
-    if (value.length < MIN_KNOWN_LEN) continue;
+  for (const value of values) {
+    if (typeof value !== 'string' || value.length < MIN_KNOWN_LEN) continue;
     const escaped = JSON.stringify(value).slice(1, -1);
     forms.add(value);
     forms.add(escaped);
@@ -373,8 +451,67 @@ export function maskKnownValues(
     if (uri) forms.add(uri);
     forms.add(new URLSearchParams({ v: value }).toString().slice(2));
   }
+  forms.delete('');
+  return { forms: [...forms].sort((a, b) => b.length - a.length) };
+}
+
+const NONE_KNOWN: CompiledKnown = { forms: [] };
+
+/** The compiled forms of `known`, compiling an array once. */
+export function asCompiled(
+  known: readonly string[] | CompiledKnown | undefined,
+): CompiledKnown {
+  if (!known) return NONE_KNOWN;
+  return 'forms' in known ? known : compileKnown(known);
+}
+
+/**
+ * A set of known values that grows while a process runs (secrets fetched at
+ * startup). `compiled()` returns the same object until `add` brings a new
+ * value, so a reader can tell whether a line was masked with the current set.
+ */
+export interface KnownValues {
+  add(values: readonly string[]): void;
+  /** The values held, each of 6 or more characters. */
+  values(): readonly string[];
+  compiled(): CompiledKnown;
+}
+
+export function createKnownValues(
+  initial: readonly string[] = [],
+): KnownValues {
+  const held = new Set<string>();
+  let compiled: CompiledKnown | undefined;
+  const add = (values: readonly string[]): void => {
+    for (const value of values) {
+      if (value.length < MIN_KNOWN_LEN || held.has(value)) continue;
+      held.add(value);
+      compiled = undefined;
+    }
+  };
+  add(initial);
+  return {
+    add,
+    values: () => [...held],
+    compiled: () => {
+      if (!compiled) compiled = compileKnown([...held]);
+      return compiled;
+    },
+  };
+}
+
+/**
+ * Mask every exact occurrence of each form of the known values (see
+ * `compileKnown`), longest first. An array is compiled for this call only.
+ * Literal search, never a regex built from the value.
+ */
+export function maskKnownValues(
+  line: string,
+  known?: readonly string[] | CompiledKnown,
+): string {
+  const { forms } = asCompiled(known);
   let s = line;
-  for (const form of [...forms].sort((a, b) => b.length - a.length)) {
+  for (const form of forms) {
     if (s.includes(form)) s = replaceKnown(s, form);
   }
   return s;
@@ -398,6 +535,8 @@ function uriEncoded(
  * `maskLine` does, so serialized JSON stays valid.
  */
 function replaceKnown(line: string, form: string): string {
+  // An empty form matches everywhere and never advances.
+  if (form === '') return line;
   let out = '';
   let from = 0;
   let at = line.indexOf(form);
@@ -425,8 +564,8 @@ function replaceKnown(line: string, form: string): string {
  * passes through it.
  *
  * Algorithm:
- * 0. Mask each `options.known` value exactly, raw, JSON-escaped and escaped
- *    twice, longest first.
+ * 0. Mask each form of the `options.known` values exactly (see
+ *    `compileKnown`), longest first.
  * 1. Mask JSON service-account fields (private_key, client_email,
  *    private_key_id, client_id, client_x509_cert_url) and credential-named
  *    JSON fields (password, token, authorization, ...) BEFORE splitting
@@ -449,11 +588,11 @@ export function scrubSecrets(line: string, options: ScrubOptions = {}): string {
   const withoutJsonKey = withoutKnown
     .replace(RE_JSON_SA_FIELD, '$1$2"***$2"')
     .replace(
-      RE_JSON_SECRET_FIELD_ESCAPED,
+      jsonSecretFieldEscaped(),
       (_match: string, keyPart: string, quote: string | undefined) =>
         quote ? `${keyPart}${quote}***` : `${keyPart}\\"***\\"`,
     )
-    .replace(RE_JSON_SECRET_FIELD, '$1"***"');
+    .replace(jsonSecretField(), '$1"***"');
 
   // Step 2: split
   const rawLines = withoutJsonKey.split('\n');
@@ -469,20 +608,21 @@ export function scrubSecrets(line: string, options: ScrubOptions = {}): string {
 }
 
 /**
- * Redact a log line and truncate to the heartbeat wire contract (256 chars).
- * This is the heartbeat-egress variant: scrub secrets, then truncate AFTER
- * masking so a token straddling char 256 is masked, not left partially visible.
- *
+ * Cut a line to the heartbeat wire contract: at most 256 characters in total.
  * The app's heartbeat schema enforces message .max(256); a 257-char string
- * would fail zod .parse and drop the whole heartbeat. Reserve one char for the
- * ellipsis so the TOTAL length is at most MAX_LENGTH (256).
+ * would fail zod .parse and drop the whole heartbeat. One character is kept
+ * for the ellipsis. It only cuts: a line it is given is masked already.
  */
-export function redactLine(line: string): string {
-  const scrubbed = scrubSecrets(line);
+export function cutLine(line: string): string {
+  if (line.length > MAX_LENGTH) return line.slice(0, MAX_LENGTH - 1) + '…';
+  return line;
+}
 
-  if (scrubbed.length > MAX_LENGTH) {
-    return scrubbed.slice(0, MAX_LENGTH - 1) + '…';
-  }
-
-  return scrubbed;
+/**
+ * Redact a log line and cut it to the heartbeat wire contract (256 chars):
+ * `scrubSecrets`, then `cutLine`, so a token straddling char 256 is masked,
+ * not left partly visible.
+ */
+export function redactLine(line: string, options: ScrubOptions = {}): string {
+  return cutLine(scrubSecrets(line, options));
 }

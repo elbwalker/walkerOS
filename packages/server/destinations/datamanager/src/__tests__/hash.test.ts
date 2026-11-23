@@ -1,152 +1,127 @@
-import { hashEmail, hashPhone, hashName } from '../hash';
-import { getHashServer } from '@walkeros/server-core';
+import {
+  hashEmail,
+  hashName,
+  hashPhone,
+  normalizeEmail,
+  normalizeFamilyName,
+  normalizeGivenName,
+  normalizePhone,
+  normalizePostalCode,
+  normalizeRegionCode,
+} from '../hash';
 
-describe('hash utilities', () => {
-  describe('hashEmail', () => {
-    test('normalizes and hashes email', async () => {
-      const email = '  Test@Example.com  ';
-      const normalized = 'test@example.com';
-      const expected = await getHashServer(normalized);
+// Sources: "guide" is Google's formatting page; "guide (Ads online
+// send-events)" that page's formatting table; "node-util 0.4.1" the output
+// of Google's UserDataFormatter; "ours" a walkerOS rule. Google's AddressInfo
+// reference says names carry "no punctuation", while its worked example and
+// its Node utility keep it; we follow the example and the utility. The
+// guide's phone example (800)555-0100 is left out: it presumes the country.
+type Row = [input: string, expected: string | undefined, source: string];
 
-      const result = await hashEmail(email);
-      expect(result).toBe(expected);
-    });
-
-    test('removes dots for gmail.com addresses', async () => {
-      const email = 'john.doe@gmail.com';
-      const normalized = 'johndoe@gmail.com';
-      const expected = await getHashServer(normalized);
-
-      const result = await hashEmail(email);
-      expect(result).toBe(expected);
-    });
-
-    test('removes dots for googlemail.com addresses', async () => {
-      const email = 'jane.smith@googlemail.com';
-      const normalized = 'janesmith@googlemail.com';
-      const expected = await getHashServer(normalized);
-
-      const result = await hashEmail(email);
-      expect(result).toBe(expected);
-    });
-
-    test('keeps dots for non-gmail addresses', async () => {
-      const email = 'user.name@yahoo.com';
-      const normalized = 'user.name@yahoo.com';
-      const expected = await getHashServer(normalized);
-
-      const result = await hashEmail(email);
-      expect(result).toBe(expected);
-    });
-
-    test('returns empty string for invalid input', async () => {
-      expect(await hashEmail('')).toBe('');
-      expect(await hashEmail(null as unknown as string)).toBe('');
-      expect(await hashEmail(undefined as unknown as string)).toBe('');
-    });
+describe('hash', () => {
+  it.each<Row>([
+    [
+      'cloudy.sanfrancisco+shopping@gmail.com',
+      'cloudysanfrancisco@gmail.com',
+      'guide',
+    ],
+    ['user.name+NYC@Example.com', 'user.name+nyc@example.com', 'guide'],
+    [' John.Doe+promo@gmail.com ', 'johndoe@gmail.com', 'node-util 0.4.1'],
+    ['a+b@gmail.com', 'a@gmail.com', 'node-util 0.4.1'],
+    ['J.Doe@GoogleMail.com', 'jdoe@googlemail.com', 'node-util 0.4.1'],
+    [
+      'jo hn@example.com',
+      'john@example.com',
+      'guide ("Trim leading, trailing and intermediate whitespace")',
+    ],
+    ['no-at-sign.example.com', undefined, 'node-util 0.4.1 (one @)'],
+    ['   ', undefined, 'node-util 0.4.1 (blank)'],
+  ])('normalizeEmail(%j) is %j: %s', (input, expected) => {
+    expect(normalizeEmail(input)).toBe(expected);
   });
 
-  describe('hashPhone', () => {
-    test('formats phone to E.164 and hashes', async () => {
-      const phone = '(800) 555-0100';
-      const normalized = '+18005550100';
-      const expected = await getHashServer(normalized);
-
-      const result = await hashPhone(phone);
-      expect(result).toBe(expected);
-    });
-
-    test('preserves existing country code', async () => {
-      const phone = '+44 20 7946 0958';
-      const normalized = '+442079460958';
-      const expected = await getHashServer(normalized);
-
-      const result = await hashPhone(phone);
-      expect(result).toBe(expected);
-    });
-
-    test('adds +1 for US numbers without country code', async () => {
-      const phone = '5551234567';
-      const normalized = '+15551234567';
-      const expected = await getHashServer(normalized);
-
-      const result = await hashPhone(phone);
-      expect(result).toBe(expected);
-    });
-
-    test('handles various formats', async () => {
-      const formats = [
-        { input: '555-123-4567', expected: '+15551234567' },
-        { input: '(555) 123-4567', expected: '+15551234567' },
-        { input: '+1-555-123-4567', expected: '+15551234567' },
-        { input: '+49 30 12345678', expected: '+493012345678' },
-      ];
-
-      for (const { input, expected } of formats) {
-        const result = await hashPhone(input);
-        const hash = await getHashServer(expected);
-        expect(result).toBe(hash);
-      }
-    });
-
-    test('returns empty string for invalid input', async () => {
-      expect(await hashPhone('')).toBe('');
-      expect(await hashPhone(null as unknown as string)).toBe('');
-      expect(await hashPhone(undefined as unknown as string)).toBe('');
-    });
+  it.each<Row>([
+    ['+1 (800) 555-0100', '+18005550100', 'node-util 0.4.1'],
+    [
+      '+49 170 1234567',
+      '+491701234567',
+      'guide ("All characters after the plus sign must be digits")',
+    ],
+    ['0049 30 1234567', '+49301234567', 'ours (ITU 00 prefix)'],
+    [
+      '+49 (0)30 1234567',
+      '+49301234567',
+      'ours (a parenthesized (0) after + or 00 is the optional trunk prefix)',
+    ],
+    ['(800) 555-0100', undefined, 'ours (no country code)'],
+    ['030 1234567', undefined, 'ours'],
+    ['491701234567', undefined, 'ours (no + or 00)'],
+    [
+      '+0301234567',
+      undefined,
+      'ours (E.164 country codes do not start with 0)',
+    ],
+    ['+1234567890123456', undefined, 'guide (E.164: at most 15 digits)'],
+  ])('normalizePhone(%j) is %j: %s', (input, expected) => {
+    expect(normalizePhone(input)).toBe(expected);
   });
 
-  describe('hashName', () => {
-    test('normalizes and hashes given name', async () => {
-      const name = '  John  ';
-      const normalized = 'john';
-      const expected = await getHashServer(normalized);
+  it.each<Row>([
+    ['Mrs. Jane', 'jane', 'node-util 0.4.1'],
+    [' JOHN ', 'john', 'guide'],
+    ['Dr.Who', 'dr.who', 'node-util 0.4.1'],
+    [
+      'Miss. Ann',
+      'miss. ann',
+      "node-util 0.4.1 (the guide's 'such as' would drop it)",
+    ],
+    ['Mr.', undefined, 'node-util 0.4.1 (prefix only)'],
+  ])('normalizeGivenName(%j) is %j: %s', (input, expected) => {
+    expect(normalizeGivenName(input)).toBe(expected);
+  });
 
-      const result = await hashName(name, 'given');
-      expect(result).toBe(expected);
-    });
+  it.each<Row>([
+    ['Ivanov', 'ivanov', 'node-util 0.4.1'],
+    ['Petrov', 'petrov', 'node-util 0.4.1'],
+    ['Aviv', 'aviv', 'node-util 0.4.1'],
+    ['Smith V', 'smith', 'node-util 0.4.1'],
+    ['Smith Jr', 'smith', 'node-util 0.4.1'],
+    ['Smith, Jr.', 'smith', 'node-util 0.4.1'],
+    ['Smith PhD', 'smith', 'node-util 0.4.1'],
+    ['King Jr. III', 'king', 'node-util 0.4.1'],
+    ['Smith-Jones', 'smith-jones', 'guide (Ads online send-events)'],
+    ["O'Brien", "o'brien", 'node-util 0.4.1'],
+    ['Jr.', undefined, "ours (suffix only; node-util 0.4.1 returns 'jr.')"],
+  ])('normalizeFamilyName(%j) is %j: %s', (input, expected) => {
+    expect(normalizeFamilyName(input)).toBe(expected);
+  });
 
-    test('removes prefixes from given names', async () => {
-      const prefixes = ['Mr.', 'Mrs.', 'Ms.', 'Miss.', 'Dr.', 'Prof.'];
+  it.each<Row>([
+    [' de ', 'DE', 'guide (Ads online send-events)'],
+    ['DEU', undefined, 'guide (alpha-2)'],
+  ])('normalizeRegionCode(%j) is %j: %s', (input, expected) => {
+    expect(normalizeRegionCode(input)).toBe(expected);
+  });
 
-      for (const prefix of prefixes) {
-        const name = `${prefix} John`;
-        const normalized = 'john';
-        const expected = await getHashServer(normalized);
+  it.each<Row>([[' 10115 ', '10115', 'guide']])(
+    'normalizePostalCode(%j) is %j: %s',
+    (input, expected) => {
+      expect(normalizePostalCode(input)).toBe(expected);
+    },
+  );
 
-        const result = await hashName(name, 'given');
-        expect(result).toBe(expected);
-      }
-    });
-
-    test('removes suffixes from family names', async () => {
-      const suffixes = ['Jr.', 'Sr.', 'II', 'III', 'IV', 'V'];
-
-      for (const suffix of suffixes) {
-        const name = `Smith ${suffix}`;
-        const normalized = 'smith';
-        const expected = await getHashServer(normalized);
-
-        const result = await hashName(name, 'family');
-        expect(result).toBe(expected);
-      }
-    });
-
-    test('handles case insensitivity', async () => {
-      const names = ['JOHN', 'john', 'JoHn', 'jOhN'];
-
-      const results = await Promise.all(
-        names.map((name) => hashName(name, 'given')),
-      );
-
-      // All should produce the same hash
-      expect(new Set(results).size).toBe(1);
-    });
-
-    test('returns empty string for invalid input', async () => {
-      expect(await hashName('', 'given')).toBe('');
-      expect(await hashName(null as unknown as string, 'given')).toBe('');
-      expect(await hashName(undefined as unknown as string, 'given')).toBe('');
-    });
+  it.each([
+    [
+      'hashEmail of an address',
+      () => hashEmail('Prospect@Example.com'),
+      '395ec5f334be0ab5b28568a1e7f6ed5ea80e443fb1ce3d803340586a3df46642',
+    ],
+    ['hashEmail of a digest', () => hashEmail('A'.repeat(64)), 'a'.repeat(64)],
+    ['hashPhone of a digest', () => hashPhone('A'.repeat(64)), 'a'.repeat(64)],
+    ['hashPhone without a country code', () => hashPhone('(800) 555-0100'), ''],
+    ['hashName of a title only', () => hashName('Mr.'), ''],
+    ['hashName of a suffix only', () => hashName('Jr.', 'family'), ''],
+  ])('%s', async (_, hash, expected) => {
+    expect(await hash()).toBe(expected);
   });
 });

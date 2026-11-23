@@ -252,7 +252,7 @@ function isCallable(value: unknown): value is Callable {
  * boundary: each call on one is recorded and answered as `answer` says (the
  * original mock runs, rejects, never settles or settles one macrotask late).
  * After a function, a path continues on its result or constructed instance,
- * as `observeEnv` reads it.
+ * as `recordEnv` reads it.
  */
 export function answerEnv(
   env: Record<string, unknown>,

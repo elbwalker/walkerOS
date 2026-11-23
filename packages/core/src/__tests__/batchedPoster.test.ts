@@ -1,394 +1,581 @@
-import { createBatchedPoster } from '..';
-import type { FlowState, PosterFetch, PosterResponse } from '..';
+import { createBatchedPoster, KEEPALIVE_BODY_BYTES } from '..';
+import type {
+  Authorize,
+  BatchedPosterOptions,
+  PosterFetch,
+  PosterRequest,
+  PosterResponse,
+  PostResult,
+} from '..';
 
-const URL = 'https://observer.example.com/ingest/dep_42';
-const TOKEN = 'tok_secret_value';
+const url = 'https://ingest.example.com/usage';
+const token = 'usage-token-example';
 
-function makeState(eventId = 'span_abc'): FlowState {
-  return {
-    flowId: 'flow_x',
-    stepId: 'collector.push',
-    stepType: 'collector',
-    phase: 'in',
-    eventId,
-    timestamp: new Date(0).toISOString(),
-    elapsedMs: 0,
-  };
-}
-
-interface CapturedCall {
+interface Call {
   url: string;
-  init: { method: string; headers: Record<string, string>; body: string };
+  init: PosterRequest;
+  /** The body as text, whichever form it was sent in. */
+  body: string;
 }
 
-interface FetchHarness {
-  fetch: PosterFetch;
-  calls: CapturedCall[];
-  callCount: () => number;
-}
-
-function makeFetchHarness(
-  responder: () => Promise<PosterResponse> | PosterResponse,
-): FetchHarness {
-  const calls: CapturedCall[] = [];
-  const fetchImpl: PosterFetch = async (url, init) => {
-    calls.push({ url, init });
-    return responder();
-  };
+/** An answer with a status and the headers it carries. */
+function answer(
+  status: number,
+  headers: Record<string, string> = {},
+): PosterResponse {
   return {
-    fetch: fetchImpl,
-    calls,
-    callCount: () => calls.length,
+    ok: status >= 200 && status < 300,
+    status,
+    headers: { get: (name) => headers[name] ?? null },
   };
 }
 
-function ok(): PosterResponse {
-  return { ok: true, status: 200 };
+/** A fetch that records every request and answers with `respond`. */
+function recorder(
+  respond: (index: number) => Promise<PosterResponse> = async () => answer(200),
+) {
+  const calls: Call[] = [];
+  const fetch: PosterFetch = async (url, init) => {
+    // No TextDecoder under jsdom; Buffer reads the bytes as UTF-8.
+    const body =
+      typeof init.body === 'string'
+        ? init.body
+        : Buffer.from(init.body).toString('utf8');
+    calls.push({ url, init, body });
+    return respond(calls.length - 1);
+  };
+  return { calls, fetch };
 }
 
-function fail(status: number): PosterResponse {
-  return { ok: false, status };
-}
-
-interface IngestBody {
-  v: number;
-  records: FlowState[];
-}
-
-function readEnvelope(init: CapturedCall['init']): IngestBody {
-  return JSON.parse(init.body);
-}
-
-function readBody(init: CapturedCall['init']): FlowState[] {
-  return readEnvelope(init).records;
-}
-
-async function flushMicrotasks(times = 6): Promise<void> {
-  // Drain enough ticks for: Promise.resolve -> then(fetch) -> await fetch
-  // -> then(check)/catch(onError). 6 ticks is comfortably above a single
-  // POST chain; split flushes await chunks sequentially and need more.
-  for (let i = 0; i < times; i++) {
-    await Promise.resolve();
-  }
+function rowsOf(body: string): unknown[] {
+  return body.split('\n').map((line): unknown => JSON.parse(line));
 }
 
 describe('createBatchedPoster', () => {
-  beforeEach(() => {
-    jest.useFakeTimers();
-  });
-
   afterEach(() => {
     jest.useRealTimers();
   });
 
-  it('posts a single FlowState after batchMs elapses', async () => {
-    const harness = makeFetchHarness(async () => ok());
-    const emit = createBatchedPoster({
-      url: URL,
-      token: TOKEN,
-      fetch: harness.fetch,
+  it('sends rows as NDJSON with the token as a Bearer header', async () => {
+    const { calls, fetch } = recorder();
+    const poster = createBatchedPoster({ url, token, fetch });
+
+    const result = await poster.send([{ seq: 1 }, { seq: 2 }]);
+
+    expect(result).toEqual({ ok: true });
+    expect(calls).toHaveLength(1);
+    expect(calls[0].url).toBe(url);
+    expect(calls[0].init).toMatchObject({
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${token}`,
+        'Content-Type': 'application/x-ndjson',
+      },
+      credentials: 'omit',
+      referrerPolicy: 'no-referrer',
     });
-
-    emit(makeState('span_1'));
-    expect(harness.callCount()).toBe(0);
-
-    jest.advanceTimersByTime(50);
-    await flushMicrotasks();
-
-    expect(harness.callCount()).toBe(1);
-    expect(harness.calls[0].init.method).toBe('POST');
-    expect(readBody(harness.calls[0].init)).toEqual([
-      { ...makeState('span_1'), seq: 1 },
-    ]);
+    expect(rowsOf(calls[0].body)).toEqual([{ seq: 1 }, { seq: 2 }]);
   });
 
-  it('posts immediately when batch size hits the cap', async () => {
-    const harness = makeFetchHarness(async () => ok());
-    const emit = createBatchedPoster({
-      url: URL,
-      token: TOKEN,
-      batchSize: 3,
-      fetch: harness.fetch,
-    });
+  // The usage report reads the outcome of its own request; nothing it can
+  // meet makes the poster throw or reject.
+  it.each<[string, () => Promise<PosterResponse>, PostResult]>([
+    [
+      'fetch rejects',
+      async () => {
+        throw new TypeError('fetch failed');
+      },
+      { ok: false, message: 'fetch failed' },
+    ],
+    [
+      'a refusal with a ClickHouse code',
+      async () => answer(500, { 'X-ClickHouse-Exception-Code': '201' }),
+      { ok: false, status: 500, code: '201', message: 'responded 500' },
+    ],
+    [
+      'a refusal without one',
+      async () => answer(403),
+      { ok: false, status: 403, message: 'responded 403' },
+    ],
+    [
+      'fetch hangs past the timeout',
+      () => new Promise<PosterResponse>(() => {}),
+      { ok: false, message: 'no answer within 10000 ms' },
+    ],
+  ])('resolves %s as a failed result', async (_name, respond, expected) => {
+    jest.useFakeTimers();
+    const { fetch } = recorder(respond);
+    const poster = createBatchedPoster({ url, token, fetch });
 
-    emit(makeState('a'));
-    emit(makeState('b'));
-    expect(harness.callCount()).toBe(0);
-    emit(makeState('c'));
-    await flushMicrotasks();
+    const result = poster.send([{ seq: 1 }]);
+    await jest.advanceTimersByTimeAsync(10_000);
 
-    expect(harness.callCount()).toBe(1);
-    const body = readBody(harness.calls[0].init);
-    expect(body).toHaveLength(3);
-    expect(body[0].eventId).toBe('a');
-    expect(body[2].eventId).toBe('c');
+    await expect(result).resolves.toEqual(expected);
   });
 
-  it('drops batch on fetch error without throwing', async () => {
-    const harness = makeFetchHarness(async () => {
-      throw new Error('network down');
+  it('hands every result to onResult, and a throwing onResult changes nothing', async () => {
+    const results: PostResult[] = [];
+    const { fetch } = recorder();
+    const poster = createBatchedPoster({
+      url,
+      token,
+      fetch,
+      onResult: (result) => {
+        results.push(result);
+        throw new Error('listener broke');
+      },
     });
-    const errors: unknown[] = [];
-    const emit = createBatchedPoster({
-      url: URL,
-      token: TOKEN,
-      fetch: harness.fetch,
-      onError: (e) => errors.push(e),
-    });
 
-    expect(() => emit(makeState())).not.toThrow();
-
-    jest.advanceTimersByTime(50);
-    await flushMicrotasks();
-
-    expect(harness.callCount()).toBe(1);
-    expect(errors).toHaveLength(1);
-    const err = errors[0];
-    if (!(err instanceof Error)) throw new Error('Expected Error');
-    expect(err.message).toBe('network down');
+    await expect(poster.send([{ seq: 1 }])).resolves.toEqual({ ok: true });
+    expect(results).toEqual([{ ok: true }]);
   });
 
-  it('sets the Authorization Bearer header', async () => {
-    const harness = makeFetchHarness(async () => ok());
-    const emit = createBatchedPoster({
-      url: URL,
-      token: TOKEN,
-      fetch: harness.fetch,
+  // A page leave's post outlives the page, so its caller judges it apart.
+  it('tells onResult whether the post was a keepalive one', async () => {
+    const posts: boolean[] = [];
+    const { fetch } = recorder();
+    const poster = createBatchedPoster({
+      url,
+      token,
+      fetch,
+      onResult: (_result, { keepalive }) => posts.push(keepalive),
     });
 
-    emit(makeState());
-    jest.advanceTimersByTime(50);
-    await flushMicrotasks();
+    poster.push({ seq: 1 });
+    await poster.flush();
+    poster.push({ seq: 2 });
+    await poster.flush(true);
+    await poster.send([{ seq: 3 }]);
 
-    expect(harness.calls[0].init.headers.Authorization).toBe(`Bearer ${TOKEN}`);
+    expect(posts).toEqual([false, true, false]);
   });
 
-  it('sends Content-Type application/json and a versioned envelope body', async () => {
-    const harness = makeFetchHarness(async () => ok());
-    const emit = createBatchedPoster({
-      url: URL,
-      token: TOKEN,
-      fetch: harness.fetch,
+  it.each<[string, () => unknown]>([
+    ['a BigInt', () => ({ value: BigInt(1) })],
+    [
+      'a cycle',
+      () => {
+        const row: Record<string, unknown> = {};
+        row.self = row;
+        return row;
+      },
+    ],
+  ])(
+    'drops a row with %s, counts it and sends the rest',
+    async (_name, bad) => {
+      const { calls, fetch } = recorder();
+      const poster = createBatchedPoster<unknown>({ url, token, fetch });
+
+      expect(() => poster.push({ seq: 1 })).not.toThrow();
+      expect(() => poster.push(bad())).not.toThrow();
+      poster.push({ seq: 3 });
+      await expect(poster.flush()).resolves.toBeUndefined();
+
+      expect(rowsOf(calls[0].body)).toEqual([{ seq: 1 }, { seq: 3 }]);
+      expect(poster.dropped()).toBe(1);
+    },
+  );
+
+  it('splits a body at 60,000 bytes, rows in order', async () => {
+    const { calls, fetch } = recorder();
+    const poster = createBatchedPoster({ url, token, fetch });
+    const rows = [1, 2, 3].map((seq) => ({ seq, pad: 'x'.repeat(25_000) }));
+
+    await poster.send(rows);
+
+    expect(calls.map(({ body }) => rowsOf(body).length)).toEqual([2, 1]);
+    expect(calls.flatMap(({ body }) => rowsOf(body))).toEqual(rows);
+    for (const { body } of calls)
+      expect(Buffer.byteLength(body)).toBeLessThanOrEqual(60_000);
+  });
+
+  it('keeps at most 500 waiting rows, dropping the oldest and counting them', async () => {
+    const { calls, fetch } = recorder();
+    const poster = createBatchedPoster({
+      url,
+      token,
+      fetch,
+      batchSize: 1000,
+      batchMs: 60_000,
     });
 
-    emit(makeState('one'));
-    emit(makeState('two'));
-    jest.advanceTimersByTime(50);
-    await flushMicrotasks();
+    for (let seq = 1; seq <= 502; seq++) poster.push({ seq });
+    await poster.flush();
 
-    const headers = harness.calls[0].init.headers;
-    expect(headers['Content-Type']).toBe('application/json');
-    const envelope = readEnvelope(harness.calls[0].init);
-    expect(envelope.v).toBe(1);
-    expect(Array.isArray(envelope.records)).toBe(true);
-    expect(envelope.records).toHaveLength(2);
+    const sent = calls.flatMap(({ body }) => rowsOf(body));
+    expect(sent).toHaveLength(500);
+    expect(sent[0]).toEqual({ seq: 3 });
+    expect(poster.dropped()).toBe(2);
   });
 
-  it('reports non-2xx responses via onError without throwing', async () => {
-    const harness = makeFetchHarness(async () => fail(500));
-    const errors: unknown[] = [];
-    const emit = createBatchedPoster({
-      url: URL,
-      token: TOKEN,
-      fetch: harness.fetch,
-      onError: (e) => errors.push(e),
+  it('flushes a batch after batchMs, and at batchSize at once', async () => {
+    jest.useFakeTimers();
+    const { calls, fetch } = recorder();
+    const poster = createBatchedPoster({ url, token, fetch, batchSize: 3 });
+
+    poster.push({ seq: 1 });
+    await jest.advanceTimersByTimeAsync(49);
+    expect(calls).toHaveLength(0);
+    await jest.advanceTimersByTimeAsync(1);
+    expect(calls).toHaveLength(1);
+
+    for (let seq = 2; seq <= 4; seq++) poster.push({ seq });
+    await jest.advanceTimersByTimeAsync(0);
+    expect(calls).toHaveLength(2);
+    expect(rowsOf(calls[1].body)).toHaveLength(3);
+  });
+
+  it('sends a page-leave flush with keepalive, never credentials or a referrer', async () => {
+    const { calls, fetch } = recorder();
+    const poster = createBatchedPoster({ url, token, fetch });
+
+    poster.push({ seq: 1 });
+    await poster.flush(true);
+
+    expect(calls[0].init).toMatchObject({
+      keepalive: true,
+      credentials: 'omit',
+      referrerPolicy: 'no-referrer',
+    });
+  });
+
+  // Six rows of 40 bytes at a 100-byte body make three bodies of two rows.
+  const sixRows = () =>
+    [1, 2, 3, 4, 5, 6].map((seq) => ({ seq, pad: 'x'.repeat(26) }));
+
+  it.each<[string, () => Promise<void>]>([
+    [
+      'one flush in flight, then one waiting turn for every row pushed meanwhile',
+      async () => {
+        const answers: Array<(response: PosterResponse) => void> = [];
+        const { calls, fetch } = recorder(
+          () => new Promise<PosterResponse>((resolve) => answers.push(resolve)),
+        );
+        const poster = createBatchedPoster({ url, token, fetch, batchSize: 1 });
+
+        poster.push({ seq: 1 });
+        poster.push({ seq: 2 });
+        poster.push({ seq: 3 });
+        void poster.flush();
+        await jest.advanceTimersByTimeAsync(0);
+        expect(calls).toHaveLength(1);
+
+        answers[0](answer(200));
+        await jest.advanceTimersByTimeAsync(0);
+        expect(calls).toHaveLength(2);
+        expect(rowsOf(calls[1].body)).toEqual([{ seq: 2 }, { seq: 3 }]);
+      },
+    ],
+    [
+      'a hang on the push and flush path, ended by the timeout aborting the request',
+      async () => {
+        const { calls, fetch } = recorder(
+          () => new Promise<PosterResponse>(() => {}),
+        );
+        const results: PostResult[] = [];
+        const poster = createBatchedPoster({
+          url,
+          token,
+          fetch,
+          onResult: (result) => results.push(result),
+        });
+
+        poster.push({ seq: 1 });
+        const flushed = poster.flush();
+        await jest.advanceTimersByTimeAsync(10_000);
+
+        await expect(flushed).resolves.toBeUndefined();
+        expect(calls[0].init.signal?.aborted).toBe(true);
+        expect(results).toEqual([
+          { ok: false, message: 'no answer within 10000 ms' },
+        ]);
+      },
+    ],
+    [
+      'a single row above maxBodyBytes, sent alone',
+      async () => {
+        const { calls, fetch } = recorder();
+        const poster = createBatchedPoster({
+          url,
+          token,
+          fetch,
+          maxBodyBytes: 100,
+        });
+
+        await poster.send([
+          { seq: 1 },
+          { seq: 2, pad: 'x'.repeat(200) },
+          { seq: 3 },
+        ]);
+
+        expect(calls.map(({ body }) => rowsOf(body).length)).toEqual([1, 1, 1]);
+        expect(rowsOf(calls[1].body)).toEqual([
+          { seq: 2, pad: 'x'.repeat(200) },
+        ]);
+      },
+    ],
+  ])('handles %s', async (_name, scenario) => {
+    jest.useFakeTimers();
+    await scenario();
+  });
+
+  // The rest would meet the same answer, so their rows are counted as lost
+  // instead of each waiting its own timeout; a body too large is per body.
+  it.each<[string, () => Promise<PosterResponse>, number, number]>([
+    ['no answer', () => new Promise<PosterResponse>(() => {}), 1, 4],
+    ['a 429', async () => answer(429), 1, 4],
+    ['a 503', async () => answer(503), 1, 4],
+    ['a 413', async () => answer(413), 3, 0],
+  ])(
+    'after %s posts %i bodies and drops %i rows',
+    async (_name, respond, bodies, dropped) => {
+      jest.useFakeTimers();
+      const { calls, fetch } = recorder(respond);
+      const poster = createBatchedPoster({
+        url,
+        token,
+        fetch,
+        maxBodyBytes: 100,
+      });
+
+      const result = poster.send(sixRows());
+      await jest.advanceTimersByTimeAsync(10_000);
+
+      await expect(result).resolves.toMatchObject({ ok: false });
+      expect(calls).toHaveLength(bodies);
+      expect(poster.dropped()).toBe(dropped);
+    },
+  );
+
+  it('takes a timeout per send', async () => {
+    jest.useFakeTimers();
+    const { fetch } = recorder(() => new Promise<PosterResponse>(() => {}));
+    const poster = createBatchedPoster({ url, token, fetch });
+
+    const result = poster.send([{ seq: 1 }], { timeoutMs: 3_000 });
+    await jest.advanceTimersByTimeAsync(3_000);
+
+    await expect(result).resolves.toEqual({
+      ok: false,
+      message: 'no answer within 3000 ms',
+    });
+  });
+
+  it('answers a send with no row left to post as failed', async () => {
+    const { calls, fetch } = recorder();
+    const poster = createBatchedPoster<unknown>({ url, token, fetch });
+
+    await expect(poster.send([{ value: BigInt(1) }])).resolves.toEqual({
+      ok: false,
+      message: 'no row could be serialized',
+    });
+    expect(calls).toEqual([]);
+  });
+
+  // Browsers keep about 64 KiB of keepalive bodies in flight, and the page is
+  // gone before a first answer: one body leaves, so the older rows are
+  // counted as lost.
+  it('sends only the newest rows that fit one body on a page leave', async () => {
+    const { calls, fetch } = recorder();
+    const poster = createBatchedPoster({
+      url,
+      token,
+      fetch,
+      maxBodyBytes: 100,
+      batchSize: 1000,
     });
 
-    emit(makeState());
-    jest.advanceTimersByTime(50);
-    await flushMicrotasks();
+    for (const row of sixRows()) poster.push(row);
+    await poster.flush(true);
 
-    expect(errors).toHaveLength(1);
-    const err = errors[0];
-    if (!(err instanceof Error)) throw new Error('Expected Error');
-    expect(err.message).toBe('Observer responded 500');
+    expect(calls).toHaveLength(1);
+    expect(rowsOf(calls[0].body).map((row) => row)).toEqual(sixRows().slice(4));
+    expect(poster.dropped()).toBe(4);
   });
 
-  it('wraps the batch in a versioned envelope {v:1, records}', async () => {
-    const harness = makeFetchHarness(async () => ({
-      ok: true,
-      status: 202,
+  // A page shares 64 KiB of keepalive bodies with every destination.
+  it('keeps a page leave body within 16,384 bytes, whatever maxBodyBytes says', async () => {
+    const { calls, fetch } = recorder();
+    const poster = createBatchedPoster({ url, token, fetch, batchSize: 1000 });
+    const rows = Array.from({ length: 60 }, (_, seq) => ({
+      seq,
+      pad: 'x'.repeat(980),
     }));
-    const emit = createBatchedPoster({
-      url: URL,
-      token: TOKEN,
-      batchMs: 1,
-      fetch: harness.fetch,
-    });
+    for (const row of rows) poster.push(row);
 
-    emit(makeState('span_env'));
-    jest.advanceTimersByTime(1);
-    await flushMicrotasks();
+    await poster.flush(true);
 
-    const envelope = readEnvelope(harness.calls[0].init);
-    expect(envelope.v).toBe(1);
-    expect(Array.isArray(envelope.records)).toBe(true);
-    expect(envelope.records[0]).toEqual({ ...makeState('span_env'), seq: 1 });
-    // The envelope is the entire body: exactly the two wire fields.
-    expect(Object.keys(envelope).sort()).toEqual(['records', 'v']);
+    expect(KEEPALIVE_BODY_BYTES).toBe(16_384);
+    expect(calls).toHaveLength(1);
+    expect(calls[0].init.keepalive).toBe(true);
+    // ASCII rows: each character is one byte.
+    expect(calls[0].body.length).toBeLessThanOrEqual(16_384);
+    const sent = rowsOf(calls[0].body);
+    expect(sent.length).toBeGreaterThan(0);
+    expect(sent[sent.length - 1]).toEqual(rows[59]);
+    expect(poster.dropped()).toBe(60 - sent.length);
   });
 
-  it('merges opts.headers into every request with fixed headers winning', async () => {
-    const harness = makeFetchHarness(async () => ok());
-    const emit = createBatchedPoster({
-      url: URL,
-      token: TOKEN,
-      headers: {
-        'X-Walkeros-Binding': 'pb_x',
-        'Content-Type': 'text/plain',
-        Authorization: 'Bearer forged',
-      },
-      fetch: harness.fetch,
-    });
+  // A row that alone exceeds the cap never fits: skipped and counted, while
+  // the older rows still go.
+  it('skips a newest row above the page-leave cap and keeps the older rows', async () => {
+    const { calls, fetch } = recorder();
+    const poster = createBatchedPoster({ url, token, fetch, batchSize: 1000 });
+    const small = Array.from({ length: 10 }, (_, seq) => ({ seq }));
+    for (const row of small) poster.push(row);
+    poster.push({ seq: 10, pad: 'x'.repeat(20_000) });
 
-    emit(makeState('h1'));
-    jest.advanceTimersByTime(50);
-    await flushMicrotasks();
+    await poster.flush(true);
 
-    emit(makeState('h2'));
-    jest.advanceTimersByTime(50);
-    await flushMicrotasks();
-
-    expect(harness.callCount()).toBe(2);
-    for (const call of harness.calls) {
-      // Custom header rides along on every request.
-      expect(call.init.headers['X-Walkeros-Binding']).toBe('pb_x');
-      // Fixed headers win on collision.
-      expect(call.init.headers['Content-Type']).toBe('application/json');
-      expect(call.init.headers.Authorization).toBe(`Bearer ${TOKEN}`);
-    }
+    expect(calls).toHaveLength(1);
+    expect(rowsOf(calls[0].body)).toEqual(small);
+    expect(poster.dropped()).toBe(1);
   });
 
-  it('drops reserved caller headers case-insensitively (no shadow duplicates)', async () => {
-    const harness = makeFetchHarness(async () => ok());
-    const emit = createBatchedPoster({
-      url: URL,
-      token: TOKEN,
-      headers: {
-        'X-Walkeros-Binding': 'pb_x',
-        'content-type': 'text/plain',
-        authorization: 'Bearer forged',
-        AUTHORIZATION: 'Bearer forged-2',
-      },
-      fetch: harness.fetch,
+  it('names a page leave whose every row is above the cap', async () => {
+    const results: PostResult[] = [];
+    const { calls, fetch } = recorder();
+    const poster = createBatchedPoster({
+      url,
+      token,
+      fetch,
+      onResult: (result) => results.push(result),
     });
+    poster.push({ seq: 1, pad: 'x'.repeat(20_000) });
 
-    emit(makeState('h3'));
-    jest.advanceTimersByTime(50);
-    await flushMicrotasks();
+    await poster.flush(true);
 
-    expect(harness.callCount()).toBe(1);
-    const headers = harness.calls[0].init.headers;
-    // The fixed values are the ONLY casings present: a surviving lowercase
-    // duplicate would be merged by fetch's Headers normalization into one
-    // invalid combined value on the wire.
-    expect(headers['Content-Type']).toBe('application/json');
-    expect(headers.Authorization).toBe(`Bearer ${TOKEN}`);
-    expect(headers['X-Walkeros-Binding']).toBe('pb_x');
-    const reserved = Object.keys(headers).filter((name) =>
-      ['authorization', 'content-type'].includes(name.toLowerCase()),
-    );
-    expect(reserved.sort()).toEqual(['Authorization', 'Content-Type']);
-  });
-
-  it('fires onStatus with the response status whenever a response exists', async () => {
-    const log: string[] = [];
-    // First response 401, second 200.
-    let call = 0;
-    const harness = makeFetchHarness(async () =>
-      call++ === 0 ? fail(401) : ok(),
-    );
-    const emit = createBatchedPoster({
-      url: URL,
-      token: TOKEN,
-      fetch: harness.fetch,
-      onStatus: (s) => log.push(`status:${s}`),
-      onError: () => log.push('error'),
-    });
-
-    emit(makeState('s1'));
-    jest.advanceTimersByTime(50);
-    await flushMicrotasks();
-
-    // onStatus fires before the non-2xx onError path.
-    expect(log).toEqual(['status:401', 'error']);
-
-    emit(makeState('s2'));
-    jest.advanceTimersByTime(50);
-    await flushMicrotasks();
-
-    // Success responses fire onStatus too, with no error.
-    expect(log).toEqual(['status:401', 'error', 'status:200']);
-  });
-
-  it('does not fire onStatus when the fetch rejects (no response exists)', async () => {
-    const statuses: number[] = [];
-    const errors: unknown[] = [];
-    const harness = makeFetchHarness(async () => {
-      throw new Error('network down');
-    });
-    const emit = createBatchedPoster({
-      url: URL,
-      token: TOKEN,
-      fetch: harness.fetch,
-      onStatus: (s) => statuses.push(s),
-      onError: (e) => errors.push(e),
-    });
-
-    emit(makeState());
-    jest.advanceTimersByTime(50);
-    await flushMicrotasks();
-
-    expect(statuses).toEqual([]);
-    expect(errors).toHaveLength(1);
-  });
-
-  it('splits oversized batches into complete envelopes within maxBodyBytes', async () => {
-    const harness = makeFetchHarness(async () => ok());
-    // One stamped record serializes to ~160 bytes. 8 records exceed 400
-    // bytes even before wrapping, forcing a recursive split; the limit is
-    // enforced on the WRAPPED body.
-    const maxBodyBytes = 400;
-    const emit = createBatchedPoster({
-      url: URL,
-      token: TOKEN,
-      batchSize: 8,
-      maxBodyBytes,
-      fetch: harness.fetch,
-    });
-
-    for (let i = 0; i < 8; i++) {
-      emit(makeState(`e${i}`));
-    }
-    await flushMicrotasks(40);
-
-    expect(harness.callCount()).toBeGreaterThan(1);
-
-    for (const call of harness.calls) {
-      // Each split chunk is its own complete versioned envelope.
-      const envelope = readEnvelope(call.init);
-      expect(envelope.v).toBe(1);
-      expect(Array.isArray(envelope.records)).toBe(true);
-      expect(envelope.records.length).toBeGreaterThan(0);
-      // Multi-record chunks respect the limit measured on the full wire
-      // body including the wrapper (ASCII content: length equals bytes).
-      if (envelope.records.length > 1) {
-        expect(call.init.body.length).toBeLessThanOrEqual(maxBodyBytes);
-      }
-    }
-
-    // Concatenation in call order preserves arrival order and seq.
-    const flat = harness.calls.flatMap((c) => readBody(c.init));
-    expect(flat.map((r) => r.eventId)).toEqual([
-      'e0',
-      'e1',
-      'e2',
-      'e3',
-      'e4',
-      'e5',
-      'e6',
-      'e7',
+    expect(calls).toEqual([]);
+    expect(results).toEqual([
+      { ok: false, message: 'no row fits a page-leave body of 16384 bytes' },
     ]);
-    expect(flat.map((r) => r.seq)).toEqual([1, 2, 3, 4, 5, 6, 7, 8]);
+    expect(poster.dropped()).toBe(1);
+  });
+
+  // A signature covers the exact bytes and one nonce, so each request asks
+  // for its own headers and sends what was signed.
+  it('signs each request with its own authorize call and sends the bytes it signed', async () => {
+    const seen: Array<{ method: string; url: string; body?: Uint8Array }> = [];
+    const authorize: Authorize = async (request) => {
+      seen.push(request);
+      return { Signature: `sig${seen.length}`, 'Signature-Input': 'sig1=()' };
+    };
+    const { calls, fetch } = recorder();
+    const poster = createBatchedPoster({
+      url,
+      authorize,
+      fetch,
+      headers: { signature: 'caller', 'X-Extra': '1' },
+    });
+
+    // Two- and three-byte characters and a surrogate pair: UTF-8 bytes.
+    const text = 'Grüße 漢 😀';
+    await poster.send([{ seq: 1, text }]);
+    await poster.send([{ seq: 2 }]);
+
+    expect(seen.map(({ method, url }) => [method, url])).toEqual([
+      ['POST', url],
+      ['POST', url],
+    ]);
+    expect(calls.map(({ init }) => init.headers)).toEqual([
+      {
+        'X-Extra': '1',
+        Signature: 'sig1',
+        'Signature-Input': 'sig1=()',
+        'Content-Type': 'application/x-ndjson',
+      },
+      {
+        'X-Extra': '1',
+        Signature: 'sig2',
+        'Signature-Input': 'sig1=()',
+        'Content-Type': 'application/x-ndjson',
+      },
+    ]);
+    expect(calls.map(({ init }) => init.body)).toEqual(
+      seen.map(({ body }) => body),
+    );
+    expect(seen[0].body).toEqual(
+      new Uint8Array(Buffer.from(JSON.stringify({ seq: 1, text }), 'utf8')),
+    );
+    expect(calls.map(({ body }) => rowsOf(body))).toEqual([
+      [{ seq: 1, text }],
+      [{ seq: 2 }],
+    ]);
+  });
+
+  it.each<[string, Omit<BatchedPosterOptions, 'url'>]>([
+    ['both token and authorize', { token, authorize: async () => ({}) }],
+    ['neither token nor authorize', {}],
+  ])('refuses %s at creation', (_name, options) => {
+    expect(() => createBatchedPoster({ url, ...options })).toThrow(
+      'createBatchedPoster takes exactly one of token and authorize',
+    );
+  });
+
+  // A door's 503 asks for a retry after a delay; its 403 may come from a
+  // clock that is off, which its Date shows.
+  it.each<[string, PosterResponse, PostResult]>([
+    [
+      'a 503 with Retry-After: 5',
+      answer(503, { 'Retry-After': '5' }),
+      { ok: false, status: 503, message: 'responded 503', retryAfter: 5 },
+    ],
+    [
+      'a 503 with Retry-After: 900, capped at 60',
+      answer(503, { 'Retry-After': '900' }),
+      { ok: false, status: 503, message: 'responded 503', retryAfter: 60 },
+    ],
+    [
+      'a 503 with an HTTP-date Retry-After',
+      answer(503, { 'Retry-After': 'Wed, 18 Nov 2026 12:01:00 GMT' }),
+      { ok: false, status: 503, message: 'responded 503' },
+    ],
+    [
+      'a 503 without Retry-After',
+      answer(503),
+      { ok: false, status: 503, message: 'responded 503' },
+    ],
+    [
+      'a 403 whose Date is 30 seconds ahead',
+      answer(403, { Date: 'Wed, 18 Nov 2026 12:00:30 GMT' }),
+      { ok: false, status: 403, message: 'responded 403', clockOffset: 30 },
+    ],
+    [
+      'a 403 without Date',
+      answer(403),
+      { ok: false, status: 403, message: 'responded 403' },
+    ],
+  ])('resolves %s', async (_name, response, expected) => {
+    jest.useFakeTimers({ now: Date.parse('2026-11-18T12:00:00Z') });
+    const { fetch } = recorder(async () => response);
+    const poster = createBatchedPoster({
+      url,
+      authorize: async () => ({}),
+      fetch,
+    });
+
+    await expect(poster.send([{ seq: 1 }])).resolves.toEqual(expected);
+  });
+
+  it('lets no caller header replace the token or the content type', async () => {
+    const { calls, fetch } = recorder();
+    const poster = createBatchedPoster({
+      url,
+      token,
+      fetch,
+      headers: {
+        authorization: 'Bearer other',
+        'CONTENT-TYPE': 'text/plain',
+        'X-Extra': '1',
+      },
+    });
+
+    await poster.send([{ seq: 1 }]);
+
+    expect(calls[0].init.headers).toEqual({
+      'X-Extra': '1',
+      Authorization: `Bearer ${token}`,
+      'Content-Type': 'application/x-ndjson',
+    });
   });
 });

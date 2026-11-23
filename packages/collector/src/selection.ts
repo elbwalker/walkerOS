@@ -214,7 +214,10 @@ export function reportRuleNotApplied(
   reportCause(
     pass.collector,
     pass.collector.logger,
-    { step: stepId('destination', pass.id), code: 'rule-not-applied' },
+    {
+      step: stepId('destination', pass.destination.config.id || pass.id),
+      code: 'rule-not-applied',
+    },
     `before chain renamed an event to "${to}": rule "${toKey}" and its consent do not apply; a destination selects its rule as the event enters it ("${selectedKey || 'no rule'}" applied)`,
     {
       type: pass.destination.type,

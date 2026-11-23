@@ -1,20 +1,11 @@
 import type { Simulation } from '@walkeros/core';
-import { observeEnv } from '@walkeros/core';
+import { recordEnv } from '@walkeros/core';
 
 interface WrapResult {
   /** Env view whose tracked paths record each call */
   wrappedEnv: Record<string, unknown>;
   /** Mutable array — calls are pushed here during step execution */
   calls: Simulation.Call[];
-  /**
-   * Well-formed declared paths whose object intermediates or leaf are absent
-   * at wrap time, as the post-`call:` dot-path (what the recorder records as
-   * `fn`). This list feeds `EnvObserve.paths` directly, so malformed paths
-   * (`parseCallPath` returned `[]`) are skipped entirely. A path that
-   * continues through a function (constructor, factory, method result)
-   * resolves at call time and is not listed.
-   */
-  unresolved: string[];
 }
 
 /**
@@ -70,8 +61,8 @@ function deepClone(
  * The env object must include a `simulation: string[]` declaring which
  * dot-paths to intercept. Returns a view of a cloned env (without
  * `simulation`) where those paths record every call into the `calls` array.
- * Recording is the shared core recorder `observeEnv`, so constructors,
- * method results and Promises on a path work the same as in web-core `getEnv`.
+ * Recording is the shared core recorder `recordEnv`, so constructors,
+ * method results and Promises on a path are followed.
  */
 export function wrapEnv(
   env: Record<string, unknown> & { simulation: string[] },
@@ -84,10 +75,6 @@ export function wrapEnv(
       typeof value === 'function' ? value : deepClone(value, memo, 1);
   }
 
-  const observed = observeEnv(cloned, simulation);
-  return {
-    wrappedEnv: observed.env,
-    calls: observed.calls,
-    unresolved: observed.unresolved,
-  };
+  const recorded = recordEnv(cloned, simulation);
+  return { wrappedEnv: recorded.env, calls: recorded.calls };
 }

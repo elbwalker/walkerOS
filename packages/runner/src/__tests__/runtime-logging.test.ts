@@ -77,7 +77,7 @@ describe('createRuntimeLogging', () => {
     const taps: Array<[Level, string, LogEntry]> = [];
     const { collectorConfig } = createRuntimeLogging({
       silent: true,
-      onLine: (level, message, entry) => taps.push([level, message, entry]),
+      onLine: (level, line) => taps.push([level, line.masked(), line.entry()]),
     });
     collectorConfig.handler?.(
       Level.ERROR,

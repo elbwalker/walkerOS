@@ -649,6 +649,135 @@ describe('stage 2 entry path normalization (issue #636)', () => {
 });
 
 /**
+ * The runner contract's signer: a host with a deployment credential passes
+ * `context.authorize`, and the generated entry hands it to the usage part
+ * without a token and to every destination env without one of its own,
+ * through the context only. A stand-in stage 1 records the config startFlow
+ * receives.
+ */
+describe('server entries hand the host signer to the steps', () => {
+  type Generator = (stage1: string, data: Record<string, unknown>) => string;
+  type Check = (config: Record<string, unknown>) => void;
+  const signer = async () => ({ Signature: 'host' });
+  const flow = (usage: Record<string, unknown>) => ({
+    observe: { usage: { url: 'https://ingest.example.com/usage', ...usage } },
+    destinations: { plain: { config: {} }, withEnv: { env: { region: 'eu' } } },
+  });
+  // A flow file holds no function: the stand-in stage 1 puts a signer of
+  // its own where a destination env names `own`.
+  const ownSigner = {
+    ...flow({ token: 'usage-token-example' }),
+    destinations: { ownSigner: { env: { authorize: 'own' } } },
+  };
+  const cases: Array<
+    [string, Record<string, unknown>, Record<string, unknown>, Check]
+  > = [
+    [
+      'hands the signer to a usage part without a token and to every destination env',
+      flow({}),
+      { authorize: signer },
+      (config) => {
+        expect(config).toMatchObject({
+          observe: { usage: { authorize: signer } },
+          destinations: {
+            plain: { env: { authorize: signer } },
+            withEnv: { env: { region: 'eu', authorize: signer } },
+          },
+        });
+      },
+    ],
+    [
+      'leaves a usage token and a destination signer as the flow named them',
+      ownSigner,
+      { authorize: signer },
+      (config) => {
+        expect(config).toMatchObject({
+          observe: { usage: { token: 'usage-token-example' } },
+          destinations: {
+            ownSigner: { env: { authorize: expect.any(Function) } },
+          },
+        });
+        expect(config).not.toHaveProperty('observe.usage.authorize');
+        expect(config).not.toHaveProperty(
+          'destinations.ownSigner.env.authorize',
+          signer,
+        );
+      },
+    ],
+    [
+      'changes nothing without a signer in the context',
+      flow({}),
+      {},
+      (config) => {
+        expect(config).toEqual(flow({}));
+      },
+    ],
+  ];
+  const generators: Array<[string, Generator]> = [
+    [
+      'generateServerEntry',
+      (stage1, data) => generateServerEntry(stage1, JSON.stringify(data)),
+    ],
+    ['generateWrapEntryServer', (stage1) => generateWrapEntryServer(stage1)],
+  ];
+  const rows: Array<
+    [string, Generator, Record<string, unknown>, Record<string, unknown>, Check]
+  > = [];
+  for (const [name, generate] of generators)
+    for (const [behaviour, data, context, check] of cases)
+      rows.push([`${name} ${behaviour}`, generate, data, context, check]);
+
+  it.each(rows)('%s', async (_name, generate, data, context, check) => {
+    const dir = await fs.mkdtemp(path.join(os.tmpdir(), 'host-signer-'));
+    try {
+      const stage1 = path.join(dir, 'stage1.mjs');
+      await fs.writeFile(
+        stage1,
+        `export const seen = [];
+export const __configData = ${JSON.stringify(data)};
+export const __walkerosEnv = undefined;
+export function wireConfig(data) {
+  const config = JSON.parse(JSON.stringify(data));
+  for (const entry of Object.values(config.destinations || {}))
+    if (entry.env && entry.env.authorize === 'own')
+      entry.env.authorize = async () => ({ Signature: 'own' });
+  return config;
+}
+export async function startFlow(config) {
+  seen.push(config);
+  return { collector: { sources: {} } };
+}
+`,
+      );
+      const entry = path.join(dir, 'entry.mjs');
+      await fs.writeFile(entry, generate(stage1, data));
+
+      const stage: unknown = await import(stage1);
+      const module: unknown = await import(entry);
+      if (
+        typeof module !== 'object' ||
+        module === null ||
+        !('default' in module) ||
+        typeof module.default !== 'function' ||
+        typeof stage !== 'object' ||
+        stage === null ||
+        !('seen' in stage) ||
+        !Array.isArray(stage.seen)
+      )
+        throw new Error('the entry has no default factory');
+      await module.default(context);
+
+      const [config] = stage.seen;
+      if (typeof config !== 'object' || config === null)
+        throw new Error('startFlow received no config');
+      check(Object.fromEntries(Object.entries(config)));
+    } finally {
+      await fs.remove(dir);
+    }
+  });
+});
+
+/**
  * Phase 2 nft wiring: when the resolved platform is `node` (server flows),
  * bundleCore must run the new nft path after esbuild instead of the legacy
  * `installExternalsViaPacote` + `writeBundleLockfile` pipeline. The legacy
@@ -1025,7 +1154,7 @@ describe('bundleCore server nft wiring (Phase 2)', () => {
     const lines: string[] = [];
     const lineLogger = createCLILogger({
       silent: true,
-      onLine: (_level, message) => lines.push(message),
+      onLine: (_level, line) => lines.push(line.masked()),
     });
     try {
       const flowSettings: Flow = { config: { platform: 'server' } };

@@ -35,6 +35,7 @@ const RETRYABLE_CODES = [
   'queue-full',
   'vendor-not-ready',
   'vendor-timeout',
+  'shutting-down',
 ];
 
 /** Longest message a reason or a log line carries. */

@@ -1,7 +1,7 @@
 import { fetchContentString, loadJsonConfig } from '../../../config/utils.js';
 
 const APP_URL = 'https://app.example.test';
-const TOKEN = 'tok_secret';
+const CREDENTIAL = 'wos_cred_secret';
 
 interface RecordedCall {
   url: string;
@@ -40,7 +40,7 @@ describe('fetchContentString sends no credential', () => {
     process.env.WALKEROS_APP_URL = APP_URL;
     // Set in every case below, so the absence of a header is attributable to
     // the URL and never to there being no credential to send.
-    process.env.WALKEROS_TOKEN = TOKEN;
+    process.env.WALKEROS_CREDENTIAL = CREDENTIAL;
   });
 
   afterEach(() => {
@@ -116,7 +116,7 @@ describe('fetchContentString failures', () => {
 
   beforeEach(() => {
     process.env = { ...originalEnv };
-    delete process.env.WALKEROS_TOKEN;
+    delete process.env.WALKEROS_CREDENTIAL;
   });
 
   afterEach(() => {

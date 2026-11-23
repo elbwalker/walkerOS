@@ -31,6 +31,37 @@ export interface CauseLog {
   flush(): void;
   /** Number of keys held. */
   size(): number;
+  /**
+   * Every held key with its reports since the cause log was created, and the
+   * reports of keys beyond the cap. A copy: changing it changes nothing.
+   */
+  snapshot(): CauseSnapshot;
+  /**
+   * Called once per new held key, inside a try. `report` runs synchronously on
+   * the push and delivery paths, so a listener only schedules work (a flag or a
+   * timer) and never does it.
+   */
+  setListener(listener: (key: CauseKey) => void): void;
+}
+
+/** One held cause: every report of its key, not reset by the window. */
+export interface CauseSnapshotEntry {
+  key: CauseKey;
+  /** Reports of the key, the first included. */
+  count: number;
+  firstAt: number;
+  lastAt: number;
+  /** The last report's message, with its error text when it carried one. */
+  message: string;
+  level: 'error' | 'warn';
+  /** The last report's retry class, when it named one. */
+  retryable?: boolean;
+}
+
+export interface CauseSnapshot {
+  keys: CauseSnapshotEntry[];
+  /** Reports of keys beyond the cap: logged on every occurrence, never held. */
+  overflow: number;
 }
 
 export interface CauseLogOptions {
@@ -40,11 +71,27 @@ export interface CauseLogOptions {
 }
 
 interface CauseEntry {
+  /** Start of the current window, and its suppressed repeats. */
   start: number;
   suppressed: number;
+  /** The window's line, printed again by `flush` with its suppressed count. */
   message: string;
   context: Record<string, unknown>;
   level: 'error' | 'warn';
+}
+
+/** Every report of a held key, for the snapshot; not reset by the window. */
+interface TrackedCause {
+  key: CauseKey;
+  count: number;
+  firstAt: number;
+  lastAt: number;
+  /** The last report, whatever the window did with it. */
+  last: {
+    message: string;
+    context: Record<string, unknown>;
+    level: 'error' | 'warn';
+  };
 }
 
 /**
@@ -73,6 +120,8 @@ function counterOf({ step, code }: CauseKey): string | undefined {
   // A `before` rename onto another rule fails nothing: the event is delivered
   // under the rule it entered with.
   if (code === 'rule-not-applied') return undefined;
+  // The Observe reporter's own failures hold no event and move no counter.
+  if (kind === 'observe') return undefined;
   // A failed store read or a dropped mapping value degrades an event that is
   // still delivered: nothing counts it.
   if (kind === 'store' || kind === 'mapping') return undefined;
@@ -146,6 +195,12 @@ export function createCauseLog(
 ): CauseLog {
   const { windowMs = 60_000, maxKeys = 100, now = Date.now } = options;
   const entries = new Map<string, CauseEntry>();
+  // The snapshot and the listener serve only the Observe reporter. Build flag
+  // (see types/build-flags): a bundle without the reporter folds every guard
+  // below out, and with them the tracking.
+  const tracked = new Map<string, TrackedCause>();
+  let overflow = 0;
+  let listener: ((key: CauseKey) => void) | undefined;
 
   const write = (
     level: 'error' | 'warn',
@@ -164,7 +219,8 @@ export function createCauseLog(
       const at = now();
 
       if (!entry) {
-        if (entries.size < maxKeys) {
+        const held = entries.size < maxKeys;
+        if (held)
           entries.set(id, {
             start: at,
             suppressed: 0,
@@ -172,9 +228,39 @@ export function createCauseLog(
             context: line,
             level,
           });
-        }
         write(level, firstLine(key, message), line);
+        if (
+          typeof __WALKEROS_OBSERVE__ === 'undefined' ||
+          __WALKEROS_OBSERVE__
+        ) {
+          if (held) {
+            tracked.set(id, {
+              key: copyKey(key),
+              count: 1,
+              firstAt: at,
+              lastAt: at,
+              last: { message, context: line, level },
+            });
+            if (listener) {
+              try {
+                listener(copyKey(key));
+              } catch {
+                // A listener only schedules; its failure must not reach the
+                // failure handling report() runs inside.
+              }
+            }
+          } else overflow++;
+        }
         return;
+      }
+
+      if (typeof __WALKEROS_OBSERVE__ === 'undefined' || __WALKEROS_OBSERVE__) {
+        const seen = tracked.get(id);
+        if (seen) {
+          seen.count++;
+          seen.lastAt = at;
+          seen.last = { message, context: line, level };
+        }
       }
 
       if (at - entry.start < windowMs) {
@@ -207,6 +293,38 @@ export function createCauseLog(
     size() {
       return entries.size;
     },
+
+    snapshot() {
+      if (typeof __WALKEROS_OBSERVE__ === 'undefined' || __WALKEROS_OBSERVE__)
+        return { keys: [...tracked.values()].map(snapshotEntry), overflow };
+      return { keys: [], overflow: 0 };
+    },
+
+    setListener(next) {
+      if (typeof __WALKEROS_OBSERVE__ === 'undefined' || __WALKEROS_OBSERVE__)
+        listener = next;
+    },
+  };
+}
+
+/** A key as its own object, so no caller can change a held one. */
+function copyKey({ step, code, status }: CauseKey): CauseKey {
+  return status === undefined ? { step, code } : { step, code, status };
+}
+
+function snapshotEntry(entry: TrackedCause): CauseSnapshotEntry {
+  const { message, context, level } = entry.last;
+  const error = typeof context.error === 'string' ? context.error : undefined;
+  return {
+    key: copyKey(entry.key),
+    count: entry.count,
+    firstAt: entry.firstAt,
+    lastAt: entry.lastAt,
+    message: error ? `${message}: ${error}` : message,
+    level,
+    ...(typeof context.retryable === 'boolean' && {
+      retryable: context.retryable,
+    }),
   };
 }
 

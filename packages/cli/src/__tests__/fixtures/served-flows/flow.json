@@ -1,0 +1,59 @@
+{
+  "version": 4,
+  "flows": {
+    "casamoda": {
+      "config": {
+        "platform": "web",
+        "settings": { "windowCollector": "servedProbe" }
+      },
+      "destinations": {
+        "probe": {
+          "code": { "push": "$code:(event) => event.name" }
+        }
+      }
+    },
+    "server": {
+      "config": {
+        "platform": "server",
+        "bundle": { "flows": { "casamoda": "casamoda/walker.js" } }
+      },
+      "stores": {
+        "files": {
+          "package": "@walkeros/server-store-fs",
+          "config": { "settings": { "basePath": "./casamoda" }, "file": true }
+        }
+      },
+      "sources": {
+        "http": {
+          "package": "@walkeros/server-source-express",
+          "config": {
+            "settings": { "paths": ["/collect", "/casamoda/*path"] },
+            "ingest": {
+              "map": {
+                "method": { "key": "method" },
+                "path": { "key": "path" }
+              }
+            }
+          },
+          "next": [
+            {
+              "match": {
+                "key": "ingest.method",
+                "operator": "eq",
+                "value": "GET"
+              },
+              "next": "file"
+            }
+          ]
+        }
+      },
+      "transformers": {
+        "file": {
+          "package": "@walkeros/server-transformer-file",
+          "config": { "settings": { "prefix": "/casamoda" } },
+          "env": { "store": "$store.files" }
+        }
+      }
+    }
+  }
+}

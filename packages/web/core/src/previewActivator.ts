@@ -3,7 +3,7 @@ import type {
   PreviewCrypto,
   PreviewKey,
 } from '@walkeros/core';
-import { OBSERVE_STORAGE_KEY, verifyActivation } from '@walkeros/core';
+import { verifyActivation } from '@walkeros/core';
 import { injectScript } from './injectScript';
 
 export interface SwapActivatorConfig {
@@ -21,16 +21,6 @@ export interface SwapActivatorConfig {
 }
 
 const STORAGE_KEY = 'elbPreview';
-/**
- * Storage slot for the session-forwarding companion grant. The web arm never
- * verifies it (it is session-bound by design; the session container is its
- * verifier): the activator only ferries it from the activation URL into
- * storage, where the seamed preview artifact reads it to stamp the
- * `X-Walkeros-Preview` header. It lives and dies with the activation state:
- * set (or cleared) whenever a URL activation succeeds, cleared whenever the
- * stored activation clears.
- */
-export const SESSION_STORAGE_KEY = 'elbPreviewSession';
 const LOG = '[walkerOS:preview]';
 const SWAP_TIMEOUT_MS = 5000;
 
@@ -82,8 +72,6 @@ function stripParam(): void {
       qIdx >= 0 ? withoutHash.slice(qIdx + 1) : '',
     );
     params.delete('elbPreview');
-    params.delete('elbPreviewSession');
-    params.delete('elbObserve');
     const query = params.toString();
     window.history.replaceState(
       {},
@@ -114,14 +102,10 @@ export async function browserSwapActivator(
   const win = window;
 
   const store = createStore(STORAGE_KEY);
-  const sessionStore = createStore(SESSION_STORAGE_KEY);
-  const observeStore = createStore(OBSERVE_STORAGE_KEY);
   const now = cfg.now ?? (() => Date.now());
   const warn = (reason: string) => console.warn(`${LOG} ${reason}`);
 
   let param: string | null = null;
-  let companion: string | null = null;
-  let observeCompanion: string | null = null;
   if (typeof URLSearchParams !== 'undefined') {
     try {
       const search = new URLSearchParams(
@@ -129,25 +113,13 @@ export async function browserSwapActivator(
       );
       const values = search.getAll('elbPreview');
       param = values.length > 0 ? (values[values.length - 1] ?? null) : null;
-      const companions = search.getAll('elbPreviewSession');
-      companion =
-        companions.length > 0
-          ? (companions[companions.length - 1] ?? null)
-          : null;
-      const observes = search.getAll('elbObserve');
-      observeCompanion =
-        observes.length > 0 ? (observes[observes.length - 1] ?? null) : null;
     } catch {
       param = null;
-      companion = null;
-      observeCompanion = null;
     }
   }
 
   if (param === 'off') {
     store.clear();
-    sessionStore.clear();
-    observeStore.clear();
     stripParam();
     return false;
   }
@@ -183,15 +155,6 @@ export async function browserSwapActivator(
     if (result.ok) {
       grant = result.grant;
       store.set(param);
-      // The URL activation defines the session context: carry its companion
-      // forwarding grant into storage, or clear a stale one from an earlier
-      // session. Never verified here: the session container is its verifier.
-      if (companion) sessionStore.set(companion);
-      else sessionStore.clear();
-      // Same rule for the observe ingest credential: ferried raw, never
-      // verified here (the observer is its verifier).
-      if (observeCompanion) observeStore.set(observeCompanion);
-      else observeStore.clear();
     } else {
       warn(result.reason);
     }
@@ -207,11 +170,7 @@ export async function browserSwapActivator(
       grant = result.grant;
     } else {
       warn(result.reason);
-      if (result.reason !== 'no-subtle') {
-        store.clear();
-        sessionStore.clear();
-        observeStore.clear();
-      }
+      if (result.reason !== 'no-subtle') store.clear();
     }
   }
 
@@ -223,8 +182,6 @@ export async function browserSwapActivator(
   if (!loaded) {
     warn('swap-failed');
     store.clear();
-    sessionStore.clear();
-    observeStore.clear();
     return false;
   }
 

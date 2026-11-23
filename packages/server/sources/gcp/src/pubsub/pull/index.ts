@@ -1,7 +1,7 @@
 import { acknowledge } from '@walkeros/core';
 import type { Collector, Logger, Source, WalkerOS } from '@walkeros/core';
 import type { Message, SubscriptionOptions } from '@google-cloud/pubsub';
-import { Duration } from '@google-cloud/pubsub';
+import { Duration, SubscriptionCloseBehaviors } from '@google-cloud/pubsub';
 import type {
   PullSubscription,
   Settings,
@@ -10,13 +10,12 @@ import type {
   Types,
 } from './types';
 import { decodeMessage, DecoderError } from '../shared/decoder';
-import { getConfig } from './config';
+import { DEFAULT_SHUTDOWN_TIMEOUT_MS, getConfig } from './config';
 import { setup } from './setup';
 
 const PERMISSION_DENIED_GRPC = 7;
 const NOT_FOUND_GRPC = 5;
 const UNAUTHENTICATED_GRPC = 16;
-const DEFAULT_SHUTDOWN_TIMEOUT_MS = 30000;
 
 interface ErrorWithCode {
   code: number;
@@ -125,7 +124,9 @@ async function handleMessage(args: {
  * called without arguments (production) it is a no-op since Pub/Sub is
  * event-driven.
  *
- * `destroy()` closes the subscriber gracefully, honoring `shutdownTimeoutMs`.
+ * `destroy()` closes the subscriber: it stops pulling, lets messages in flight
+ * finish and, at `shutdownTimeoutMs`, nacks the rest so Pub/Sub redelivers
+ * them.
  */
 export const sourcePubSubPull: Source.Init<Types> = async (context) => {
   const { config: partialConfig = {}, env, logger, id } = context;
@@ -133,8 +134,18 @@ export const sourcePubSubPull: Source.Init<Types> = async (context) => {
   const settings: Settings = config.settings;
 
   // Acquire subscription handle from the resolved client.
+  //
+  // The SDK's default close nacks every message it holds, so messages already
+  // inside the flow would be redelivered as duplicates on each stop. WAIT lets
+  // them finish; the SDK nacks what is left near the timeout.
+  const closeTimeoutMs =
+    settings.shutdownTimeoutMs ?? DEFAULT_SHUTDOWN_TIMEOUT_MS;
   const subscriptionOptions: SubscriptionOptions = {
     flowControl: settings.flowControl,
+    closeOptions: {
+      behavior: SubscriptionCloseBehaviors.WaitForProcessing,
+      timeout: Duration.from({ milliseconds: closeTimeoutMs }),
+    },
   };
   if (typeof settings.ackDeadline === 'number') {
     // Map our seconds-based setting onto the SDK's typed Duration field.
@@ -225,21 +236,24 @@ export const sourcePubSubPull: Source.Init<Types> = async (context) => {
     destroy: async () => {
       const subToClose = settings.subscriptionHandle;
       if (!subToClose) return;
-      const timeoutMs =
-        settings.shutdownTimeoutMs ?? DEFAULT_SHUTDOWN_TIMEOUT_MS;
+      // The same timeout the SDK's close was given, so a close that hangs
+      // past it does not hold the collector's shutdown.
+      let timer: ReturnType<typeof setTimeout> | undefined;
       try {
         await Promise.race([
           subToClose.close(),
-          new Promise<void>((resolve) =>
-            setTimeout(() => {
+          new Promise<void>((resolve) => {
+            timer = setTimeout(() => {
               logger.warn(
-                `Pub/Sub subscriber close timed out after ${timeoutMs}ms; forcing close.`,
+                `Pub/Sub subscriber close timed out after ${closeTimeoutMs}ms; forcing close.`,
               );
               resolve();
-            }, timeoutMs),
-          ),
+            }, closeTimeoutMs);
+          }),
         ]);
       } finally {
+        // A close that settled in time must not log a timeout later.
+        clearTimeout(timer);
         if (settings.client) {
           await settings.client.close().catch(() => undefined);
         }

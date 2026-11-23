@@ -1,4 +1,4 @@
-import type { Destination as CoreDestination } from '@walkeros/core';
+import type { Authorize, Destination as CoreDestination } from '@walkeros/core';
 import type { DestinationServer } from '@walkeros/server-core';
 import type {
   ClickHouseClient,
@@ -28,7 +28,10 @@ export type ClickHouseClientFactory = (
  * created the client. Every field is present.
  */
 export interface Settings {
-  /** ClickHouse HTTP endpoint, like https://host.clickhouse.cloud:8443. */
+  /**
+   * ClickHouse HTTP endpoint, like https://host.clickhouse.cloud:8443. A path,
+   * like https://ingest.walkeros.io/events, is the path every insert is sent to.
+   */
   url: string;
   /** Database holding the events table. */
   database: string;
@@ -40,10 +43,13 @@ export interface Settings {
   clickhouse?: ClickHouseClientConfigOptions;
   /** ClickHouse settings applied to every insert. */
   clickhouseSettings?: ClickHouseSettings;
+  /** Present and true when each insert is signed by the host (`InitSettings.signed`). */
+  signed?: true;
   /**
-   * The live client created by init(). Carried on the resolved config so the
-   * insert path receives it as part of its settings argument. Runtime-only,
-   * not user-facing.
+   * The live client created by init(): the SDK's, or with `signed` the one
+   * that signs each insert. Carried on the resolved config so the insert path
+   * receives it as part of its settings argument. Runtime-only, not
+   * user-facing.
    */
   client: ClickHouseClientSurface;
 }
@@ -53,7 +59,10 @@ export interface Settings {
  * fills the rest from the documented defaults.
  */
 export interface InitSettings {
-  /** ClickHouse HTTP endpoint, like https://host.clickhouse.cloud:8443. */
+  /**
+   * ClickHouse HTTP endpoint, like https://host.clickhouse.cloud:8443. A path,
+   * like https://ingest.walkeros.io/events, is the path every insert is sent to.
+   */
   url: string;
   /** Database holding the events table. Default `default`. */
   database?: string;
@@ -68,6 +77,14 @@ export interface InitSettings {
   clickhouse?: ClickHouseClientConfigOptions;
   /** ClickHouse settings applied to every insert. */
   clickhouseSettings?: ClickHouseSettings;
+  /**
+   * Sign each insert with the host's `authorize` instead of a credential: for
+   * a paired runner writing to walkerOS hosted ingest, which hands its signer
+   * to the destination's env. Without a host that signs, or beside a
+   * credential, init refuses. Unset, the destination ignores `authorize` and
+   * sends through the client with its credential, or none. Default false.
+   */
+  signed?: boolean;
   /**
    * The live client, populated by init(). Runtime-only, not user-facing.
    *
@@ -84,19 +101,28 @@ export interface InitSettings {
  */
 export interface Mapping {}
 
-/** Username and password for the ClickHouse user the destination writes as. */
-export interface Credentials {
-  username: string;
-  password: string;
-}
+/**
+ * How the destination signs in: the username and password of the ClickHouse
+ * user it writes as, or a token, sent as `Authorization: Bearer`, for an
+ * endpoint that takes one (a proxy in front of ClickHouse). One of the two:
+ * the client signs in with one, and init refuses a token beside a username or
+ * password wherever they sit.
+ */
+export type Credentials =
+  | { username: string; password: string }
+  | { token: string };
 
 /**
  * Env carries the client factory so tests and simulations inject a recording
  * stand-in instead of opening a socket. Production leaves it undefined and the
  * destination uses the SDK's own `createClient`.
+ *
+ * `authorize` is the host's signer, set by a paired runner's bundle entry. It
+ * is used only with `settings.signed: true`.
  */
 export interface Env extends DestinationServer.Env {
   ClickHouseClient?: ClickHouseClientFactory;
+  authorize?: Authorize;
 }
 
 /**

@@ -32,7 +32,7 @@ Local filesystem sink for walkerOS server flows. Appends events to a file as JSO
 
 <Configuration type="destination" data={data} />
 
-The destination opens one long-lived `WriteStream` per resolved filename during `init()` (for static filenames) or on first matching event (for dynamic filenames). On flow hot-swap or server shutdown, `destroy()` closes all cached streams.
+The destination opens one long-lived `WriteStream` per resolved filename during `init()` (for static filenames) or on first matching event (for dynamic filenames). On server shutdown, `destroy()` closes all cached streams. It runs inside the collector's 8 second shutdown deadline; one that does not close in time is reported by name ([`walker shutdown`](/docs/collector/commands#shutdown)).
 
 ## Filename templating
 

@@ -6,7 +6,9 @@
 
 # @walkeros/runner
 
-Runs prebuilt walkerOS flow artifacts. Ships the `runneros` binary.
+Runs walkerOS server flows. Ships the `runneros` binary: `runneros start` runs
+one prebuilt artifact, and `runneros remote` takes releases from the walkerOS
+app.
 
 ## Installation
 
@@ -34,17 +36,23 @@ argument it uses `BUNDLE`; without either it uses `flow.mjs` in the working
 directory. Anything else, a `.json` flow config above all, is refused.
 
 Stdin is read only when the given path (argument or `BUNDLE`) does not exist:
-piped content is then written to `/app/flow/flow.mjs` (or
-`/tmp/walkeros-flow.mjs` outside a container) and started. An empty stdin is
-ignored, so a missing file is reported as missing. Stdin carries no
-`node_modules/`, so a server flow built by `walkeros bundle` fails there with
-`Cannot find package`: start its directory or its archive instead.
+piped content is then written to `/app/flow/flow.mjs` (or, outside a container,
+to `flow/flow.mjs` in a private folder of the process under the temp directory,
+removed when the process exits; a killed process leaves it behind) and started.
+An empty stdin is ignored, so a missing file is reported as missing. Stdin
+carries no `node_modules/`, so a server flow built by `walkeros bundle` fails
+there with `Cannot find package`: start its directory or its archive instead.
 
-Credentials come from the environment only: `WALKEROS_DEPLOY_TOKEN` (or
-`WALKEROS_TOKEN`) and `WALKEROS_APP_URL`, used with `--flow-id` and `--project`
-(or `WALKEROS_FLOW_ID` and `WALKEROS_PROJECT_ID`) to enable the heartbeat and
-secret injection. The app accepts a heartbeat only with `WALKEROS_DEPLOYMENT_ID`
-set to the deployment the token belongs to.
+One variable connects a runner to the walkerOS app: `WALKEROS_CREDENTIAL`, the
+credential shown once when you pair a runner on a flow part's Self-hosted tab.
+It names the app and the deployment, and is read once at start and removed from
+the environment. With it the runner fetches its secrets at boot and checks in.
+Without it the runner calls no app.
+
+`runneros remote --cache <dir>` runs the releases the app hands it, each checked
+before it runs, and swaps to a new one with no image rebuild. It reads
+`WALKEROS_CREDENTIAL` only. See
+[Remote releases](https://www.walkeros.io/docs/apps/remote).
 
 [Documentation](https://www.walkeros.io/docs/apps/runtime) &bull;
 [Source Code](https://github.com/elbwalker/walkerOS/tree/main/packages/runner)

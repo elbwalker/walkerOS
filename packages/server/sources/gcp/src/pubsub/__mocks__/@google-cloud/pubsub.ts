@@ -271,22 +271,37 @@ class MockSubscription {
 }
 
 /**
- * Minimal Duration stand-in. The real SDK's Duration is a class with a
- * `seconds` accessor; tests only need a value the source can pass through
- * to the typed SubscriberOptions slot. Recording the seconds count is enough
- * for assertion purposes.
+ * Minimal Duration stand-in. The real SDK's Duration is a class built from
+ * hours, minutes, seconds or milliseconds. Keeping the total in milliseconds
+ * makes two durations of the same length compare equal, however they were
+ * built.
  */
 class MockDuration {
-  readonly seconds: number;
-  private constructor(seconds: number) {
-    this.seconds = seconds;
+  readonly milliseconds: number;
+  private constructor(milliseconds: number) {
+    this.milliseconds = milliseconds;
   }
-  static from(input: { seconds?: number }): MockDuration {
-    return new MockDuration(input.seconds ?? 0);
+  static from(input: {
+    hours?: number;
+    minutes?: number;
+    seconds?: number;
+    milliseconds?: number;
+  }): MockDuration {
+    return new MockDuration(
+      (input.hours ?? 0) * 3_600_000 +
+        (input.minutes ?? 0) * 60_000 +
+        (input.seconds ?? 0) * 1000 +
+        (input.milliseconds ?? 0),
+    );
   }
 }
 
 export const Duration = MockDuration;
+
+export const SubscriptionCloseBehaviors = {
+  NackImmediately: 'NACK',
+  WaitForProcessing: 'WAIT',
+};
 
 export class PubSub {
   options: unknown;

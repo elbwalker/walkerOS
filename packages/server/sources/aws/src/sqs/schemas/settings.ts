@@ -69,7 +69,7 @@ export const SettingsSchema = z.object({
     .int()
     .positive()
     .describe(
-      'Graceful shutdown timeout in milliseconds. Default: 30000. After this window, destroy() force-closes.',
+      'How long a close waits for messages in flight, in milliseconds. Default: 5000. On shutdown the source ends its long poll and lets messages in flight finish; after this window it closes, and messages not yet deleted redeliver after their visibility timeout.',
     )
     .optional(),
   onPushError: z

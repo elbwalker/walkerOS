@@ -33,7 +33,7 @@ describe('createCLILogger handler redaction', () => {
   it('redacts a PEM block in both console output and the onLine tap', () => {
     const captured: string[] = [];
     const logger = createCLILogger({
-      onLine: (_level, message) => captured.push(message),
+      onLine: (_level, line) => captured.push(line.masked()),
     });
 
     const pem = [
@@ -53,7 +53,7 @@ describe('createCLILogger handler redaction', () => {
   it('redacts a private_key JSON value in both sinks', () => {
     const captured: string[] = [];
     const logger = createCLILogger({
-      onLine: (_level, message) => captured.push(message),
+      onLine: (_level, line) => captured.push(line.masked()),
     });
 
     const secret = 'MIIEvQIBADANBgkqhkiG9w0BAQEFAASCBKcw==';
@@ -68,7 +68,7 @@ describe('createCLILogger handler redaction', () => {
   it('redacts a client_email JSON value in both sinks', () => {
     const captured: string[] = [];
     const logger = createCLILogger({
-      onLine: (_level, message) => captured.push(message),
+      onLine: (_level, line) => captured.push(line.masked()),
     });
 
     const email = 'svc@my-proj.iam.gserviceaccount.com';
@@ -81,7 +81,7 @@ describe('createCLILogger handler redaction', () => {
   it('redacts a client_x509_cert_url JSON value in both sinks', () => {
     const captured: string[] = [];
     const logger = createCLILogger({
-      onLine: (_level, message) => captured.push(message),
+      onLine: (_level, line) => captured.push(line.masked()),
     });
 
     const url =
@@ -99,7 +99,7 @@ describe('createCLILogger handler redaction', () => {
   it('leaves a normal line unchanged in both sinks', () => {
     const captured: string[] = [];
     const logger = createCLILogger({
-      onLine: (_level, message) => captured.push(message),
+      onLine: (_level, line) => captured.push(line.masked()),
     });
 
     logger.info('Connected to BigQuery dataset analytics');
@@ -118,8 +118,8 @@ describe('createCLILogger handler redaction', () => {
     const config = createCLILoggerConfig({
       verbose: false,
       silent: true,
-      onLine: (level, message) => {
-        if (level === Level.ERROR) ringMessages.push(message);
+      onLine: (level, line) => {
+        if (level === Level.ERROR) ringMessages.push(line.masked());
       },
     });
 

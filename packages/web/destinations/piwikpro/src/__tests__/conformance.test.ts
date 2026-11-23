@@ -2,7 +2,7 @@ import type { StandardEventName } from '@walkeros/core';
 import path from 'path';
 import { startFlow } from '@walkeros/collector';
 import { conformance, runExamples } from '@walkeros/collector/dev';
-import { clone, createLogger, isObject, observeEnv } from '@walkeros/core';
+import { clone, createLogger, isObject, recordEnv } from '@walkeros/core';
 import { expectSimulationResolves } from '@walkeros/core/dev';
 import { page } from '@walkeros/web-core/dev';
 import type { Config } from '../types';
@@ -67,7 +67,7 @@ describe('piwikpro conformance', () => {
     const config: Config = { loadScript: true, settings };
     expect(init.in).toEqual(config);
 
-    const observed = observeEnv(
+    const recorded = recordEnv(
       clone(examples.env.push),
       examples.env.simulation,
     );
@@ -75,12 +75,12 @@ describe('piwikpro conformance', () => {
     await destinationPiwikPro.init?.({
       id: 'piwikpro',
       config,
-      env: observed.env,
+      env: recorded.env,
       logger: createLogger(),
       collector,
     });
 
-    expect(observed.calls.map(({ fn, args }) => [fn, ...args])).toEqual(
+    expect(recorded.calls.map(({ fn, args }) => [fn, ...args])).toEqual(
       init.out,
     );
   });

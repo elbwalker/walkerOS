@@ -123,6 +123,7 @@ const sidebars: SidebarsConfig = {
               },
               items: [
                 'sources/web/cmps/cookiebot/index',
+                'sources/web/cmps/cookieconsent/index',
                 'sources/web/cmps/cookiefirst/index',
                 'sources/web/cmps/cookiepro/index',
                 'sources/web/cmps/usercentrics/index',
@@ -299,9 +300,20 @@ const sidebars: SidebarsConfig = {
                   className: 'sidebar-badge-web',
                 },
                 {
-                  type: 'doc',
-                  id: 'destinations/web/matomo',
-                  className: 'sidebar-badge-web',
+                  type: 'category',
+                  label: 'Matomo',
+                  items: [
+                    {
+                      type: 'doc',
+                      id: 'destinations/web/matomo',
+                      className: 'sidebar-badge-web',
+                    },
+                    {
+                      type: 'doc',
+                      id: 'destinations/server/matomo',
+                      className: 'sidebar-badge-server',
+                    },
+                  ],
                 },
                 {
                   type: 'category',
@@ -583,6 +595,7 @@ const sidebars: SidebarsConfig = {
           items: [
             'apps/cli',
             'apps/runtime',
+            'apps/remote',
             {
               type: 'category',
               label: 'Core',

@@ -1,4 +1,10 @@
-import { createLogger, Level, type Logger } from '@walkeros/core';
+import {
+  createLogger,
+  Level,
+  redactLine,
+  SHUTDOWN_DEADLINE_MS,
+  type Logger,
+} from '@walkeros/core';
 import { EventEmitter } from 'events';
 import type { PipelineOptions } from '../pipeline.js';
 import {
@@ -15,10 +21,11 @@ import {
 import type { HeartbeatHandle } from '../heartbeat.js';
 
 const fakeApi: NonNullable<PipelineOptions['api']> = {
-  appUrl: 'https://app.example',
-  token: 'token',
-  projectId: 'project',
-  flowId: 'flow',
+  app: {
+    origin: 'https://app.example',
+    authorize: async () => ({}),
+    answered: () => false,
+  },
   heartbeatIntervalMs: 30_000,
   cacheDir: '/tmp/cache',
 };
@@ -67,7 +74,6 @@ describe('runShutdown (extracted orchestrator)', () => {
 
   function baseDeps(overrides: Partial<ShutdownDeps>): ShutdownDeps {
     return {
-      tracePoller: null,
       heartbeat: null,
       collector: { command: undefined, status: undefined },
       healthServer: {
@@ -78,12 +84,21 @@ describe('runShutdown (extracted orchestrator)', () => {
       },
       logger: makeLogger(),
       exit: jest.fn(),
-      forceTimeoutMs: 15000,
+      forceTimeoutMs: SHUTDOWN_DEADLINE_MS + 1000,
       ...overrides,
     };
   }
 
-  it('awaits the final heartbeat sendOnce BEFORE heartbeat.stop()', async () => {
+  /** A promise and the function that settles it, for a drain the test ends. */
+  function deferred<T>(): { promise: Promise<T>; resolve: (value: T) => void } {
+    let resolve: (value: T) => void = () => {};
+    const promise = new Promise<T>((r) => {
+      resolve = r;
+    });
+    return { promise, resolve };
+  }
+
+  it('starts the final heartbeat sendOnce before heartbeat.stop()', async () => {
     const { handle, order } = makeHeartbeat(() => Promise.resolve());
     const exit = jest.fn();
 
@@ -136,7 +151,6 @@ describe('runShutdown (extracted orchestrator)', () => {
       // fire exit(1) at forceTimeoutMs.
       const deps = baseDeps({
         exit,
-        forceTimeoutMs: 15000,
         healthServer: {
           setReady: jest.fn(),
           setFailed: jest.fn(),
@@ -146,35 +160,14 @@ describe('runShutdown (extracted orchestrator)', () => {
       });
 
       runShutdown('SIGTERM', deps);
+      await jest.advanceTimersByTimeAsync(deps.forceTimeoutMs - 1);
       expect(exit).not.toHaveBeenCalled();
 
-      await jest.advanceTimersByTimeAsync(15000);
+      await jest.advanceTimersByTimeAsync(1);
       expect(exit).toHaveBeenCalledWith(1);
     } finally {
       jest.useRealTimers();
     }
-  });
-
-  it('stops the tracePoller before the final beat', async () => {
-    const calls: string[] = [];
-    const tracePoller = {
-      start: jest.fn(),
-      stop: jest.fn(() => {
-        calls.push('tracePoller.stop');
-      }),
-      pollOnce: jest.fn(() => Promise.resolve()),
-    };
-    const { handle } = makeHeartbeat(() => {
-      calls.push('sendOnce');
-      return Promise.resolve();
-    });
-
-    await runShutdown(
-      'SIGTERM',
-      baseDeps({ tracePoller, heartbeat: handle, exit: jest.fn() }),
-    );
-
-    expect(calls).toEqual(['tracePoller.stop', 'sendOnce']);
   });
 
   it('drops /ready before the final beat and the collector drain', async () => {
@@ -208,6 +201,140 @@ describe('runShutdown (extracted orchestrator)', () => {
       'sendOnce',
       'collector-shutdown',
     ]);
+  });
+
+  it('drains at once beside a final beat that never settles, and exits by the deadline', async () => {
+    jest.useFakeTimers();
+    try {
+      const { handle } = makeHeartbeat(() => new Promise<void>(() => {}));
+      const command = jest.fn(() => Promise.resolve({ ok: true }));
+      const exit = jest.fn();
+
+      void runShutdown(
+        'SIGTERM',
+        baseDeps({ heartbeat: handle, collector: { command }, exit }),
+      );
+      await jest.advanceTimersByTimeAsync(0);
+      expect(command).toHaveBeenCalledWith('shutdown');
+
+      await jest.advanceTimersByTimeAsync(SHUTDOWN_DEADLINE_MS);
+      expect(exit).toHaveBeenCalledTimes(1);
+      expect(exit).toHaveBeenCalledWith(0);
+    } finally {
+      jest.useRealTimers();
+    }
+  });
+
+  it.each<[string, unknown]>([
+    ['every destination drained', { ok: true }],
+    ['an earlier collector answers nothing', undefined],
+  ])('exits 0 when %s', async (_case, answer) => {
+    const exit = jest.fn();
+    const logger = makeLogger();
+    const command = jest.fn(() => Promise.resolve(answer));
+
+    await runShutdown(
+      'SIGTERM',
+      baseDeps({ collector: { command }, exit, logger }),
+    );
+
+    expect(exit).toHaveBeenCalledWith(0);
+    expect(logger.error).not.toHaveBeenCalled();
+  });
+
+  it.each<[string, 'flush' | 'destroy', string]>([
+    [
+      'a batch that did not flush',
+      'flush',
+      "Shutdown lost events: destination 'hang' did not flush its batch (timeout)",
+    ],
+    [
+      'a destroy that timed out',
+      'destroy',
+      "Shutdown: destination 'hang' did not close cleanly (timeout); events it buffered may be lost",
+    ],
+  ])('exits 1 with one ERROR for %s', async (_case, phase, line) => {
+    const exit = jest.fn();
+    const logger = makeLogger();
+    const command = jest.fn(() =>
+      Promise.resolve({
+        ok: false,
+        failed: {
+          hang: {
+            type: 'test',
+            reason: { code: 'timeout', message: 'x', retryable: true },
+            phase,
+          },
+        },
+      }),
+    );
+
+    await runShutdown(
+      'SIGTERM',
+      baseDeps({ collector: { command }, exit, logger }),
+    );
+
+    expect(exit).toHaveBeenCalledWith(1);
+    expect(logger.error).toHaveBeenCalledTimes(1);
+    expect(logger.error).toHaveBeenCalledWith(line);
+  });
+
+  it('exits 1 with one ERROR for pushes the drain deadline cut', async () => {
+    const exit = jest.fn();
+    const logger = makeLogger();
+    const command = jest.fn(() =>
+      Promise.resolve({
+        ok: false,
+        reason: {
+          code: 'timeout',
+          message: '1 push still running at the shutdown deadline',
+          retryable: true,
+        },
+        error: '1 push still running at the shutdown deadline',
+      }),
+    );
+
+    await runShutdown(
+      'SIGTERM',
+      baseDeps({ collector: { command }, exit, logger }),
+    );
+
+    const line =
+      'Shutdown lost events: 1 push still running at the shutdown deadline (timeout)';
+    expect(exit).toHaveBeenCalledWith(1);
+    expect(logger.error).toHaveBeenCalledTimes(1);
+    expect(logger.error).toHaveBeenCalledWith(line);
+    expect(redactLine(line)).toBe(line);
+  });
+
+  it('logs one line for a second signal during the drain and lets the first decide', async () => {
+    const drain = deferred<unknown>();
+    const command = jest.fn(() => drain.promise);
+    const exit = jest.fn();
+    const logger = makeLogger();
+    const deps = baseDeps({ collector: { command }, exit, logger });
+
+    const first = runShutdown('SIGTERM', deps);
+    await runShutdown('SIGINT', deps);
+
+    expect(exit).not.toHaveBeenCalled();
+    expect(command).toHaveBeenCalledTimes(1);
+    expect(logger.info).toHaveBeenLastCalledWith(
+      'Received SIGINT during shutdown, the drain goes on',
+    );
+
+    drain.resolve({
+      ok: false,
+      failed: {
+        hang: {
+          type: 'test',
+          reason: { code: 'timeout', message: 'x', retryable: true },
+        },
+      },
+    });
+    await first;
+    expect(exit).toHaveBeenCalledTimes(1);
+    expect(exit).toHaveBeenCalledWith(1);
   });
 });
 

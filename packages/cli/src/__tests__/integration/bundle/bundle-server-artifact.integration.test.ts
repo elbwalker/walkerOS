@@ -10,6 +10,7 @@
 import { bundle } from '../../../commands/bundle/index.js';
 import { join, resolve } from 'path';
 import fs from 'fs-extra';
+import type { Flow } from '@walkeros/core';
 
 // Resolve paths relative to test file, not cwd (which is monorepo root)
 const cliRoot = resolve(__dirname, '../../../..');
@@ -92,6 +93,34 @@ describe('Server bundle artifact', () => {
     // Externalized step package stays a bare ESM import.
     expect(content).toMatch(/from\s*['"]@walkeros\/server-source-express['"]/);
   });
+
+  it('exports the $secret and $env names its flow reads', async () => {
+    const config: Flow.Json = await fs.readJson(configPath);
+    const flow = config.flows.default;
+    flow.collector = {
+      ...flow.collector,
+      globals: {
+        ...flow.collector?.globals,
+        host: '$env.FIXTURE_HOST',
+        token: '$secret.FIXTURE_SECRET',
+      },
+    };
+    const declaredConfigPath = join(testDir, 'declared-env.json');
+    const declaredBundlePath = join(testDir, 'declared-env/bundle.mjs');
+    await fs.writeJson(declaredConfigPath, config);
+
+    await bundle(declaredConfigPath, {
+      verbose: false,
+      silent: true,
+      buildOverrides: { output: declaredBundlePath },
+    });
+
+    const module: unknown = await import(declaredBundlePath);
+    expect(module).toHaveProperty('__walkerosEnv', {
+      secrets: ['FIXTURE_SECRET'],
+      env: ['FIXTURE_HOST'],
+    });
+  }, 120000);
 
   it('should not inline step package source into the entry bundle', () => {
     // Decision #9 (bundler-nft-redesign): esbuild externalizes ALL step

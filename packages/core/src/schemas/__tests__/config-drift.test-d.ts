@@ -41,7 +41,7 @@ import type {
   InitConfigSchema as CollectorInitConfigSchema,
 } from '../collector';
 import type { SourceFieldsSchema, UserFieldsSchema } from '../walkeros';
-import type { CodeSchema, ContractRuleSchema } from '../flow';
+import type { BundleSchema, CodeSchema, ContractRuleSchema } from '../flow';
 import type { STEP_FUNCTION_KEYS } from '../../step-entry';
 import type { CONTRACT_RULE_KEYS } from '../../contract';
 
@@ -110,6 +110,11 @@ type _userEventCheck = Expect<IsExactly<_UserEventZodKeys, _UserEventTsKeys>>;
 type _CodeZodKeys = keyof z.infer<typeof CodeSchema>;
 type _CodeTsKeys = keyof Flow.Code;
 type _codeCheck = Expect<IsExactly<_CodeZodKeys, _CodeTsKeys>>;
+
+// Flow.Bundle (closed): build-time settings under `config.bundle`.
+type _BundleZodKeys = keyof z.infer<typeof BundleSchema>;
+type _BundleTsKeys = keyof Flow.Bundle;
+type _bundleCheck = Expect<IsExactly<_BundleZodKeys, _BundleTsKeys>>;
 
 // Flow.ContractRule (closed): the keys `CONTRACT_RULE_KEYS` lists.
 type _ContractRuleZodKeys = keyof z.infer<typeof ContractRuleSchema>;

@@ -100,12 +100,11 @@ describe('wrapEnv hardening', () => {
     }
     const env: Record<string, unknown> = { a: node };
 
-    const { wrappedEnv, unresolved, calls } = wrapEnv({
+    const { wrappedEnv, calls } = wrapEnv({
       ...env,
       simulation: ['a.b.c.d.e.f.g.h.fn'],
     });
 
-    expect(unresolved).toEqual([]);
     let cursor: unknown = wrappedEnv;
     for (const key of ['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h']) {
       cursor = asRecord(cursor)[key];

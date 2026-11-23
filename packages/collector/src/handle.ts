@@ -24,6 +24,7 @@ import {
   InvalidEventError,
   isFunction,
   isString,
+  SHUTDOWN_DEADLINE_MS,
 } from '@walkeros/core';
 import { isObject } from '@walkeros/core';
 import { processConsent } from './consent';
@@ -140,6 +141,13 @@ export async function commonHandleCommand(
         break;
 
       case Const.Commands.Flush:
+        // The waiting preview rows go first, with keepalive so the request
+        // outlives the page: a destination's flush can take a round trip,
+        // and by then the page may be gone. Never awaited: no flush waits on
+        // ingest. The rows the flushes below make go with the next window
+        // if the page stays.
+        if (typeof __WALKEROS_OBSERVE__ === 'undefined' || __WALKEROS_OBSERVE__)
+          void collector.reporter?.flush(true);
         // Deliver every pending destination batch now (a page going away),
         // through the same flush shutdown uses. The collector keeps running.
         result = await flushDestinationBatches(collector);
@@ -189,12 +197,26 @@ export async function commonHandleCommand(
         break;
 
       case Const.Commands.Shutdown:
-        // Idempotency guard: re-entrancy must not re-run destroyAllSteps and
-        // double-close writers, destinations, or stores. The first shutdown
-        // sets the flag and runs the full sequence; a second command no-ops.
+        // The flag guards re-entry: a second command must not re-run
+        // destroyAllSteps and double-close writers, destinations, or stores.
+        // It also makes every push that enters after the shutdown began
+        // answer shutting-down. The first shutdown sets it and runs the full
+        // sequence; a second command no-ops.
+        // One deadline for the whole sequence, the last report included, so
+        // a host's grace period bounds it. The answer names the destinations
+        // that lost or may have lost events.
         if (!collector.hasShutdown) {
           collector.hasShutdown = true;
-          await destroyAllSteps(collector);
+          const deadlineAt = Date.now() + SHUTDOWN_DEADLINE_MS;
+          result = await destroyAllSteps(collector, deadlineAt);
+          // The last report goes after every destination flushed, so its
+          // counters are final; it takes what is left of the deadline, at
+          // most its own 3 s.
+          if (
+            typeof __WALKEROS_OBSERVE__ === 'undefined' ||
+            __WALKEROS_OBSERVE__
+          )
+            await collector.reporter?.stop(deadlineAt);
         }
         break;
 
@@ -308,7 +330,7 @@ export function createEvent(
 /**
  * Checked once per incoming event: an event JSON cannot carry (a cycle, a
  * BigInt, a throwing getter or `toJSON`) fails in every step that serializes
- * it (a request body, the server transport, Observe). Refused here, it is
+ * it (a request body, the server transport). Refused here, it is
  * reported once, as the producer's invalid input.
  */
 function assertSerializable(event: WalkerOS.Event): void {

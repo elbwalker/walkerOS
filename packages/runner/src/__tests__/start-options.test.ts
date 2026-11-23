@@ -1,21 +1,15 @@
 /**
  * `runneros start` option resolution. The opt-in --env-file is loaded before
- * any env fallback is read, so values that live only in the file (flow id,
- * project, deployment id, port, BUNDLE) take effect. runCommand no longer
- * loads it, so the file is read exactly once.
+ * any env fallback is read, so values that live only in the file (port,
+ * BUNDLE, the credential) take effect. runCommand no longer loads it, so the
+ * file is read exactly once.
  */
 import { chmodSync, mkdtempSync, rmSync, writeFileSync } from 'fs';
 import { tmpdir } from 'os';
 import { join } from 'path';
 import { resolveStartOptions } from '../start-options.js';
 
-const KEYS = [
-  'BUNDLE',
-  'PORT',
-  'WALKEROS_FLOW_ID',
-  'WALKEROS_PROJECT_ID',
-  'WALKEROS_DEPLOYMENT_ID',
-] as const;
+const KEYS = ['BUNDLE', 'PORT', 'WALKEROS_CREDENTIAL'] as const;
 
 describe('resolveStartOptions', () => {
   const originalEnv = { ...process.env };
@@ -38,49 +32,39 @@ describe('resolveStartOptions', () => {
     return file;
   }
 
-  it('reads the env fallbacks from the env file', () => {
+  it('reads the env fallbacks from the env file, and leaves the credential for its read', () => {
     const envFile = writeEnvFile(
       [
         'BUNDLE=/app/flow/flow.mjs',
         'PORT=9090',
-        'WALKEROS_FLOW_ID=flow_from_file',
-        'WALKEROS_PROJECT_ID=proj_from_file',
-        'WALKEROS_DEPLOYMENT_ID=dep_from_file',
+        'WALKEROS_CREDENTIAL=wos_cred_from_file',
       ].join('\n'),
     );
 
     expect(resolveStartOptions(undefined, { envFile })).toEqual({
       config: '/app/flow/flow.mjs',
       port: 9090,
-      flowId: 'flow_from_file',
-      project: 'proj_from_file',
-      deploymentId: 'dep_from_file',
       json: undefined,
       verbose: undefined,
       silent: undefined,
     });
+    expect(process.env.WALKEROS_CREDENTIAL).toBe('wos_cred_from_file');
   });
 
   it('keeps flags and existing env over the file', () => {
-    process.env.WALKEROS_PROJECT_ID = 'proj_from_env';
-    const envFile = writeEnvFile(
-      'WALKEROS_FLOW_ID=flow_from_file\nWALKEROS_PROJECT_ID=proj_from_file\n',
-    );
+    process.env.BUNDLE = '/from/env.mjs';
+    const envFile = writeEnvFile('BUNDLE=/from/file.mjs\nPORT=9090\n');
 
-    const options = resolveStartOptions('flow.mjs', {
-      envFile,
-      flowId: 'flow_from_flag',
-    });
+    const options = resolveStartOptions(undefined, { envFile, port: 8081 });
 
-    expect(options.config).toBe('flow.mjs');
-    expect(options.flowId).toBe('flow_from_flag');
-    expect(options.project).toBe('proj_from_env');
+    expect(options.config).toBe('/from/env.mjs');
+    expect(options.port).toBe(8081);
   });
 
   it('loads nothing without --env-file (no auto-discovery)', () => {
-    writeEnvFile('WALKEROS_FLOW_ID=should_not_load\n');
+    writeEnvFile('BUNDLE=should_not_load\n');
 
-    expect(resolveStartOptions(undefined, {}).flowId).toBeUndefined();
-    expect(process.env.WALKEROS_FLOW_ID).toBeUndefined();
+    expect(resolveStartOptions(undefined, {}).config).toBeUndefined();
+    expect(process.env.BUNDLE).toBeUndefined();
   });
 });

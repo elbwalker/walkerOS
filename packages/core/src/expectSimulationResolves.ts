@@ -1,4 +1,4 @@
-import { parseCallPath } from './observeEnv';
+import { parseCallPath } from './recordEnv';
 
 /**
  * Test helper for a step package's dev examples env: every declared

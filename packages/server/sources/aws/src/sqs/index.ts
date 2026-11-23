@@ -14,12 +14,11 @@ import type {
   Types,
 } from './types';
 import { decodeBody, DecoderError } from './decoder';
-import { getConfig } from './config';
+import { DEFAULT_SHUTDOWN_TIMEOUT_MS, getConfig } from './config';
 import { setup } from './setup';
 
 export { setup } from './setup';
 
-const DEFAULT_SHUTDOWN_TIMEOUT_MS = 30000;
 const RECEIVE_RETRY_BACKOFF_MS = 1000;
 
 interface MessageDispatch {
@@ -141,8 +140,9 @@ function isFetchedMessage(value: unknown): value is FetchedMessage {
  * through the same handler the loop uses, bypassing the run gate; called
  * without arguments (production) it is a no-op since SQS is event-driven.
  *
- * destroy() stops the loop, drains in-flight handlers, and force-closes after
- * shutdownTimeoutMs (default 30000).
+ * destroy() stops the loop and ends a waiting long poll at once (messages
+ * that poll was receiving reappear after their visibility timeout), drains
+ * in-flight handlers, and force-closes after shutdownTimeoutMs (default 5000).
  */
 export const sourceSqs: Source.Init<Types> = async (context) => {
   const { config: partialConfig = {}, env, logger, id } = context;
@@ -191,8 +191,11 @@ export const sourceSqs: Source.Init<Types> = async (context) => {
     }
   }
 
-  // Long-poll loop control flag and in-flight tracker.
+  // Long-poll loop control flag and in-flight tracker. A close aborts the
+  // waiting long poll, which would otherwise hold the close for up to
+  // waitTimeSeconds.
   let stopped = false;
+  const receiving = new AbortController();
   const inFlight = new Set<Promise<void>>();
 
   const loop = async (): Promise<void> => {
@@ -207,6 +210,7 @@ export const sourceSqs: Source.Init<Types> = async (context) => {
             MessageAttributeNames: ['All'],
             AttributeNames: ['All'],
           }),
+          { abortSignal: receiving.signal },
         );
         const messages = res.Messages ?? [];
         for (const msg of messages) {
@@ -310,6 +314,7 @@ export const sourceSqs: Source.Init<Types> = async (context) => {
     },
     destroy: async () => {
       stopped = true;
+      receiving.abort();
       const timeoutMs =
         settings.shutdownTimeoutMs ?? DEFAULT_SHUTDOWN_TIMEOUT_MS;
       let timer: NodeJS.Timeout | undefined;

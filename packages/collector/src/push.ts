@@ -15,6 +15,11 @@ import {
   useHooks,
 } from '@walkeros/core';
 import { pushBounded, seededQueueMax } from './buffers';
+import {
+  refuseWhileShuttingDown,
+  setAdmittedPush,
+  trackPush,
+} from './in-flight';
 import { createEvent, enrichEvent } from './handle';
 import {
   chainFailureResult,
@@ -25,6 +30,7 @@ import {
 import {
   emitCollectorDrop,
   journeyFields,
+  observed,
   observerStepError,
   stepState,
 } from './observerEmit';
@@ -412,57 +418,77 @@ export function createPush<T extends Collector.Instance>(
     // run trace, plus the source context threaded through `options.ingest`.
     // The processed full event is not visible here, so out/error reuse the
     // same incoming-event trace (identical value in the common case).
-    const journey = journeyFields(identified, options?.ingest, collector);
+    const journey = observed(collector)
+      ? journeyFields(identified, options?.ingest, collector)
+      : undefined;
     const started = Date.now();
-    const inState = stepState(
-      collector,
-      'collector.push',
-      'collector',
-      'in',
-      eventId,
-      started,
-      journey,
-    );
-    inState.inEvent = identified;
-    emitStep(collector, inState);
+    if (journey) {
+      const inState = stepState(
+        collector,
+        'collector.push',
+        'collector',
+        'in',
+        eventId,
+        started,
+        journey,
+      );
+      inState.inEvent = identified;
+      emitStep(collector, inState);
+    }
 
     try {
       const result = await innerPush(identified, options);
-      const finished = Date.now();
-      const outState = stepState(
-        collector,
-        'collector.push',
-        'collector',
-        'out',
-        // The same id as the in record. Reading it off the result instead
-        // would split the wrap's own pair across two journeys whenever the
-        // result reports a different event: a fan-out reporting its first
-        // child, or a `prePush` hook that swapped the event.
-        eventId,
-        finished,
-        journey,
-      );
-      outState.durationMs = finished - started;
-      outState.outEvent = result;
-      emitStep(collector, outState);
+      if (observed(collector)) {
+        const finished = Date.now();
+        const outState = stepState(
+          collector,
+          'collector.push',
+          'collector',
+          'out',
+          // The same id as the in record. Reading it off the result instead
+          // would split the wrap's own pair across two journeys whenever the
+          // result reports a different event: a fan-out reporting its first
+          // child, or a `prePush` hook that swapped the event.
+          eventId,
+          finished,
+          journey ?? journeyFields(identified, options?.ingest, collector),
+        );
+        outState.durationMs = finished - started;
+        outState.outEvent = result;
+        emitStep(collector, outState);
+      }
       return result;
     } catch (err) {
-      const finished = Date.now();
-      const errState = stepState(
-        collector,
-        'collector.push',
-        'collector',
-        'error',
-        eventId,
-        finished,
-        journey,
-      );
-      errState.durationMs = finished - started;
-      errState.error = observerStepError(err);
-      emitStep(collector, errState);
+      if (observed(collector)) {
+        const finished = Date.now();
+        const errState = stepState(
+          collector,
+          'collector.push',
+          'collector',
+          'error',
+          eventId,
+          finished,
+          journey ?? journeyFields(identified, options?.ingest, collector),
+        );
+        errState.durationMs = finished - started;
+        errState.error = observerStepError(err);
+        emitStep(collector, errState);
+      }
       throw err;
     }
   };
 
-  return wrapped;
+  // An event a source push admitted goes on through `wrapped` itself, so it
+  // keeps its span id and its records and is never refused on its way in.
+  setAdmittedPush(collector, wrapped);
+
+  // A push that enters after the shutdown began is refused before any chain
+  // work; one admitted before is counted, so the shutdown waits for it.
+  const guarded: Collector.PushFn = (event, options) => {
+    if (collector.hasShutdown)
+      return Promise.resolve(refuseWhileShuttingDown(collector, event.name));
+    return trackPush(collector, () => wrapped(event, options));
+  };
+
+  return guarded;
 }

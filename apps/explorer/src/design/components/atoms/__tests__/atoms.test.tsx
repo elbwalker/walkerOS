@@ -12,6 +12,9 @@ describe('Icon', () => {
     ['check', '0 0 16 16'],
     ['copy', '0 0 24 24'],
     ['warning', '0 0 24 24'],
+    ['success', '0 0 24 24'],
+    ['danger', '0 0 24 24'],
+    ['info', '0 0 24 24'],
   ])('%s is a hidden glyph on a %s grid', (name, viewBox) => {
     const svg = render(<Icon name={name} />).container.querySelector('svg');
     expect(svg?.getAttribute('viewBox')).toBe(viewBox);

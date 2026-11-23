@@ -6,7 +6,7 @@ export const SettingsSchema = z
       .string()
       .min(1)
       .describe(
-        'ClickHouse HTTP endpoint (like https://host.clickhouse.cloud:8443)',
+        'ClickHouse HTTP endpoint (like https://host.clickhouse.cloud:8443); a path is the path every insert is sent to (like https://ingest.walkeros.io/events)',
       ),
     database: z
       .string()
@@ -37,6 +37,12 @@ export const SettingsSchema = z
       .optional()
       .describe(
         'ClickHouse settings applied to every insert (like { async_insert: 1 })',
+      ),
+    signed: z
+      .boolean()
+      .optional()
+      .describe(
+        'Sign each insert with the host instead of a credential: true for a paired runner writing to walkerOS hosted ingest (like https://ingest.walkeros.io/events); leave unset for any other ClickHouse',
       ),
   })
   .strict();

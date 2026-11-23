@@ -1,5 +1,15 @@
 import { generateKeyPairSync, sign } from 'crypto';
-import { scrubSecrets, redactLine } from '../redactLine';
+import {
+  compileKnown,
+  createKnownValues,
+  cutLine,
+  maskKnownValues,
+  redactLine,
+  scrubSecrets,
+  type CompiledKnown,
+} from '../redactLine';
+
+type KnownInput = readonly string[] | CompiledKnown;
 
 describe('scrubSecrets', () => {
   it('masks a high-entropy token', () => {
@@ -126,6 +136,66 @@ describe('scrubSecrets', () => {
       const result = scrubSecrets('key is AKIAIOSFODNN7EXAMPLE done');
       expect(result).not.toContain('AKIAIOSFODNN7EXAMPLE');
       expect(result).toContain('***');
+    });
+
+    // Every walkerOS token starts with wos_, so it is masked by that prefix,
+    // not only when its shape or entropy gives it away.
+    it.each([
+      [
+        'a preview token of low entropy',
+        `wos_preview_${'a'.repeat(16)}_${'a'.repeat(43)}`,
+      ],
+      ['a short app token', 'wos_at_shorttoken'],
+    ])('masks %s by its prefix', (_name, token) => {
+      expect(redactLine(`report refused for ${token} at /preview`)).toBe(
+        'report refused for *** at /preview',
+      );
+    });
+
+    // In serialized JSON an escape ends the word before a token.
+    it('masks a token right after a JSON escape, keeping the escape', () => {
+      expect(redactLine('{"m":"line\\nsk_live_abc"}')).toBe(
+        '{"m":"line\\n***"}',
+      );
+    });
+
+    // The credential after an auth scheme masks whatever its length; an
+    // ordinary word after the scheme name stays.
+    it.each([
+      ['Authorization: Bearer Ab3dEf6hIj9lMn2pQr', 'Authorization: Bearer ***'],
+      ['Authorization: Basic dXNlcjpzM2NyZXQ=', 'Authorization: Basic ***'],
+      ['retry with bearer abc123', 'retry with bearer ***'],
+      ['falls back to basic auth', 'falls back to basic auth'],
+      [
+        'Basic Auth failed for the basic plan',
+        'Basic Auth failed for the basic plan',
+      ],
+      ['the bearer token was refused', 'the bearer token was refused'],
+      // A JWT whose segments the entropy guess lets pass: only the scheme
+      // rule masks it.
+      ['Authorization: DPoP eyJhbGci.eyJzdWIi.c2ln', 'Authorization: DPoP ***'],
+      ['the dpop proof was refused', 'the dpop proof was refused'],
+    ])('masks the credential after an auth scheme in %s', (line, masked) => {
+      expect(redactLine(line)).toBe(masked);
+    });
+
+    // In a URL a percent escape ends the word before a token.
+    it.each([
+      ['auth=Bearer%20sk_live_abc', 'auth=Bearer%20***'],
+      ['q=Bearer%20wos_at_shorttoken&x=1', 'q=Bearer%20***&x=1'],
+      ['k%3Dsk_test_abc', 'k%3D***'],
+    ])('masks a token right after a percent escape in %s', (line, masked) => {
+      expect(redactLine(line)).toBe(masked);
+    });
+
+    // A prefix inside a word is ordinary text.
+    it.each([
+      'task_queue failed',
+      'disk-full on /var',
+      'mask-rule not applied',
+      'twos_complement',
+    ])('leaves %s unchanged', (line) => {
+      expect(redactLine(line)).toBe(line);
     });
   });
 
@@ -406,19 +476,27 @@ describe('scrubSecrets doubly escaped credential fields', () => {
   });
 });
 
-describe('scrubSecrets known values', () => {
+describe.each([
+  ['an array', (values: readonly string[]): KnownInput => values],
+  [
+    'a compiled set',
+    (values: readonly string[]): KnownInput => compileKnown(values),
+  ],
+])('scrubSecrets known values as %s', (_form, as) => {
   it('masks known values raw and JSON-escaped, longest first, before patterns', () => {
     const sa =
       '{"private_key":"-----BEGIN PRIVATE KEY-----\\nabc\\n","client_email":"a@p"}';
     const escaped = JSON.stringify(sa).slice(1, -1);
     expect(
-      scrubSecrets(`raw ${sa} esc ${escaped}`, { known: [sa] }),
+      scrubSecrets(`raw ${sa} esc ${escaped}`, { known: as([sa]) }),
     ).not.toMatch(/abc|a@p/);
-    expect(scrubSecrets('abcdefgh', { known: ['abcdef', 'abcdefgh'] })).toBe(
-      '***',
+    expect(
+      scrubSecrets('abcdefgh', { known: as(['abcdef', 'abcdefgh']) }),
+    ).toBe('***');
+    expect(scrubSecrets('x analyt y', { known: as(['analyt']) })).toBe(
+      'x *** y',
     );
-    expect(scrubSecrets('x analyt y', { known: ['analyt'] })).toBe('x *** y');
-    expect(scrubSecrets('short abc', { known: ['abc'] })).toBe('short abc');
+    expect(scrubSecrets('short abc', { known: as(['abc']) })).toBe('short abc');
   });
 
   it('masks a multi-line service account inside JSON output and a log line', () => {
@@ -434,13 +512,13 @@ describe('scrubSecrets known values', () => {
     const jsonOutput = JSON.stringify({ calls: [{ args: [sa] }] }, null, 2);
     const logLine = `[flow] push failed ${JSON.stringify({ credentials: sa })}`;
     for (const line of [jsonOutput, logLine]) {
-      const out = scrubSecrets(line, { known: [sa] });
+      const out = scrubSecrets(line, { known: as([sa]) });
       expect(out).not.toContain('plainkeybody');
       expect(out).not.toContain('svc@proj');
       expect(out).not.toContain('service_account');
     }
     expect(() =>
-      JSON.parse(scrubSecrets(jsonOutput, { known: [sa] })),
+      JSON.parse(scrubSecrets(jsonOutput, { known: as([sa]) })),
     ).not.toThrow();
   });
 
@@ -452,7 +530,7 @@ describe('scrubSecrets known values', () => {
     );
     const body = JSON.stringify({ credentials: sa });
     const jsonOutput = JSON.stringify({ calls: [{ args: [body] }] });
-    const out = scrubSecrets(jsonOutput, { known: [sa] });
+    const out = scrubSecrets(jsonOutput, { known: as([sa]) });
     expect(out).not.toContain('plainkeybody');
     expect(out).not.toContain('svc@proj');
     expect(() => JSON.parse(out)).not.toThrow();
@@ -464,7 +542,7 @@ describe('scrubSecrets known values', () => {
   ])(
     'keeps JSON valid when a known value starts inside %s',
     (_label, value, known) => {
-      const out = scrubSecrets(JSON.stringify(value), { known: [known] });
+      const out = scrubSecrets(JSON.stringify(value), { known: as([known]) });
       expect(() => JSON.parse(out)).not.toThrow();
       expect(out).not.toContain('abcdefgh');
     },
@@ -489,7 +567,7 @@ describe('scrubSecrets known values', () => {
         ],
         ['a form body', `body a=1&v=${form}&b=2`, 'body a=1&v=***&b=2'],
       ])('in %s', (_label, line, masked) => {
-        expect(scrubSecrets(line, { known: [secret] })).toBe(masked);
+        expect(scrubSecrets(line, { known: as([secret]) })).toBe(masked);
       });
     },
   );
@@ -500,10 +578,10 @@ describe('scrubSecrets known values', () => {
       const body = new URLSearchParams({ v: secret, w: '1' }).toString();
       const url = encodeURI(`https://vendor.test/${secret}/collect`);
 
-      expect(scrubSecrets(`body ${body}`, { known: [secret] })).toBe(
+      expect(scrubSecrets(`body ${body}`, { known: as([secret]) })).toBe(
         'body v=***&w=1',
       );
-      expect(scrubSecrets(`GET ${url}`, { known: [secret] })).toBe(
+      expect(scrubSecrets(`GET ${url}`, { known: as([secret]) })).toBe(
         'GET https://vendor.test/***/collect',
       );
     },
@@ -511,19 +589,97 @@ describe('scrubSecrets known values', () => {
 
   it('masks a value URL encoding cannot encode as it is', () => {
     const secret = 'abcdef\ud800';
-    expect(scrubSecrets(`x ${secret} y`, { known: [secret] })).toBe('x *** y');
+    expect(scrubSecrets(`x ${secret} y`, { known: as([secret]) })).toBe(
+      'x *** y',
+    );
   });
 
   it('keeps the length rule for an encoded short value', () => {
-    expect(scrubSecrets('x a%2Bb%2F y', { known: ['a+b/'] })).toBe(
+    expect(scrubSecrets('x a%2Bb%2F y', { known: as(['a+b/']) })).toBe(
       'x a%2Bb%2F y',
     );
   });
 
   it('treats regex characters in a known value literally', () => {
-    expect(scrubSecrets('a (x+y)*[z] b', { known: ['(x+y)*[z]'] })).toBe(
+    expect(scrubSecrets('a (x+y)*[z] b', { known: as(['(x+y)*[z]']) })).toBe(
       'a *** b',
     );
+  });
+});
+
+describe('createKnownValues', () => {
+  it('hands out the same compiled set until the values change', () => {
+    const known = createKnownValues(['first-value']);
+    expect(known.compiled()).toBe(known.compiled());
+  });
+
+  it.each([
+    ['a new value', 'second-value', true],
+    ['a value already held', 'first-value', false],
+    ['a value under 6 characters', 'short', false],
+  ])('after adding %s, compiles anew: %s', (_label, value, changes) => {
+    const known = createKnownValues(['first-value']);
+    const before = known.compiled();
+    known.add([value]);
+    expect(known.compiled() !== before).toBe(changes);
+  });
+
+  it('masks a value added after the set was first compiled', () => {
+    const known = createKnownValues();
+    known.compiled();
+    known.add(['late-value-42']);
+    expect(scrubSecrets('x late-value-42', { known: known.compiled() })).toBe(
+      'x ***',
+    );
+    expect(known.values()).toEqual(['late-value-42']);
+  });
+});
+
+describe('known values that are not masking text', () => {
+  const line = 'x [object Object] {} 1234567 undefined real-secret-1';
+
+  it.each<[string, unknown]>([
+    ['Object.prototype', Object.prototype],
+    ['an empty object', {}],
+    ['a number', 1234567],
+    ['undefined', undefined],
+    ['the empty string', ''],
+  ])(
+    '%s compiles to no form and masks only the other values',
+    (_label, value) => {
+      // Checked before masking: a set with an empty form never finishes.
+      expect(compileKnown([value]).forms).toEqual([]);
+      expect(
+        maskKnownValues(line, compileKnown([value, 'real-secret-1'])),
+      ).toBe('x [object Object] {} 1234567 undefined ***');
+    },
+  );
+
+  it('masks only the other values when a compiled set holds an empty form', () => {
+    expect(
+      maskKnownValues('x real-secret-1 y', { forms: ['real-secret-1', ''] }),
+    ).toBe('x *** y');
+  });
+
+  it('masks in bounded time after a value read through an inherited name', () => {
+    // A server secret named `__proto__` reads Object.prototype from an
+    // environment record, which inherits from it.
+    const env: Record<string, string> = {};
+    const known = createKnownValues();
+    known.add([env['__proto__'] ?? '', 'real-secret-1']);
+    expect(known.compiled().forms).not.toContain('');
+    expect(
+      maskKnownValues('x [object Object] real-secret-1', known.compiled()),
+    ).toBe('x [object Object] ***');
+  });
+});
+
+describe('cutLine', () => {
+  it.each([
+    ['a line over 256', 'Z'.repeat(300), 'Z'.repeat(255) + '…'],
+    ['a line of 256', 'Z'.repeat(256), 'Z'.repeat(256)],
+  ])('keeps a 256-character total for %s', (_label, line, cut) => {
+    expect(cutLine(line)).toBe(cut);
   });
 });
 
@@ -538,6 +694,12 @@ describe('redactLine (truncating wire variant)', () => {
   it('scrubs secrets as well', () => {
     const token = 'AKIAIOSFODNN7EXAMPLEKEY1234ABCD';
     expect(redactLine(`token is ${token} here`)).toBe('token is *** here');
+  });
+
+  it('masks a known value', () => {
+    expect(redactLine('auth plainword', { known: ['plainword'] })).toBe(
+      'auth ***',
+    );
   });
 });
 

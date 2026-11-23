@@ -1,4 +1,5 @@
 import React, { type HTMLAttributes, type ReactNode } from 'react';
+import { StepNumber } from '../atoms/StepNumber';
 import { cx } from '../cx';
 
 export interface QuickstartStep {
@@ -71,9 +72,7 @@ export function QuickstartSteps({
           const item = (
             <li key={step.title} className="elb-quickstart__step">
               <div className="elb-quickstart__head">
-                <span className="elb-quickstart__num" aria-hidden="true">
-                  {index + 1}
-                </span>
+                <StepNumber n={index + 1} aria-hidden="true" />
                 <h3 className="elb-quickstart__title">{step.title}</h3>
               </div>
               <p className="elb-quickstart__copy">{step.text}</p>

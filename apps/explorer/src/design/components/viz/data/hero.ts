@@ -1,14 +1,14 @@
 /**
  * The hero demo's script: walkerOS attributes typed into an article teaser, the
- * card lighting up per tagged part, a click, and the events in a live table.
- * heroMarkup() is the tagged markup the demo ends on, and heroEvents() what
- * walkerOS makes of it; a fidelity test runs the one through walkerOS and
- * compares with the other. Imports only package-free demo parts.
+ * card lighting up per tagged part, a click, and the events in a live table,
+ * one article per loop. heroMarkup() is the tagged markup the demo ends on, and
+ * heroEvents() what walkerOS makes of it; a fidelity test runs the one through
+ * walkerOS and compares with the other. Imports only package-free demo parts.
  */
-import { tok, type CodeToken } from '../../codeTokens';
-import { clamp, ease } from '../parts/timeline';
-import { lineText, truncate, typedLength } from '../parts/tokens';
+import { tok } from '../../codeTokens';
+import { lineText } from '../parts/tokens';
 import type { ThumbKind } from '../parts/Thumb';
+import type { TaggingEvent, TaggingScript } from './tagging';
 
 export interface HeroArticle {
   readonly kicker: string;
@@ -30,8 +30,6 @@ export const HERO_LOOP = 11500;
 
 /** The loop's cues, in ms from the start of an article's loop. */
 const CUE = {
-  slideInStart: 0,
-  slideInEnd: 500,
   entityStart: 900,
   entityEnd: 1500,
   impressionStart: 1800,
@@ -43,17 +41,9 @@ const CUE = {
   actionStart: 5000,
   actionEnd: 5800,
   impressionEvent: 6200,
-  moveStart: 6900,
-  moveEnd: 7700,
   click: 7850,
   openEvent: 8000,
-  fadeOut: 10600,
-  slideOutStart: 10800,
-  slideOutEnd: 11400,
 };
-
-const MAX_ROWS = 24;
-const PAST = 10000;
 
 const ENTITY = [
   tok('data-elb', 'attr'),
@@ -84,198 +74,13 @@ const ACTION = [
   tok('"click:open"', 'str'),
 ];
 
-type Slot = 'entity' | 'impression' | 'category' | 'title' | 'action';
-
-const TYPING: ReadonlyArray<readonly [number, number]> = [
-  [CUE.entityStart, CUE.entityEnd],
-  [CUE.impressionStart, CUE.impressionEnd],
-  [CUE.categoryStart, CUE.categoryEnd],
-  [CUE.titleStart, CUE.titleEnd],
-  [CUE.actionStart, CUE.actionEnd],
-];
-
-export interface HeroLine {
-  readonly id: string;
-  readonly n: number;
-  readonly tokens: readonly CodeToken[];
-  readonly on: boolean;
-  /** How many tokens stand before the caret; null without a caret. */
-  readonly caret: number | null;
-}
-
 export interface HeroEvent {
   readonly name: string;
   readonly data: Readonly<Record<string, string>>;
 }
 
-export interface HeroRow extends HeroEvent {
-  readonly key: string;
-  readonly age: number;
-}
-
-export interface HeroFrame {
-  readonly article: HeroArticle;
-  readonly lines: readonly HeroLine[];
-  readonly fade: number;
-  readonly caretOn: boolean;
-  readonly card: {
-    readonly opacity: number;
-    readonly offset: number;
-    readonly entity: boolean;
-    readonly impression: boolean;
-    readonly category: boolean;
-    readonly title: boolean;
-    readonly action: boolean;
-  };
-  readonly cursor: {
-    readonly x: number;
-    readonly y: number;
-    readonly opacity: number;
-    readonly ring: number;
-    readonly ringOpacity: number;
-    readonly pressed: boolean;
-  };
-  readonly rows: readonly HeroRow[];
-}
-
 function articleAt(loop: number): HeroArticle {
   return HERO_ARTICLES[loop % HERO_ARTICLES.length];
-}
-
-function caretSlot(ph: number): Slot | null {
-  if (ph >= CUE.entityStart - 400 && ph < CUE.impressionStart - 300)
-    return 'entity';
-  if (ph >= CUE.impressionStart - 300 && ph < CUE.categoryStart - 100)
-    return 'impression';
-  if (ph >= CUE.categoryStart - 100 && ph < CUE.titleStart - 100)
-    return 'category';
-  if (ph >= CUE.titleStart - 100 && ph < CUE.actionStart - 100) return 'title';
-  if (ph >= CUE.actionStart - 100 && ph < CUE.moveStart) return 'action';
-  return null;
-}
-
-function typed(
-  tokens: readonly CodeToken[],
-  start: number,
-  end: number,
-  ph: number,
-): CodeToken[] {
-  return truncate(
-    tokens,
-    Math.round(clamp((ph - start) / (end - start)) * typedLength(tokens)),
-  );
-}
-
-/** The code pane's lines at phase `ph` of an article's loop. */
-function heroLines(article: HeroArticle, ph: number): HeroLine[] {
-  const slot = caretSlot(ph);
-  const indent = tok('  ', 'punct');
-  const entity = typed(ENTITY, CUE.entityStart, CUE.entityEnd, ph);
-  const impression = typed(
-    IMPRESSION,
-    CUE.impressionStart,
-    CUE.impressionEnd,
-    ph,
-  );
-  const category = typed(CATEGORY, CUE.categoryStart, CUE.categoryEnd, ph);
-  const title = typed(TITLE, CUE.titleStart, CUE.titleEnd, ph);
-  const action = typed(ACTION, CUE.actionStart, CUE.actionEnd, ph);
-  const lines: Array<Omit<HeroLine, 'n'> | null> = [
-    {
-      id: 'open',
-      tokens: [
-        tok('<article', 'tag'),
-        tok(' ', 'punct'),
-        tok('class', 'attr'),
-        tok('=', 'punct'),
-        tok('"teaser"', 'str'),
-      ],
-      on: false,
-      caret: null,
-    },
-    ph >= CUE.entityStart - 400
-      ? {
-          id: 'entity',
-          tokens: [indent, ...entity],
-          on: true,
-          caret: slot === 'entity' ? 1 + entity.length : null,
-        }
-      : null,
-    ph >= CUE.impressionStart - 300
-      ? {
-          id: 'impression',
-          tokens: [indent, ...impression],
-          on: true,
-          caret: slot === 'impression' ? 1 + impression.length : null,
-        }
-      : null,
-    { id: 'close', tokens: [tok('>', 'tag')], on: false, caret: null },
-    {
-      id: 'image',
-      tokens: [
-        indent,
-        tok('<img', 'tag'),
-        tok(' ', 'punct'),
-        tok('src', 'attr'),
-        tok('=', 'punct'),
-        tok(`"/img/${article.thumb}.jpg"`, 'str'),
-        tok(' ', 'punct'),
-        tok('alt', 'attr'),
-        tok('=', 'punct'),
-        tok('""', 'str'),
-        tok(' />', 'tag'),
-      ],
-      on: false,
-      caret: null,
-    },
-    {
-      id: 'category',
-      tokens: [
-        indent,
-        tok('<span', 'tag'),
-        tok(' ', 'punct'),
-        tok('class', 'attr'),
-        tok('=', 'punct'),
-        tok('"kicker"', 'str'),
-        ...category,
-        tok('>', 'tag'),
-        tok(article.kicker, 'text'),
-        tok('</span>', 'tag'),
-      ],
-      on: ph >= CUE.categoryStart - 100,
-      caret: slot === 'category' ? 6 + category.length : null,
-    },
-    {
-      id: 'title',
-      tokens: [
-        indent,
-        tok('<h3', 'tag'),
-        ...title,
-        tok('>', 'tag'),
-        tok(article.title, 'text'),
-        tok('</h3>', 'tag'),
-      ],
-      on: ph >= CUE.titleStart - 100,
-      caret: slot === 'title' ? 2 + title.length : null,
-    },
-    {
-      id: 'action',
-      tokens: [
-        indent,
-        tok('<a', 'tag'),
-        ...action,
-        tok('>', 'tag'),
-        tok('Open →', 'text'),
-        tok('</a>', 'tag'),
-      ],
-      on: ph >= CUE.actionStart - 100,
-      caret: slot === 'action' ? 2 + action.length : null,
-    },
-    { id: 'end', tokens: [tok('</article>', 'tag')], on: false, caret: null },
-  ];
-  return lines
-    .filter((line): line is Omit<HeroLine, 'n'> => line !== null)
-    .map((line, index) => ({ ...line, n: index + 1 }));
 }
 
 /** What walkerOS makes of the tagged teaser: its impression and the click on Open. */
@@ -291,79 +96,155 @@ export function heroEvents(
 
 /** The tagged teaser as the demo's code pane ends on it, as HTML. */
 export function heroMarkup(article: HeroArticle): string {
-  return heroLines(article, CUE.moveStart)
-    .map((line) => lineText(line.tokens))
+  return heroScript(article)
+    .lines.map((line) => lineText(line.tokens))
     .join('\n');
 }
 
-function heroRows(loop: number, ph: number): HeroRow[] {
-  const rows: HeroRow[] = [];
-  for (let j = loop; j >= 0 && rows.length < MAX_ROWS; j--) {
-    const [impression, open] = heroEvents(articleAt(j));
-    const current = j === loop;
-    if (!current || ph >= CUE.openEvent)
-      rows.push({
-        ...open,
-        key: `${j}-open`,
-        age: current ? ph - CUE.openEvent : PAST,
-      });
-    if (!current || ph >= CUE.impressionEvent)
-      rows.push({
-        ...impression,
-        key: `${j}-impression`,
-        age: current ? ph - CUE.impressionEvent : PAST,
-      });
-  }
-  return rows.slice(0, MAX_ROWS);
+/** The teaser's code pane as it ends, line by line. */
+function heroCode(article: HeroArticle) {
+  const indent = tok('  ', 'punct');
+  return {
+    open: [
+      tok('<article', 'tag'),
+      tok(' ', 'punct'),
+      tok('class', 'attr'),
+      tok('=', 'punct'),
+      tok('"teaser"', 'str'),
+    ],
+    entity: [indent, ...ENTITY],
+    impression: [indent, ...IMPRESSION],
+    close: [tok('>', 'tag')],
+    image: [
+      indent,
+      tok('<img', 'tag'),
+      tok(' ', 'punct'),
+      tok('src', 'attr'),
+      tok('=', 'punct'),
+      tok(`"/img/${article.thumb}.jpg"`, 'str'),
+      tok(' ', 'punct'),
+      tok('alt', 'attr'),
+      tok('=', 'punct'),
+      tok('""', 'str'),
+      tok(' />', 'tag'),
+    ],
+    category: [
+      indent,
+      tok('<span', 'tag'),
+      tok(' ', 'punct'),
+      tok('class', 'attr'),
+      tok('=', 'punct'),
+      tok('"kicker"', 'str'),
+      ...CATEGORY,
+      tok('>', 'tag'),
+      tok(article.kicker, 'text'),
+      tok('</span>', 'tag'),
+    ],
+    title: [
+      indent,
+      tok('<h3', 'tag'),
+      ...TITLE,
+      tok('>', 'tag'),
+      tok(article.title, 'text'),
+      tok('</h3>', 'tag'),
+    ],
+    action: [
+      indent,
+      tok('<a', 'tag'),
+      ...ACTION,
+      tok('>', 'tag'),
+      tok('Open →', 'text'),
+      tok('</a>', 'tag'),
+    ],
+    end: [tok('</article>', 'tag')],
+  };
 }
 
-/** Everything the hero demo shows at time `t` (ms since the first loop began). */
-export function heroFrame(t: number): HeroFrame {
-  const loop = Math.floor(t / HERO_LOOP);
-  const ph = t - loop * HERO_LOOP;
-  const article = articleAt(loop);
-  const slideIn = ease(
-    clamp((ph - CUE.slideInStart) / (CUE.slideInEnd - CUE.slideInStart)),
-  );
-  const slideOut = ease(
-    clamp((ph - CUE.slideOutStart) / (CUE.slideOutEnd - CUE.slideOutStart)),
-  );
-  const move = ease(
-    clamp((ph - CUE.moveStart) / (CUE.moveEnd - CUE.moveStart)),
-  );
-  const ripple = clamp((ph - CUE.click) / 550);
-  const cursorShown = ph >= CUE.moveStart - 200 && ph < CUE.fadeOut + 200;
-  const fadingOut = ph > CUE.fadeOut ? 1 - clamp((ph - CUE.fadeOut) / 200) : 1;
+/** One article's loop as a tagging script: the teaser typed, lit, clicked, and its two events. */
+export function heroScript(article: HeroArticle): TaggingScript {
+  const code = heroCode(article);
+  const [impression, open] = heroEvents(article);
+  const still = (id: keyof typeof code) => ({
+    id,
+    tokens: code[id],
+    typeFrom: 0,
+    typeTo: 0,
+  });
   return {
-    article,
-    lines: heroLines(article, ph),
-    fade:
-      ph < 250
-        ? ph / 250
-        : ph > CUE.fadeOut
-          ? 1 - clamp((ph - CUE.fadeOut) / (HERO_LOOP - CUE.fadeOut - 150))
-          : 1,
-    caretOn:
-      TYPING.some(([start, end]) => ph >= start && ph <= end) || ph % 900 < 500,
+    file: 'ArticleTeaser.html',
+    loop: HERO_LOOP,
+    lines: [
+      still('open'),
+      {
+        id: 'entity',
+        tokens: code.entity,
+        typeFrom: CUE.entityStart,
+        typeTo: CUE.entityEnd,
+        showFrom: CUE.entityStart - 400,
+      },
+      {
+        id: 'impression',
+        tokens: code.impression,
+        typeFrom: CUE.impressionStart,
+        typeTo: CUE.impressionEnd,
+        showFrom: CUE.impressionStart - 300,
+      },
+      still('close'),
+      still('image'),
+      {
+        id: 'category',
+        tokens: code.category,
+        typeFrom: CUE.categoryStart,
+        typeTo: CUE.categoryEnd,
+        showFrom: CUE.categoryStart - 100,
+        lights: 'category',
+      },
+      {
+        id: 'title',
+        tokens: code.title,
+        typeFrom: CUE.titleStart,
+        typeTo: CUE.titleEnd,
+        showFrom: CUE.titleStart - 100,
+        lights: 'title',
+      },
+      {
+        id: 'action',
+        tokens: code.action,
+        typeFrom: CUE.actionStart,
+        typeTo: CUE.actionEnd,
+        showFrom: CUE.actionStart - 100,
+        lights: 'action',
+      },
+      still('end'),
+    ],
     card: {
-      opacity: clamp(ph / 250) * (1 - slideOut),
-      offset: ph >= CUE.slideOutStart ? -slideOut * 190 : (1 - slideIn) * 190,
-      entity: ph >= CUE.entityEnd,
-      impression: ph >= CUE.impressionEnd,
-      category: ph >= CUE.categoryEnd,
-      title: ph >= CUE.titleEnd,
-      action: ph >= CUE.actionEnd,
+      thumb: article.thumb,
+      parts: [
+        { id: 'category', text: article.kicker, role: 'kicker' },
+        { id: 'title', text: article.title, role: 'title' },
+        { id: 'action', text: 'Open →', role: 'action' },
+      ],
     },
-    cursor: {
-      x: 22 + (1 - move) * 190,
-      y: 11 - (1 - move) * 80,
-      opacity: cursorShown
-        ? clamp((ph - (CUE.moveStart - 200)) / 200) * fadingOut
-        : 0,
-      ring: 1 + ripple * 1.8,
-      ringOpacity: ph >= CUE.click ? (1 - ripple) * 0.9 : 0,
-      pressed: ph >= CUE.click && ph < CUE.click + 180,
-    },
-    rows: heroRows(loop, ph),
+    events: [
+      { ...impression, at: CUE.impressionEvent },
+      { ...open, at: CUE.openEvent },
+    ],
+    click: { part: 'action', at: CUE.click },
   };
+}
+
+/** Earlier loops whose events the table still lists: it keeps 24 rows, two per loop. */
+const PAST_LOOPS = 11;
+
+/**
+ * The hero's script for its `loop`-th loop (from 0): that loop's article, with
+ * the earlier loops' events still in the table as events before the loop began.
+ */
+export function heroLoopScript(loop: number): TaggingScript {
+  const script = heroScript(articleAt(loop));
+  const past: TaggingEvent[] = [];
+  for (let j = Math.max(0, loop - PAST_LOOPS); j < loop; j++)
+    for (const event of heroScript(articleAt(j)).events)
+      past.push({ ...event, at: event.at + (j - loop) * HERO_LOOP });
+  return { ...script, events: [...past, ...script.events] };
 }

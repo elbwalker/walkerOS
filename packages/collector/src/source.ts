@@ -37,6 +37,7 @@ import {
 } from './destination';
 import { emitCollectorDrop } from './observerEmit';
 import { getCacheStore } from './cache';
+import { admittedPush, refuseWhileShuttingDown, trackPush } from './in-flight';
 import {
   DEFAULT_DESTINATION_TIMEOUT_MS,
   DestinationTimeoutError,
@@ -175,8 +176,10 @@ export async function initSource(
     : undefined;
 
   // The pipeline's end. `terminus` replaces the collector entirely; see the
-  // field's doc on Source.InitSource for the full (total) semantics.
-  const terminalPush: Collector.PushFn = terminus ?? collector.push;
+  // field's doc on Source.InitSource for the full (total) semantics. Without
+  // one, the event this source push admitted takes the collector's unguarded
+  // push: the guard already ran at this push's entry.
+  const terminalPush: Collector.PushFn = terminus ?? admittedPush(collector);
   const hasTerminus = Boolean(terminus);
 
   /**
@@ -189,7 +192,7 @@ export async function initSource(
    * intercept the cached value before forwarding). That mutation is
    * scope-local: a concurrent call with its own scope is unaffected.
    */
-  const executePush = async (
+  const runSourcePush = async (
     rawEvent: WalkerOS.DeepPartialEvent,
     options: Collector.PushOptions,
     scope: { ingest: Ingest; respond: RespondFn | undefined },
@@ -401,6 +404,19 @@ export async function initSource(
     if (pendingRespond) await pendingRespond;
 
     return pushResult;
+  };
+
+  // A source push that enters after the shutdown began is refused before any
+  // chain work, the terminus included; one admitted before is counted, so the
+  // shutdown waits for it.
+  const executePush = (
+    rawEvent: WalkerOS.DeepPartialEvent,
+    options: Collector.PushOptions,
+    scope: { ingest: Ingest; respond: RespondFn | undefined },
+  ): Promise<Elb.PushResult> => {
+    if (collector.hasShutdown)
+      return Promise.resolve(refuseWhileShuttingDown(collector, rawEvent.name));
+    return trackPush(collector, () => runSourcePush(rawEvent, options, scope));
   };
 
   /**

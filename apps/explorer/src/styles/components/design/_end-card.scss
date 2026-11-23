@@ -1,0 +1,23 @@
+// EndCard (@walkeros/explorer/design/components): the closing card of a video
+// or a post, where to try it yourself.
+@layer components {
+  // Fills and centres through .elb-full-frame.
+  .elb-end-card {
+    justify-items: center;
+    gap: 24px;
+    color: var(--fg);
+    text-align: center;
+  }
+
+  .elb-end-card__logo {
+    display: flex;
+    justify-content: center;
+  }
+
+  .elb-end-card__url {
+    font-family: var(--type-title-card-family);
+    font-size: var(--type-title-card-size);
+    line-height: var(--type-title-card-line-height);
+    font-weight: var(--type-title-card-weight);
+  }
+}

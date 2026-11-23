@@ -1,7 +1,7 @@
 import type { Cache, Collector, Store } from '@walkeros/core';
 import { emitStep, useHooks } from '@walkeros/core';
 import { createCacheStore } from './cache-store';
-import { observerStepError, stepState } from './observerEmit';
+import { observed, observerStepError, stepState } from './observerEmit';
 import { wrapStoreWithCache } from './store-cache-wrapper';
 import { buildReportError } from './report-error';
 
@@ -61,41 +61,34 @@ function applyStoreHooks(
     collector.logger,
   );
 
+  // Store values can be secrets or PII: a record carries only the op and the
+  // key, never the raw value, on any phase (in/out/error). Observers see what
+  // happened, not what was written. Built only when an observer reads it.
+  const record = (
+    phase: 'in' | 'out' | 'error',
+    op: 'get' | 'set' | 'delete',
+    key: string,
+    at: number,
+    started?: number,
+    err?: unknown,
+  ): void => {
+    if (!observed(collector)) return;
+    const state = stepState(collector, stepIdFor, 'store', phase, '', at);
+    if (started !== undefined) state.durationMs = at - started;
+    state.meta = { op, key };
+    if (phase === 'error') state.error = observerStepError(err);
+    emitStep(collector, state);
+  };
+
   instance.get = async (key: string): Promise<Store.StoreValue | undefined> => {
     const started = Date.now();
-    const inState = stepState(collector, stepIdFor, 'store', 'in', '', started);
-    inState.meta = { op: 'get', key };
-    emitStep(collector, inState);
-
+    record('in', 'get', key, started);
     try {
       const result = await innerGet(key);
-      const finished = Date.now();
-      const outState = stepState(
-        collector,
-        stepIdFor,
-        'store',
-        'out',
-        '',
-        finished,
-      );
-      outState.durationMs = finished - started;
-      outState.meta = { op: 'get', key };
-      emitStep(collector, outState);
+      record('out', 'get', key, Date.now(), started);
       return result;
     } catch (err) {
-      const finished = Date.now();
-      const errState = stepState(
-        collector,
-        stepIdFor,
-        'store',
-        'error',
-        '',
-        finished,
-      );
-      errState.durationMs = finished - started;
-      errState.meta = { op: 'get', key };
-      errState.error = observerStepError(err);
-      emitStep(collector, errState);
+      record('error', 'get', key, Date.now(), started, err);
       throw err;
     }
   };
@@ -106,79 +99,24 @@ function applyStoreHooks(
     ttl?: number,
   ): Promise<void> => {
     const started = Date.now();
-    const inState = stepState(collector, stepIdFor, 'store', 'in', '', started);
-    // Store values can be secrets or PII: emit only the op + key, never the
-    // raw value, on any phase (in/out/error). Observers see what happened,
-    // not what was written.
-    inState.meta = { op: 'set', key };
-    emitStep(collector, inState);
-
+    record('in', 'set', key, started);
     try {
       await innerSet(key, value, ttl);
-      const finished = Date.now();
-      const outState = stepState(
-        collector,
-        stepIdFor,
-        'store',
-        'out',
-        '',
-        finished,
-      );
-      outState.durationMs = finished - started;
-      outState.meta = { op: 'set', key };
-      emitStep(collector, outState);
+      record('out', 'set', key, Date.now(), started);
     } catch (err) {
-      const finished = Date.now();
-      const errState = stepState(
-        collector,
-        stepIdFor,
-        'store',
-        'error',
-        '',
-        finished,
-      );
-      errState.durationMs = finished - started;
-      errState.meta = { op: 'set', key };
-      errState.error = observerStepError(err);
-      emitStep(collector, errState);
+      record('error', 'set', key, Date.now(), started, err);
       throw err;
     }
   };
 
   instance.delete = async (key: string): Promise<void> => {
     const started = Date.now();
-    const inState = stepState(collector, stepIdFor, 'store', 'in', '', started);
-    inState.meta = { op: 'delete', key };
-    emitStep(collector, inState);
-
+    record('in', 'delete', key, started);
     try {
       await innerDelete(key);
-      const finished = Date.now();
-      const outState = stepState(
-        collector,
-        stepIdFor,
-        'store',
-        'out',
-        '',
-        finished,
-      );
-      outState.durationMs = finished - started;
-      outState.meta = { op: 'delete', key };
-      emitStep(collector, outState);
+      record('out', 'delete', key, Date.now(), started);
     } catch (err) {
-      const finished = Date.now();
-      const errState = stepState(
-        collector,
-        stepIdFor,
-        'store',
-        'error',
-        '',
-        finished,
-      );
-      errState.durationMs = finished - started;
-      errState.meta = { op: 'delete', key };
-      errState.error = observerStepError(err);
-      emitStep(collector, errState);
+      record('error', 'delete', key, Date.now(), started, err);
       throw err;
     }
   };

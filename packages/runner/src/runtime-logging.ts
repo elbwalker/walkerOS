@@ -10,6 +10,7 @@
  * still need `--verbose`. No environment variable sets either.
  */
 
+import chalk from 'chalk';
 import { Level, type Logger } from '@walkeros/core';
 import {
   createCLILogger,
@@ -17,6 +18,9 @@ import {
   type CLILoggerColors,
   type CLILoggerOptions,
 } from '@walkeros/core/node';
+
+/** The runtime's terminal colours, injected into the shared logger factory. */
+export const RUNTIME_COLORS: CLILoggerColors = { error: chalk.red };
 
 /** The flow's own logger settings, as the bundle entry reports them. */
 export type FlowLoggerSettings = Pick<Logger.Config, 'level' | 'format'>;

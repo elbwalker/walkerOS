@@ -64,6 +64,10 @@ export const VALIDATE_CODES = [
   'MAPPING_VALUE_PRODUCERS',
   'BATCH_WITHOUT_PUSH_BATCH',
   'MALFORMED_REFERENCE',
+  'SERVED_FLOWS_NOT_SERVER',
+  'SERVED_FLOW_NOT_WEB',
+  'SERVED_PATH_INVALID',
+  'SERVED_PATH_CONFLICT',
   // Resolution (getFlowSettings, as the bundler resolves the flow)
   'UNRESOLVED_REFERENCE',
   'MISSING_ENV',
@@ -120,6 +124,7 @@ export type ValidateCheck =
   | 'flow:schema'
   | 'flow:steps'
   | 'flow:structure'
+  | 'flow:served'
   | 'flow:package-versions'
   | 'flow:routes'
   | 'flow:examples'

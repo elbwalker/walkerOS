@@ -14,15 +14,6 @@ export interface RunCommandOptions {
   /** Server port (overrides flow config) */
   port?: number;
 
-  /** API flow ID (enables heartbeat and secrets) */
-  flowId?: string;
-
-  /** Deployment ID (for heartbeat tracking) */
-  deploymentId?: string;
-
-  /** Project ID */
-  project?: string;
-
   /** Enable JSON output */
   json?: boolean;
 

@@ -4,14 +4,12 @@
  * driven at runtime by setting the global, which is what an undefined flag
  * reads. Flags absent (the default) are covered by every other suite.
  */
-import { Level, createIngest } from '@walkeros/core';
+import { Level } from '@walkeros/core';
 import type {
   BuildFlag,
   Collector,
   Destination,
-  FlowState,
   Logger,
-  ObserverFn,
   Source,
   Store,
   WalkerOS,
@@ -19,7 +17,6 @@ import type {
 import { startFlow } from '..';
 
 const FLAGS: BuildFlag[] = [
-  '__WALKEROS_OBSERVE__',
   '__WALKEROS_STORES__',
   '__WALKEROS_STATE__',
   '__WALKEROS_VALIDATE__',
@@ -41,11 +38,6 @@ function errorCapture(): { errors: string[]; logger: Logger.Config } {
   return { errors, logger: { level: 'ERROR', handler } };
 }
 
-interface ApiEnv extends Destination.BaseEnv {
-  api: { track: (name: string) => void };
-}
-type ApiTypes = Destination.Types<unknown, unknown, ApiEnv>;
-
 /** A destination that records the events it receives. */
 function spy(events: WalkerOS.Event[], type = 'spy'): Destination.Instance {
   return {
@@ -59,66 +51,6 @@ function spy(events: WalkerOS.Event[], type = 'spy'): Destination.Instance {
 
 afterEach(() => {
   for (const flag of FLAGS) setFlag(flag, undefined);
-});
-
-describe('__WALKEROS_OBSERVE__ false', () => {
-  it('installs no telemetry for config.observe, logs an ERROR, and keeps caller observers', async () => {
-    setFlag('__WALKEROS_OBSERVE__', false);
-    const { errors, logger } = errorCapture();
-    const observer: ObserverFn = () => undefined;
-
-    const { collector } = await startFlow({
-      logger,
-      observers: [observer],
-      observe: {
-        url: 'https://obs.example',
-        sessionId: 'ses_1',
-        token: 'tok',
-        level: 'trace',
-      },
-    });
-
-    expect([...collector.observers]).toEqual([observer]);
-    expect(collector.observeLevel).toBeUndefined();
-    expect(errors).toContain('observe: not in this build, config ignored');
-  });
-
-  it('skips trace-level call capture and hands the destination its env untouched', async () => {
-    setFlag('__WALKEROS_OBSERVE__', false);
-    const states: FlowState[] = [];
-    const tracked: string[] = [];
-    const track = (name: string): void => {
-      tracked.push(name);
-    };
-    let received: unknown;
-    const code: Destination.Instance<ApiTypes> = {
-      type: 'api',
-      config: {},
-      env: { api: { track } },
-      calls: ['call:api.track'],
-      push: async (event, context) => {
-        received = context.env.api.track;
-        context.env.api.track(event.name);
-      },
-    };
-
-    const { collector } = await startFlow({ destinations: { api: { code } } });
-    collector.observeLevel = () => 'trace';
-    collector.observers.add((state) => states.push(state));
-
-    await collector.push(
-      { name: 'page view', data: {} },
-      { id: 'web', ingest: createIngest('web') },
-    );
-
-    const out = states.find(
-      (s) => s.stepId === 'destination.api' && s.phase === 'out',
-    );
-    expect(out).toBeDefined();
-    expect(out?.calls).toBeUndefined();
-    expect(received).toBe(track);
-    expect(tracked).toEqual(['page view']);
-  });
 });
 
 describe('__WALKEROS_STORES__ false', () => {

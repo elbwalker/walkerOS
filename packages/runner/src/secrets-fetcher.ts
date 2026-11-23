@@ -1,13 +1,13 @@
-import { mergeAuthHeaders } from './auth-headers.js';
-import { secretValuesUrl } from './api-paths.js';
+import { sendWithServiceAuth } from '@walkeros/server-core';
+import { secretsUrl } from './api-paths.js';
+import { attemptHeaders } from './auth-headers.js';
+import type { AppAuth } from './credentials.js';
 import { fetchWithRetry } from './fetch-retry.js';
 import { throwIfRunnerAuthFailure } from './runner-auth-error.js';
 
 export interface FetchSecretsOptions {
-  appUrl: string;
-  token: string;
-  projectId: string;
-  flowId: string;
+  /** The app and the runner credential's headers. */
+  app: AppAuth;
 }
 
 /**
@@ -28,22 +28,25 @@ export class SecretsHttpError extends Error {
 export async function fetchSecrets(
   options: FetchSecretsOptions,
 ): Promise<Record<string, string>> {
-  const { appUrl, token, projectId, flowId } = options;
-  const url = secretValuesUrl(appUrl, projectId, flowId);
+  const { app } = options;
+  const url = secretsUrl(app.origin);
 
   // Runs sequentially after the bundle fetch within Scaleway's ~100s container
   // health window, so keep the total budget small. Retries transient failures
   // (timeouts, 5xx, 429); 401/403, 404, and other 4xx are returned for the
-  // classification/checks below. The helper also adds the per-attempt timeout
-  // this fetch previously lacked.
-  const res = await fetchWithRetry(url, {
-    maxTotalMs: 20_000,
-    init: {
-      headers: mergeAuthHeaders(token, { 'Content-Type': 'application/json' }),
-    },
-  });
+  // classification/checks below.
+  const request = { method: 'GET', url };
+  const res = await sendWithServiceAuth(app, request, (headers) =>
+    fetchWithRetry(url, {
+      maxTotalMs: 20_000,
+      headers: attemptHeaders(app, request, headers),
+      // The family never redirects: a redirect is a failed read, not
+      // followed, so no proof or signature leaves the app's origin.
+      init: { redirect: 'manual' },
+    }),
+  );
 
-  // Classify 401/403 with the app's error code (FORBIDDEN_FLOW, FORBIDDEN_SCOPE).
+  // Classify 401/403 with the app's error code (FORBIDDEN_KIND, FORBIDDEN_SCOPE).
   await throwIfRunnerAuthFailure(res);
 
   if (!res.ok) {

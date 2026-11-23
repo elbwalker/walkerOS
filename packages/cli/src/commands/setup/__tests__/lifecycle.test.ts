@@ -155,6 +155,7 @@ function mockLoad(flow: Flow): void {
     isMultiFlow: false,
     availableFlows: ['default'],
     configDigest: 'digest',
+    served: [],
   });
 }
 

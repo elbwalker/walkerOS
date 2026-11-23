@@ -1,0 +1,221 @@
+---
+title: Matomo
+description: "Server-side event delivery to the Matomo HTTP Tracking API, with visitors and location as matomo.js reports them"
+path: /docs/destinations/server/matomo
+sidebar_position: 10
+package: '@walkeros/server-destination-matomo'
+---
+import data from '@walkeros/server-destination-matomo/walkerOS.json';
+import Configuration from '@site/src/components/snippets/_configuration.mdx';
+import Quickstart from '@site/src/components/snippets/_quickstart.mdx';
+
+import WhereThisFits from '@site/src/components/snippets/_where-this-fits.mdx';
+
+# Matomo
+
+<PackageLink env="server" github="packages/server/destinations/matomo" npm="@walkeros/server-destination-matomo" />
+
+Send walker.js events to your [Matomo](https://matomo.org/) from the server, with visitors and location as matomo.js reports them. The destination turns each event into Matomo [HTTP Tracking API](https://developer.matomo.org/api-reference/tracking-api) requests and sends them as one bulk request, so walker.js stays the only script on your pages.
+
+With walker.js as the only script and consent granted, these work as they do with matomo.js: visits, page views, the Visits Log, new and returning visitors, ecommerce, goals, events, site search, content and custom dimensions. Location and device work too once you set `ip`, `credentials.token` and `userAgent`; without them Matomo sees the collector's. Matomo computes time on page from consecutive page views, so the last page of a visit shows 0 s. The destination turns a `page hide` event with `data.total` into Matomo's heartbeat: the last page of a visit gets its time on page only on Matomo 6; Matomo 5 shows it as 0 s and counts the heartbeat as visit duration. No walkerOS source sends a `page hide` event yet, see [time on page](#time-on-page). Product views need your product pages marked, see [product views](#product-views). Heatmaps, session recordings, media, form analytics and A/B tests run inside matomo.js and do not work from a server, see [Matomo's heatmap requirements](https://matomo.org/faq/heatmap-session-recording/matomo-heatmap-requirements/).
+
+<WhereThisFits
+  pre={<>Matomo is a <strong>server destination</strong> in the walkerOS flow:</>}
+  flowMap={{
+    destinations: { default: { label: 'Destination', text: 'Matomo', highlight: true } },
+  }}
+  post={<>Builds Tracking API requests from each event and sends them to your Matomo in one bulk POST request, with the visitor ID from the device ID.</>}
+/>
+
+## Before you start on Matomo 6
+
+Matomo 6 switches on Tracking Spam Prevention by default. It excludes hits from the IP ranges of cloud providers (AWS, Google Cloud, Azure, and providers such as Scaleway and Hetzner by their GeoIP name), which is where a collector usually runs, and still answers that it tracked them. Add your collector's IP addresses to its IP allow list, or send the visitor's IP with `ip` and `credentials.token` (see [IP, location and device](#ip-location-and-device)), and set `userAgent`. Matomo explains the options in its [Tracking Spam Prevention FAQ](https://matomo.org/faq/how-to/block-spam-and-bot-traffic-with-tracking-spam-prevention/).
+
+## Installation
+
+<Quickstart data={data} />
+
+<Configuration type="destination" data={data} />
+
+## Methods
+
+A rule's `name` is a Matomo JavaScript tracker method, and its `data` resolves to the method's arguments in matomo.js order. Use `set` to pass several arguments. A required argument is marked with `*`; when it is missing or malformed, the event fails with `missing-input`.
+
+| Method | What the server sends |
+|---|---|
+| `trackPageView([customTitle])` | `action_name`, and the product fields with the rule setting `ecommerceView`, see [product views](#product-views) |
+| `trackEvent(category*, action*[, name[, value]])` | `e_c`, `e_a`, `e_n`, `e_v` (a number) |
+| `trackGoal(idGoal*[, customRevenue])` | `idgoal` (a positive integer), `revenue` (a number) |
+| `trackSiteSearch(keyword*[, category[, resultsCount]])` | `search`, `search_cat`, `search_count` (an integer) |
+| `trackLink(url*, linkType*)` | `link` or `download`, by `linkType`, which must be `"link"` or `"download"` |
+| `trackContentImpression(contentName*[, contentPiece[, contentTarget]])` | `c_n`, `c_p`, `c_t` |
+| `trackContentInteraction(contentInteraction*, contentName*[, contentPiece[, contentTarget]])` | `c_i`, `c_n`, `c_p`, `c_t` |
+| `trackEcommerceOrder(orderId*, grandTotal*[, subTotal[, tax[, shipping[, discount]]]])` | `idgoal=0`, `ec_id`, `revenue`, `ec_st`, `ec_tx`, `ec_sh`, `ec_dt`, and `ec_items` from the rule setting `items` |
+| `trackEcommerceCartUpdate(grandTotal*)` | `idgoal=0`, `revenue`, and `ec_items` from the rule setting `items` |
+| `ping([totalMs])` | `ping=1`, and `pv_time` in whole seconds, see [time on page](#time-on-page) |
+
+A `page view` without a rule name becomes `trackPageView` with `data.title`, and a `page hide` becomes `ping` with `data.total`. Any other event needs a rule with a `name` or a `goalId`, or it fails with `missing-input`. To keep unmapped events out without a failure, ignore everything with a wildcard and map what you need:
+
+<CodeSnippet
+  code={`"mapping": {
+  "*": { "*": { "ignore": true } },
+  "page": { "view": {}, "hide": {} }
+}`}
+  language="json"
+/>
+
+A custom event, a site search, an outlink and a content impression:
+
+<StepExample example={data.examples.step.customEvent} />
+
+<StepExample example={data.examples.step.siteSearch} />
+
+<StepExample example={data.examples.step.outlink} />
+
+<StepExample example={data.examples.step.contentImpression} />
+
+The server cannot track outlinks and downloads on its own the way matomo.js does: tag the link and map its event to `trackLink`.
+
+### Goals
+
+A rule's `settings.goalId` adds a goal hit to the same request, and `settings.goalValue` is a mapping value for its revenue, such as `"data.value"`. A page view rule with a goal still sends its page view:
+
+<StepExample example={data.examples.step.pageViewWithGoal} />
+
+## Visitors
+
+The visitor ID goes as `cid`, Matomo's forced visitor ID: 16 hex characters hashed from `user.device`, which the [session source](/docs/sources/web/session#storage-based-detection) sets in storage mode. Matomo recognizes a visitor by this ID alone, also when its force-cookieless option is on, and needs no `trust_visitors_cookies` change. A value that is already 16 lowercase hex characters passes through as it is. Matomo splits a visit after 30 minutes without a hit, at midnight and on a campaign change.
+
+`uid` goes only when you set `userId`, like `"event.user.id"`. With `uid`, Matomo uses a hash of the user ID as the visitor ID instead of `cid`, and a user's first identified hit of a visit may join another visitor's visit by its fingerprint. Set `userId` together with `ip`, `credentials.token` and `userAgent`.
+
+Without `cid`, Matomo recognizes visitors by its fingerprint of IP address and user agent, and on a server those are the collector's unless `ip` and `userAgent` are set, so different visitors merge into one visit. The destination still sends such a hit and writes one ERROR line per minute with code `visitor-merge` when a hit does not carry both the visitor's IP and user agent and has either no visitor ID or a user ID.
+
+## IP, location and device
+
+The destination sends no IP address, no user agent and no user ID unless you set them. To give Matomo the visitor's location and device, map them from the request and add a token:
+
+<CodeSnippet
+  code={`"config": {
+  "settings": {
+    "url": "https://matomo.example.com/",
+    "siteId": "1",
+    "ip": ["ingest.ip", "event.user.ip"],
+    "userAgent": ["ingest.userAgent", "event.user.userAgent"]
+  },
+  "credentials": { "token": "$secret.MATOMO_TOKEN" }
+}`}
+  language="json"
+/>
+
+To send the user ID as well, add `"userId": "event.user.id"` to the same settings, see [visitors](#visitors). Your server source fills `ingest.ip` and `ingest.userAgent` with its [ingest map](/docs/sources/server/express#ingest-metadata); behind a proxy, see [client IP behind a proxy](/docs/sources/server/express#client-ip-behind-a-proxy). Matomo rejects a visitor IP (`cip`) without a token, so the destination does not start when `ip` is set without `credentials.token`. The token belongs to a Matomo user with at least write access to the site, see Matomo's [tracking API example](https://matomo.org/faq/general/matomo-tracking-api-example-for-developers/), and it goes only into the request body, as `token_auth`. Matomo anonymizes the IP address by its own privacy settings.
+
+<StepExample example={data.examples.step.withToken} />
+
+## Time on page
+
+Matomo computes time on page from consecutive page views, so the last page of a visit shows 0 s. On Matomo 6, a heartbeat gives that page its time as well. The destination turns a `page hide` event into this heartbeat: an event named `page hide` that closes a page view, with `data.total`, the milliseconds of the whole page view so far, and the `source.url` and `source.trace` of that page view. Without a rule it becomes one hit, `ping=1`, with the page view ID (`pv_id`) and the page view's time in whole seconds (`pv_time`, from `data.total`, left out when it rounds to 0). No walkerOS source sends a `page hide` event yet; until one does, the last page of a visit shows 0 s.
+
+Matomo 6 records the heartbeat as that page view's time on page. It finds the page view by its ID, so a `page hide` that arrives after the next route's page view still lands on its own page. Matomo 5 shows the last page as 0 s and counts the heartbeat as visit duration.
+
+<StepExample example={data.examples.step.pageHide} />
+
+## Several sites from one step
+
+`siteId` and `url` take a mapping value too, resolved for every event against `{ ingest, event }`. A function over the page's hostname sends each shop to its own Matomo and site ID:
+
+<CodeSnippet
+  code={`"settings": {
+  "url": {
+    "fn": "$code:(_, context) => context.event.source.url && ({ 'shop-a.example': 'https://a.matomo.example/', 'shop-b.example': 'https://b.matomo.example/' })[new URL(context.event.source.url).hostname]"
+  },
+  "siteId": {
+    "fn": "$code:(_, context) => context.event.source.url && ({ 'shop-a.example': '1', 'shop-b.example': '2' })[new URL(context.event.source.url).hostname]"
+  }
+}`}
+  language="json"
+/>
+
+<StepExample example={data.examples.step.twoSitesA} />
+
+An event from a host the function does not know fails with `missing-input`, naming `siteId` or `url`.
+
+## Events that arrive late
+
+The event time goes as `cdt`. Matomo needs `credentials.token` for an event older than 24 hours and refuses it without one, so the push fails with Matomo's counts, see [what a 2xx means](#what-a-2xx-means). On Matomo 6, a time more than a day ahead is refused too. The event time is the device's clock, so without a token Matomo also refuses a fresh event from a device whose clock is more than a day behind (or, on Matomo 6, more than a day ahead); the push fails the same way. Set `timestamp: false` to let Matomo use the time it receives the request instead.
+
+## Ecommerce
+
+Orders and cart updates map to `trackEcommerceOrder` and `trackEcommerceCartUpdate`. The rule setting `items` resolves to the products, each with `sku` and optional `name`, `category` (a string or up to 5), `price` and `quantity`, and is sent as `ec_items`. The order and cart view examples above show the mapping. An order ID Matomo already has for the site is refused, so a resent order fails.
+
+### Product views
+
+Matomo records a product view as the product page's one page view carrying the product, which gives each product its conversion rate, see [Matomo's ecommerce FAQ](https://matomo.org/faq/reports/advanced-manually-tracking-ecommerce-actions-in-matomo/). Map `product view` to `trackPageView` with the rule setting `ecommerceView`: its product fields go as `_pks`, `_pkn`, `_pkc` and `_pkp` on that page view.
+
+<StepExample example={data.examples.step.productView} />
+
+The product page's plain `page view` must then send no second page view. For data-layer setups, Matomo's FAQ advises to stop it on product pages. A rule with a condition on the event does that:
+
+<StepExample example={data.examples.step.pageViewOnProductPage} />
+
+In a `flow.json`, write the condition with `$code:`; in the walkerOS app, write the same rule into the destination's Mapping code, which holds what `mapping` holds here:
+
+<CodeSnippet
+  code={`"mapping": {
+  "page": {
+    "view": {
+      "condition": "$code:(event) => event.globals.pagetype === 'product'",
+      "ignore": true
+    }
+  }
+}`}
+  language="json"
+/>
+
+The condition reads the event, not how the value got there. Give a product page's events `globals.pagetype: 'product'` in the way that fits your site:
+
+- **Tagging:** `<body data-elbglobals="pagetype:product">` on the product page, as in the [walker.js quickstart](/docs/getting-started/quickstart/walkerjs#tag-your-page), see [globals](/docs/sources/web/browser/tagging/html-attributes#globals).
+- **Code:** `elb('walker globals', { pagetype: 'product' })` on the product page before its page view, see the [globals command](/docs/collector/commands#globals).
+- **The event as sent:** an event with `"globals": { "pagetype": "product" }`, for example one sent with [`walkeros push`](/docs/apps/cli#push-command) or in a simulation.
+
+Set the value where the product's `product view` is set. Otherwise:
+
+- A product page whose events lack the value counts two page views, the plain one and the product view.
+- A page whose events carry the value but that sends no `product view` sends no page view at all, and nothing reports it.
+
+## Custom dimensions
+
+Custom dimensions are keyed by bare dimension id, like `{ "1": "data.size" }`, and each value is a mapping value resolved for every event. `settings.customDimensions` applies to every hit, and a rule's `settings.customDimensions` wins per key:
+
+<StepExample example={data.examples.step.customDimensions} />
+
+## What a 2xx means
+
+Matomo answers a bulk request with how many requests it tracked and how many it found invalid. When it tracked fewer than the destination sent, for example for an unknown `siteId`, an invalid parameter, an order ID it already has or an old event without a token, the push fails with `transport` and the counts, and the event goes to the dead-letter queue. A non-2xx answer fails with its status.
+
+With Matomo's QueuedTracking plugin, Matomo queues the request and answers before it tracks it, without counts. The push then counts as delivered, and a request Matomo refuses later cannot be seen. The destination writes one WARN line per minute with code `unconfirmed`, which the default log level (`ERROR`) does not show.
+
+Matomo counts a visit it excludes by its own settings (excluded IPs, bots, opt-outs) or by Tracking Spam Prevention (see [before you start on Matomo 6](#before-you-start-on-matomo-6)) as tracked. When visits are missing although the pushes are delivered, check those settings.
+
+## Consent
+
+Gate the destination with `config.consent`, so only events with that consent reach Matomo. Matomo itself receives no consent signal over this API.
+
+<CodeSnippet
+  code={`"config": {
+  "consent": { "analytics": true }
+}`}
+  language="json"
+/>
+
+See [consent management](/docs/guides/consent) for how events wait for consent.
+
+## Coming from the API destination
+
+If you send to Matomo with the [API destination](/docs/destinations/api/server) and a hand-built Tracking API mapping, its parameters map to this destination's settings one to one: `cip` to `ip`, `ua` to `userAgent`, `lang` to `language` and `res` to `screenSize`. Its `_id` becomes `cid`, from the `visitorId` setting, and its `token_auth` moves to `credentials.token`.
+
+## Related
+
+- [Matomo web destination](/docs/destinations/web/matomo)
+- [Express source](/docs/sources/server/express)
+- [Session source](/docs/sources/web/session)
+- [Consent management](/docs/guides/consent)

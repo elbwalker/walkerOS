@@ -1,4 +1,5 @@
 import { getEvent } from '@walkeros/core';
+import type { Event } from '../types';
 import {
   formatTimestamp,
   formatConsent,
@@ -162,14 +163,14 @@ describe('format utilities', () => {
 
       expect(result).toBeDefined();
       expect(result?.userIdentifiers).toHaveLength(1);
-      const addressIdentifier = result?.userIdentifiers[0] as {
-        address: Record<string, string>;
-      };
-      expect(addressIdentifier).toHaveProperty('address');
-      expect(addressIdentifier.address).toHaveProperty('givenName');
-      expect(addressIdentifier.address).toHaveProperty('familyName');
-      expect(addressIdentifier.address.regionCode).toBe('US'); // Uppercased
-      expect(addressIdentifier.address.postalCode).toBe('12345'); // Not hashed
+      expect(result?.userIdentifiers[0]).toMatchObject({
+        address: {
+          givenName: expect.any(String),
+          familyName: expect.any(String),
+          regionCode: 'US', // Uppercased
+          postalCode: '12345', // Not hashed
+        },
+      });
     });
 
     test('combines multiple user identifiers', async () => {
@@ -385,5 +386,149 @@ describe('format utilities', () => {
         adUserData: 'CONSENT_GRANTED',
       });
     });
+  });
+
+  describe('dropped values', () => {
+    const absent = undefined;
+    it.each<
+      [
+        data: Record<string, unknown>,
+        dropped: string[],
+        read: (event: Event) => unknown,
+        sent: unknown,
+      ]
+    >([
+      [
+        { foo: 1 },
+        ['foo (not sent by this destination)'],
+        (event) => Object.keys(event).find((key) => key === 'foo'),
+        absent,
+      ],
+      [
+        { additionalEventParameters: { a: 'b' } },
+        ['additionalEventParameters (not sent by this destination)'],
+        (event) =>
+          Object.keys(event).find((key) => key === 'additionalEventParameters'),
+        absent,
+      ],
+      [
+        { conversionValue: '149.99' },
+        ['conversionValue (not a number)'],
+        (event) => event.conversionValue,
+        absent,
+      ],
+      [
+        { email: ['a@b.de'] },
+        ['email (not a string)'],
+        (event) => event.userData,
+        absent,
+      ],
+      [
+        { transactionId: true },
+        ['transactionId (not a string or number)'],
+        (event) => event.transactionId,
+        absent,
+      ],
+      [
+        { userId: 42 },
+        ['userId (not a string)'],
+        (event) => event.userId,
+        absent,
+      ],
+      [
+        { email: 'no-at-sign' },
+        ['email (not an email address)'],
+        (event) => event.userData,
+        absent,
+      ],
+      [
+        { phone: '030 1234567' },
+        ['phone (not E.164 with a country code)'],
+        (event) => event.userData,
+        absent,
+      ],
+      [
+        { firstName: 'Jane', postalCode: '10115' },
+        ['address (missing lastName, regionCode)'],
+        (event) => event.userData,
+        absent,
+      ],
+      [
+        {
+          firstName: 'Mr.',
+          lastName: 'Doe',
+          regionCode: 'DE',
+          postalCode: '10115',
+        },
+        ['firstName (only a title)', 'address (missing firstName)'],
+        (event) => event.userData,
+        absent,
+      ],
+      [
+        {
+          firstName: 'J',
+          lastName: 'Jr.',
+          regionCode: 'DE',
+          postalCode: '10115',
+        },
+        ['lastName (only a suffix)', 'address (missing lastName)'],
+        (event) => event.userData,
+        absent,
+      ],
+      [
+        { firstName: 'J', lastName: 'D', regionCode: 'DEU', postalCode: '1' },
+        ['regionCode (not two letters)', 'address (missing regionCode)'],
+        (event) => event.userData,
+        absent,
+      ],
+      [
+        { firstName: 'J', lastName: 'D', regionCode: 'DE', postalCode: 10115 },
+        ['postalCode (not a string)', 'address (missing postalCode)'],
+        (event) => event.userData,
+        absent,
+      ],
+      [
+        { eventSource: 'WEBSITE' },
+        ['eventSource (not WEB, APP, IN_STORE, PHONE, MESSAGE or OTHER)'],
+        (event) => event.eventSource,
+        absent,
+      ],
+      [
+        { adUserData: 'yes' },
+        ['adUserData (not a boolean)'],
+        (event) => event.consent?.adUserData,
+        absent,
+      ],
+      [
+        { cartData: { items: [] } },
+        ['cartData (no items)'],
+        (event) => event.cartData,
+        absent,
+      ],
+      [
+        { cartData: { items: [{ itemId: 'A', price: 1 }], foo: 1 } },
+        [
+          'cartData.foo (not sent by this destination)',
+          'cartData.items[0].price (not sent by this destination)',
+        ],
+        (event) => event.cartData,
+        { items: [{ itemId: 'A' }] },
+      ],
+      [{ email: '   ', phone: '' }, [], (event) => event.userData, absent],
+    ])(
+      'reports what it does not send: %j',
+      async (data, dropped, read, sent) => {
+        const reported: string[] = [];
+
+        const result = await formatEvent(
+          getEvent('order complete'),
+          data,
+          reported,
+        );
+
+        expect(reported.sort()).toEqual([...dropped].sort());
+        expect(read(result)).toEqual(sent);
+      },
+    );
   });
 });

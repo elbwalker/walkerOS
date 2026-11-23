@@ -138,7 +138,7 @@ Extract request metadata and forward it through the pipeline.
 
 Ingest is opt-in: without `config.ingest` the source forwards no request
 metadata. Server destinations with client IP and user agent fields
-(Meta, TikTok, Snapchat, Pinterest, Bing, Reddit, Criteo and X (Twitter) conversion APIs, Google Data Manager and Piwik PRO) read `ingest.ip` and `ingest.userAgent` by default, so name the keys
+(Meta, TikTok, Snapchat, Pinterest, Bing, Reddit, Criteo and X (Twitter) conversion APIs, Google Data Manager (Google Ads entries) and Piwik PRO) read `ingest.ip` and `ingest.userAgent` by default, so name the keys
 `ip` and `userAgent`. This source has no `ip` path (see below); map it from a
 single-value header your own infrastructure sets:
 

@@ -1,4 +1,5 @@
 import type { Store } from '@walkeros/core';
+import { unrefTimer } from './timers';
 
 /**
  * Options for the built-in collector cache store (`__cache`).
@@ -126,13 +127,7 @@ export function createCacheStore(options: CacheStoreOptions = {}): CacheStore {
   let sweepTimer: ReturnType<typeof setInterval> | undefined;
   if (sweepIntervalMs > 0) {
     sweepTimer = setInterval(sweep, sweepIntervalMs);
-    // Don't keep the Node.js event loop alive solely for the cache sweep.
-    if (
-      sweepTimer &&
-      typeof (sweepTimer as { unref?: () => void }).unref === 'function'
-    ) {
-      (sweepTimer as { unref: () => void }).unref();
-    }
+    unrefTimer(sweepTimer);
   }
 
   const store: CacheStore = {

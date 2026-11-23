@@ -1,13 +1,14 @@
 import { GoogleAuth, OAuth2Client } from 'google-auth-library';
 import { createMockLogger } from '@walkeros/core';
-import { createAuthClient, getAccessToken, AuthError } from '../auth';
-import type { Config } from '../types';
+import { createAuthClient, getAuthHeaders, AuthError } from '../auth';
+import type { AuthClient, Config } from '../types';
 
 jest.mock('google-auth-library');
 
 describe('Authentication', () => {
-  let mockOAuth2Client: jest.Mocked<OAuth2Client>;
-  let mockGoogleAuth: jest.Mocked<GoogleAuth>;
+  // The library is automocked: every GoogleAuth answers this client.
+  let mockOAuth2Client: OAuth2Client;
+  const getClient = jest.mocked(GoogleAuth.prototype.getClient);
   let logger: ReturnType<typeof createMockLogger>;
 
   beforeEach(() => {
@@ -15,19 +16,8 @@ describe('Authentication', () => {
 
     logger = createMockLogger();
 
-    const getAccessTokenMock = jest
-      .fn<Promise<{ token?: string | null; res?: any | null }>, []>()
-      .mockResolvedValue({ token: 'default-token', res: null });
-
-    mockOAuth2Client = {
-      getAccessToken: getAccessTokenMock,
-    } as unknown as jest.Mocked<OAuth2Client>;
-
-    mockGoogleAuth = {
-      getClient: jest.fn().mockResolvedValue(mockOAuth2Client),
-    } as unknown as jest.Mocked<GoogleAuth>;
-
-    (GoogleAuth as jest.Mock).mockImplementation(() => mockGoogleAuth);
+    mockOAuth2Client = new OAuth2Client();
+    getClient.mockResolvedValue(mockOAuth2Client);
   });
 
   describe('createAuthClient', () => {
@@ -68,16 +58,13 @@ describe('Authentication', () => {
       expect(logger.warn).not.toHaveBeenCalled();
     });
 
-    test('throws AuthError on invalid JSON string credentials', async () => {
+    test('builds no client from invalid JSON string credentials', async () => {
       const config: Config = {
         credentials: 'not-json',
         settings: { destinations: [] },
       };
 
       await expect(createAuthClient(config, logger)).rejects.toThrow(AuthError);
-      await expect(createAuthClient(config, logger)).rejects.toThrow(
-        'Invalid credentials',
-      );
       expect(GoogleAuth).not.toHaveBeenCalled();
     });
 
@@ -139,7 +126,7 @@ describe('Authentication', () => {
       expect(client).toBe(mockOAuth2Client);
     });
 
-    test('uses ADC as fallback when no auth config provided', async () => {
+    test('falls back to ADC when no auth config provided', async () => {
       const config: Config = {
         settings: { destinations: [] },
       };
@@ -180,24 +167,55 @@ describe('Authentication', () => {
 
       await createAuthClient(config, logger);
 
-      const callArgs = (GoogleAuth as jest.Mock).mock.calls[0][0];
+      const callArgs = jest.mocked(GoogleAuth).mock.calls[0][0];
       expect(callArgs).toHaveProperty('credentials');
       expect(callArgs).not.toHaveProperty('keyFilename');
     });
 
-    test('throws AuthError on failure', async () => {
-      const config: Config = {
-        settings: { destinations: [] },
-      };
+    test.each([
+      [
+        'config.credentials',
+        { credentials: 'not json', settings: { destinations: [] } },
+        'Data Manager credentials in config.credentials are neither a service account object nor its JSON string',
+      ],
+      [
+        'settings.credentials',
+        { settings: { credentials: 'not json', destinations: [] } },
+        'Data Manager credentials in settings.credentials are neither a service account object nor its JSON string',
+      ],
+      [
+        'config.credentials',
+        { credentials: serviceAccount, settings: { destinations: [] } },
+        'Data Manager could not create an auth client from config.credentials',
+      ],
+      [
+        'settings.credentials',
+        { settings: { credentials: serviceAccount, destinations: [] } },
+        'Data Manager could not create an auth client from settings.credentials',
+      ],
+      [
+        'settings.keyFilename',
+        { settings: { keyFilename: '/path/to/key.json', destinations: [] } },
+        'Data Manager could not create an auth client from settings.keyFilename',
+      ],
+      [
+        'Application Default Credentials',
+        { settings: { destinations: [] } },
+        'Data Manager could not create an auth client from Application Default Credentials (GOOGLE_APPLICATION_CREDENTIALS, gcloud auth application-default login or the Google Cloud metadata server)',
+      ],
+    ])(
+      'createAuthClient names the path: %s',
+      async (_, config: Config, message) => {
+        getClient.mockRejectedValue(new Error('Auth failed'));
 
-      const error = new Error('Auth failed');
-      mockGoogleAuth.getClient.mockRejectedValue(error);
+        const error = await createAuthClient(config, logger).catch(
+          (caught: unknown) => caught,
+        );
 
-      await expect(createAuthClient(config, logger)).rejects.toThrow(AuthError);
-      await expect(createAuthClient(config, logger)).rejects.toThrow(
-        'Failed to create auth client',
-      );
-    });
+        expect(error).toBeInstanceOf(AuthError);
+        expect(error).toHaveProperty('message', message);
+      },
+    );
 
     test('AuthError includes cause', async () => {
       const config: Config = {
@@ -205,78 +223,66 @@ describe('Authentication', () => {
       };
 
       const originalError = new Error('Original error');
-      mockGoogleAuth.getClient.mockRejectedValue(originalError);
+      getClient.mockRejectedValue(originalError);
 
-      try {
-        await createAuthClient(config, logger);
-        fail('Should have thrown');
-      } catch (error) {
-        expect(error).toBeInstanceOf(AuthError);
-        expect((error as AuthError).cause).toBe(originalError);
-      }
+      const error = await createAuthClient(config, logger).catch(
+        (caught: unknown) => caught,
+      );
+
+      expect(error).toBeInstanceOf(AuthError);
+      expect(error).toHaveProperty('cause', originalError);
     });
   });
 
-  describe('getAccessToken', () => {
-    test('returns access token from client', async () => {
-      (mockOAuth2Client.getAccessToken as jest.Mock).mockResolvedValue({
-        token: 'ya29.test_token',
-        res: null,
+  describe('getAuthHeaders', () => {
+    const clientWith = (
+      getRequestHeaders: AuthClient['getRequestHeaders'],
+    ): AuthClient => ({ getRequestHeaders });
+
+    test('returns the auth library headers in a plain object', async () => {
+      const headers = await getAuthHeaders(
+        clientWith(
+          async () =>
+            new Headers({
+              authorization: 'Bearer ya29.test_token',
+              'x-goog-user-project': 'my-project',
+            }),
+        ),
+      );
+
+      expect(headers).toEqual({
+        authorization: 'Bearer ya29.test_token',
+        'x-goog-user-project': 'my-project',
       });
-
-      const token = await getAccessToken(mockOAuth2Client);
-
-      expect(token).toBe('ya29.test_token');
-      expect(mockOAuth2Client.getAccessToken).toHaveBeenCalled();
     });
 
-    test('throws AuthError if token is null', async () => {
-      (mockOAuth2Client.getAccessToken as jest.Mock).mockResolvedValue({
-        token: null,
-        res: null,
-      });
-
-      await expect(getAccessToken(mockOAuth2Client)).rejects.toThrow(AuthError);
-      await expect(getAccessToken(mockOAuth2Client)).rejects.toThrow(
-        'Failed to obtain access token',
+    const cause = new Error('invalid_grant');
+    test.each([
+      [
+        'no authorization header',
+        async () => new Headers({ 'x-goog-user-project': 'my-project' }),
+        'Auth client returned no authorization header',
+      ],
+      [
+        'a rejected header request',
+        () => Promise.reject(cause),
+        'Auth client could not provide request headers',
+      ],
+    ])('throws AuthError on %s', async (_, getRequestHeaders, message) => {
+      const error = await getAuthHeaders(clientWith(getRequestHeaders)).catch(
+        (caught: unknown) => caught,
       );
-    });
 
-    test('throws AuthError if token is undefined', async () => {
-      (mockOAuth2Client.getAccessToken as jest.Mock).mockResolvedValue({
-        token: undefined,
-        res: null,
-      });
-
-      await expect(getAccessToken(mockOAuth2Client)).rejects.toThrow(AuthError);
-      await expect(getAccessToken(mockOAuth2Client)).rejects.toThrow(
-        'Failed to obtain access token',
-      );
-    });
-
-    test('throws AuthError on client failure', async () => {
-      const error = new Error('Token fetch failed');
-      (mockOAuth2Client.getAccessToken as jest.Mock).mockRejectedValue(error);
-
-      await expect(getAccessToken(mockOAuth2Client)).rejects.toThrow(AuthError);
-      await expect(getAccessToken(mockOAuth2Client)).rejects.toThrow(
-        'Failed to obtain access token',
-      );
+      expect(error).toBeInstanceOf(AuthError);
+      expect(error).toHaveProperty('message', message);
     });
 
     test('AuthError includes cause on failure', async () => {
-      const originalError = new Error('Network error');
-      (mockOAuth2Client.getAccessToken as jest.Mock).mockRejectedValue(
-        originalError,
-      );
+      const error = await getAuthHeaders(
+        clientWith(() => Promise.reject(cause)),
+      ).catch((caught: unknown) => caught);
 
-      try {
-        await getAccessToken(mockOAuth2Client);
-        fail('Should have thrown');
-      } catch (error) {
-        expect(error).toBeInstanceOf(AuthError);
-        expect((error as AuthError).cause).toBe(originalError);
-      }
+      expect(error).toHaveProperty('cause', cause);
     });
   });
 

@@ -1,31 +1,29 @@
+import type { SendResponse } from '@walkeros/core';
 import type { AuthClient, Env } from '../types';
 
 /**
  * Example environment configurations for Google Data Manager destination.
  *
- * The destination invokes `env.fetch(url, { method, headers, body })` once
- * per push, with `Authorization: Bearer <accessToken>` obtained from
- * `env.authClient` via `getAccessToken`.
+ * The destination calls `env.sendServer(url, body, { headers, timeout })`
+ * once per push, with the headers `env.authClient.getRequestHeaders()`
+ * returns (an `authorization` header with the access token).
  *
- * For tests we use a stub `authClient` (jest mocks the `getAccessToken`
- * helper at module level) and a mock `fetch` returning a successful ingest
- * response.
+ * For tests we use a stub `authClient` with a fixed token and a mock
+ * `sendServer` returning a successful ingest answer.
  */
 
-async function mockFetch(): Promise<Response> {
-  return new Response(
-    JSON.stringify({ requestId: 'mock-request-id', validationErrors: [] }),
-    { status: 200, headers: { 'Content-Type': 'application/json' } },
-  );
+async function mockSendServer(): Promise<SendResponse> {
+  return { data: { requestId: 'mock-request-id' } };
 }
 
 const mockAuthClient: AuthClient = {
-  getAccessToken: async () => ({ token: 'ya29.c.test_token' }),
+  getRequestHeaders: async () =>
+    new Headers({ authorization: 'Bearer ya29.c.test_token' }),
 };
 
 export const push: Env = {
-  fetch: mockFetch,
+  sendServer: mockSendServer,
   authClient: mockAuthClient,
 };
 
-export const simulation = ['fetch'];
+export const simulation = ['sendServer'];

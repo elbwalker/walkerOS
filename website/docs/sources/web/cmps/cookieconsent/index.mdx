@@ -1,0 +1,160 @@
+---
+title: CookieConsent
+description: Pass the visitor's CookieConsent decision to every walkerOS destination
+package: '@walkeros/web-source-cmp-cookieconsent'
+---
+
+import data from '@walkeros/web-source-cmp-cookieconsent/walkerOS.json';
+import Configuration from '@site/src/components/snippets/_configuration.mdx';
+
+# CookieConsent
+
+Passes the visitor's [CookieConsent](https://cookieconsent.orestbida.com/) (v3, by orestbida) decision to walkerOS, so destinations gated with `config.consent` send only what the visitor agreed to. The source reads only a decision the visitor made: accepted categories are granted, rejected ones are denied.
+
+## Installation
+
+```bash
+npm install @walkeros/web-source-cmp-cookieconsent
+```
+
+```typescript
+import { startFlow } from '@walkeros/collector';
+import { sourceCookieConsent } from '@walkeros/web-source-cmp-cookieconsent';
+
+await startFlow({
+  sources: {
+    consent: {
+      code: sourceCookieConsent,
+    },
+  },
+});
+```
+
+<Configuration type="source" data={data} />
+
+## How it works
+
+1. **Stored decision**: If `window.CookieConsent` already holds a valid
+   decision when the source starts, the source publishes it at once.
+
+2. **Decision events**: The source listens for CookieConsent's `cc:onConsent`
+   and `cc:onChange` window events. CookieConsent fires `cc:onConsent` after a
+   first decision and on every page load with a stored one, and `cc:onChange`
+   when the visitor changes it. Each time, the source reads the decision from
+   `CookieConsent.getUserPreferences()`.
+
+3. **Mapping**: Accepted categories are published as `true`, rejected ones as
+   `false`, through `categoryMap` and `elb('walker consent', state)`.
+
+4. **One command per decision**: A stored decision is reported both by the read
+   at start and by `cc:onConsent` on page load. The source sends a state only
+   when it differs from the last one it sent.
+
+### The ESM build
+
+The script build defines `window.CookieConsent`. If you import
+`vanilla-cookieconsent` as a module, assign it before `CookieConsent.run`:
+`window.CookieConsent = CookieConsent;`. Without it the source cannot read the
+decision and logs an ERROR.
+
+```javascript
+import * as CookieConsent from 'vanilla-cookieconsent';
+
+window.CookieConsent = CookieConsent;
+```
+
+### Default category mapping
+
+The categories are the ones your `CookieConsent.run` configuration names. For
+the categories the CookieConsent docs use:
+
+| CookieConsent category | walkerOS consent group |
+| --- | --- |
+| `necessary` | `necessary`: keeps its name and grants no group |
+| `analytics` | `analytics` |
+| `ads` | `marketing` |
+| any other category | its own name |
+
+CookieConsent always accepts the read-only `necessary` category, so the default
+mapping never turns it into a group a destination waits for. Category names are
+compared case-insensitively.
+
+When several categories map to the same group, the group is `true` only if
+every one of them is accepted: any deny denies.
+
+Custom entries are merged with the default mapping. Specify only the categories
+you want to override. All other defaults remain active.
+
+### Custom mapping example
+
+```typescript
+await startFlow({
+  sources: {
+    consent: {
+      code: sourceCookieConsent,
+      config: {
+        settings: {
+          categoryMap: {
+            functionality: 'functional', // Your functionality category
+            advertisement: 'marketing', // CookieConsent's Google Consent Mode guide names it so
+          },
+        },
+      },
+    },
+  },
+});
+```
+
+### When the source sends nothing
+
+The source publishes a decision only while `CookieConsent.validConsent()` is
+true, so it sends nothing:
+
+- before the visitor makes a choice;
+- after you raise `revision` in your configuration, until the visitor decides
+  again;
+- in `mode: 'opt-out'` before a choice, although CookieConsent runs the scripts
+  of your enabled categories;
+- with `respectGpc` for a visitor whose browser sends Global Privacy Control,
+  until that visitor opens the preferences and decides;
+- in a bot or automated browser (Playwright, Selenium, Puppeteer) under
+  CookieConsent's default `hideFromBots`, so a test setup sets
+  `hideFromBots: false` in `CookieConsent.run`.
+
+Destinations gated with `config.consent` keep that visitor's events queued (see
+[how CMP sources work](/docs/sources/web/cmps#how-cmp-sources-work)).
+
+To act on your opt-out defaults before a choice, set them yourself with a
+[`walker consent` command](/docs/guides/consent) or the collector's `consent`
+setting.
+
+### Services
+
+The source maps categories, not services: it publishes the categories
+CookieConsent reports as accepted or rejected.
+
+### Google Consent Mode
+
+The source sends nothing to Google itself. The
+[gtag destination](/docs/destinations/web/gtag) sets Google Consent Mode with
+its `como` setting from the `analytics` and `marketing` groups.
+
+If your CookieConsent callbacks already call `gtag('consent', ...)`
+(CookieConsent's Google Consent Mode guide), keep one of them: remove those
+calls, or set `"como": false` on the gtag destination.
+
+### Timing considerations
+
+The source may start before or after `CookieConsent.run`. Both orders report
+the stored decision once:
+
+- **CookieConsent runs before the source**: the read at start publishes the
+  stored decision.
+- **Source starts before CookieConsent**: the source publishes the decision
+  when CookieConsent fires `cc:onConsent`.
+
+## Reference
+
+- [CookieConsent API reference](https://cookieconsent.orestbida.com/reference/api-reference.html)
+- [CookieConsent callbacks and events](https://cookieconsent.orestbida.com/advanced/callbacks-events.html)
+- [Source code](https://github.com/elbwalker/walkerOS/tree/main/packages/web/sources/cmps/cookieconsent)

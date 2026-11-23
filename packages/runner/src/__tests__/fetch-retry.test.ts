@@ -77,6 +77,28 @@ describe('fetchWithRetry', () => {
     expect(mockFetch).toHaveBeenCalledTimes(2);
   });
 
+  it('makes the headers anew for each attempt: a proof or a signature is good for one request', async () => {
+    mockFetch
+      .mockResolvedValueOnce(new Response('busy', { status: 503 }))
+      .mockResolvedValueOnce(new Response('ok', { status: 200 }));
+    let made = 0;
+    const headers = async () => {
+      made += 1;
+      return { DPoP: `proof-${made}` };
+    };
+
+    await runWithTimers(
+      fetchWithRetry('https://app.example/api/runner/secrets', { headers }),
+    );
+
+    expect(
+      mockFetch.mock.calls.map(
+        ([, init]: [string, { headers: Record<string, string> }]) =>
+          init.headers,
+      ),
+    ).toEqual([{ DPoP: 'proof-1' }, { DPoP: 'proof-2' }]);
+  });
+
   it('retries a 429 then succeeds (2 calls)', async () => {
     mockFetch
       .mockResolvedValueOnce(new Response('slow down', { status: 429 }))

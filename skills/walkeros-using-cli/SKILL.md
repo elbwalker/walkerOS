@@ -52,7 +52,8 @@ nothing, and both still print `success: true`.
 | `setup`       | Run a component's `setup()` to provision external resources                                      | ⚠️    |
 | `validate`    | Validate configs/events                                                                          | ✅    |
 | `cache`       | Manage caching                                                                                   | ✅    |
-| `auth`        | Check who the token in `WALKEROS_TOKEN` belongs to                                               | ✅    |
+| `login`       | Sign a person in with the walkerOS app in a browser; `logout` revokes it                         | ✅    |
+| `auth`        | Check who the credential belongs to and where it comes from                                      | ✅    |
 | `api`         | Call the walkerOS app API, or list its operations                                                | ⚠️    |
 | `diagnostics` | Show the CLI version, the app URL, and whether the app answers                                   | ✅    |
 | `telemetry`   | Show, enable or disable anonymous usage telemetry                                                | ✅    |
@@ -153,9 +154,9 @@ loads it itself, events go nowhere while the push still reports them as done.
         "bundle": {
           "packages": {},               // NPM packages pacote will install
           "overrides": {},              // Transitive dep version pins (npm-style)
-          "traceInclude": []            // Optional: nft escape hatch (paths/globs)
-        },
-        "observe": {}                   // Optional, web flows only: url + binding, level, sample
+          "traceInclude": [],           // Optional: nft escape hatch (paths/globs)
+          "flows": {}                   // Server flows only: web flow key -> file path in the output folder
+        }
       },
       "sources": {},                    // Event sources
       "destinations": {},               // Event destinations (each with its own mapping)
@@ -180,17 +181,22 @@ exact version everywhere in the install graph. Direct `packages` specs always
 win over overrides; overrides only substitute transitive resolution.
 
 **Schema version stays at 4.** Build-time fields live under
-`flow.<name>.config.bundle.{packages, overrides, traceInclude, env}`. A
+`flow.<name>.config.bundle.{packages, overrides, traceInclude, env, flows}`. A
 `config.bundle.external` field fails `walkeros validate` (`Unrecognized key`);
 the bundle only warns and builds, so remove it.
 
-**`config.observe` bakes only public values.** For web flows, `walkeros bundle`
-emits the `url` + `binding` connect pair statically into the bundle; the
-per-session credential arrives out-of-band at runtime (`?elbObserve=` URL
-param), so no secret ever enters the artifact. A partial pair (only one of the
-two set) warns at build time and wires nothing. A server flow ignores
-`config.observe`: the runner reads its level from `WALKEROS_OBSERVE_LEVEL`
-instead (see Runtime environment below).
+**`collector.observe` starts the reporter.** A server flow reads
+`"collector": { "observe": { "usage": { "url", "token", "interval" }, "preview": { "url", "token" } } }`
+from its own config, with the token from a `$secret`; `usage` is counters and
+issues every 10 to 300 seconds, `preview` is one row per event. A production web
+bundle carries no reporter: a web flow's own `collector.observe` block ships in
+the bundle bytes, token included, and is not used (the page logs
+`observe: not in this build, config ignored`), so never put a token there. Only
+a browser wrap given `observe: { preview: { url, token } }` (a preview build;
+`usage`, a node wrap or `observe` beside preview activation is refused) carries
+the reporter. `walkeros push` and every simulate drop the block, so they report
+nothing. See the
+[Observe page](https://www.walkeros.io/docs/getting-started/observe).
 
 For detailed configuration options, see
 [flow-configuration.md](flow-configuration.md).
@@ -259,9 +265,9 @@ success: true
   number whose printed form contains a known value becomes `"***"`, so the JSON
   still parses. Simulate and a real push of a flow config route the flow's own
   logs through the masking CLI logger, so flow DEBUG lines need `--verbose`; the
-  run's own CLI lines mask the known values too. The runner masks the secret
-  values it fetches; values from `--env-file` or the container env get the
-  pattern rules only.
+  run's own CLI lines mask the known values too. The runner masks every value
+  the flow declares through `$secret` or `$env` (6+ chars), whether the app, an
+  `--env-file` or the container env supplied it.
 - **Only the target starts.** Destination simulate keeps only the target
   destination (no source, no other destination initializes); the flow's
   transformers still start, and a store without a mock env runs for real. Source
@@ -316,10 +322,8 @@ Consent mental model (what decides whether a destination receives an event):
 | `config.consent: { marketing }` | Each event checked against collector consent plus `event.consent`; denied = skipped | grant via `--consent` or the event; else `skipped`       |
 | `event.consent`                 | Per event, counted on top of collector consent                                      | part of the `-e` event                                   |
 
-- **Trace-mode limit.** Simulate injects the mock env before `init`, so clients
-  built in `init` (BigQuery writer, Pub/Sub client) are recorded. Runtime trace
-  mode (an Observe session at trace level) wraps the env per push only, so calls
-  through a client built in `init` are not recorded there.
+- **Clients built in `init`.** Simulate injects the mock env before `init`, so
+  clients built in `init` (BigQuery writer, Pub/Sub client) are recorded.
 
 ### Same flow via MCP (`flow_simulate`)
 
@@ -462,6 +466,10 @@ Output:
   nft-traced)
 - Server archive: `flow.tar.gz` / `flow.tgz` (the server bundle directory packed
   into a single gzip file)
+- Served web flows: a server flow that lists web flows in `config.bundle.flows`
+  also gets each one at its path in the directory or archive
+  (`Served flow casamoda: casamoda/walker.js`). Stdout and URL outputs carry the
+  server file alone and warn `Served flows left out (stdout): ...`.
 
 Use `-o ./dist/walker.js` for web, `-o ./dist/` for a server directory, or
 `-o ./flow.tar.gz` for a server archive. Web single-file bundles do not support
@@ -532,8 +540,6 @@ The CLI has no `run` command. The runtime is a separate package,
 runneros start [artifact] [options]
 
 Options:
-  --flow-id <id>        App flow ID (enables heartbeat and secrets)
-  --project <id>        Project ID (default WALKEROS_PROJECT_ID; required with --flow-id)
   -p, --port <number>   Port (default: 8080)
   --env-file <path>     Load a dotenv file first (existing env wins; a group- or other-readable file is refused)
   --json                JSON output
@@ -547,6 +553,14 @@ http(s) URL to either. **The runtime does not bundle**: it has no bundler
 installed; a local flow config is refused and one fed by URL or stdin fails at
 import. Never generate a container or command that hands `flow.json` to the
 runtime; bundle first. The full reference is "Deploying a server flow" below.
+
+`runneros remote --cache <dir>` is the other mode: a self-hosted runner that
+takes its server flow releases from the walkerOS app instead of a built
+artifact. It reads `WALKEROS_CREDENTIAL` only (the credential of a paired
+deployment), takes no `--env-file`, checks each release before it runs and swaps
+to it with no image rebuild. Options: `--no-heartbeat`, `--heap <MB>`,
+`-p, --port`, `--json`, `-v`, `-s`. See
+https://www.walkeros.io/docs/apps/remote.
 
 ### Setup Command
 
@@ -630,6 +644,13 @@ trace, else the build throws `nft-trace: resolved packages missing from trace`.
 A declared package that is neither imported nor traced (e.g. a type-only
 dependency) only warns:
 `Package <name> is declared in bundle.packages but nothing imports it; it is not in the bundle. Remove it from bundle.packages if unused.`
+When the installed copy has none of the entries its manifest names, the warning
+reads `... but its installed copy has no <entry>; it is not in the bundle.`
+instead. A local package (`path`) whose `main`, `module`, `exports` or `bin`
+points outside `dist/` is copied whole, so a Node entry in `lib/` arrives.
+`node_modules` and `.env` or `.env.*` files (any depth) and a top-level `.turbo`
+and `.git` are left out, and type declarations and `.json` leaves of `exports`
+do not trigger the whole copy.
 
 **Bundle directory (the server flow's unpacked artifact):**
 
@@ -746,26 +767,19 @@ flag forbids it. Generate two steps (bundle, then start), never one.
 
 ### Runtime environment
 
-| Variable                                   | Meaning                                                                                                                                                                            |
-| ------------------------------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `BUNDLE`                                   | Artifact path or URL (image default `/app/flow/flow.mjs`)                                                                                                                          |
-| `PORT`                                     | Port (default 8080)                                                                                                                                                                |
-| `WALKEROS_FLOW_ID`, `WALKEROS_PROJECT_ID`  | App flow and project; with a runner token they enable secrets and the heartbeat                                                                                                    |
-| `WALKEROS_DEPLOYMENT_ID`                   | Deployment ID sent with every heartbeat; the app accepts a heartbeat only with the deployment the runner token belongs to, else every beat logs `Heartbeat rejected (404)` at WARN |
-| `WALKEROS_FLOW_RELEASE`                    | Release the loaded flow must carry, or the boot fails                                                                                                                              |
-| `WALKEROS_FLOW_NAME`                       | Flow name it must carry; checked only with `WALKEROS_FLOW_RELEASE`                                                                                                                 |
-| `WALKEROS_DEPLOY_TOKEN` / `WALKEROS_TOKEN` | Runner token (`wos_run_...`), deploy token first; a person's automation token is refused. Env only, never a config file                                                            |
-| `WALKEROS_APP_URL`                         | App base URL (default `https://app.walkeros.io`)                                                                                                                                   |
-| `WALKEROS_HEARTBEAT_INTERVAL`              | Seconds (default 60, minimum 10)                                                                                                                                                   |
-| `WALKEROS_CACHE_DIR`                       | Error cache dir (then `CACHE_DIR`, then XDG `~/.cache/walkeros`)                                                                                                                   |
-| `WALKEROS_OBSERVE_LEVEL`                   | `off`, `standard` or `trace`                                                                                                                                                       |
+| Variable                      | Meaning                                                                                                                                                                                                                                                  |
+| ----------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `BUNDLE`                      | Artifact path or URL (image default `/app/flow/flow.mjs`)                                                                                                                                                                                                |
+| `PORT`                        | Port (default 8080)                                                                                                                                                                                                                                      |
+| `WALKEROS_CREDENTIAL`         | The runner's credential (`wos_cred_...`) from pairing on the Self-hosted tab; it names the app and the deployment. Read once at start and removed from the environment; with it the runner fetches its secrets and checks in, without it it calls no app |
+| `WALKEROS_HEARTBEAT_INTERVAL` | Seconds (default 60, minimum 10)                                                                                                                                                                                                                         |
+| `WALKEROS_CACHE_DIR`          | Error cache dir (then `CACHE_DIR`, then XDG `~/.cache/walkeros`)                                                                                                                                                                                         |
 
-Secrets are fetched ONCE at boot when connected (401/403 is fatal). There is no
-config polling and no hot-swap: a new flow version is a rebuild and a redeploy.
-`/health` is always 200; `/ready` is 200 once the collector is constructed and,
-with `WALKEROS_FLOW_RELEASE` set, the loaded flow matches it; 503 otherwise. A
-mismatch exits with
-`Artifact mismatch: expected <name>@<release>, loaded <name>@<release>`.
+Secrets are fetched ONCE at boot with a credential (401/403 is fatal). There is
+no config polling and no hot-swap in start mode: a new flow version is a rebuild
+and a redeploy. `runneros remote` takes releases from the app with no redeploy,
+see https://www.walkeros.io/docs/apps/remote. `/health` is always 200; `/ready`
+is 200 once the collector is constructed, 503 otherwise.
 
 ### Constraints
 
@@ -805,6 +819,15 @@ Unknown top-level keys are ignored; artifact entries are strict; local
 filesystem inputs are refused with `LOCAL_PATH_NOT_ALLOWED`. Only `--json`,
 `-v`, `-s` combine with it. Schemas: `BuildManifestSchema`, `BuildResultSchema`,
 `BUILD_ERROR_CODES` from `@walkeros/cli`.
+
+Optional `packages` makes every bundle artifact install one tree, reported in
+the result as `packages: { digest, tree }`: `{ resolve: { before, exempt } }`
+resolves once, taking only versions published at or before `before` except for
+names under an `exempt` prefix and the exact versions those declare; `{ tree }`
+installs exactly a recorded tree from its tarball URLs and sha512 values and
+resolves nothing (`PACKAGE_UNAVAILABLE` when the registry no longer serves an
+entry, `PACKAGE_TREE_INVALID` for a tree that fails the check). Without
+`packages` packages resolve fresh, as in a local build.
 
 ---
 

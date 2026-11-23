@@ -527,6 +527,7 @@ describe('CookiePro Source', () => {
           info: () => {},
           debug: () => {},
           json: () => {},
+          mask: (text: string) => text,
           throw: (m: string | Error) => {
             throw typeof m === 'string' ? new Error(m) : m;
           },
@@ -547,6 +548,7 @@ describe('CookiePro Source', () => {
           info: () => {},
           debug: () => {},
           json: () => {},
+          mask: (text: string) => text,
           throw: (m: string | Error) => {
             throw typeof m === 'string' ? new Error(m) : m;
           },

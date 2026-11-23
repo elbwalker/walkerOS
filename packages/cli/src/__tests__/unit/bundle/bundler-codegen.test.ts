@@ -1189,10 +1189,8 @@ describe('the Tag Mode loader call', () => {
     expect(output).not.toContain("from '@walkeros/core'");
   });
 
-  it('generateWrapEntry calls the loader in a preview artifact', () => {
-    const output = generateWrapEntry('./skeleton.mjs', {
-      previewGrantTargets: ['api'],
-    });
+  it('generateWrapEntry calls the loader in a wrap without the activator', () => {
+    const output = generateWrapEntry('./skeleton.mjs', {});
     expect(output).toContain('(async () => {\n  moin();\n  const config');
   });
 
@@ -1286,94 +1284,14 @@ describe('cliPackagesPlugin', () => {
   });
 });
 
-describe('generateServerEntry observer wiring', () => {
-  it('iterates context.observers and installs them on collector.observers after startFlow', () => {
-    const out = generateServerEntry('./skel.mjs', '{}');
-    expect(out).toContain('context.observers');
-    expect(out).toContain('collector.observers.add');
-    // The legacy hooks merge must be gone.
+describe('server entries take no hooks from the context', () => {
+  it.each([
+    ['generateServerEntry', generateServerEntry('./skel.mjs', '{}')],
+    ['generateWrapEntryServer', generateWrapEntryServer('./skel.mjs')],
+  ])('%s merges no hooks from the context', (_name, out) => {
+    expect(out).toContain('await startFlow(config)');
     expect(out).not.toContain('context.hooks');
     expect(out).not.toContain('config.hooks');
-    // Observer install must come AFTER startFlow returns the result.
-    const startFlowIdx = out.indexOf('await startFlow(config)');
-    const observerIdx = out.indexOf('result.collector.observers.add');
-    expect(startFlowIdx).toBeGreaterThan(-1);
-    expect(observerIdx).toBeGreaterThan(startFlowIdx);
-  });
-
-  it('installs a guarded context.observeLevel on the collector after the observers loop', () => {
-    const out = generateServerEntry('./skel.mjs', '{}');
-    // Guarded install: a context without the supplier (no telemetry env)
-    // leaves collector.observeLevel unset.
-    expect(out).toContain(
-      'if (context.observeLevel) result.collector.observeLevel = context.observeLevel;',
-    );
-    const observersIdx = out.indexOf('result.collector.observers.add');
-    const levelIdx = out.indexOf(
-      'result.collector.observeLevel = context.observeLevel',
-    );
-    expect(observersIdx).toBeGreaterThan(-1);
-    expect(levelIdx).toBeGreaterThan(observersIdx);
-  });
-});
-
-describe('generateWrapEntryServer observer wiring', () => {
-  it('iterates context.observers and installs them on collector.observers after startFlow', () => {
-    const out = generateWrapEntryServer('./skel.mjs');
-    expect(out).toContain('context.observers');
-    expect(out).toContain('collector.observers.add');
-    expect(out).not.toContain('context.hooks');
-    expect(out).not.toContain('config.hooks');
-    const startFlowIdx = out.indexOf('await startFlow(config)');
-    const observerIdx = out.indexOf('result.collector.observers.add');
-    expect(startFlowIdx).toBeGreaterThan(-1);
-    expect(observerIdx).toBeGreaterThan(startFlowIdx);
-  });
-
-  it('installs a guarded context.observeLevel on the collector after the observers loop', () => {
-    const out = generateWrapEntryServer('./skel.mjs');
-    // Guarded install: a context without the supplier (no telemetry env)
-    // leaves collector.observeLevel unset.
-    expect(out).toContain(
-      'if (context.observeLevel) result.collector.observeLevel = context.observeLevel;',
-    );
-    const observersIdx = out.indexOf('result.collector.observers.add');
-    const levelIdx = out.indexOf(
-      'result.collector.observeLevel = context.observeLevel',
-    );
-    expect(observersIdx).toBeGreaterThan(-1);
-    expect(levelIdx).toBeGreaterThan(observersIdx);
-  });
-});
-
-describe('generated browser entries carry no baked observer machinery', () => {
-  // The baked-token telemetry block is gone from the codegen entirely: no
-  // option can request it, so every generated browser entry must be free of
-  // observer installs, token literals, and poll machinery. The bake-nothing
-  // `config.observe` connect pair is the only observation wiring left, and
-  // the runtime installs its observer at boot.
-  it('generateWebEntry emits no observer install, token literal, or poller', () => {
-    const out = generateWebEntry('./skel.mjs', '{}');
-    expect(out).not.toContain('createTelemetryObserver');
-    expect(out).not.toContain('createBatchedPoster');
-    expect(out).not.toContain('collector.observers.add');
-    expect(out).not.toContain('observeLevel');
-    expect(out).not.toContain('__pollTrace');
-    expect(out).not.toContain('setInterval');
-    expect(out).not.toContain('ingestToken');
-    expect(out).not.toContain('Bearer');
-  });
-
-  it('generateWrapEntry emits no observer install, token literal, or poller', () => {
-    const out = generateWrapEntry('./skel.mjs', {});
-    expect(out).not.toContain('createTelemetryObserver');
-    expect(out).not.toContain('createBatchedPoster');
-    expect(out).not.toContain('collector.observers.add');
-    expect(out).not.toContain('observeLevel');
-    expect(out).not.toContain('__pollTrace');
-    expect(out).not.toContain('setInterval');
-    expect(out).not.toContain('ingestToken');
-    expect(out).not.toContain('Bearer');
   });
 });
 
@@ -1832,5 +1750,95 @@ describe('declared package exports', () => {
     );
 
     expect(codeEntry).not.toContain('__packageExports');
+  });
+});
+
+describe('the declared env export', () => {
+  const packagePaths = new Map([
+    [
+      '@walkeros/destination-demo',
+      localPackageDir('@walkeros/destination-demo'),
+    ],
+  ]);
+
+  function flowWith(
+    platform: 'server' | 'web',
+    settings: Record<string, unknown>,
+  ): Flow {
+    return {
+      config: { platform },
+      sources: {},
+      destinations: {
+        demo: { package: '@walkeros/destination-demo', config: { settings } },
+      },
+    };
+  }
+
+  function options(platform: 'node' | 'browser'): BuildOptions {
+    return {
+      platform,
+      format: 'esm',
+      packages: { '@walkeros/destination-demo': {} },
+      output: './dist/bundle.mjs',
+      code: '',
+    };
+  }
+
+  it.each<[string, Record<string, unknown>, string]>([
+    [
+      'one $secret and one $env',
+      {
+        apiKey: '__WALKEROS_SECRET:API_KEY',
+        url: 'https://__WALKEROS_ENV:HOST:localhost/x',
+      },
+      '{"secrets":["API_KEY"],"env":["HOST"]}',
+    ],
+    ['none', { name: 'Demo' }, '{"secrets":[],"env":[]}'],
+  ])(
+    'writes the names a server flow with %s reads into its stage 1 module',
+    async (_case, settings, declared) => {
+      const { codeEntry } = await createEntryPoint(
+        flowWith('server', settings),
+        options('node'),
+        packagePaths,
+      );
+
+      expect(codeEntry).toContain(`export const __walkerosEnv = ${declared};`);
+    },
+  );
+
+  it('writes no declared env export into a browser stage 1 module', async () => {
+    const { codeEntry } = await createEntryPoint(
+      flowWith('web', { name: 'Demo' }),
+      options('browser'),
+      packagePaths,
+    );
+
+    expect(codeEntry).not.toContain('__walkerosEnv');
+  });
+
+  it('generateServerEntry re-exports the stage 1 declared env', async () => {
+    const dir = await fs.mkdtemp(path.join(os.tmpdir(), 'declared-env-'));
+    try {
+      const stage1 = path.join(dir, 'stage1.mjs');
+      await fs.writeFile(
+        stage1,
+        `export function wireConfig(data) { return data; }
+export async function startFlow() { return { collector: { sources: {} } }; }
+export const __walkerosEnv = { secrets: ['API_KEY'], env: ['HOST'] };
+`,
+      );
+      const entry = path.join(dir, 'entry.mjs');
+      await fs.writeFile(entry, generateServerEntry(stage1, '{}'));
+
+      const module: unknown = await import(entry);
+
+      expect(module).toHaveProperty('__walkerosEnv', {
+        secrets: ['API_KEY'],
+        env: ['HOST'],
+      });
+    } finally {
+      await fs.remove(dir);
+    }
   });
 });

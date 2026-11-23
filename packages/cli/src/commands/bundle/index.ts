@@ -19,18 +19,27 @@ import {
   writeResult,
 } from '../../core/index.js';
 import { tmpRunDir } from '../../core/tmp-names.js';
-import { packBundleDir } from './archive.js';
-import type { Flow, Logger } from '@walkeros/core';
+import type { PackageInstall } from '../../core/package-tree.js';
+import { isArchiveOutput, packBundleDir } from './archive.js';
+import { SERVER_OUTPUT_ENTRIES, type Flow, type Logger } from '@walkeros/core';
 import type { BundleStats } from './bundler.js';
 import {
   loadJsonConfig,
   loadBundleConfig,
   loadAllFlows,
+  assertNoConfigErrors,
   type LoadConfigResult,
 } from '../../config/index.js';
 import { isUrl } from '../../config/utils.js';
 import type { BuildOptions } from '../../types/bundle.js';
 import { bundleCore, type BundleProvenance } from './bundler.js';
+import {
+  buildServedFlows,
+  placeServedFlows,
+  servedWriteErrors,
+  type BuiltServedFlow,
+  type ServedBuildContext,
+} from './served.js';
 import type { BundleTarget } from './targets.js';
 import { resolveTarget } from './targets.js';
 import { uploadBundleToUrl, sanitizeUrl } from './upload.js';
@@ -78,12 +87,6 @@ export function resolveOutputPath(
   return resolved;
 }
 
-/** Recognizes the packed-archive output extensions. */
-function isArchiveOutput(output: string): boolean {
-  const lower = output.toLowerCase();
-  return lower.endsWith('.tar.gz') || lower.endsWith('.tgz');
-}
-
 /**
  * Run the core bundler, transparently producing a packed `.tar.gz`/`.tgz`
  * artifact when `buildOptions.output` carries an archive extension.
@@ -97,6 +100,11 @@ function isArchiveOutput(output: string): boolean {
  *
  * Web bundles are single-file IIFEs with no sibling `node_modules` to pack, so
  * requesting an archive extension for a web/browser platform is an error.
+ *
+ * `place` runs once the server build is written, with the folder it was
+ * written to (the archive's temp folder for an archive), and resolves with
+ * the paths it wrote there; an archive packs those beside the server's own
+ * entries.
  */
 async function runBundleCoreWithArchive(
   flowSettings: Flow,
@@ -104,15 +112,18 @@ async function runBundleCoreWithArchive(
   logger: Logger.Instance,
   showStats: boolean,
   provenance: BundleProvenance,
+  place?: (dir: string) => Promise<string[]>,
 ): Promise<BundleStats | void> {
   if (!isArchiveOutput(buildOptions.output)) {
-    return bundleCore(
+    const stats = await bundleCore(
       flowSettings,
       buildOptions,
       logger,
       showStats,
       provenance,
     );
+    if (place) await place(path.dirname(path.resolve(buildOptions.output)));
+    return stats;
   }
 
   if (buildOptions.platform !== 'node') {
@@ -147,11 +158,12 @@ async function runBundleCoreWithArchive(
         );
       }
     }
-    const candidates = ['flow.mjs', 'node_modules', 'package.json'];
+    const placed = place ? await place(tempDir) : [];
     const entries: string[] = [];
-    for (const entry of candidates) {
+    for (const entry of SERVER_OUTPUT_ENTRIES) {
       if (await fs.pathExists(path.join(tempDir, entry))) entries.push(entry);
     }
+    entries.push(...placed);
 
     await fs.ensureDir(path.dirname(archivePath));
     await packBundleDir(tempDir, archivePath, entries);
@@ -161,6 +173,72 @@ async function runBundleCoreWithArchive(
   } finally {
     await fs.remove(tempDir).catch(() => {});
   }
+}
+
+/**
+ * The one function every door builds through: `bundleCommand`, `bundle()`
+ * and, through `bundle()`, the local MCP and the manifest. A server flow
+ * that lists web flows builds each of them first, one after another, into a
+ * scratch folder, then itself, then places each web file at its path in its
+ * folder or archive. `leaveOut` names an output that carries one file, so
+ * the server builds alone and the line names the flows left out.
+ */
+async function bundleWithServed(
+  loaded: LoadConfigResult,
+  build: ServedBuildContext & {
+    showStats: boolean;
+    release?: string;
+    leaveOut?: 'stdout' | 'URL upload';
+    onServed?: (built: readonly BuiltServedFlow[]) => Promise<void>;
+  },
+): Promise<BundleStats | void> {
+  const { flowSettings, buildOptions, flowName, configDigest } = loaded;
+  const provenance = { flowName, release: build.release, configDigest };
+  if (build.leaveOut && loaded.served.length > 0) {
+    build.logger.warn(
+      `Served flows left out (${build.leaveOut}): ${loaded.served
+        .map(({ flow }) => flow)
+        .join(', ')}`,
+    );
+  }
+  const served = build.leaveOut ? [] : loaded.served;
+  if (served.length === 0) {
+    return runBundleCoreWithArchive(
+      flowSettings,
+      buildOptions,
+      build.logger,
+      build.showStats,
+      provenance,
+    );
+  }
+
+  assertNoConfigErrors(await servedWriteErrors(loaded));
+  const scratch = await tmpRunDir('served');
+  try {
+    const built = await buildServedFlows(served, build, scratch);
+    const stats = await runBundleCoreWithArchive(
+      flowSettings,
+      buildOptions,
+      build.logger,
+      build.showStats,
+      provenance,
+      (dir) => placeServedFlows(built, dir, build.logger),
+    );
+    await build.onServed?.(built);
+    return stats;
+  } finally {
+    await fs.remove(scratch).catch(() => {});
+  }
+}
+
+/** The output that carries the server file alone, if this one does. */
+function leftOutBy(
+  writingToStdout: boolean,
+  outputIsUrl: boolean,
+): 'stdout' | 'URL upload' | undefined {
+  if (writingToStdout) return 'stdout';
+  if (outputIsUrl) return 'URL upload';
+  return undefined;
 }
 
 export async function bundleCommand(
@@ -227,15 +305,12 @@ export async function bundleCommand(
       success: boolean;
       stats?: unknown;
       error?: string;
+      /** Served flows a stdout build left out (`--json` prints no line). */
+      servedLeftOut?: string[];
     }> = [];
 
-    for (const {
-      flowSettings,
-      buildOptions,
-      flowName,
-      isMultiFlow,
-      configDigest,
-    } of configsToBundle) {
+    for (const loaded of configsToBundle) {
+      const { buildOptions, flowName, isMultiFlow } = loaded;
       try {
         // Override cache setting from CLI if provided
         if (options.cache !== undefined) {
@@ -277,15 +352,27 @@ export async function bundleCommand(
         // The bundler bakes flow name + release into the collector before
         // codegen, so the deployed flow stamps real provenance on
         // event.source.release.
-        const stats = await runBundleCoreWithArchive(
-          flowSettings,
-          buildOptions,
+        const leaveOut = leftOutBy(writingToStdout, outputIsUrl);
+        const stats = await bundleWithServed(loaded, {
+          rawConfig,
+          configPath,
+          cache: options.cache,
           logger,
-          shouldCollectStats === true,
-          { flowName, release: options.release, configDigest },
-        );
+          showStats: shouldCollectStats === true,
+          release: options.release,
+          leaveOut,
+        });
 
-        results.push({ flowName, success: true, stats });
+        // Under --json the logger prints no line, so the result names the
+        // served flows a stdout build left out.
+        const servedLeftOut =
+          leaveOut === 'stdout' ? loaded.served.map(({ flow }) => flow) : [];
+        results.push({
+          flowName,
+          success: true,
+          stats,
+          ...(servedLeftOut.length > 0 ? { servedLeftOut } : {}),
+        });
 
         // Upload to URL if output was a presigned URL
         if (uploadUrl) {
@@ -385,6 +472,43 @@ export async function bundleCommand(
   }
 }
 
+/** Options of `bundle()`. */
+export interface BundleOptions {
+  silent?: boolean;
+  verbose?: boolean;
+  stats?: boolean;
+  cache?: boolean;
+  flowName?: string;
+  /**
+   * Release id baked into `config.collector.release`, stamping this flow's
+   * entry in `event.source.release` at runtime. Beats an authored release;
+   * omitted, the release is a content id of config, packages and CLI. A web
+   * flow this flow serves is built without it.
+   */
+  release?: string;
+  /**
+   * Named bundle target. If omitted, falls back to
+   * `buildOverrides.skipWrapper` mapping (deprecated) or `'cdn'`. A web flow
+   * this flow serves is always built as `'cdn'`.
+   */
+  target?: BundleTarget;
+  buildOverrides?: Partial<BuildOptions>;
+  /**
+   * Base environment web `$env` references resolve against, beneath the
+   * flow's declared `config.bundle.env`. Omitted, it is `process.env` (a
+   * local build). Pass `{}` for a hosted build, which then resolves against
+   * the declared values alone and never the building process's own env.
+   */
+  buildEnv?: Record<string, string | undefined>;
+  /** How each served web flow installs its packages; absent, it resolves fresh. */
+  servedPackageInstall?: (flow: string) => PackageInstall | undefined;
+  /**
+   * Called with the served files after placement, before the scratch folder
+   * that holds them is removed.
+   */
+  onServed?: (built: readonly BuiltServedFlow[]) => Promise<void>;
+}
+
 /**
  * High-level bundle function for programmatic usage.
  *
@@ -422,33 +546,8 @@ export async function bundleCommand(
  */
 export async function bundle(
   configOrPath: unknown,
-  options: {
-    silent?: boolean;
-    verbose?: boolean;
-    stats?: boolean;
-    cache?: boolean;
-    flowName?: string;
-    /**
-     * Release id baked into `config.collector.release`, stamping this flow's
-     * entry in `event.source.release` at runtime. Beats an authored release;
-     * omitted, the release is a content id of config, packages and CLI.
-     */
-    release?: string;
-    /**
-     * Named bundle target. If omitted, falls back to
-     * `buildOverrides.skipWrapper` mapping (deprecated) or `'cdn'`.
-     */
-    target?: BundleTarget;
-    buildOverrides?: Partial<BuildOptions>;
-    /**
-     * Base environment web `$env` references resolve against, beneath the
-     * flow's declared `config.bundle.env`. Omitted, it is `process.env` (a
-     * local build). Pass `{}` for a hosted build, which then resolves against
-     * the declared values alone and never the building process's own env.
-     */
-    buildEnv?: Record<string, string | undefined>;
-  } = {},
-): Promise<import('./bundler').BundleStats | void> {
+  options: BundleOptions = {},
+): Promise<BundleStats | void> {
   // Resolve effective target: explicit target > legacy skipWrapper mapping > default 'cdn'.
   let effectiveTarget: BundleTarget;
   if (options.target) {
@@ -497,30 +596,35 @@ export async function bundle(
     withDev: preset.withDev,
     externalizeDev: preset.externalizeDev,
   };
-  const { flowSettings, buildOptions, flowName, configDigest } =
-    loadBundleConfig(rawConfig, {
-      configPath,
-      flowName: options.flowName,
-      buildOverrides: mergedOverrides,
-      buildEnv: options.buildEnv,
-    });
+  const loaded = loadBundleConfig(rawConfig, {
+    configPath,
+    flowName: options.flowName,
+    buildOverrides: mergedOverrides,
+    buildEnv: options.buildEnv,
+  });
 
   // 3. Handle cache option
   if (options.cache !== undefined) {
-    buildOptions.cache = options.cache;
+    loaded.buildOptions.cache = options.cache;
   }
 
   // 4. Create logger internally
   const logger = createCLILogger(options);
 
-  // 5. Call core bundler (packs a .tar.gz/.tgz artifact when output requests it)
-  // The bundler bakes flow name + release into the collector so the deployed
-  // flow stamps real provenance on event.source.release.
-  return await runBundleCoreWithArchive(
-    flowSettings,
-    buildOptions,
+  // 5. Build the flow and the web flows it serves (packs a .tar.gz/.tgz
+  // artifact when output requests it). The bundler bakes flow name + release
+  // into the collector so the deployed flow stamps real provenance on
+  // event.source.release.
+  return await bundleWithServed(loaded, {
+    rawConfig,
+    configPath,
+    buildEnv: options.buildEnv,
+    cache: options.cache,
+    tempDir: options.buildOverrides?.tempDir,
     logger,
-    options.stats ?? false,
-    { flowName, release: options.release, configDigest },
-  );
+    packageInstall: options.servedPackageInstall,
+    showStats: options.stats ?? false,
+    release: options.release,
+    onServed: options.onServed,
+  });
 }
