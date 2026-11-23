@@ -24,14 +24,19 @@ const CODES_BY_MINOR_UNIT: ReadonlyArray<[number, string]> = [
   [4, 'CLF UYW'],
 ];
 
-const MINOR_UNITS = new Map<string, number>(
-  CODES_BY_MINOR_UNIT.flatMap(([minorUnits, codes]) =>
-    codes
-      .split(/\s+/)
-      .filter(Boolean)
-      .map((code): [string, number] => [code, minorUnits]),
-  ),
-);
+// Built on the first lookup, not at load, so a bundle that never looks up a
+// currency (walker.js) drops the table.
+let minorUnitsByCode: Map<string, number> | undefined;
+
+const buildMinorUnits = (): Map<string, number> =>
+  new Map(
+    CODES_BY_MINOR_UNIT.flatMap(([minorUnits, codes]) =>
+      codes
+        .split(/\s+/)
+        .filter(Boolean)
+        .map((code): [string, number] => [code, minorUnits]),
+    ),
+  );
 
 /**
  * The ISO 4217 minor unit of a currency code, in any letter case: 2 for EUR
@@ -39,5 +44,6 @@ const MINOR_UNITS = new Map<string, number>(
  * list, or has no minor unit there, gives undefined.
  */
 export function getCurrencyMinorUnits(currency: string): number | undefined {
-  return MINOR_UNITS.get(currency.toUpperCase());
+  minorUnitsByCode ??= buildMinorUnits();
+  return minorUnitsByCode.get(currency.toUpperCase());
 }
