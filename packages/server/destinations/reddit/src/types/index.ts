@@ -19,7 +19,7 @@ export interface Settings {
    */
   ip?: WalkerOSMapping.Value | false;
   /**
-   * Client user agent, sent as user.user_agent (hashed). Resolves against
+   * Client user agent, sent as user.user_agent (as is, never hashed). Resolves against
    * { ingest, event }. `false` switches it off.
    * @default ['ingest.userAgent', 'event.user.userAgent']
    */
@@ -128,11 +128,10 @@ export interface ConversionEvent {
   user: UserData;
 }
 
+// v2.0 body: `events` at the top level (the `data` envelope belongs to v3).
 export interface RequestBody {
   test_mode?: boolean;
-  data: {
-    events: ConversionEvent[];
-  };
+  events: ConversionEvent[];
 }
 
 export interface ResponseBody {

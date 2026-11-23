@@ -52,7 +52,7 @@ export const SettingsSchema = z
       'Client IP, sent as user.ip_address (hashed). Resolves against { ingest, event }. Default: ["ingest.ip", "event.user.ip"]. false switches it off. A mapped user.ip_address wins.',
     ).optional(),
     userAgent: InputSchema.describe(
-      'Client user agent, sent as user.user_agent (hashed). Resolves against { ingest, event }. Default: ["ingest.userAgent", "event.user.userAgent"]. false switches it off. A mapped user.user_agent wins.',
+      'Client user agent, sent as user.user_agent (as is, never hashed). Resolves against { ingest, event }. Default: ["ingest.userAgent", "event.user.userAgent"]. false switches it off. A mapped user.user_agent wins.',
     ).optional(),
   })
   .strict();
