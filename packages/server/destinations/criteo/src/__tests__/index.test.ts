@@ -241,33 +241,6 @@ describe('Server Destination Criteo', () => {
     expect(body.retailer_visitor_id).toBe('device-456');
   });
 
-  test('raw email is hashed into md5, sha256, sha256_md5', async () => {
-    const event = createEvent({
-      name: 'form submit',
-      user: { email: 'user@example.com' },
-    });
-    const config: Config = {
-      settings: {
-        partnerId,
-        callerId,
-        user_data: { email: 'user.email' },
-      },
-    };
-
-    await destination.push(
-      event,
-      createMockContext({ config, env: testEnv, id: 'test-criteo' }),
-    );
-
-    const body = JSON.parse(mockSendServer.mock.calls[0][1]);
-    const emailHashes = body.id.email;
-    expect(emailHashes).toBeDefined();
-    expect(emailHashes.md5).toMatch(/^[a-f0-9]{32}$/);
-    expect(emailHashes.sha256).toMatch(/^[a-f0-9]{64}$/);
-    expect(emailHashes.sha256_md5).toMatch(/^[a-f0-9]{64}$/);
-    expect(emailHashes.raw).toBeUndefined();
-  });
-
   test('country and language included when set', async () => {
     const event = getEvent();
     const config: Config = {

@@ -13,15 +13,16 @@ import {
   createMappingRoot,
   getMappingValue,
   isObject,
+  isString,
+  reportCause,
   StepError,
+  stepId,
 } from '@walkeros/core';
-import { getHashServer, sendServer } from '@walkeros/server-core';
+import { getHashServer, hashUserData, sendServer } from '@walkeros/server-core';
+import { normalizers, oneValue } from './hash';
 import { DEFAULT_URL } from './config';
 
 const INTEGRATION_VERSION = 'walkeros_criteo_1.0.0';
-
-const sha256HexPattern = /^[a-f0-9]{64}$/;
-const md5HexPattern = /^[a-f0-9]{32}$/;
 
 /**
  * Criteo Events API expects email in three hashed forms:
@@ -29,29 +30,19 @@ const md5HexPattern = /^[a-f0-9]{32}$/;
  * - sha256: SHA-256 of lowercased/trimmed email
  * - sha256_md5: SHA-256 of the MD5 hex string
  *
- * Already-hashed input is passed through: a SHA-256 hex only sets `sha256`;
- * an MD5 hex sets `md5` and derives `sha256_md5` from it.
+ * md5 and sha256_md5 are derived from the raw email, so an email listed in
+ * doNotHash, a SHA-256 digest, only sets `sha256`.
  *
  * https://guides.criteotilt.com/events-api/
  */
-async function hashEmail(email: string): Promise<CriteoEmailHashes> {
-  const normalized = email.toLowerCase().trim();
-  if (!normalized) return {};
-
-  if (sha256HexPattern.test(normalized)) {
-    return { sha256: normalized };
-  }
-
-  if (md5HexPattern.test(normalized)) {
-    return { md5: normalized, sha256_md5: await getHashServer(normalized) };
-  }
-
-  const md5 = await getHashServer(normalized, undefined, { algorithm: 'md5' });
-  return {
-    md5,
-    sha256: await getHashServer(normalized),
-    sha256_md5: await getHashServer(md5),
-  };
+async function emailHashes(
+  sha256: string,
+  email: string,
+): Promise<CriteoEmailHashes> {
+  const md5 = await getHashServer(normalizers.email(email), undefined, {
+    algorithm: 'md5',
+  });
+  return { md5, sha256, sha256_md5: await getHashServer(md5) };
 }
 
 function toStringOrUndef(value: unknown): string | undefined {
@@ -103,7 +94,7 @@ export const push: PushFn = async function (event, context) {
 
 const send: PushFn = async function (
   event,
-  { config, rule, data, ingest, env, logger, collector },
+  { config, rule, data, ingest, env, logger, collector, id },
 ) {
   const {
     partnerId,
@@ -113,6 +104,7 @@ const send: PushFn = async function (
     language,
     url = DEFAULT_URL,
     user_data,
+    doNotHash,
     ip,
     userAgent,
   } = config.settings ?? {};
@@ -135,11 +127,27 @@ const send: PushFn = async function (
   const mappedUserId = toStringOrUndef(resolvedUserData.mapped_user_id);
   if (mappedUserId) identity.mapped_user_id = mappedUserId;
 
-  const rawEmail = toStringOrUndef(resolvedUserData.email);
-  if (rawEmail) {
-    const hashes = await hashEmail(rawEmail);
-    if (Object.keys(hashes).length > 0) identity.email = hashes;
-  }
+  const {
+    userData: { email: sha256 },
+    dropped,
+  } = await hashUserData(
+    { email: resolvedUserData.email },
+    normalizers,
+    doNotHash,
+    oneValue,
+  );
+  if (dropped.length)
+    reportCause(
+      collector,
+      logger,
+      { step: stepId('destination', id), code: 'mapping' },
+      `Criteo user_data ${dropped.join(', ')} left out: Criteo takes one value, not a list`,
+      { event: event.name },
+    );
+  if (isString(sha256))
+    identity.email = doNotHash?.includes('email')
+      ? { sha256 }
+      : await emailHashes(sha256, String(resolvedUserData.email));
 
   // Build event object
   const criteoEventName =

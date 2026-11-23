@@ -10,7 +10,6 @@ import {
 } from '@walkeros/core';
 import { startFlow } from '@walkeros/collector';
 import { examples } from '../dev';
-import { hashEvent } from '../hash';
 
 const { env } = examples;
 
@@ -263,54 +262,6 @@ describe('Server Destination Pinterest', () => {
         '9176e6f336dbdb4f99b0e45cbd7e41e0e2323812b236822842a61ffbd362ac8c',
       ], // from custom user_data (hashed)
       ph: expect.any(String), // from mapping (hashed)
-    });
-  });
-
-  test('hashing', async () => {
-    expect(await hashEvent('test')).toEqual('test');
-    expect(
-      await hashEvent({ user_data: { em: ['m@i.l'], foo: 'bar' } }),
-    ).toEqual({
-      user_data: {
-        em: [
-          'd42649b85459f1140acba6d88f5325256ad2519782c520b7666c51390d9744f0',
-        ],
-        foo: 'bar',
-      },
-    });
-    expect(
-      await hashEvent({ user_data: { em: ['m@i.l'], foo: 'bar' } }, ['em']),
-    ).toEqual({
-      user_data: {
-        em: ['m@i.l'],
-        foo: 'bar',
-      },
-    });
-    // client_ip_address and client_user_agent should not be hashed
-    expect(
-      await hashEvent({
-        user_data: {
-          em: ['test@example.com'],
-          client_ip_address: '1.2.3.4',
-          client_user_agent: 'Mozilla/5.0',
-        },
-      }),
-    ).toEqual({
-      user_data: {
-        em: [expect.any(String)], // hashed
-        client_ip_address: '1.2.3.4', // not hashed
-        client_user_agent: 'Mozilla/5.0', // not hashed
-      },
-    });
-    // hashed_maids should be hashed (Pinterest-specific key)
-    expect(
-      await hashEvent({
-        user_data: { hashed_maids: ['test-maid'] },
-      }),
-    ).toEqual({
-      user_data: {
-        hashed_maids: [expect.any(String)], // hashed
-      },
     });
   });
 

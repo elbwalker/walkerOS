@@ -49,8 +49,8 @@ The destination builds an `identifiers` array. Each identifier is a separate sin
 
 **Primary identifiers:**
 
-- **`hashed_email`**: resolved from `event.user.email` or a `user_data.email` mapping. The email is normalized (trimmed, lowercased) and SHA-256 hashed before sending. Set `doNotHash: ['email']` if you are pre-hashing upstream: the email is then sent trimmed and lowercased, but not hashed.
-- **`hashed_phone_number`**: resolved from `event.user.phone` or a `user_data.phone` mapping, trimmed and SHA-256 hashed as mapped. X expects the number in E.164 format (`+491701234567`), so map it in that form: the destination does not remove spaces, brackets or dashes. Use `doNotHash: ['phone']` to skip hashing: the number is then sent trimmed, but not hashed, so use it only for a value you hash upstream.
+- **`hashed_email`**: resolved from `event.user.email` or a `user_data.email` mapping. The email is normalized (trimmed, lowercased) and SHA-256 hashed before sending. Set `doNotHash: ['email']` if you hash it upstream: the value is then sent exactly as mapped, so it must already be a SHA-256 digest.
+- **`hashed_phone_number`**: resolved from `event.user.phone` or a `user_data.phone` mapping, trimmed and SHA-256 hashed as mapped. X expects the number in E.164 format (`+491701234567`), so map it in that form: the destination does not remove spaces, brackets or dashes. Set `doNotHash: ['phone']` if you hash it upstream: the value is then sent exactly as mapped, so it must already be a SHA-256 digest.
 - **`twclid`**: X click ID (pass-through, **not** hashed). The [session source](/docs/sources/web/session#session-start-event) reads it from the landing page URL into its `session start` event only, so carry it to your conversion events yourself (the snippet reads `context.twclid`):
 
 <CodeSnippet
@@ -70,7 +70,7 @@ The destination builds an `identifiers` array. Each identifier is a separate sin
 
 **Secondary identifiers**: `ip_address` and `user_agent` are optional and sent unhashed (see [Client IP and user agent](#client-ip-and-user-agent)).
 
-Every other key in `user_data` (for example `phone_number`, `hashed_email` or `em`) is dropped without a log line, and a list mapped to `email` is ignored in favour of `event.user.email`.
+An email or phone number that is empty after trimming is left out, so an event whose only primary identifier is a blank email or phone fails with `missing-input`. An IP address or user agent does not keep such an event from failing. X takes one email and one phone number: a list mapped to `email` or `phone` is left out, and the collector logs one ERROR line naming the key. Every other key in `user_data` (for example `phone_number`, `hashed_email` or `em`) is dropped without a log line.
 
 ## Per-event overrides
 

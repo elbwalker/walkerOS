@@ -6,8 +6,8 @@ import {
   isObject,
   StepError,
 } from '@walkeros/core';
-import { sendServer } from '@walkeros/server-core';
-import { hashEvent } from './hash';
+import { hashUserData, sendServer } from '@walkeros/server-core';
+import { normalizers } from './hash';
 
 // A silent rule has no Pinterest call of its own: nothing to send.
 export const push: PushFn = async function (event, context) {
@@ -82,7 +82,7 @@ const send: PushFn = async function (
     event_time: Math.round((event.timestamp || Date.now()) / 1000),
     action_source,
     ...restEventData,
-    user_data: userData,
+    user_data: (await hashUserData(userData, normalizers, doNotHash)).userData,
   };
 
   // Nest custom_data from mapping
@@ -100,9 +100,7 @@ const send: PushFn = async function (
     serverEvent.partner_name = partner_name;
   }
 
-  const hashedServerEvent = await hashEvent(serverEvent, doNotHash);
-
-  const body: RequestBody = { data: [hashedServerEvent] };
+  const body: RequestBody = { data: [serverEvent] };
 
   // Build endpoint URL
   const testParam = test ? '?test=true' : '';

@@ -1,118 +1,100 @@
-import { hashUserData, normalizeEmail } from '../hash';
+import type { WalkerOS } from '@walkeros/core';
+import { startFlow } from '@walkeros/collector';
+import { createEvent, Logger } from '@walkeros/core';
+import { destinationBing } from '..';
+import type { HashKey } from '../hash';
+import type { Env, Settings } from '../types';
 
-describe('hashUserData', () => {
-  test('hashes em and ph', async () => {
-    const userData = {
-      em: 'user@example.com',
-      ph: '+14135552671',
-    };
-
-    const result = await hashUserData(userData);
-
-    expect(result.em).not.toBe(userData.em);
-    expect(result.ph).not.toBe(userData.ph);
-
-    expect(result.em).toMatch(/^[a-f0-9]{64}$/);
-    expect(result.ph).toMatch(/^[a-f0-9]{64}$/);
+/**
+ * The userData Microsoft receives when each key of the event data is mapped
+ * to the userData key of the same name, and the ERROR lines written.
+ */
+async function send(data: WalkerOS.Properties, doNotHash?: HashKey[]) {
+  const bodies: string[] = [];
+  const errors: unknown[] = [];
+  const env: Env = {
+    sendServer: async (_url, body) => {
+      bodies.push(String(body));
+      return { data: {} };
+    },
+  };
+  const settings: Settings = {
+    accessToken: 's3cr3t',
+    tagId: 'UET-12345',
+    ip: false,
+    userAgent: false,
+    doNotHash,
+    user_data: Object.fromEntries(
+      Object.keys(data).map((key) => [key, `data.${key}`]),
+    ),
+  };
+  const { collector } = await startFlow({
+    logger: {
+      handler: (level, message, context) => {
+        if (level === Logger.Level.ERROR) errors.push([message, context]);
+      },
+    },
+    destinations: {
+      bing: { code: destinationBing, config: { settings }, env },
+    },
   });
 
-  test('does NOT hash anonymousId, externalId, msclkid, clientIpAddress, clientUserAgent, idfa, gaid', async () => {
-    const userData = {
-      anonymousId: 'anon-abc',
-      externalId: 'user-123',
-      msclkid: 'msclkid-xyz',
-      clientIpAddress: '192.0.2.1',
-      clientUserAgent: 'Mozilla/5.0',
-      idfa: 'IDFA-abcd',
-      gaid: 'GAID-1234',
-    };
+  const result = await collector.push(createEvent({ name: 'page view', data }));
+  await collector.command('shutdown');
 
-    const result = await hashUserData(userData);
+  expect(result.ok).toBe(true);
+  return { userData: JSON.parse(bodies[0]).data[0].userData, errors };
+}
 
-    expect(result.anonymousId).toBe('anon-abc');
-    expect(result.externalId).toBe('user-123');
-    expect(result.msclkid).toBe('msclkid-xyz');
-    expect(result.clientIpAddress).toBe('192.0.2.1');
-    expect(result.clientUserAgent).toBe('Mozilla/5.0');
-    expect(result.idfa).toBe('IDFA-abcd');
-    expect(result.gaid).toBe('GAID-1234');
+describe('Bing userData hashing', () => {
+  // Microsoft's published example: john@contoso.com and +14255551234
+  // https://learn.microsoft.com/en-us/advertising/guides/uet-conversion-api-integration
+  const em = 'ec81f3ac7b2b19675bab9d54cf416f9f18cff87c97da5cca82c0f0891bc40602';
+  const ph = 'c59475d96e9f01d7d18d06cfad84dd02333207f02c0c2c5663ef2782cda0390e';
+
+  it.each<[string, WalkerOS.Properties, HashKey[], Record<string, unknown>]>([
+    [
+      'em and ph match Microsoft example',
+      { em: 'john@contoso.com', ph: '+14255551234' },
+      [],
+      { em, ph },
+    ],
+    [
+      'em drops dots and the alias of the user part, ph is trimmed',
+      { em: ' J.O.H.N+ads@Contoso.com ', ph: ' +14255551234 ' },
+      [],
+      { em, ph },
+    ],
+    [
+      'empty values under hashed keys are left out, others are sent as mapped',
+      { em: '', ph: '  ', anonymousId: '' },
+      [],
+      { anonymousId: '' },
+    ],
+    [
+      'doNotHash values and keys it does not hash are sent as mapped',
+      { em: em.toUpperCase(), externalId: 'user-123' },
+      ['em'],
+      { em: em.toUpperCase(), externalId: 'user-123' },
+    ],
+  ])('%s', async (_, data, doNotHash, expected) => {
+    expect((await send(data, doNotHash)).userData).toEqual(expected);
   });
 
-  test('respects doNotHash array', async () => {
-    const userData = {
-      em: 'user@example.com',
-      ph: '+14135552671',
-    };
+  it('leaves out a list under em and reports it in one ERROR line', async () => {
+    const { userData, errors } = await send({
+      em: ['john@contoso.com', 'jane@contoso.com'],
+      ph: '+14255551234',
+    });
 
-    const result = await hashUserData(userData, ['em']);
-
-    // em should NOT be hashed (passes through as-is, no normalization)
-    expect(result.em).toBe('user@example.com');
-
-    // ph should still be hashed
-    expect(result.ph).not.toBe('+14135552671');
-    expect(result.ph).toMatch(/^[a-f0-9]{64}$/);
-  });
-
-  test('handles empty object', async () => {
-    const result = await hashUserData({});
-    expect(result).toEqual({});
-  });
-
-  test('handles undefined fields gracefully', async () => {
-    const userData = { em: 'user@example.com' };
-
-    const result = await hashUserData(userData);
-
-    expect(result.em).toMatch(/^[a-f0-9]{64}$/);
-    expect(result.ph).toBeUndefined();
-  });
-
-  test('email normalization: dots removed from user portion', async () => {
-    // "a.b.c@example.com" normalizes to "abc@example.com"
-    const resultDotted = await hashUserData({ em: 'a.b.c@example.com' });
-    const resultPlain = await hashUserData({ em: 'abc@example.com' });
-    expect(resultDotted.em).toBe(resultPlain.em);
-  });
-
-  test('email normalization: +alias suffix stripped', async () => {
-    const resultAlias = await hashUserData({ em: 'user+promo@example.com' });
-    const resultNoAlias = await hashUserData({ em: 'user@example.com' });
-    expect(resultAlias.em).toBe(resultNoAlias.em);
-  });
-
-  test('email normalization: lowercased and trimmed', async () => {
-    const resultMixed = await hashUserData({ em: '  USER@Example.COM  ' });
-    const resultLower = await hashUserData({ em: 'user@example.com' });
-    expect(resultMixed.em).toBe(resultLower.em);
-  });
-
-  test('phone normalization: whitespace trimmed', async () => {
-    const resultSpaced = await hashUserData({ ph: '  +14135552671  ' });
-    const resultPlain = await hashUserData({ ph: '+14135552671' });
-    expect(resultSpaced.ph).toBe(resultPlain.ph);
-  });
-
-  test('normalizeEmail exposes normalization helper', () => {
-    expect(normalizeEmail('  User.Name+promo@Example.COM  ')).toBe(
-      'username@example.com',
-    );
-    expect(normalizeEmail('nouser')).toBe('nouser');
-  });
-
-  test('mixed hashable and non-hashable fields', async () => {
-    const userData = {
-      em: 'user@example.com',
-      externalId: 'ext-1',
-      msclkid: 'click-42',
-      clientIpAddress: '10.0.0.1',
-    };
-
-    const result = await hashUserData(userData);
-
-    expect(result.em).toMatch(/^[a-f0-9]{64}$/);
-    expect(result.externalId).toBe('ext-1');
-    expect(result.msclkid).toBe('click-42');
-    expect(result.clientIpAddress).toBe('10.0.0.1');
+    expect(userData).toEqual({ ph });
+    expect(errors).toEqual([
+      [
+        expect.stringContaining(
+          'Bing userData em left out: Microsoft takes one value, not a list',
+        ),
+        { step: 'destination.bing', code: 'mapping', event: 'page view' },
+      ],
+    ]);
   });
 });

@@ -92,7 +92,8 @@ Map identity fields with Microsoft's key names under `userData` in a rule's `dat
 - **`anonymousId` and `externalId` are not hashed.** Microsoft asks never to send real user IDs, so map an anonymized or hashed ID there, such as the walkerOS `user.device`, not a login or customer ID.
 - **Every event needs an identifier.** Microsoft requires at least one of `em`, `ph`, `anonymousId`, `externalId`, `msclkid`, `idfa` or `gaid` in `userData`. The client IP and user agent do not count, and the quickstart maps none, so map at least one.
 - **Phone numbers are hashed as mapped**, only trimmed: map them in E.164 format (`+14255551234`), as Microsoft requires.
-- **Map one value per key.** A list is joined with commas and hashed as one string.
+- **Map one value per key.** Microsoft takes one `em` and one `ph`: a list under either is left out, and the collector logs one ERROR line naming the key.
+- **An empty `em` or `ph` is left out**, and so is one that is empty after trimming. Other keys are sent as mapped.
 
 ### Microsoft-specific email normalization
 
@@ -105,7 +106,7 @@ Before hashing, emails are normalized to match Microsoft's canonicalization:
 
 - **Emails can be mapped raw**; the destination normalizes them as above.
 
-If a value is already hashed or you want to skip hashing for a specific field, use `doNotHash`. A `doNotHash` key is sent exactly as mapped, and Microsoft removes an `em` or `ph` that is not a SHA-256 hash:
+If a value is already hashed, add its key to `doNotHash`: it is sent exactly as mapped, so it must already be a SHA-256 digest. Microsoft removes an `em` or `ph` that is not one:
 
 <CodeSnippet
   code={`"settings": {

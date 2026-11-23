@@ -1,95 +1,91 @@
-import { createHash } from 'node:crypto';
 import type { WalkerOS } from '@walkeros/core';
-import type { Config, CriteoEmailHashes, Settings } from '../types';
-import { clone, createEvent, createMockContext } from '@walkeros/core';
-import { examples } from '../dev';
-
-const { env } = examples;
+import { startFlow } from '@walkeros/collector';
+import { createEvent, Logger } from '@walkeros/core';
+import { destinationCriteo } from '..';
+import type { HashKey } from '../hash';
+import type { Env, Settings } from '../types';
 
 /**
- * Regression gate for Criteo's email hashing. The hashing logic lives inline in
- * push.ts; these tests assert the three expected forms (md5, sha256, sha256_md5)
- * and already-hashed passthrough through the destination's request body.
+ * The id.email Criteo receives for an email mapped from the event data, and
+ * the ERROR lines written.
  */
+async function send(email: WalkerOS.Property, doNotHash?: HashKey[]) {
+  const bodies: string[] = [];
+  const errors: unknown[] = [];
+  const env: Env = {
+    sendServer: async (_url, body) => {
+      bodies.push(String(body));
+      return { data: 'OK' };
+    },
+  };
+  const settings: Settings = {
+    partnerId: '12345',
+    callerId: 'CALLER_ID',
+    doNotHash,
+    user_data: { email: 'data.email' },
+  };
+  const { collector } = await startFlow({
+    logger: {
+      handler: (level, message, context) => {
+        if (level === Logger.Level.ERROR) errors.push([message, context]);
+      },
+    },
+    destinations: {
+      criteo: { code: destinationCriteo, config: { settings }, env },
+    },
+  });
+
+  const result = await collector.push(
+    createEvent({ name: 'page view', data: { email } }),
+  );
+  await collector.command('shutdown');
+
+  expect(result.ok).toBe(true);
+  return { email: JSON.parse(bodies[0]).id.email, errors };
+}
+
+// md5, sha256 and sha256_md5 of 'user@example.com'
+const user = {
+  md5: 'b58996c504c5638798eb6b511e6f49af',
+  sha256: 'b4c9a289323b21a01c3e940f150eb9b8c542587f1abfd8f0e1cc1ffc5e475514',
+  sha256_md5:
+    '7f7892563bd354c8aa47ec54a5ce8c6100c6258089273db2f8c777e1853d365b',
+};
+
 describe('Criteo email hashing', () => {
-  const partnerId = '12345';
-  const callerId = 'CALLER_ABC';
-  const mockSendServer = jest.fn();
-  const testEnv = clone(env.push);
-  testEnv.sendServer = mockSendServer;
-
-  beforeEach(() => {
-    jest.clearAllMocks();
-    mockSendServer.mockResolvedValue({ data: 'OK' });
+  it.each<[string, string, HashKey[], unknown]>([
+    ['an email is hashed into three forms', 'user@example.com', [], user],
+    [
+      'an email is lowercased and trimmed first',
+      '  USER@Example.COM  ',
+      [],
+      user,
+    ],
+    ['an empty email is left out', '   ', [], undefined],
+    [
+      'a doNotHash email is sent as its SHA-256 digest',
+      user.sha256,
+      ['email'],
+      { sha256: user.sha256 },
+    ],
+  ])('%s', async (_, email, doNotHash, expected) => {
+    expect((await send(email, doNotHash)).email).toEqual(expected);
   });
 
-  async function pushEmail(email: string): Promise<CriteoEmailHashes> {
-    const destination = jest.requireActual('../').default;
-    const event = createEvent({ name: 'form submit', user: { email } });
-    const config: Config = {
-      settings: {
-        partnerId,
-        callerId,
-        user_data: { email: 'user.email' },
-      } as Settings,
-    };
+  it('leaves out a list under email and reports it in one ERROR line', async () => {
+    const { email, errors } = await send([
+      'user@example.com',
+      'jane@example.com',
+    ]);
 
-    await destination.push(
-      event,
-      createMockContext({ config, env: testEnv, id: 'test-criteo' }),
-    );
-
-    const body = JSON.parse(mockSendServer.mock.calls[0][1]) as {
-      id: { email?: CriteoEmailHashes };
-    };
-    return body.id.email ?? {};
-  }
-
-  test('produces md5, sha256, and sha256_md5 for raw email', async () => {
-    const result = await pushEmail('user@example.com');
-
-    expect(result.md5).toMatch(/^[a-f0-9]{32}$/);
-    expect(result.sha256).toMatch(/^[a-f0-9]{64}$/);
-    expect(result.sha256_md5).toMatch(/^[a-f0-9]{64}$/);
-  });
-
-  test('lowercases and trims before hashing', async () => {
-    const a = await pushEmail('  USER@Example.COM  ');
-    const b = await pushEmail('user@example.com');
-
-    expect(a.md5).toBe(b.md5);
-    expect(a.sha256).toBe(b.sha256);
-    expect(a.sha256_md5).toBe(b.sha256_md5);
-  });
-
-  test('sha256_md5 is the SHA-256 of the md5 hex, distinct from sha256', async () => {
-    const result = await pushEmail('user@example.com');
-    expect(result.sha256_md5).toBe(
-      createHash('sha256').update(result.md5!).digest('hex'),
-    );
-    expect(result.sha256_md5).not.toBe(result.sha256);
-  });
-
-  test('empty input yields no email hashes', async () => {
-    expect(await pushEmail('')).toEqual({});
-    expect(await pushEmail('   ')).toEqual({});
-  });
-
-  test('pre-hashed sha256 input is passed through without re-hashing', async () => {
-    const sha256Hex = 'a'.repeat(64);
-    const result = await pushEmail(sha256Hex);
-
-    expect(result.sha256).toBe(sha256Hex);
-    expect(result.md5).toBeUndefined();
-    expect(result.sha256_md5).toBeUndefined();
-  });
-
-  test('pre-hashed md5 input is passed through and sha256_md5 derived', async () => {
-    const md5Hex = 'b'.repeat(32);
-    const result = await pushEmail(md5Hex);
-
-    expect(result.md5).toBe(md5Hex);
-    expect(result.sha256_md5).toMatch(/^[a-f0-9]{64}$/);
-    expect(result.sha256).toBeUndefined();
+    expect(email).toBeUndefined();
+    expect(errors).toEqual([
+      [
+        expect.stringContaining(
+          'Criteo user_data email left out: Criteo takes one value, not a list',
+        ),
+        { step: 'destination.criteo', code: 'mapping', event: 'page view' },
+      ],
+    ]);
   });
 });

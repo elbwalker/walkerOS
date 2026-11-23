@@ -15,11 +15,14 @@ import {
   isNumber,
   isObject,
   isString,
+  reportCause,
   StepError,
+  stepId,
 } from '@walkeros/core';
-import { sendServer, getHashServer } from '@walkeros/server-core';
+import { hashUserData, sendServer } from '@walkeros/server-core';
 import OAuth from 'oauth-1.0a';
 import crypto from 'crypto';
+import { normalizers, oneValue } from './hash';
 
 function normalizeString(value: unknown): string | undefined {
   if (isString(value) && value.length > 0) return value;
@@ -35,7 +38,7 @@ export const push: PushFn = async function (event, context) {
 
 const send: PushFn = async function (
   event,
-  { config, rule, data, ingest, env, logger, collector },
+  { config, rule, data, ingest, env, logger, collector, id },
 ) {
   const {
     pixelId,
@@ -92,35 +95,27 @@ const send: PushFn = async function (
   // Build identifiers array (each is a single-key object)
   const identifiers: Identifier[] = [];
 
-  // hashed_email
-  const emailRaw = isString(userData.email)
-    ? userData.email
-    : isString(event.user.email)
-      ? event.user.email
-      : undefined;
-  if (emailRaw) {
-    const normalizedEmail = emailRaw.trim().toLowerCase();
-    const shouldHash = !doNotHash?.includes('email');
-    const idValue = shouldHash
-      ? await getHashServer(normalizedEmail)
-      : normalizedEmail;
-    identifiers.push({ hashed_email: idValue });
-  }
-
-  // hashed_phone_number
-  const phoneRaw = isString(userData.phone)
-    ? userData.phone
-    : isString(event.user.phone)
-      ? event.user.phone
-      : undefined;
-  if (phoneRaw) {
-    const normalizedPhone = phoneRaw.trim();
-    const shouldHash = !doNotHash?.includes('phone');
-    const idValue = shouldHash
-      ? await getHashServer(normalizedPhone)
-      : normalizedPhone;
-    identifiers.push({ hashed_phone_number: idValue });
-  }
+  // A mapped email or phone wins over event.user
+  const { userData: hashed, dropped } = await hashUserData(
+    {
+      email: userData.email ?? event.user.email,
+      phone: userData.phone ?? event.user.phone,
+    },
+    normalizers,
+    doNotHash,
+    oneValue,
+  );
+  if (dropped.length)
+    reportCause(
+      collector,
+      logger,
+      { step: stepId('destination', id), code: 'mapping' },
+      `X user_data ${dropped.join(', ')} left out: X takes one value, not a list`,
+      { event: event.name },
+    );
+  if (isString(hashed.email)) identifiers.push({ hashed_email: hashed.email });
+  if (isString(hashed.phone))
+    identifiers.push({ hashed_phone_number: hashed.phone });
 
   // twclid (pass-through, handles context tuple [value, order])
   const twclid = normalizeString(userData.twclid);

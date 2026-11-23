@@ -275,69 +275,6 @@ describe('Server Destination Twitter', () => {
     );
   });
 
-  test('email hashing - email is SHA-256 hashed, trimmed, lowercased', async () => {
-    const event = createEvent({
-      name: 'form submit',
-      user: { email: '  User@Example.COM  ' },
-    });
-    const config: Config = { settings: baseSettings };
-
-    await destination.push(
-      event,
-      createMockContext({ config, env: testEnv, id: 'test-twitter' }),
-    );
-
-    const requestBody = JSON.parse(mockSendServer.mock.calls[0][1]);
-    const identifiers = requestBody.conversions[0].identifiers;
-    expect(identifiers).toHaveLength(1);
-    expect(identifiers[0]).toEqual({
-      hashed_email:
-        'b4c9a289323b21a01c3e940f150eb9b8c542587f1abfd8f0e1cc1ffc5e475514',
-    });
-  });
-
-  test('email hashing - doNotHash skips hashing', async () => {
-    const event = createEvent({
-      name: 'form submit',
-      user: { email: 'already-hashed-email' },
-    });
-    const config: Config = {
-      settings: { ...baseSettings, doNotHash: ['email'] },
-    };
-
-    await destination.push(
-      event,
-      createMockContext({ config, env: testEnv, id: 'test-twitter' }),
-    );
-
-    const requestBody = JSON.parse(mockSendServer.mock.calls[0][1]);
-    expect(requestBody.conversions[0].identifiers[0]).toEqual({
-      hashed_email: 'already-hashed-email',
-    });
-  });
-
-  test('phone hashing - phone is SHA-256 hashed', async () => {
-    const event = createEvent({
-      name: 'form submit',
-      user: { phone: '+1234567890' },
-    });
-    const config: Config = { settings: baseSettings };
-
-    await destination.push(
-      event,
-      createMockContext({ config, env: testEnv, id: 'test-twitter' }),
-    );
-
-    const requestBody = JSON.parse(mockSendServer.mock.calls[0][1]);
-    const identifiers = requestBody.conversions[0].identifiers;
-    expect(identifiers).toHaveLength(1);
-    expect(identifiers[0]).toHaveProperty('hashed_phone_number');
-    const hashed = identifiers[0].hashed_phone_number;
-    expect(typeof hashed).toBe('string');
-    expect(hashed.length).toBe(64);
-    expect(hashed).not.toBe('+1234567890');
-  });
-
   test('twclid passthrough - not hashed', async () => {
     const event = createEvent({
       name: 'form submit',

@@ -1,15 +1,16 @@
 import type {
   Mapping as WalkerOSMapping,
   Destination as CoreDestination,
+  HashSettings,
 } from '@walkeros/core';
 import type { DestinationServer, sendServer } from '@walkeros/server-core';
+import type { HashKey } from '../hash';
 
-export interface Settings {
+export interface Settings extends HashSettings<HashKey> {
   accessToken: string;
   pixelId: string;
   url?: string;
   action_source?: ActionSource;
-  doNotHash?: string[];
   user_data?: WalkerOSMapping.Map;
   testMode?: boolean;
   /**
@@ -74,31 +75,31 @@ export interface SnapchatEvent {
   custom_data?: CustomData;
 }
 
-// User identity fields. Hashable: em, ph, fn, ln, db, ge, ct, st, zp, country,
-// external_id. Non-hashable: sc_cookie1, client_ip_address, client_user_agent,
-// sc_click_id, idfv, madid.
+// User identity fields. Hashed as mapped, without normalizing: em, ph, fn, ln,
+// db, ge, ct, st, zp, country, external_id. Sent as mapped: sc_cookie1,
+// client_ip_address, client_user_agent, sc_click_id, idfv, madid.
 export interface UserData {
-  /** Email, SHA-256 hashed, lowercase trimmed */
-  em?: string;
-  /** Phone number, SHA-256 hashed, E.164 digits */
-  ph?: string;
-  /** First name, SHA-256 hashed, lowercase */
-  fn?: string;
-  /** Last name, SHA-256 hashed, lowercase */
-  ln?: string;
-  /** Date of birth YYYYMMDD, SHA-256 hashed */
-  db?: string;
-  /** Gender (m/f), SHA-256 hashed */
-  ge?: string;
-  /** City, SHA-256 hashed, lowercase */
-  ct?: string;
-  /** State, SHA-256 hashed, lowercase */
-  st?: string;
-  /** Zip/postal code, SHA-256 hashed */
-  zp?: string;
-  /** Country code ISO 3166-1 alpha-2, SHA-256 hashed */
-  country?: string;
-  /** External/customer ID, SHA-256 hash recommended */
+  /** Email(s), SHA-256 hashed as mapped; Snapchat expects lowercase, trimmed */
+  em?: string | string[];
+  /** Phone number(s), SHA-256 hashed as mapped; Snapchat expects E.164 digits */
+  ph?: string | string[];
+  /** First name(s), SHA-256 hashed as mapped; Snapchat expects lowercase */
+  fn?: string | string[];
+  /** Last name(s), SHA-256 hashed as mapped; Snapchat expects lowercase */
+  ln?: string | string[];
+  /** Date(s) of birth, SHA-256 hashed as mapped; Snapchat expects YYYYMMDD */
+  db?: string | string[];
+  /** Gender(s), SHA-256 hashed as mapped; Snapchat expects m or f */
+  ge?: string | string[];
+  /** City or cities, SHA-256 hashed as mapped; Snapchat expects lowercase */
+  ct?: string | string[];
+  /** State(s), SHA-256 hashed as mapped; Snapchat expects lowercase */
+  st?: string | string[];
+  /** Zip/postal code(s), SHA-256 hashed as mapped */
+  zp?: string | string[];
+  /** Country code(s) ISO 3166-1 alpha-2, SHA-256 hashed as mapped */
+  country?: string | string[];
+  /** External/customer ID, SHA-256 hashed as mapped; Snapchat takes one value */
   external_id?: string;
   /** Snap cookie. Do NOT hash. */
   sc_cookie1?: string;

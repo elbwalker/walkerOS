@@ -1,42 +1,27 @@
-import type { UserData } from './types';
-import { getHashServer } from '@walkeros/server-core';
+import type { Normalizer } from '@walkeros/server-core';
+
+const asMapped: Normalizer = (value) => value;
 
 /**
- * Snapchat Conversions API user data fields that must be SHA-256 hashed
- * before sending. Same 11 identity fields as Meta's CAPI.
+ * The user_data keys Snapchat requires hashed. Their values are hashed as
+ * mapped, without normalizing them.
  * https://developers.snap.com/api/marketing-api/Conversions-API/Parameters
  */
-const keysToHash = [
-  'em',
-  'ph',
-  'fn',
-  'ln',
-  'db',
-  'ge',
-  'ct',
-  'st',
-  'zp',
-  'country',
-  'external_id',
-];
+export const normalizers = {
+  em: asMapped,
+  ph: asMapped,
+  fn: asMapped,
+  ln: asMapped,
+  db: asMapped,
+  ge: asMapped,
+  ct: asMapped,
+  st: asMapped,
+  zp: asMapped,
+  country: asMapped,
+  external_id: asMapped,
+} satisfies Record<string, Normalizer>;
 
-function shouldBeHashed(key: string, doNotHash: string[] = []): boolean {
-  return keysToHash.includes(key) && !doNotHash.includes(key);
-}
+export type HashKey = keyof typeof normalizers;
 
-export async function hashUserData(
-  userData: UserData,
-  doNotHash: string[] = [],
-): Promise<UserData> {
-  const entries = await Promise.all(
-    Object.entries(userData).map(async ([key, value]) => {
-      if (value === undefined) return [key, value];
-      if (shouldBeHashed(key, doNotHash)) {
-        return [key, await getHashServer(String(value))];
-      }
-      return [key, value];
-    }),
-  );
-
-  return Object.fromEntries(entries) as UserData;
-}
+/** Snapchat takes one external_id, never a list. */
+export const oneValue: HashKey[] = ['external_id'];

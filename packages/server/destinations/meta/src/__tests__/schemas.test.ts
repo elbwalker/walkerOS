@@ -69,6 +69,16 @@ describe('SettingsSchema', () => {
     },
   );
 
+  it.each<[string[], boolean]>([
+    [['em', 'external_id'], true],
+    [['email'], false],
+    [['client_ip_address'], false],
+  ])('doNotHash %j is valid: %s', (doNotHash, valid) => {
+    expect(SettingsSchema.safeParse({ ...required, doNotHash }).success).toBe(
+      valid,
+    );
+  });
+
   it('restricts user_data keys in the JSON schema', () => {
     expect(settings).toMatchObject({
       properties: {

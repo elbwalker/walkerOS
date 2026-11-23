@@ -1,14 +1,4 @@
-import type { UserData } from './types';
-import { getHashServer } from '@walkeros/server-core';
-
-/**
- * Bing UET CAPI user data fields that must be SHA-256 hashed before sending.
- * Only `em` and `ph` are hashable; all other identity fields pass through
- * unhashed (anonymousId, externalId, msclkid, clientIpAddress,
- * clientUserAgent, idfa, gaid).
- * https://learn.microsoft.com/en-us/advertising/guides/uet-conversion-api-integration
- */
-const keysToHash = ['em', 'ph'];
+import type { Normalizer } from '@walkeros/server-core';
 
 /**
  * Microsoft-specific email normalization:
@@ -19,7 +9,7 @@ const keysToHash = ['em', 'ph'];
  * - Strip `+alias` suffix from the user portion
  * - Rejoin
  */
-export function normalizeEmail(value: string): string {
+function normalizeEmail(value: string): string {
   const trimmed = value.trim().toLowerCase();
   const atIndex = trimmed.lastIndexOf('@');
   if (atIndex < 0) return trimmed;
@@ -34,34 +24,18 @@ export function normalizeEmail(value: string): string {
   return `${normalizedUser}@${domain}`;
 }
 
-function normalizePhone(value: string): string {
-  return value.trim();
-}
+/**
+ * The userData keys Microsoft requires hashed. All other identity fields
+ * (anonymousId, externalId, msclkid, clientIpAddress, clientUserAgent, idfa,
+ * gaid) are sent as mapped.
+ * https://learn.microsoft.com/en-us/advertising/guides/uet-conversion-api-integration
+ */
+export const normalizers = {
+  em: normalizeEmail,
+  ph: (value) => value.trim(),
+} satisfies Record<string, Normalizer>;
 
-function shouldBeHashed(key: string, doNotHash: string[] = []): boolean {
-  return keysToHash.includes(key) && !doNotHash.includes(key);
-}
+export type HashKey = keyof typeof normalizers;
 
-function normalizeForKey(key: string, value: string): string {
-  if (key === 'em') return normalizeEmail(value);
-  if (key === 'ph') return normalizePhone(value);
-  return value;
-}
-
-export async function hashUserData(
-  userData: UserData,
-  doNotHash: string[] = [],
-): Promise<UserData> {
-  const entries = await Promise.all(
-    Object.entries(userData).map(async ([key, value]) => {
-      if (value === undefined) return [key, value];
-      if (shouldBeHashed(key, doNotHash)) {
-        const normalized = normalizeForKey(key, String(value));
-        return [key, await getHashServer(normalized)];
-      }
-      return [key, value];
-    }),
-  );
-
-  return Object.fromEntries(entries) as UserData;
-}
+/** Microsoft takes one em and one ph, never a list. */
+export const oneValue: HashKey[] = ['em', 'ph'];

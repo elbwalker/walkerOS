@@ -99,7 +99,7 @@ Criteo matches users via three signals. Wire them through `user_data` in setting
 | `email`               | Raw email. Hashed into MD5, SHA-256 and SHA-256(MD5)  |
 | `retailer_visitor_id` | Stable retailer visitor identifier                    |
 
-Any other key, a list, and a `user_data` object in a rule's `data` are dropped without a log line.
+A list mapped to `email` is left out, and the collector logs one ERROR line naming the key, as Criteo takes one email. Any other key, a list under the other keys, and a `user_data` object in a rule's `data` are dropped without a log line.
 
 <CodeSnippet
   code={`"settings": {
@@ -122,7 +122,17 @@ Raw emails are lowercased and trimmed, then hashed into all three formats Criteo
 - `sha256`: SHA-256 hex digest
 - `sha256_md5`: SHA-256 hex of the MD5 hex string
 
-A value that is already a hash is not hashed again: a 64-character hex value is sent as `sha256` only, and a 32-character hex value is sent as `md5`, with `sha256_md5` derived from it.
+An email that is empty after trimming is left out. `doNotHash: ['email']` takes a SHA-256 digest only, of the lowercased, trimmed email: the destination sends it as `sha256`, without the `md5` and `sha256_md5` keys it sends for a raw email, since it cannot derive them from a digest. An MD5 digest cannot be sent, so map the raw email.
+
+<CodeSnippet
+  code={`"settings": {
+  "partnerId": "12345",
+  "callerId": "YOUR_CALLER_ID",
+  "user_data": { "email": "user.email" },
+  "doNotHash": ["email"]
+}`}
+  language="json"
+/>
 
 ## Deduplication
 

@@ -1,4 +1,5 @@
 import { schemas, z } from '@walkeros/core/dev';
+import { normalizers } from '../hash';
 import { ApiVersionSchema, EventIdSchema } from './primitives';
 
 const InputSchema = z.union([
@@ -31,12 +32,7 @@ export const SettingsSchema = z
     apiVersion: ApiVersionSchema.describe(
       'X Ads API version number (like "12")',
     ).optional(),
-    doNotHash: z
-      .array(z.string())
-      .describe(
-        "Array of user data fields that should not be hashed (like ['email'])",
-      )
-      .optional(),
+    ...schemas.createHashSettingsSchema(Object.keys(normalizers)).shape,
     url: z
       .string()
       .url()

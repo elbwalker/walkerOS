@@ -95,6 +95,9 @@ export {
   credentialsJsonSchema,
 } from './credentials';
 
+// Hash settings schema (doNotHash of destinations that hash user data keys)
+export { createHashSettingsSchema } from './hash';
+
 // ========================================
 // Direct Exports (commonly used schemas)
 // ========================================

@@ -45,9 +45,9 @@ The quickstart sets no `config.consent`, so Pinterest receives every event, what
 
 ## Hashing
 
-The destination SHA-256 hashes these `user_data` keys before sending: `em`, `ph`, `fn`, `ln`, `db`, `ge`, `ct`, `st`, `zp`, `country`, `external_id` and `hashed_maids`; a list is hashed value by value. Map personal data only to these keys, in `settings.user_data`, or under `user_data` in a rule's `data` or the destination's `config.data`.
+The destination SHA-256 hashes these `user_data` keys before sending: `em`, `ph`, `fn`, `ln`, `db`, `ge`, `ct`, `st`, `zp`, `country`, `external_id` and `hashed_maids`. A list is hashed item by item, and an empty value is left out. Map personal data only to these keys, in `settings.user_data`, or under `user_data` in a rule's `data` or the destination's `config.data`.
 
 - **Every other key is sent in clear text.** `client_ip_address` and `client_user_agent` are sent as mapped, and so is any other key: nothing checks the names under `user_data`, so `email` or `phone` instead of `em` and `ph` reaches Pinterest unhashed. Keys mapped outside `user_data` and `custom_data` are sent at the top level of the event, unhashed.
 - **Values are hashed exactly as mapped**, without normalization. Normalize them upstream in the format Pinterest expects, for example the email trimmed and lowercased.
 
-If a value is already hashed, add its key to `doNotHash` and the destination sends it as mapped.
+If a value is already hashed, add its key to `doNotHash`: the destination sends it as mapped, so it must already be a SHA-256 digest.

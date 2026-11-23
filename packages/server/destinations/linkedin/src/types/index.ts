@@ -1,14 +1,15 @@
 import type {
   Mapping as WalkerOSMapping,
   Destination as CoreDestination,
+  HashSettings,
 } from '@walkeros/core';
 import type { DestinationServer, sendServer } from '@walkeros/server-core';
+import type { HashKey } from '../hash';
 
-export interface Settings {
+export interface Settings extends HashSettings<HashKey> {
   accessToken: string;
   conversionRuleId: string;
   apiVersion?: string;
-  doNotHash?: string[];
   url?: string;
   user_data?: WalkerOSMapping.Map;
 }

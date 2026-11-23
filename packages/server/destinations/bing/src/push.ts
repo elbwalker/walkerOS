@@ -9,9 +9,15 @@ import type {
   UserData,
 } from './types';
 import type { Collector, Mapping as WalkerOSMapping } from '@walkeros/core';
-import { createMappingRoot, getMappingValue, isObject } from '@walkeros/core';
-import { sendServer } from '@walkeros/server-core';
-import { hashUserData } from './hash';
+import {
+  createMappingRoot,
+  getMappingValue,
+  isObject,
+  reportCause,
+  stepId,
+} from '@walkeros/core';
+import { hashUserData, sendServer } from '@walkeros/server-core';
+import { normalizers, oneValue } from './hash';
 
 // A silent rule has no bing call of its own: nothing to send.
 export const push: PushFn = async function (event, context) {
@@ -20,7 +26,7 @@ export const push: PushFn = async function (event, context) {
 
 const send: PushFn = async function (
   event,
-  { config, rule, data, ingest, env, logger, collector },
+  { config, rule, data, ingest, env, logger, collector, id },
 ) {
   const {
     accessToken,
@@ -75,7 +81,20 @@ const send: PushFn = async function (
   };
 
   // Hash identity fields (em, ph only; with Microsoft email normalization)
-  const hashedUserData = await hashUserData(userData, doNotHash);
+  const { userData: hashedUserData, dropped } = await hashUserData(
+    userData,
+    normalizers,
+    doNotHash,
+    oneValue,
+  );
+  if (dropped.length)
+    reportCause(
+      collector,
+      logger,
+      { step: stepId('destination', id), code: 'mapping' },
+      `Bing userData ${dropped.join(', ')} left out: Microsoft takes one value, not a list`,
+      { event: event.name },
+    );
 
   // Build customData from mapped event data
   const customData: CustomData = {};

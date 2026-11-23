@@ -1,4 +1,5 @@
 import { schemas, z } from '@walkeros/core/dev';
+import { normalizers } from '../hash';
 import { ActionSourceSchema } from './primitives';
 
 const InputSchema = z.union([
@@ -21,12 +22,7 @@ export const SettingsSchema = z
     action_source: ActionSourceSchema.describe(
       'Source of the event (web, app_android, app_ios, offline) (like web)',
     ).optional(),
-    doNotHash: z
-      .array(z.string())
-      .describe(
-        "Array of user_data fields that should not be hashed (like ['external_id'])",
-      )
-      .optional(),
+    ...schemas.createHashSettingsSchema(Object.keys(normalizers)).shape,
     test: z
       .boolean()
       .describe(

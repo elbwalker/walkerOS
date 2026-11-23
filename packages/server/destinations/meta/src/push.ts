@@ -13,8 +13,8 @@ import {
   reportCause,
   stepId,
 } from '@walkeros/core';
-import { sendServer } from '@walkeros/server-core';
-import { hashEvent } from './hash';
+import { hashUserData, sendServer } from '@walkeros/server-core';
+import { getNormalizers } from './hash';
 import { getUnknownUserDataKeys } from './userData';
 
 // A silent rule has no meta call of its own: nothing to send.
@@ -102,15 +102,14 @@ const send: PushFn = async function (
     event_time: Math.round((event.timestamp || Date.now()) / 1000),
     action_source,
     ...eventData,
-    user_data: userData,
+    user_data: (await hashUserData(userData, getNormalizers(logger), doNotHash))
+      .userData,
   };
 
   if (action_source === 'website' && event.source?.url)
     serverEvent.event_source_url = event.source.url;
 
-  const hashedServerEvent = await hashEvent(serverEvent, doNotHash, logger);
-
-  const body: BodyParameters = { data: [hashedServerEvent] };
+  const body: BodyParameters = { data: [serverEvent] };
 
   // Test event code
   if (test_event_code) body.test_event_code = test_event_code;
