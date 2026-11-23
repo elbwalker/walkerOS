@@ -1,25 +1,26 @@
 import type {
   Mapping as WalkerOSMapping,
   Destination as CoreDestination,
+  HashSettings,
 } from '@walkeros/core';
 import type { DestinationServer, sendServer } from '@walkeros/server-core';
+import type { HashKey } from '../hash';
 
-export interface Settings {
+export interface Settings extends HashSettings<HashKey> {
   pixelCode: string;
   accessToken: string;
   url?: string;
   test_event_code?: string;
-  doNotHash?: string[];
   user_data?: WalkerOSMapping.Map;
   partner_name?: string;
   /**
-   * Client IP, sent as context.ip. Resolves against { ingest, event }.
+   * Client IP, sent as user.ip. Resolves against { ingest, event }.
    * `false` switches it off.
    * @default ['ingest.ip', 'event.user.ip']
    */
   ip?: WalkerOSMapping.Value | false;
   /**
-   * Client user agent, sent as context.user_agent. Resolves against
+   * Client user agent, sent as user.user_agent. Resolves against
    * { ingest, event }. `false` switches it off.
    * @default ['ingest.userAgent', 'event.user.userAgent']
    */
@@ -76,11 +77,12 @@ export interface EventData {
 
 // User identity and client fields
 export interface UserData {
-  email?: string;
+  /** A list is hashed item by item and sent as a list */
+  email?: string | string[];
   /** Sent as `phone`; `phone_number` is accepted as a mapping key */
-  phone?: string;
-  phone_number?: string;
-  external_id?: string;
+  phone?: string | string[];
+  phone_number?: string | string[];
+  external_id?: string | string[];
   ttp?: string;
   ttclid?: string;
   locale?: string;

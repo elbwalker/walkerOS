@@ -22,7 +22,7 @@ Server-side event delivery to TikTok's Events API for enhanced conversion tracki
   flowMap={{
     destinations: { default: { label: 'Destination', text: 'TikTok Events API', highlight: true } },
   }}
-  post={<>Sends events server-side to TikTok's Events API using raw HTTP (no SDK). Requests use the Events API 2.0 format (`event_source: "web"`, `event_source_id` = pixel code, `user`, `page` and `properties` per event, `event_time` in seconds). Identity fields (email, phone, external_id) are normalised and SHA-256 hashed before sending. Events include a stable `event_id` for deduplication with the browser pixel.</>}
+  post={<>Sends events server-side to TikTok's Events API using raw HTTP (no SDK). Requests use the Events API 2.0 format (`event_source: "web"`, `event_source_id` = pixel code, `user`, `page` and `properties` per event, `event_time` in seconds). Identity fields (email, phone, external_id) are normalized and SHA-256 hashed before sending. Events include a stable `event_id` for deduplication with the browser pixel.</>}
 />
 
 ## Installation
@@ -45,13 +45,12 @@ The quickstart sets no `config.consent`, so TikTok receives every event, whateve
 
 ## Hashing
 
-The destination SHA-256 hashes three `user_data` keys before sending: `email` (trimmed, lowercased), `phone_number` or `phone` (digits and `+` only, sent as `phone`) and `external_id` (trimmed). A value that already is a SHA-256 hex digest is sent as it is. Map personal data only to these keys, in `settings.user_data`, or under `user_data` in a rule's `data` or the destination's `config.data`.
+The destination SHA-256 hashes three `user_data` keys before sending: `email` (trimmed, lowercased), `phone_number` or `phone` (digits and `+` only, sent as `phone`; `phone` wins when both are mapped) and `external_id` (trimmed). A list is hashed item by item and sent as a list. An empty value, or one that is empty after normalization, is left out. Map personal data only to these keys, in `settings.user_data`, or under `user_data` in a rule's `data` or the destination's `config.data`.
 
-- **Every other key is sent in clear text.** Nothing checks the key names under `user_data`, so `em` instead of `email`, reaches TikTok unhashed. Keys mapped outside `user_data` are sent in `properties`, unhashed.
-- **Values are hashed exactly as mapped**, without normalization. Normalize them upstream in the format TikTok expects, for example the email trimmed and lowercased.
-- **Map one value per key.** A list is joined with commas and hashed as one string.
+- **Every other key is sent in clear text.** Nothing checks the key names under `user_data`, so `em` instead of `email` reaches TikTok unhashed. Keys mapped outside `user_data` are sent in `properties`, unhashed.
+- **Map phone numbers in E.164**, with `+` and the country code (`+4917012345678`). The destination only keeps digits and `+`, so a national number such as `0170 1234567` hashes to a value TikTok cannot match.
 
-If your data is already hashed or you want to skip hashing for specific fields, use the `doNotHash` setting:
+If your data is already hashed or you want to skip hashing for specific fields, use the `doNotHash` setting (`phone_number` there applies to `phone`). A key listed there is sent as mapped, so its value must already be a SHA-256 hex digest: TikTok rejects an unhashed value.
 
 <CodeSnippet
   code={`"settings": {

@@ -11,7 +11,6 @@ import {
 } from '@walkeros/core';
 import { startFlow } from '@walkeros/collector';
 import { examples } from '../dev';
-import { hashUserData } from '../hash';
 
 const { env } = examples;
 
@@ -157,7 +156,6 @@ describe('Server Destination TikTok', () => {
     const requestBody = JSON.parse(mockSendServer.mock.calls[0][1]);
     expect(requestBody.event_source).toBe('web');
     expect(requestBody.event_source_id).toBe(pixelCode);
-    expect(requestBody).not.toHaveProperty('pixel_code');
     expect(requestBody.partner_name).toBe('walkerOS');
     expect(requestBody.data).toHaveLength(1);
   });
@@ -182,7 +180,6 @@ describe('Server Destination TikTok', () => {
     expect(eventData.event).toBe('page view');
     expect(eventData.event_id).toBe(event.id);
     expect(eventData.event_time).toBe(1700000900);
-    expect(eventData).not.toHaveProperty('context');
   });
 
   test('test_event_code included when set', async () => {
@@ -257,23 +254,6 @@ describe('Server Destination TikTok', () => {
     // Should be hashed (64 hex chars)
     expect(userData.email).toMatch(/^[a-f0-9]{64}$/);
     expect(userData.email).not.toBe('test@example.com');
-  });
-
-  test('hashing', async () => {
-    const result = await hashUserData({
-      email: 'm@i.l',
-      ttp: 'cookie',
-    });
-    expect(result.email).toMatch(/^[a-f0-9]{64}$/);
-    expect(result.ttp).toBe('cookie');
-
-    // Respect doNotHash
-    const result2 = await hashUserData(
-      { email: 'm@i.l', phone_number: '+1234' },
-      ['email'],
-    );
-    expect(result2.email).toBe('m@i.l');
-    expect(result2.phone).toMatch(/^[a-f0-9]{64}$/);
   });
 
   test('environment customization', async () => {

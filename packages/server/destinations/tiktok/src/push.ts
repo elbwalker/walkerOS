@@ -7,7 +7,7 @@ import {
   StepError,
 } from '@walkeros/core';
 import { sendServer } from '@walkeros/server-core';
-import { hashUserData } from './hash';
+import { hashUser } from './hash';
 
 // A silent rule has no TikTok call of its own: nothing to send.
 export const push: PushFn = async function (event, context) {
@@ -65,7 +65,7 @@ const send: PushFn = async function (
   }
 
   // Hash identity fields, then add the client IP and user agent in clear
-  const user = await hashUserData(userData, doNotHash);
+  const { userData: hashed } = await hashUser(userData, doNotHash);
   const root = createMappingRoot(ingest, event);
   const clientIp = await resolveClient(ip, DEFAULT_IP, root, collector);
   const clientUserAgent = await resolveClient(
@@ -74,8 +74,11 @@ const send: PushFn = async function (
     root,
     collector,
   );
-  if (clientIp !== undefined) user.ip = clientIp;
-  if (clientUserAgent !== undefined) user.user_agent = clientUserAgent;
+  const user: UserData = {
+    ...hashed,
+    ...(clientIp !== undefined ? { ip: clientIp } : {}),
+    ...(clientUserAgent !== undefined ? { user_agent: clientUserAgent } : {}),
+  };
 
   // Events API 2.0 item: user, page and properties per event
   const tiktokEvent: EventData = {

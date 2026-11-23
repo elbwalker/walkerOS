@@ -17,7 +17,7 @@ import { createEvent, getEvent } from '@walkeros/core';
  *   event_source, event_source_id, partner_name, data[] with { event,
  *   event_time (seconds), event_id, user?, page?, properties }.
  *
- * User identity fields (`email`, `phone`, `external_id`) are normalised and
+ * User identity fields (`email`, `phone`, `external_id`) are normalized and
  * hashed with SHA-256; `phone_number` is sent as `phone`.
  */
 const ENDPOINT = 'https://business-api.tiktok.com/open_api/v1.3/event/track/';
@@ -262,13 +262,13 @@ export const pageView: Flow.StepExample = {
 export const lead: Flow.StepExample = {
   title: 'Submit form',
   description:
-    'A newsletter form submission is sent to TikTok as a SubmitForm event with the hashed email in user context.',
+    'A newsletter form submission is sent to TikTok as a SubmitForm event with the normalized and hashed email and phone in user context.',
   in: createEvent({
     name: 'form submit',
     id: 'd1e2f3a4b5c60004',
     timestamp: 1700000903000,
     data: { type: 'newsletter' },
-    user: { email: 'user@example.com' },
+    user: { email: ' User@Example.com ', phone: '(+1)2133734253' },
     source: {
       type: 'browser',
       platform: 'web',
@@ -282,6 +282,7 @@ export const lead: Flow.StepExample = {
         user_data: {
           map: {
             email: 'user.email',
+            phone_number: 'user.phone',
           },
         },
       },
@@ -304,6 +305,9 @@ export const lead: Flow.StepExample = {
               // sha256('user@example.com')
               email:
                 'b4c9a289323b21a01c3e940f150eb9b8c542587f1abfd8f0e1cc1ffc5e475514',
+              // sha256('+12133734253')
+              phone:
+                '9f7ec22d72092cd3c0b58726ed9c2d91b92e51a3f29837508fb2948bb22dd2fd',
             },
             page: {
               url: 'https://example.com/contact',

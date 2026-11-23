@@ -1,4 +1,5 @@
 import { schemas, z } from '@walkeros/core/dev';
+import { doNotHashKeys } from '../hash';
 
 const InputSchema = z.union([
   schemas.MappingSchemas.ValueSchema,
@@ -22,12 +23,7 @@ export const SettingsSchema = z
         'Test event code for debugging in TikTok Events Manager (like TEST12345)',
       )
       .optional(),
-    doNotHash: z
-      .array(z.string())
-      .describe(
-        "User data fields to skip hashing (like ['email', 'phone_number'])",
-      )
-      .optional(),
+    ...schemas.createHashSettingsSchema(doNotHashKeys).shape,
     user_data: z
       .record(z.string(), z.string())
       .describe("Mapping for user data fields (like { email: 'user.email' })")
