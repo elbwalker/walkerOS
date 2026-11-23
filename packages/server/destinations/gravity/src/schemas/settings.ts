@@ -1,4 +1,6 @@
 import { schemas, z } from '@walkeros/core/dev';
+import { normalizers } from '../hash';
+import { ActionSourceSchema } from './primitives';
 
 const InputSchema = z.union([
   schemas.MappingSchemas.ValueSchema,
@@ -13,13 +15,10 @@ export const SettingsSchema = z
       .describe(
         'Gravity API key from Settings > Organization (owner or admin), sent as Bearer token (like grv_...)',
       ),
-    action_source: z
-      .string()
-      .min(1)
-      .describe(
-        'Where the conversion happened. Default: website (like website)',
-      )
-      .optional(),
+    action_source: ActionSourceSchema.describe(
+      'Where the conversion happened: website, app, email, phone_call, chat, physical_store, system_generated, pixel or other. Default: website. A mapped action_source wins (like phone_call)',
+    ).optional(),
+    ...schemas.createHashSettingsSchema(Object.keys(normalizers)).shape,
     test_event_code: z
       .string()
       .describe(

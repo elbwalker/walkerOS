@@ -22,7 +22,7 @@ Server-side conversions to the [Gravity Conversions API](https://docs.trygravity
   flowMap={{
     destinations: { default: { label: 'Destination', text: 'Gravity', highlight: true } },
   }}
-  post={<>Sends one event per request to `POST https://api.trygravity.com/gateway/events` with the API key as Bearer token, using raw HTTP (no SDK). Email and phone are normalised and SHA-256 hashed. Each event carries the walkerOS event id, which Gravity uses with the event name to deduplicate for 48 hours.</>}
+  post={<>Sends one event per request to `POST https://api.trygravity.com/gateway/events` with the API key as Bearer token, using raw HTTP (no SDK). Email, phone and names are normalised and SHA-256 hashed. Each event carries the walkerOS event id, or a mapped `event_id`, which Gravity uses with the event name to deduplicate for 48 hours.</>}
 />
 
 ## Installation
@@ -48,39 +48,69 @@ The mapped name is sent as `event_name`: a Gravity standard event (`Purchase`, `
   language="json"
 />
 
+## Attribution
+
+Gravity attributes a conversion with the values its pixel collects. With the Gravity pixel on your site, call `window.gravityPixel?.getCAPIData?.()` in the browser and send its `user_data` and `client_context` along with the event, for example under `data.gravity`. Then map both objects as they are: Gravity asks for the pixel's `user_data` unchanged on every event, not single fields copied out of it. `getCAPIData()` returns `null` until the visitor consents.
+
+<CodeSnippet
+  code={`"data": { "map": {
+  "user_data": "data.gravity.user_data",
+  "client_context": "data.gravity.client_context",
+  "email": "user.email"
+} }`}
+  language="json"
+/>
+
+Without the pixel, read Gravity's click parameters (`grclid`, `grcpid`, `grpuid`, `gradid`, `grsig`, `graid`, `oppref`) from the landing page URL, keep them with the session, and map every one of them on each conversion. `grsig` signs the others, so they go back unchanged.
+
 ## Mapped data
 
 | Field | Sent as |
 |---|---|
-| `email`, `phone` | `user_data.em`, `user_data.ph` (email trimmed and lowercased, phone digits only, then SHA-256; an existing SHA-256 hex digest is kept) |
-| `external_id` | `user_data.external_id`, as it is |
+| `user_data` | `user_data`, as it is (the Gravity pixel's `getCAPIData().user_data`) |
+| `email`, `phone` | `user_data.em`, `user_data.ph`, as lists and hashed (see [Hashing](#hashing)) |
+| `first_name`, `last_name` | `user_data.fn`, `user_data.ln`, one value each, hashed |
+| `external_id` | `user_data.external_id`, as a list, not hashed |
+| `visitor_id`, `session_id` | `user_data.visitor_id`, `user_data.session_id` |
 | `grclid`, `grcpid`, `grpuid`, `gradid`, `grsig`, `graid`, `oppref` | `user_data`, as they are |
 | `ip_address`, `user_agent` | `user_data.client_ip_address`, `user_data.client_user_agent` |
-| `client_context` | `client_context` (from the Gravity pixel's `getCAPIData()`) |
-| `value`, `currency`, `order_id` | `custom_data` (currency uppercased, `USD` when a value has none) |
+| `client_context` | `client_context`, as it is (the Gravity pixel's `getCAPIData().client_context`) |
+| `event_id` | `event_id`, cut to 128 characters (default: the walkerOS event id) |
+| `action_source` | `action_source`, one of `website`, `app`, `email`, `phone_call`, `chat`, `physical_store`, `system_generated`, `pixel` or `other` (default: the `action_source` setting, else `website`) |
+| `value`, `currency`, `order_id`, `contents`, `content_name`, `content_category`, `predicted_ltv` | `custom_data` (currency uppercased; `contents` is a list of line items such as `{ id, quantity, item_price, title }`, built with a `loop`) |
 | `source_url` | `event_source_url` (default: `event.source.url`) |
 
-Gravity attributes a conversion through its click parameters: store every one of them on the landing page and send them back with each conversion.
+A key you map on its own wins over the same key in `user_data`, except the click parameters: those in `user_data` win, because `grsig` signs them as one set. Gravity counts a `value` without a `currency` as USD.
+
+To count a conversion once when the pixel or a second server sends it too, map the same `event_id` everywhere, such as your order ID, and use the same event name: Gravity deduplicates on both for 48 hours, and an event without `event_id` uses the walkerOS event id.
+
+A mapped key the destination does not read, a `user_data` key Gravity does not list, and a value of the wrong type are left out: the event is still sent, and the collector logs one ERROR line naming them. A `value` that is negative or not a number, a `currency` that is not a 3-letter code and an `action_source` Gravity does not list fail the event instead (see When it fails).
+
+## Hashing
+
+The destination SHA-256 hashes four `user_data` keys before sending, whether they are mapped on their own or inside `user_data`:
+
+| Key | Normalization before hashing |
+| --- | --- |
+| `em` | Trim and lowercase. |
+| `ph` | Keep only digits, so `+1 (555) 123-4567`, `15551234567` and `+15551234567` give the same hash. Include the country code. |
+| `fn`, `ln` | Trim and lowercase. Gravity states no rule for names. |
+
+A list is hashed item by item, and an empty value, or one that is empty after normalization, is left out. `fn` and `ln` take one value: a list is left out and named in the ERROR line. A value that already looks like a hash is hashed again. If your values are already SHA-256 digests, add their keys to `doNotHash`: they are sent exactly as mapped. The pixel's `user_data` holds no key that is hashed, so it reaches Gravity unchanged.
 
 ## Client IP and user agent
 
-The destination sends the client IP and user agent by default. The `ip` and `userAgent` settings resolve against `{ ingest, event }` and default to `["ingest.ip", "event.user.ip"]` and `["ingest.userAgent", "event.user.userAgent"]` (see the `config.ingest` recipe on the [Express source](/docs/sources/server/express#ingest-metadata)). A mapped `ip_address` or `user_agent` wins. Set either setting to `false` to turn it off.
+The destination sends the client IP and user agent by default. The `ip` and `userAgent` settings resolve against `{ ingest, event }` and default to `["ingest.ip", "event.user.ip"]` and `["ingest.userAgent", "event.user.userAgent"]` (see the `config.ingest` recipe on the [Express source](/docs/sources/server/express#ingest-metadata)). A mapped `ip_address` or `user_agent` wins, and so does a `client_ip_address` or `client_user_agent` in a mapped `user_data`. Set either setting to `false` to turn it off.
 
 ## Consent
 
-The quickstart sets no `config.consent`, so Gravity receives every event, whatever consent the event carries. Add `consent: { marketing: true }` to `config`, next to `settings`, to send only events with marketing consent (see [Gate a destination with consent](/docs/guides/consent#gate-a-destination-with-consent)).
+The quickstart sets no `config.consent`, so Gravity receives every event, whatever consent the event carries. To send only events with consent, add `consent: { marketing: true }` to `config`, next to `settings` (with several keys listed, one granted key is enough). An event without that consent is skipped or queued, depending on the collector's `consentDenied`. Server flows built by the CLI skip it and count it in `skipped`. With `startFlow` it waits in the destination's queue by default: a later event that carries consent does not release it, and only a `walker consent` command does, which then sends the waiting events of every user at once. Pass `consentDenied: 'skip'` to `startFlow` to skip such events instead (see [Gate a destination with consent](/docs/guides/consent#gate-a-destination-with-consent) and [consent-denied events on a server](/docs/collector#consent-denied-events-on-a-server)). Gravity asks that once a visitor withdraws consent, neither the pixel nor your backend sends anything more for them.
 
-## Failures
+## Delivery and testing
 
-- Gravity answers HTTP 200 with a status per event: an `error` status fails the push, marked not retryable.
-- A negative or non-numeric `value`, or a `currency` that is not a 3-letter code, fails with the code `mapping`, marked not retryable, and nothing is sent.
-- A response outside the 2xx range, a network error or no answer within 5 seconds fails with `transport` (with the HTTP status) or `timeout`, and the event goes to the dead-letter queue. 429 and 5xx are marked retryable, other 4xx not; nothing resends the event by itself.
-- Without `apiKey` the destination does not start: every push answers `failed` with the code `config`.
-- A rule with `silent: true` sends nothing.
+A live request answers `accepted` for each event, and Gravity stores and attributes the event later. The push counts as delivered, but only Events Manager shows whether the conversion arrived. While you set up a mapping, set `test_event_code` to the code from Events Manager > Set up tracking > CAPI test: Gravity then checks each event at once and does not store it, a valid event answers `test_ok`, and one it rejects fails the push. A made-up code checks the payload too, but only the Events Manager code unlocks the event for Conversions and CPA campaigns.
 
-## Testing
-
-Set `test_event_code` to a code from Events Manager > Set up tracking: Gravity validates the events and does not record them.
+A response outside the 2xx range, a network error or no answer within 5 seconds fails the push with `transport` (with the HTTP status) or `timeout`, and the event goes to the dead-letter queue. 429 and 5xx are marked retryable, other 4xx not; nothing resends the event by itself. Without `apiKey` the destination does not start: every push answers `failed` with the code `config`. A rule with `silent: true` sends nothing.
 
 ## Links
 

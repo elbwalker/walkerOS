@@ -7,8 +7,8 @@
 # @walkeros/server-destination-gravity
 
 Server-side conversions to the [Gravity](https://trygravity.com) Conversions API
-(ads in AI assistants), with hashed email and phone, the Gravity click
-parameters and deduplication on the walkerOS event id.
+(ads in AI assistants), with hashed email, phone and names, the Gravity pixel's
+user data and click parameters, and deduplication on the event id.
 
 [Documentation](https://www.walkeros.io/docs/destinations/server/gravity) &bull;
 [NPM Package](https://www.npmjs.com/package/@walkeros/server-destination-gravity)

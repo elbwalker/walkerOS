@@ -1,61 +1,8 @@
-import type { WalkerOS } from '@walkeros/core';
-import { startFlow } from '@walkeros/collector';
-import { clone, isObject } from '@walkeros/core';
-import { examples } from '../dev';
+import { isObject } from '@walkeros/core';
 import { expectSimulationResolves } from '@walkeros/core/dev';
+import { examples } from '../dev';
 
-type Captured = [callable: string, ...args: unknown[]];
-
-/**
- * Gravity destination invokes `env.sendServer(url, body, options)`
- * exactly once per push. Stateless: no init-time calls to filter.
- */
-describe('Step Examples', () => {
-  const mockSendServer = jest.fn();
-
-  beforeEach(() => {
-    jest.clearAllMocks();
-    mockSendServer.mockResolvedValue({
-      data: { results: [{ status: 'success' }] },
-    });
-  });
-
-  // Non-public examples (silent, failures) run in the conformance test.
-  const published = Object.entries(examples.step).filter(
-    ([, example]) => example.public !== false,
-  );
-
-  it.each(published)('%s', async (_name, example) => {
-    const event = example.in as WalkerOS.Event;
-    const mapping = example.mapping;
-
-    const testEnv = clone(examples.env.push);
-    testEnv.sendServer = mockSendServer;
-
-    const dest = jest.requireActual('../').default;
-    const { elb } = await startFlow();
-
-    const mappingConfig = mapping
-      ? { [event.entity]: { [event.action]: mapping } }
-      : undefined;
-
-    await elb('walker destination', {
-      code: { ...dest, env: testEnv },
-      config: {
-        settings: { apiKey: 's3cr3t' },
-        mapping: mappingConfig,
-      },
-    });
-
-    await elb(event);
-
-    const captured: Captured[] = mockSendServer.mock.calls.map(
-      (args) => ['sendServer', ...args] as Captured,
-    );
-
-    expect(captured).toEqual(example.out);
-  });
-});
+// Every example runs on a real collector in conformance.test.ts.
 
 it('declares simulation paths that resolve', () =>
   expectSimulationResolves(examples.env));

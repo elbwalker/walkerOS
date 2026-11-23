@@ -1,6 +1,6 @@
 import type { SendDataValue, SendResponse } from '@walkeros/core';
 import type { SendServerOptions } from '@walkeros/server-core';
-import type { Env } from '../types';
+import type { Env, ResponseBody } from '../types';
 
 /**
  * Example environment configurations for Gravity Conversions API destination
@@ -15,12 +15,19 @@ type MockSendServer = (
   options?: SendServerOptions,
 ) => Promise<SendResponse>;
 
+/** Gravity's live answer: the event is accepted and processed later. */
+const accepted: ResponseBody = {
+  events_received: 1,
+  events_errored: 0,
+  results: [{ status: 'accepted', attributed: false }],
+  test_mode: false,
+};
+
 /**
  * Mock sendServer function that simulates successful HTTP responses
  */
 const mockSendServer: MockSendServer = async () => {
-  // Gravity answers 200 with a status per event
-  return { data: { results: [{ status: 'success' }] } };
+  return { data: accepted };
 };
 
 /**

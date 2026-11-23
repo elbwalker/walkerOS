@@ -1,10 +1,12 @@
 import type {
+  HashSettings,
   Mapping as WalkerOSMapping,
   Destination as CoreDestination,
 } from '@walkeros/core';
 import type { DestinationServer, sendServer } from '@walkeros/server-core';
+import type { HashKey } from '../hash';
 
-export interface Settings {
+export interface Settings extends HashSettings<HashKey> {
   /** Gravity API key (Settings > Organization), sent as Bearer token */
   apiKey: string;
   /** Where the conversion happened. @default 'website' */
@@ -58,8 +60,20 @@ export type Rules = WalkerOSMapping.Rules<Rule>;
 // Gravity Conversions API types
 // https://docs.trygravity.com/advertisers/server-conversions
 
-/** Where the conversion happened, like `website` (the default) */
-export type ActionSource = string;
+/** Where the conversion happened, as Gravity lists it */
+export const ACTION_SOURCES = [
+  'website',
+  'app',
+  'email',
+  'phone_call',
+  'chat',
+  'physical_store',
+  'system_generated',
+  'pixel',
+  'other',
+] as const;
+
+export type ActionSource = (typeof ACTION_SOURCES)[number];
 
 /** Gravity click parameters, stored on the landing page */
 export const CLICK_KEYS = [
@@ -74,18 +88,40 @@ export const CLICK_KEYS = [
 
 export type ClickKey = (typeof CLICK_KEYS)[number];
 
-export type UserData = {
-  em?: string[];
-  ph?: string[];
-  external_id?: string[];
-  client_ip_address?: string;
-  client_user_agent?: string;
-} & Partial<Record<ClickKey, string>>;
+/**
+ * The user_data keys Gravity documents: the set the Gravity pixel's
+ * getCAPIData() returns, and the identity keys from the backend.
+ */
+export const USER_DATA_KEYS = [
+  ...CLICK_KEYS,
+  'visitor_id',
+  'session_id',
+  'client_user_agent',
+  'client_ip_address',
+  'em',
+  'ph',
+  'fn',
+  'ln',
+  'external_id',
+] as const;
+
+export type UserDataKey = (typeof USER_DATA_KEYS)[number];
+
+/**
+ * user_data as sent: em, ph, fn and ln SHA-256 hashed, every other value as
+ * mapped, so a passed pixel object reaches Gravity unchanged.
+ */
+export type UserData = Partial<Record<UserDataKey, unknown>>;
 
 export interface CustomData {
   value?: number;
   currency?: string;
   order_id?: string;
+  /** Line items, like `{ id, quantity, item_price, title }` */
+  contents?: Record<string, unknown>[];
+  content_name?: string;
+  content_category?: string;
+  predicted_ltv?: number;
 }
 
 export interface ConversionEvent {
@@ -104,6 +140,25 @@ export interface RequestBody {
   data: ConversionEvent[];
 }
 
+/** Gravity's status for one event of a request */
+export type ResultStatus =
+  | 'accepted'
+  | 'ok'
+  | 'duplicate'
+  | 'test_ok'
+  | 'skipped'
+  | 'error';
+
+/** Gravity's HTTP 200 answer */
 export interface ResponseBody {
-  results?: { status?: string; error?: string }[];
+  events_received?: number;
+  events_processed?: number;
+  events_errored?: number;
+  results?: {
+    event_id?: string;
+    status?: ResultStatus;
+    attributed?: boolean;
+    error?: string;
+  }[];
+  test_mode?: boolean;
 }
