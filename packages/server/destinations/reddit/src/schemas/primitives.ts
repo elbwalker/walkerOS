@@ -5,7 +5,12 @@ import { z } from '@walkeros/core/dev';
  * Where the conversion event took place
  * https://ads-api.reddit.com/docs/v2/#tag/Conversions-API
  */
-export const ActionSourceSchema = z.enum(['WEBSITE', 'APP', 'PHYSICAL_STORE']);
+export const ActionSourceSchema = z.enum([
+  'WEBSITE',
+  'APP',
+  'PHYSICAL_STORE',
+  'OTHER',
+]);
 
 /**
  * Tracking Type

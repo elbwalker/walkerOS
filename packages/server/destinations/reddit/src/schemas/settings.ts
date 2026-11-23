@@ -1,4 +1,5 @@
 import { schemas, z } from '@walkeros/core/dev';
+import { normalizers } from '../hash';
 import { ActionSourceSchema } from './primitives';
 
 const InputSchema = z.union([
@@ -21,14 +22,9 @@ export const SettingsSchema = z
         'Reddit Pixel ID used as the API path parameter (like a2_abcdef123456)',
       ),
     action_source: ActionSourceSchema.describe(
-      'Has no effect: the destination sends no action source to Reddit (accepts WEBSITE, APP, PHYSICAL_STORE)',
+      'Channel of the conversion, sent as events[].action_source: WEBSITE, APP, PHYSICAL_STORE or OTHER (like WEBSITE). Reddit takes WEBSITE when it is unset',
     ).optional(),
-    doNotHash: z
-      .array(z.string())
-      .describe(
-        "Array of user fields that should not be hashed (like ['email'])",
-      )
-      .optional(),
+    ...schemas.createHashSettingsSchema(Object.keys(normalizers)).shape,
     test_mode: z
       .boolean()
       .describe(
@@ -45,7 +41,7 @@ export const SettingsSchema = z
     user_data: z
       .record(z.string(), z.string())
       .describe(
-        "Mapping configuration for user fields (like { email: 'user.email', external_id: 'user.id' })",
+        "Mapping configuration for user fields (like { email: 'user.email', external_id: 'user.id' }). Only email, external_id, ip_address, phone_number, idfa and aaid are hashed; any other key is sent unhashed",
       )
       .optional(),
     ip: InputSchema.describe(

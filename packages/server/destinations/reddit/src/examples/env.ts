@@ -19,10 +19,10 @@ type MockSendServer = (
  * Mock sendServer function that simulates successful HTTP responses
  */
 const mockSendServer: MockSendServer = async () => {
-  // Simulate successful Reddit API response
+  // Reddit's v2.0 answer for one processed event
   return {
     data: {
-      success: true,
+      message: 'Successfully processed 1 conversion events.',
     },
   };
 };

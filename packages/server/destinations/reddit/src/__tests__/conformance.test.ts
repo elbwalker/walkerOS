@@ -1,7 +1,9 @@
 import path from 'path';
-import { conformance } from '@walkeros/collector/dev';
+import { conformance, runExamples } from '@walkeros/collector/dev';
 import { destinationReddit } from '..';
 import { examples, schemas } from '../dev';
+
+const { settings } = examples.minimal;
 
 describe('reddit conformance', () => {
   beforeEach(() => {
@@ -13,9 +15,19 @@ describe('reddit conformance', () => {
       profile: 'http',
       examples: examples.step,
       schema: schemas.settings,
-      settings: examples.minimal.settings,
+      settings,
       minimal: examples.minimal,
       root: path.join(__dirname, '..', '..'),
     });
+  });
+
+  it('fails an event Reddit did not process in its HTTP 200 body', async () => {
+    const { notProcessed } = examples.step;
+    await runExamples(
+      'destination',
+      destinationReddit,
+      { notProcessed },
+      { settings },
+    );
   });
 });

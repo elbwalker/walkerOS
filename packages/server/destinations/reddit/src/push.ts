@@ -7,9 +7,17 @@ import type {
   UserData,
 } from './types';
 import type { Collector, Mapping as WalkerOSMapping } from '@walkeros/core';
-import { createMappingRoot, getMappingValue, isObject } from '@walkeros/core';
-import { sendServer } from '@walkeros/server-core';
-import { hashEvent } from './hash';
+import {
+  createMappingRoot,
+  getMappingValue,
+  isObject,
+  isString,
+  reportCause,
+  StepError,
+  stepId,
+} from '@walkeros/core';
+import { hashUserData, sendServer } from '@walkeros/server-core';
+import { normalizers, oneValue } from './hash';
 
 const STANDARD_TRACKING_TYPES: ReadonlySet<TrackingType> =
   new Set<TrackingType>([
@@ -42,12 +50,12 @@ export const push: PushFn = async function (event, context) {
 
 const send: PushFn = async function (
   event,
-  { config, data, ingest, env, logger, collector },
+  { config, data, ingest, env, logger, collector, id },
 ) {
   const {
     accessToken,
     pixelId,
-    action_source: _action_source,
+    action_source,
     doNotHash,
     test_mode,
     url = 'https://ads-api.reddit.com/api/v2.0/conversions/events/',
@@ -85,6 +93,21 @@ const send: PushFn = async function (
     ...(isObject(eventData.user) ? eventData.user : {}),
   };
 
+  const { userData: user, dropped } = await hashUserData(
+    userData,
+    normalizers,
+    doNotHash,
+    oneValue,
+  );
+  if (dropped.length)
+    reportCause(
+      collector,
+      logger,
+      { step: stepId('destination', id), code: 'mapping' },
+      `Reddit user ${dropped.join(', ')} left out: Reddit takes one value, not a list`,
+      { event: event.name },
+    );
+
   const {
     user: _u,
     event_metadata: eventMetadata,
@@ -98,8 +121,9 @@ const send: PushFn = async function (
     event_at: new Date(timestampMs).toISOString(),
     event_at_ms: timestampMs,
     event_type: buildEventType(event.name),
+    ...(action_source ? { action_source } : {}),
     ...restEventData,
-    user: userData,
+    user,
   };
 
   // Merge event_metadata with auto-populated conversion_id (event.id for dedup)
@@ -113,11 +137,9 @@ const send: PushFn = async function (
     serverEvent.click_id = eventClickId;
   }
 
-  const hashedServerEvent = await hashEvent(serverEvent, doNotHash);
-
   const body: RequestBody = {
     ...(test_mode ? { test_mode: true } : {}),
-    events: [hashedServerEvent],
+    events: [serverEvent],
   };
 
   const endpoint = `${url}${pixelId}`;
@@ -130,10 +152,32 @@ const send: PushFn = async function (
   });
 
   const sendServerFn = env?.sendServer || sendServer;
-  await sendServerFn(endpoint, JSON.stringify(body), {
+  const response = await sendServerFn(endpoint, JSON.stringify(body), {
     headers: { Authorization: `Bearer ${accessToken}` },
   });
+  checkResponse(response.data, body.events.length);
 };
+
+/** The count in Reddit's 200 answer, in test mode the events validated. */
+const CONFIRMED =
+  /^(?:Successfully processed|In test mode\.) (\d+) conversion events\b/;
+
+/**
+ * Reddit answers HTTP 200 with a message that counts the events it processed
+ * ("Successfully processed 1 conversion events."), in test mode the events it
+ * validated. A message that does not count every event sent fails the push,
+ * not retryable; the body stays on the error.
+ */
+function checkResponse(data: unknown, sent: number): void {
+  if (!isObject(data) || !isString(data.message)) return;
+  const confirmed = CONFIRMED.exec(data.message);
+  if (confirmed && Number(confirmed[1]) >= sent) return;
+  throw new StepError('Reddit Conversions API did not process the event', {
+    code: 'transport',
+    retryable: false,
+    body: data,
+  });
+}
 
 const DEFAULT_IP: WalkerOSMapping.Value = ['ingest.ip', 'event.user.ip'];
 const DEFAULT_USER_AGENT: WalkerOSMapping.Value = [

@@ -1,55 +1,48 @@
-import { WalkerOS } from '@walkeros/core';
-import { isArray, isObject, isString } from '@walkeros/core';
-import { getHashServer } from '@walkeros/server-core';
+import type { Normalizer } from '@walkeros/server-core';
 
-// user_agent is matched in clear by Reddit: never hashed.
-const keysToHash = ['email', 'external_id', 'ip_address', 'idfa', 'aaid'];
+/**
+ * Reddit's email canonicalization: trimmed and lowercased, then the `+alias`
+ * and the dots removed from the part before the `@`.
+ */
+function normalizeEmail(value: string): string {
+  const email = value.trim().toLowerCase();
+  const at = email.lastIndexOf('@');
+  if (at < 0) return email;
 
-const SHA256_HEX = /^[a-f0-9]{64}$/;
-
-// Trimmed and lowercased before hashing; an existing SHA-256 digest is kept.
-async function hashOne(item: unknown): Promise<string> {
-  const normalized = String(item).trim().toLowerCase();
-  return SHA256_HEX.test(normalized) ? normalized : getHashServer(normalized);
+  const local = email.slice(0, at);
+  const alias = local.indexOf('+');
+  const user = (alias < 0 ? local : local.slice(0, alias)).replace(/\./g, '');
+  return `${user}@${email.slice(at + 1)}`;
 }
 
-function shouldBeHashed(key: string, doNotHash: string[] = []): boolean {
-  return keysToHash.includes(key) && !doNotHash.includes(key);
+/** Reddit's phone canonicalization: no extension, digits only, a leading +. */
+function normalizePhone(value: string): string {
+  const digits = value.split(/ext|x|#/i)[0].replace(/\D/g, '');
+  return digits ? `+${digits}` : '';
 }
 
-type HashableValue = WalkerOS.AnyObject | unknown | unknown[];
+/**
+ * The user keys Reddit hashes, with the canonical form Reddit documents
+ * before hashing. user_agent and every other key are sent as mapped.
+ * https://ads-api.reddit.com/docs/v3/guides/programs/capi/direct-integration
+ */
+export const normalizers = {
+  email: normalizeEmail,
+  external_id: (value) => value,
+  ip_address: (value) => value,
+  phone_number: normalizePhone,
+  idfa: (value) => value.trim().toUpperCase(),
+  aaid: (value) => value.trim().toLowerCase(),
+} satisfies Record<string, Normalizer>;
 
-async function processValue(
-  value: unknown,
-  shouldHash: boolean,
-): Promise<unknown> {
-  if (!shouldHash) return value;
-  if (isArray(value)) {
-    return Promise.all(value.map(hashOne));
-  }
-  return hashOne(value);
-}
+export type HashKey = keyof typeof normalizers;
 
-export async function hashEvent<T extends HashableValue>(
-  value: T,
-  doNotHash: string[] = [],
-): Promise<T> {
-  if (!isObject(value)) return value;
-
-  const isUser = 'user' in value;
-  const target = (isUser ? value.user : value) as WalkerOS.AnyObject;
-
-  const entries = await Promise.all(
-    Object.entries(target).map(async ([k, v]) => [
-      k,
-      await processValue(v, isUser && shouldBeHashed(k, doNotHash)),
-    ]),
-  );
-
-  const result = entries.reduce((acc, [k, v]) => {
-    if (isString(k)) acc[k] = v;
-    return acc;
-  }, {} as WalkerOS.AnyObject);
-
-  return isUser ? { ...value, user: result } : (result as T);
-}
+/** Reddit takes one value per user key, never a list. */
+export const oneValue: HashKey[] = [
+  'email',
+  'external_id',
+  'ip_address',
+  'phone_number',
+  'idfa',
+  'aaid',
+];

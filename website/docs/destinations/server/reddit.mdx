@@ -22,7 +22,7 @@ Server-side event delivery to Reddit's Conversions API v2.0 for enhanced convers
   flowMap={{
     destinations: { default: { label: 'Destination', text: 'Reddit CAPI', highlight: true } },
   }}
-  post={<>Sends events server-side to Reddit's Conversions API using raw HTTP (no SDK). Identity fields (`email`, `external_id`, `ip_address`, `idfa`, `aaid`) are trimmed, lowercased and SHA-256 hashed before sending; `user_agent` is sent as is. Events include a stable `event_metadata.conversion_id`, the walkerOS event id.</>}
+  post={<>Sends events server-side to Reddit's Conversions API using raw HTTP (no SDK). Identity fields (`email`, `phone_number`, `external_id`, `ip_address`, `idfa`, `aaid`) are brought into Reddit's canonical form and SHA-256 hashed before sending; `user_agent` is sent as is. Events include a stable `event_metadata.conversion_id`, the walkerOS event id.</>}
 />
 
 ## Installation
@@ -33,7 +33,7 @@ Server-side event delivery to Reddit's Conversions API v2.0 for enhanced convers
 
 ## Failures
 
-A response outside the 2xx range, a network error, or no answer within 5 seconds fails the event: the push answers `failed` with the code `transport` (with the HTTP status) or `timeout`, the event goes to the dead-letter queue, and the collector logs one ERROR line. Any 2xx answer counts as delivered: the destination does not read the response body. Without `accessToken` or `pixelId` the destination does not start: every push answers `failed` with the code `config`, and the collector logs `destination init failed`. A rule with `silent: true` sends nothing.
+A response outside the 2xx range, a network error, or no answer within 5 seconds fails the event: the push answers `failed` with the code `transport` (with the HTTP status) or `timeout`, the event goes to the dead-letter queue, and the collector logs one ERROR line. Reddit answers HTTP 200 with a message that counts the events it processed (in test mode, the events it validated). A message that does not count the event, such as `Successfully processed 0 conversion events.`, fails it the same way, with the code `transport`, not retryable. Without `accessToken` or `pixelId` the destination does not start: every push answers `failed` with the code `config`, and the collector logs `destination init failed`. A rule with `silent: true` sends nothing.
 
 ## Client IP and user agent
 
@@ -88,17 +88,25 @@ Reddit takes conversion details under `event_metadata`: map them into `event_met
 
 ## Hashing
 
-The destination SHA-256 hashes these keys of the user object before sending: `email`, `external_id`, `ip_address`, `idfa`, `aaid`. In a rule's `data` or the destination's `config.data`, map them under `user`; the setting that applies to every event is `settings.user_data`. Map personal data only to these keys.
+The destination SHA-256 hashes these keys of the user object before sending, each in the canonical form Reddit documents. In a rule's `data` or the destination's `config.data`, map them under `user`; the setting that applies to every event is `settings.user_data`. Map personal data only to these keys.
 
-- **Every other key is sent in clear text.** `uuid`, `opt_out`, `screen_dimensions` and `data_processing_options` are sent as mapped, and so is any other key under `user`: nothing checks the names, so `phone_number` or `em` reaches Reddit unhashed.
+| Key | Canonical form before hashing |
+| --- | --- |
+| `email` | Trimmed and lowercased, with the `+alias` and the dots removed from the part before `@`: `Al.ice+Apple@Example.Com` becomes `alice@example.com`. |
+| `phone_number` | The extension removed, digits only, with a leading `+`: `+1 (555) 444-1234 ext. 789` becomes `+15554441234`. The destination cannot add a country code, so map the number with one. |
+| `idfa` | Trimmed and uppercased, dashes kept. |
+| `aaid` | Trimmed and lowercased, dashes kept. |
+| `external_id`, `ip_address` | None. The value is hashed as it is. |
+
+- **Map one value per key.** Reddit takes one value under each of these keys: a list is left out, and the collector logs one ERROR line naming the key. An empty value, or one that is empty after normalization, is left out.
+- **Every other key is sent in clear text.** `user_agent`, `uuid`, `opt_out`, `screen_dimensions` and `data_processing_options` are sent as mapped, and so is any other key under `user`: nothing checks the names, so `em` reaches Reddit unhashed.
 - **`user_data` in `data` (a rule's or `config.data`) is not the user object.** Other conversion API destinations use that name; this one sends it unhashed at the top level of the event, like any other key mapped outside `user`.
-- **Values are trimmed and lowercased before hashing.** A value that already is a SHA-256 hex digest is sent as it is, never hashed twice.
 
 :::note Different from Meta/Pinterest
-Reddit hashes `ip_address`, which Meta CAPI and Pinterest CAPI pass through as plaintext; `user_agent` stays in clear.
+The destination hashes `ip_address`, which Meta CAPI and Pinterest CAPI send in clear; Reddit takes it either way. `user_agent` stays in clear.
 :::
 
-If a value is already hashed or you want to skip hashing for a specific field, use `doNotHash`:
+If a value is already hashed, add its key to `doNotHash`: it is sent exactly as mapped, so it must already be a SHA-256 digest (64 lowercase hex digits):
 
 <CodeSnippet
   code={`"settings": {
@@ -115,7 +123,7 @@ Each event is sent with `event_metadata.conversion_id` set to the walkerOS event
 
 ## Test mode
 
-Set `test_mode: true` in settings to send `"test_mode": true` as a **top-level boolean in the request body**. Useful during development.
+Set `test_mode: true` in settings to send `"test_mode": true` as a **top-level boolean in the request body**. Reddit then validates the events without recording them, and they do not appear in Reddit's Event Testing tool. Useful during development.
 
 <CodeSnippet
   code={`"settings": {
