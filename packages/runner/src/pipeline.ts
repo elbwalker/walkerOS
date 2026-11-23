@@ -31,6 +31,7 @@ import {
 } from './secret-injection.js';
 import type { ErrorRing, LogRing } from './log-ring.js';
 import type { FlowLogger } from './runtime-logging.js';
+import { startRuntimeSampler } from './runtime-sampler.js';
 import { VERSION } from './version.js';
 
 export interface PipelineOptions {
@@ -173,6 +174,13 @@ export async function runPipeline(options: PipelineOptions): Promise<void> {
 
   // Collector constructed successfully: flow is genuinely ready to serve.
   healthServer.setReady(true);
+
+  // The collector's usage report carries the process's own numbers from
+  // here on; a collector without a status has nowhere to carry them. The
+  // process exit ends it; it samples through the drain, so the final report
+  // carries fresh numbers.
+  if (handle.collector.status)
+    startRuntimeSampler(handle.collector.status, { logger });
 
   logger.info('Flow running');
   logger.info(`Port: ${port}`);

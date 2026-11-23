@@ -436,8 +436,9 @@ type ReportBase = Pick<
 >;
 
 /**
- * The rows of one report. Counters count since the collector started; a
- * counter at 0 is left out, except `collector.in`, which marks every report.
+ * The rows of one report. Counters count since the collector started, the
+ * `runtime` ones since their host's start; a counter at 0 is left out,
+ * except `collector.in`, which marks every report.
  * Gauges go in every report, zero included, and so does every held issue.
  */
 function usageRows(
@@ -519,6 +520,17 @@ function usageRows(
 
   for (const [step, errors] of Object.entries(status.connectionErrors))
     count(step, 'connection_errors', errors);
+
+  // Set only by a host that measures its process; its counters count from
+  // the host's start.
+  const { runtime } = status;
+  if (runtime) {
+    add('runtime', 'memory_bytes', runtime.memoryBytes, true);
+    add('runtime', 'memory_limit_bytes', runtime.memoryLimitBytes, true);
+    count('runtime', 'cpu_ms', runtime.cpuMs);
+    count('runtime', 'loop_delay_ms', runtime.loopDelayMs);
+    count('runtime', 'loop_samples', runtime.loopSamples);
+  }
 
   for (const issue of collector.causeLog?.snapshot().keys ?? [])
     add(issue.key.step, 'issue', issue.count, false, {

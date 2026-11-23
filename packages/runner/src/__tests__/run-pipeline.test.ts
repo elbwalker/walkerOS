@@ -1,5 +1,5 @@
 import http from 'http';
-import type { DeclaredEnv } from '@walkeros/core';
+import type { Collector, DeclaredEnv } from '@walkeros/core';
 import { createCLILogger, createKnownValues } from '@walkeros/core/node';
 import type { PipelineOptions } from '../pipeline.js';
 import type { HealthServer } from '../health-server.js';
@@ -349,6 +349,38 @@ describe('runPipeline', () => {
     await new Promise((r) => setTimeout(r, 50));
 
     expect(order).toEqual(['setReady(true)', 'onReady']);
+  });
+
+  it('fills the collector status with a runtime record once the flow is ready', async () => {
+    const status: Collector.Status = {
+      startedAt: 0,
+      in: 0,
+      out: 0,
+      failed: 0,
+      sources: {},
+      destinations: {},
+      dropped: {},
+      breakers: {},
+      connectionErrors: {},
+    };
+    jest
+      .mocked(loadFlow)
+      .mockImplementationOnce(
+        loading(undefined, { command: jest.fn(), status }),
+      );
+
+    void runPipeline(baseOptions);
+    await new Promise((r) => setTimeout(r, 50));
+
+    expect(status.runtime).toEqual({
+      memoryBytes: expect.any(Number),
+      memoryLimitBytes: expect.any(Number),
+      cpuMs: expect.any(Number),
+      loopDelayMs: expect.any(Number),
+      loopSamples: expect.any(Number),
+    });
+    expect(status.runtime?.memoryBytes).toBeGreaterThan(0);
+    expect(status.runtime?.memoryLimitBytes).toBeGreaterThan(0);
   });
 
   describe('the report hook', () => {

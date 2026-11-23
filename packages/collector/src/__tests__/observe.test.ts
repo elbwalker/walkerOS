@@ -725,6 +725,93 @@ describe('usage', () => {
     ]);
   });
 
+  // A host such as the runner writes the record; the collector only reports it.
+  describe('runtime', () => {
+    const runtime: Collector.RuntimeStatus = {
+      memoryBytes: 212_000_000,
+      memoryLimitBytes: 512_000_000,
+      cpuMs: 1234,
+      loopDelayMs: 56,
+      loopSamples: 789,
+    };
+
+    /** The runtime rows of the report one interval after the host set `record`. */
+    async function runtimeRows(record: Collector.RuntimeStatus) {
+      const { requests } = installFetch();
+      const { collector } = await startFlow({
+        observe: { usage: { url: usageUrl, token, interval: 10 } },
+      });
+      collector.status.runtime = record;
+      await jest.advanceTimersByTimeAsync(10_000);
+      return requests[requests.length - 1].rows.filter(
+        (row) => row.step === 'runtime',
+      );
+    }
+
+    /** Each row's metric with its `[is_gauge, value]`. */
+    function byMetric(rows: Row[]) {
+      return Object.fromEntries(
+        rows.map((row) => [row.metric, [row.is_gauge, row.value]]),
+      );
+    }
+
+    it('sends the runtime record as five runtime rows', async () => {
+      const rows = await runtimeRows(runtime);
+
+      expect(rows).toHaveLength(5);
+      expect(byMetric(rows)).toEqual({
+        memory_bytes: [1, 212_000_000],
+        memory_limit_bytes: [1, 512_000_000],
+        cpu_ms: [0, 1234],
+        loop_delay_ms: [0, 56],
+        loop_samples: [0, 789],
+      });
+    });
+
+    it('sends no runtime row while the record is unset', async () => {
+      const { requests } = installFetch();
+      await startFlow({
+        observe: { usage: { url: usageUrl, token, interval: 10 } },
+      });
+      await jest.advanceTimersByTimeAsync(20_000);
+
+      expect(requests).toHaveLength(3);
+      expect(
+        requests.some((request) =>
+          request.rows.some((row) => row.step === 'runtime'),
+        ),
+      ).toBe(false);
+    });
+
+    // A counter at 0 is left out as every counter is; memory goes in always.
+    it.each<[string, Collector.RuntimeStatus, Record<string, unknown>]>([
+      [
+        'no CPU time yet',
+        { ...runtime, cpuMs: 0 },
+        {
+          memory_bytes: [1, 212_000_000],
+          memory_limit_bytes: [1, 512_000_000],
+          loop_delay_ms: [0, 56],
+          loop_samples: [0, 789],
+        },
+      ],
+      [
+        'no event loop sample yet',
+        { ...runtime, loopDelayMs: 0, loopSamples: 0 },
+        {
+          memory_bytes: [1, 212_000_000],
+          memory_limit_bytes: [1, 512_000_000],
+          cpu_ms: [0, 1234],
+        },
+      ],
+    ])(
+      'leaves a runtime counter at 0 out and keeps both gauges: %s',
+      async (_case, record, expected) => {
+        expect(byMetric(await runtimeRows(record))).toEqual(expected);
+      },
+    );
+  });
+
   // One deadline for the whole stop: nothing goes after it.
   it('ends a shutdown with a beat hung in flight at 3 s, and sends nothing after', async () => {
     const { requests } = installFetch(hang);
