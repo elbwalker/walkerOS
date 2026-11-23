@@ -11,6 +11,7 @@ export * from './castValue';
 export * from './clone';
 export * from './consent';
 export * from './createDestination';
+export { getCurrencyMinorUnits } from './currency';
 export * from './deepMerge';
 export * from './eventGenerator';
 export * from './getId';
