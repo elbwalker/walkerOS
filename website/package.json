@@ -35,6 +35,7 @@
     "@walkeros/server-destination-customerio": "^4.9.0",
     "@walkeros/server-destination-datamanager": "^4.9.0",
     "@walkeros/server-destination-file": "^4.9.0",
+    "@walkeros/server-destination-ga4": "^4.9.0",
     "@walkeros/server-destination-gcp": "^4.9.0",
     "@walkeros/server-destination-gravity": "^4.9.0",
     "@walkeros/server-destination-hubspot": "^4.9.0",

@@ -1,0 +1,101 @@
+---
+title: GA4 Measurement Protocol
+description: "Server-side events to Google Analytics 4 through the Measurement Protocol"
+path: /docs/destinations/server/ga4
+sidebar_position: 7
+package: '@walkeros/server-destination-ga4'
+---
+import data from '@walkeros/server-destination-ga4/walkerOS.json';
+import Configuration from '@site/src/components/snippets/_configuration.mdx';
+import Quickstart from '@site/src/components/snippets/_quickstart.mdx';
+
+import WhereThisFits from '@site/src/components/snippets/_where-this-fits.mdx';
+
+# GA4 Measurement Protocol
+
+<PackageLink env="server" github="packages/server/destinations/ga4" npm="@walkeros/server-destination-ga4" status="beta" />
+
+Server-side events to Google Analytics 4 through the [Measurement Protocol](https://developers.google.com/analytics/devguides/collection/protocol/ga4). Use it for events that happen on a server (a sign-up confirmed by your app, a payment webhook) or that should not depend on the browser; the [gtag web destination](/docs/destinations/web/gtag/ga4) stays the way to send page views and browser events.
+
+<WhereThisFits
+  pre={<>GA4 Measurement Protocol is a <strong>server destination</strong> in the walkerOS flow:</>}
+  flowMap={{
+    destinations: { default: { label: 'Destination', text: 'GA4 MP', highlight: true } },
+  }}
+  post={<>Sends one event per request to `/mp/collect` with the measurement id and API secret in the query string, using raw HTTP (no SDK). Nothing personal is sent unless you map it: no email, IP or user agent.</>}
+/>
+
+## Installation
+
+<Quickstart data={data} />
+
+<Configuration type="destination" data={data} />
+
+## Joining the visitor's session
+
+The Measurement Protocol attributes an event to a visitor and a session only through ids you send. Read them in the browser and carry them to the server event (for example as `globals`):
+
+| Mapped `data` | Sent as | Where it comes from |
+|---|---|---|
+| `client_id` | `client_id` | The `_ga` cookie `GA1.1.<random>.<seconds>`: send `<random>.<seconds>` |
+| `session_id` | `events[0].params.session_id` | The `_ga_<stream>` cookie (digits) |
+| `user_id` | `user_id` | Your own user id (optional) |
+| `params` | `events[0].params` | Event parameters, such as `value` (sent as a number), `currency`, `transaction_id` |
+
+With a valid `client_id` and `session_id` the event joins the visitor's session and its traffic source. Without a valid `client_id`, the destination derives a stable one from the walkerOS event id: the event still counts, as a new user, and a retry keeps the same id. `engagement_time_msec: 1` is added so the event counts as engaged.
+
+<CodeSnippet
+  code={`"mapping": {
+  "order": { "complete": {
+    "name": "purchase",
+    "data": { "map": {
+      "client_id": "globals.ga_client_id",
+      "session_id": "globals.ga_session_id",
+      "params": { "map": {
+        "value": "data.total",
+        "currency": "data.currency",
+        "transaction_id": "data.id"
+      } }
+    } }
+  } }
+}`}
+  language="json"
+/>
+
+## Event name
+
+The mapped name, with `_` for spaces (`order complete` becomes `order_complete`). GA4 accepts letters, digits and `_`, starting with a letter, up to 40 characters: an invalid name fails with the code `mapping` and nothing is sent. Use GA4's recommended names (`purchase`, `sign_up`, `generate_lead`) for reports and key events to pick them up.
+
+## Consent
+
+`consent.ad_user_data` and `consent.ad_personalization` are `GRANTED` only when the event carries `marketing` consent, else `DENIED`. Gate the destination itself on measurement consent: add `consent: { analytics: true }` to `config`, next to `settings` (see [Gate a destination with consent](/docs/guides/consent#gate-a-destination-with-consent)).
+
+## Timestamps
+
+`timestamp_micros` is the event time when the event is less than 71 hours old; GA4 refuses older ones, so an older event (a late retry) is sent without it and GA4 uses the reception time.
+
+## Testing
+
+GA4 answers 2xx even to an invalid payload. While setting up, point `url` to the validation server, which answers with the problems it finds and records nothing:
+
+<CodeSnippet
+  code={`"settings": {
+  "measurementId": "G-XXXXXXXXXX",
+  "apiSecret": "$secret.GA4_API_SECRET",
+  "url": "https://www.google-analytics.com/debug/mp/collect"
+}`}
+  language="json"
+/>
+
+For collection in the EU, use `https://region1.google-analytics.com/mp/collect`.
+
+## Failures
+
+- A response outside the 2xx range, a network error or no answer within 5 seconds fails with `transport` (with the HTTP status) or `timeout`, and the event goes to the dead-letter queue. 429 and 5xx are marked retryable, other 4xx not; nothing resends the event by itself.
+- Without `measurementId` or `apiSecret`, or with a measurement id that is not `G-...`, the destination does not start: every push answers `failed` with the code `config`.
+- A rule with `silent: true` sends nothing.
+
+## Links
+
+- [GA4 Measurement Protocol](https://developers.google.com/analytics/devguides/collection/protocol/ga4)
+- [Validating events](https://developers.google.com/analytics/devguides/collection/protocol/ga4/validating-events)
