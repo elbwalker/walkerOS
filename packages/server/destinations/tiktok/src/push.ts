@@ -1,11 +1,4 @@
-import type {
-  EventData,
-  EventContext,
-  PushFn,
-  RequestBody,
-  UserData,
-  Env,
-} from './types';
+import type { EventData, PushFn, RequestBody, UserData, Env } from './types';
 import type { Collector, Mapping as WalkerOSMapping } from '@walkeros/core';
 import {
   createMappingRoot,
@@ -71,13 +64,8 @@ const send: PushFn = async function (
     }
   }
 
-  // Hash identity fields
-  const hashedUserData = await hashUserData(userData, doNotHash);
-
-  // Build context
-  const context: EventContext = {};
-
-  // Client IP and user agent auto-fill
+  // Hash identity fields, then add the client IP and user agent in clear
+  const user = await hashUserData(userData, doNotHash);
   const root = createMappingRoot(ingest, event);
   const clientIp = await resolveClient(ip, DEFAULT_IP, root, collector);
   const clientUserAgent = await resolveClient(
@@ -86,36 +74,26 @@ const send: PushFn = async function (
     root,
     collector,
   );
-  if (clientIp !== undefined) context.ip = clientIp;
-  if (clientUserAgent !== undefined) context.user_agent = clientUserAgent;
+  if (clientIp !== undefined) user.ip = clientIp;
+  if (clientUserAgent !== undefined) user.user_agent = clientUserAgent;
 
-  // Add user data if non-empty
-  if (Object.keys(hashedUserData).length > 0) {
-    context.user = hashedUserData;
-  }
-
-  // Page context from event source
-  context.page = {
-    url: event.source?.url,
-  };
-
-  // Build event data
+  // Events API 2.0 item: user, page and properties per event
   const tiktokEvent: EventData = {
     event: event.name,
+    event_time: Math.round((event.timestamp || Date.now()) / 1000),
     event_id: event.id,
-    timestamp: new Date(event.timestamp).toISOString(),
-    context,
+    ...(Object.keys(user).length > 0 ? { user } : {}),
+    ...(event.source?.url ? { page: { url: event.source.url } } : {}),
     properties,
   };
 
-  // Build request body
   const body: RequestBody = {
-    pixel_code: pixelCode,
-    partner_name,
+    event_source: 'web',
+    event_source_id: pixelCode,
+    ...(partner_name ? { partner_name } : {}),
     data: [tiktokEvent],
   };
 
-  // Test event code
   if (test_event_code) body.test_event_code = test_event_code;
 
   logger.debug('Calling TikTok Events API', {
