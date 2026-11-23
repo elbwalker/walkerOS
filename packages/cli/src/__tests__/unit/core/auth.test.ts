@@ -180,13 +180,20 @@ describe('the credential a command sends', () => {
           'DPoP tok-2',
         ]);
         expect(auth.tokenRequests).toHaveLength(2);
-        // One line for the refusal, the client's; the command adds none.
+        // One line for the refusal, the client's, naming no end; the command adds none.
         expect(streams.err).toEqual([]);
         expect(
           errorSpy.mock.calls.filter((call) =>
-            String(call[0]).includes("refused this automation's credential"),
+            String(call[0]).includes(
+              `The app refused a token the auth server had just issued for this automation's credential (HTTP 401); its tokens are for ${SERVICE_APP}/api`,
+            ),
           ),
         ).toHaveLength(1);
+        expect(
+          errorSpy.mock.calls.filter((call) =>
+            String(call[0]).includes('revoked or ended'),
+          ),
+        ).toEqual([]);
       },
     ],
   ])('%s', async (_name, run) => {

@@ -275,12 +275,17 @@ waits at most 2.5 seconds per attempt: when the token endpoint cannot be
 reached, the flow starts anyway. When the auth server cannot be reached, the
 runtime signs each request to the app with the credential's key instead and
 keeps serving; one ERROR line says so, and one more when a token is bought
-again. A credential the app
-refuses (replaced by a new pairing, revoked, or its deployment ended) writes
-one ERROR line, `The app refused this runner's credential (replaced, revoked
-or ended); a self-hosted runner is paired again on its Self-hosted tab`, and
-the flow keeps serving. When the auth server refuses a token request, the line
-names how far this machine's clock is off from the server's.
+again. A credential that was replaced by a new pairing, revoked, or whose
+deployment ended buys no token. One ERROR line says so, `The auth server
+refused this runner's credential (invalid_client: ...): (replaced, revoked or
+ended); a self-hosted runner is paired again on its Self-hosted tab`. The
+runtime then signs instead, with its line, and the app refuses the signed
+requests with one more, `The app refused this runner's signed request (HTTP
+401)`. The flow keeps serving. A token the app
+refuses although the auth server had just issued it writes one ERROR line
+naming the resource the credential's tokens are for, and no end. When this
+machine's clock is further off the server's than the server allows, the line
+names how far.
 
 The artifact itself never changes while the runtime runs. To ship a new
 version, bundle again and redeploy. To take new versions from the app with no
@@ -345,6 +350,14 @@ source's routes); before a flow is loaded, those answer `503`. A flow whose
 sources have no HTTP handler, such as the fetch, AWS and GCP sources built for
 their own platforms, still reports ready, and every request answers `503` with
 `{"error":"No flow loaded"}`.
+
+While a flow runs, the runtime measures the process that runs it every 10
+seconds: its resident memory against the memory it may use (the container's
+limit, else the machine's memory), its CPU time and its event loop delay. A
+flow that sends [Observe](/docs/getting-started/observe) usage reports carries
+these numbers as its `runtime` rows, with no option to set. Under `runneros
+remote` they are the flow's child process, measured against the whole
+instance's memory; the supervisor's memory and CPU time are not counted.
 
 ## Serving files
 
@@ -708,9 +721,10 @@ in the step's [`import`](/docs/apps/cli#named-export-selection-with-import).
 something other than the credential the app showed. Copy it again from the
 start config, or pair the runner again.
 
-**Exits with a 401 or 403 on secrets**, or **`The app refused this runner's
-credential`**: the credential was replaced by a newer pairing, revoked, or its
-deployment ended. Pair the runner again on its Self-hosted tab.
+**Exits with a 401 or 403 on secrets**, or **`The auth server refused this
+runner's credential`**: the credential was replaced by a newer pairing, revoked,
+or its deployment ended. Pair the runner again on its Self-hosted tab. When the
+line also says how far this clock is off, set the machine's clock first.
 
 ## Next steps
 

@@ -40,7 +40,10 @@ const HOLDER: Record<ServiceTargetKind, string> = {
   automation: 'automation',
 };
 
-/** What the app's 401 means for each kind, and what to do. */
+/**
+ * What the token endpoint's `invalid_client` means for each kind, and what to
+ * do: the end is named there, since a credential that ended can buy no token.
+ */
 const ENDED: Record<ServiceTargetKind, string> = {
   deployment:
     '(replaced, revoked or ended); a self-hosted runner is paired again on its Self-hosted tab',
@@ -49,13 +52,42 @@ const ENDED: Record<ServiceTargetKind, string> = {
 };
 
 /**
- * The line the app's refusal writes: a 401 refuses the credential itself, a
- * 403 only this route (its scope or the holder's role), so it says no end.
+ * How far this clock may be off either way, by the error a refusal names,
+ * before its line notes the offset: inside the window the check passed the
+ * clock, so a note would point nowhere. The auth server takes an assertion
+ * for an offset in (-30 s, +30 s]: it is signed for
+ * `ASSERTION_LIFETIME_SECONDS`, and the auth server takes an `exp` in the
+ * future and at most 60 s ahead (the app's
+ * `src/lib/auth-server/service-token.ts:177-188`). It takes a proof within
+ * 60 s either way (the app's `src/lib/security/dpop.ts:19`). Each window is
+ * 2 s less, for the `Date` header's whole seconds and the transit.
+ */
+const CLOCK_WINDOW_SECONDS = {
+  invalid_client: 28,
+  invalid_dpop_proof: 58,
+};
+
+/**
+ * The line of the other refusals: a 401 tied to no token the client holds
+ * tells no end (the token endpoint tells it), a 403 refuses only this route
+ * (its scope or the holder's role).
  */
 function refusedLine(kind: ServiceTargetKind, status: number): string {
   return status === 401
-    ? `The app refused this ${HOLDER[kind]}'s credential ${ENDED[kind]} (HTTP 401)`
+    ? `The app refused this ${HOLDER[kind]}'s credential (HTTP 401)`
     : `The app's route refused this ${HOLDER[kind]}'s credential (scope or role; HTTP ${status})`;
+}
+
+/**
+ * A 401 to a token bought since the app refused the one before: the auth
+ * server sells this credential tokens the app does not take here, so the
+ * line names what they are for and no end.
+ */
+function refusedFreshTokenLine(
+  kind: ServiceTargetKind,
+  resource: string,
+): string {
+  return `The app refused a token the auth server had just issued for this ${HOLDER[kind]}'s credential (HTTP 401); its tokens are for ${resource}`;
 }
 
 /** RFC 9449 section 8.1: a nonce is one or more NQCHAR. */
@@ -96,6 +128,8 @@ export interface ServiceAuth {
    * refused line once per change of state. Answers true when one retry of
    * that request may pass: a 401 asking for a DPoP nonce, or a 401 naming the
    * token invalid, which is dropped so the next `authorize` buys once more.
+   * That drop writes no line: the next answer, or the purchase's refusal,
+   * writes it.
    */
   answered(answer: { status: number; headers?: Headers }): boolean;
   /** The credential's resource origin, the one origin `authorize` serves. */
@@ -263,7 +297,10 @@ export function createServiceAuth(
   let sending: 'token' | 'signature' | undefined;
   /** Which refused line the app's last refusal wrote, until an answer below 400 ends it. */
   let refusedAs: string | undefined;
-  /** One retry per refusal: set by a dropped token, ended by any answer but a 401. */
+  /**
+   * One retry per refusal: set by a dropped token, ended by any answer but a
+   * 401. While it is set, a token the client holds was bought since the drop.
+   */
   let retriedRefusal = false;
 
   /**
@@ -326,12 +363,20 @@ export function createServiceAuth(
     return metadata;
   }
 
-  /** This clock against an answer's `Date`, when it carries one. */
-  function clockOffset(headers: Headers | undefined, server: string): string {
+  /**
+   * This clock against an answer's `Date`, when it carries one; for a
+   * refusal naming `error`, only past that check's window.
+   */
+  function clockOffset(
+    headers: Headers | undefined,
+    server: string,
+    error?: keyof typeof CLOCK_WINDOW_SECONDS,
+  ): string {
     const date = headers ? headers.get('date') : null;
     const at = date === null ? NaN : Date.parse(date);
     if (Number.isNaN(at)) return '';
     const offset = Math.round((now() - at) / 1000);
+    if (error && Math.abs(offset) <= CLOCK_WINDOW_SECONDS[error]) return '';
     return `; this clock is ${offset >= 0 ? '+' : ''}${offset} s off the ${server}'s`;
   }
 
@@ -431,10 +476,14 @@ export function createServiceAuth(
           ? `${answer.error}: ${answer.description}`
           : answer.error
         : `HTTP ${status}`;
+      if (answer.error === 'invalid_client')
+        throw new TokenRequestError(
+          `The auth server refused this ${HOLDER[kind]}'s credential (${what}): ${ENDED[kind]}${clockOffset(response.headers, 'auth server', answer.error)}`,
+          'refused',
+        );
       const clock =
-        answer.error === 'invalid_client' ||
         answer.error === 'invalid_dpop_proof'
-          ? clockOffset(response.headers, 'auth server')
+          ? clockOffset(response.headers, 'auth server', answer.error)
           : '';
       throw new TokenRequestError(
         `The auth server refused this credential's token request (${what})${clock}`,
@@ -605,24 +654,9 @@ export function createServiceAuth(
         if (status < 400) refusedAs = undefined;
         return false;
       }
-      const proof =
-        status === 401 && sending === 'token' && refusesProof(headers);
-      const signed =
-        status === 401 && sending === 'signature' && namesNoError(headers);
-      const line = proof
-        ? refusedProofLine(kind)
-        : signed
-          ? refusedSignatureLine(kind)
-          : refusedLine(kind, status);
-      if (line !== refusedAs)
-        logger.error(
-          proof
-            ? `${line}${clockOffset(headers, 'app')}; ${NO_NEW_CREDENTIAL[kind]}`
-            : signed
-              ? line + clockOffset(headers, 'app')
-              : line,
-        );
-      refusedAs = line;
+      // A refused token tells nothing yet: an ended credential's purchase is
+      // refused at the token endpoint, whose line names the end, and a new
+      // token may pass. So the one retry decides the line.
       if (
         status === 401 &&
         current &&
@@ -633,6 +667,31 @@ export function createServiceAuth(
         retriedRefusal = true;
         return true;
       }
+      const proof =
+        status === 401 && sending === 'token' && refusesProof(headers);
+      const signed =
+        status === 401 && sending === 'signature' && namesNoError(headers);
+      const fresh =
+        status === 401 &&
+        sending === 'token' &&
+        retriedRefusal &&
+        current !== undefined;
+      const line = proof
+        ? refusedProofLine(kind)
+        : signed
+          ? refusedSignatureLine(kind)
+          : fresh
+            ? refusedFreshTokenLine(kind, credential.resource)
+            : refusedLine(kind, status);
+      if (line !== refusedAs)
+        logger.error(
+          proof
+            ? `${line}${clockOffset(headers, 'app', 'invalid_dpop_proof')}; ${NO_NEW_CREDENTIAL[kind]}`
+            : signed
+              ? line + clockOffset(headers, 'app')
+              : line,
+        );
+      refusedAs = line;
       return false;
     },
     close() {

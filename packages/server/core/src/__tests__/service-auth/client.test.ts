@@ -15,8 +15,18 @@ const TOKEN_URL = 'https://auth.walkeros.io/api/services/token';
 const CHECK_IN = 'https://app.walkeros.io/api/runner/check-in';
 const T0 = 1_800_000_000_000;
 const HOUR = 3_600_000;
-const REFUSED_RUNNER_LINE =
-  "The app refused this runner's credential (replaced, revoked or ended); a self-hosted runner is paired again on its Self-hosted tab (HTTP 401)";
+const ENDED_RUNNER_LINE =
+  "The auth server refused this runner's credential (invalid_client: The client assertion is not valid.): (replaced, revoked or ended); a self-hosted runner is paired again on its Self-hosted tab";
+const ENDED_AUTOMATION_LINE =
+  "The auth server refused this automation's credential (invalid_client: The client assertion is not valid.): (revoked or ended)";
+const PROOF_REFUSED_LINE =
+  "The auth server refused this credential's token request (invalid_dpop_proof: The DPoP proof is not valid.)";
+const SIGNING_LINE =
+  'No live token: requests to https://app.walkeros.io are signed until a token is bought';
+const SIGNED_REFUSED_LINE =
+  "The app refused this runner's signed request (HTTP 401): its credential is not connected yet or has ended, or this clock is off";
+const freshTokenLine = (holder: string) =>
+  `The app refused a token the auth server had just issued for this ${holder}'s credential (HTTP 401); its tokens are for https://app.walkeros.io/api`;
 
 const { kty, crv, x, y } = TEST_KEY_ECC_P256;
 const publicKey: PublicEcJwk = { kty, crv, x, y };
@@ -40,8 +50,30 @@ function app(...answers: Response[]) {
 const appAnswer = (status: number, headers: Record<string, string> = {}) =>
   new Response(null, { status, headers });
 
-/** How the stub token endpoint answers one request. */
-type TokenAnswer = 'token' | 'refused' | 'down' | 'nonce' | 'hang';
+/** The app's 401 to a token it does not take. */
+const tokenRefused = () =>
+  appAnswer(401, {
+    'WWW-Authenticate': 'DPoP error="invalid_token", algs="ES256"',
+  });
+
+/** The app's 401 to a signed request: the challenge names no error. */
+const signatureRefused = () =>
+  appAnswer(401, { 'WWW-Authenticate': 'DPoP algs="ES256"' });
+
+/** A refused token request: its OAuth error, and how far this clock is ahead of the answer's `Date`. */
+interface Refusal {
+  error: 'invalid_client' | 'invalid_dpop_proof';
+  aheadMs: number;
+}
+
+/** The token endpoint's descriptions, as the auth server words them. */
+const DESCRIPTIONS: Record<Refusal['error'], string> = {
+  invalid_client: 'The client assertion is not valid.',
+  invalid_dpop_proof: 'The DPoP proof is not valid.',
+};
+
+/** How the stub token endpoint answers one request; `refused` is `invalid_client`, 75 s ahead. */
+type TokenAnswer = 'token' | 'refused' | 'down' | 'nonce' | 'hang' | Refusal;
 
 interface TokenRequest {
   dpop: string | null;
@@ -59,6 +91,15 @@ function stub(
   const tokenRequests: TokenRequest[] = [];
   const queue = [...answers];
 
+  const refusal = ({ error, aheadMs }: Refusal) =>
+    Response.json(
+      { error, error_description: DESCRIPTIONS[error] },
+      {
+        status: error === 'invalid_client' ? 401 : 400,
+        headers: { Date: new Date(clock - aheadMs).toUTCString() },
+      },
+    );
+
   const fetch: typeof globalThis.fetch = async (input, init) => {
     const url = String(input);
     if (url === METADATA_URL)
@@ -73,7 +114,9 @@ function stub(
       dpop,
       form: Object.fromEntries(new URLSearchParams(String(init?.body))),
     });
-    switch (queue.shift() || 'token') {
+    const answer = queue.shift() || 'token';
+    if (typeof answer === 'object') return refusal(answer);
+    switch (answer) {
       case 'token':
         issued += 1;
         return Response.json({
@@ -83,16 +126,7 @@ function stub(
           scope: 'runner:heartbeat runner:secrets runner:release',
         });
       case 'refused':
-        return Response.json(
-          {
-            error: 'invalid_client',
-            error_description: 'Client authentication failed',
-          },
-          {
-            status: 401,
-            headers: { Date: new Date(clock - 75_000).toUTCString() },
-          },
-        );
+        return refusal({ error: 'invalid_client', aheadMs: 75_000 });
       case 'nonce':
         return Response.json(
           { error: 'use_dpop_nonce' },
@@ -176,9 +210,7 @@ describe('the service credential client', () => {
         expect((await s.auth.token()).token).toBe('tok-1');
         expect(s.tokenRequests).toHaveLength(3);
         expect(s.lines).toEqual([
-          expect.stringContaining(
-            "The auth server refused this credential's token request (invalid_client: Client authentication failed)",
-          ),
+          `${ENDED_RUNNER_LINE}; this clock is +75 s off the auth server's`,
         ]);
       },
     ],
@@ -231,25 +263,7 @@ describe('the service credential client', () => {
       },
     ],
     [
-      'drops a token the app refuses and buys once more, never twice',
-      async () => {
-        const s = stub();
-        await s.auth.authorize(get);
-        const refused = {
-          status: 401,
-          headers: new Headers({
-            'WWW-Authenticate': 'DPoP error="invalid_token"',
-          }),
-        };
-        expect(s.auth.answered(refused)).toBe(true);
-        expect((await s.auth.authorize(get)).Authorization).toBe('DPoP tok-2');
-        expect(s.auth.answered(refused)).toBe(false);
-        expect(s.tokenRequests).toHaveLength(2);
-        expect(s.lines).toEqual([REFUSED_RUNNER_LINE]);
-      },
-    ],
-    [
-      'sends once more with fresh headers when the app refuses the token',
+      'sends once more with fresh headers when the app refuses the token, and writes no line when that passes',
       async () => {
         const s = stub();
         const target = app(
@@ -263,6 +277,7 @@ describe('the service credential client', () => {
           'DPoP tok-2',
         ]);
         expect(target.sent[1].DPoP).not.toBe(target.sent[0].DPoP);
+        expect(s.lines).toEqual([]);
       },
     ],
     [
@@ -369,16 +384,6 @@ describe('the service credential client', () => {
       },
     ],
     [
-      'names the clock offset when the assertion is refused',
-      async () => {
-        const s = stub('deployment', ['refused']);
-        await s.auth.authorize(get);
-        expect(s.lines[0]).toBe(
-          "The auth server refused this credential's token request (invalid_client: Client authentication failed); this clock is +75 s off the auth server's",
-        );
-      },
-    ],
-    [
       'sends no header to another origin',
       async () => {
         const s = stub();
@@ -423,12 +428,130 @@ describe('the service credential client', () => {
     await run();
   });
 
+  /** The lines an automation's first request writes when the token endpoint refuses the purchase. */
+  async function refusedPurchaseLines(refusal: Refusal): Promise<string[]> {
+    const s = stub('automation', [refusal]);
+    await expect(s.auth.authorize(get)).rejects.toThrow(Error);
+    return s.lines;
+  }
+
+  it.each<[string, () => Promise<string[]>, string[]]>([
+    [
+      'an app that refuses every token at one route: one line naming the resource, two purchases, no end',
+      async () => {
+        const s = stub('automation');
+        const target = app(tokenRefused(), tokenRefused());
+        const answer = await sendWithServiceAuth(s.auth, get, target.send);
+        expect([
+          answer.status,
+          target.sent.length,
+          s.tokenRequests.length,
+        ]).toEqual([401, 2, 2]);
+        return s.lines;
+      },
+      [freshTokenLine('automation')],
+    ],
+    [
+      "a revoked automation: the token endpoint's line with the end words, only",
+      async () => {
+        const s = stub('automation', [
+          { error: 'invalid_client', aheadMs: 1_000 },
+        ]);
+        const target = app();
+        await expect(
+          sendWithServiceAuth(s.auth, get, target.send),
+        ).rejects.toThrow(ENDED_AUTOMATION_LINE);
+        expect(target.sent).toEqual([]);
+        return s.lines;
+      },
+      [ENDED_AUTOMATION_LINE],
+    ],
+    [
+      'a revoked runner holding a live token: no line at the first 401, then the end with the re-pair, then the signature line, each once',
+      async () => {
+        const ended: Refusal = { error: 'invalid_client', aheadMs: 0 };
+        const s = stub('deployment', ['token', ended, ended]);
+        await s.auth.authorize(get);
+        const target = app(
+          tokenRefused(),
+          signatureRefused(),
+          signatureRefused(),
+        );
+        await sendWithServiceAuth(s.auth, get, target.send);
+        await sendWithServiceAuth(s.auth, get, target.send);
+        expect(target.sent.map((headers) => headers.Authorization)).toEqual([
+          'DPoP tok-1',
+          undefined,
+          undefined,
+        ]);
+        return s.lines;
+      },
+      [ENDED_RUNNER_LINE, SIGNING_LINE, SIGNED_REFUSED_LINE],
+    ],
+    [
+      'a caller that does not retry: no line at the first 401, the fresh-token line at its next answer',
+      async () => {
+        const s = stub();
+        const target = app(tokenRefused(), tokenRefused());
+        const checkIn = async () => {
+          s.auth.answered(await target.send(await s.auth.authorize(get)));
+        };
+        await checkIn();
+        expect(s.lines).toEqual([]);
+        await checkIn();
+        return s.lines;
+      },
+      [freshTokenLine('runner')],
+    ],
+    [
+      'invalid_client 27 s ahead of the auth server: no clock note',
+      () => refusedPurchaseLines({ error: 'invalid_client', aheadMs: 27_000 }),
+      [ENDED_AUTOMATION_LINE],
+    ],
+    [
+      'invalid_client 29 s ahead of the auth server: the clock note',
+      () => refusedPurchaseLines({ error: 'invalid_client', aheadMs: 29_000 }),
+      [`${ENDED_AUTOMATION_LINE}; this clock is +29 s off the auth server's`],
+    ],
+    [
+      'invalid_client 29 s behind the auth server: the clock note',
+      () => refusedPurchaseLines({ error: 'invalid_client', aheadMs: -29_000 }),
+      [`${ENDED_AUTOMATION_LINE}; this clock is -29 s off the auth server's`],
+    ],
+    [
+      'invalid_dpop_proof 57 s ahead of the auth server: no clock note',
+      () =>
+        refusedPurchaseLines({ error: 'invalid_dpop_proof', aheadMs: 57_000 }),
+      [PROOF_REFUSED_LINE],
+    ],
+    [
+      'invalid_dpop_proof 59 s ahead of the auth server: the clock note',
+      () =>
+        refusedPurchaseLines({ error: 'invalid_dpop_proof', aheadMs: 59_000 }),
+      [`${PROOF_REFUSED_LINE}; this clock is +59 s off the auth server's`],
+    ],
+  ])('names a refusal by what it holds: %s', async (_name, run, lines) => {
+    expect(await run()).toEqual(lines);
+  });
+
   it.each<[string, ServiceTargetKind, Record<string, string>, string]>([
     [
       "a runner's, with the answer's Date",
       'deployment',
       { Date: new Date(T0 - 90_000).toUTCString() },
       "The app refused this runner's DPoP proof (HTTP 401): this clock is off or the request URL is not the app's; this clock is +90 s off the app's; pairing again does not help",
+    ],
+    [
+      "a runner's, 57 s off the app's: inside the proof's window, no note",
+      'deployment',
+      { Date: new Date(T0 - 57_000).toUTCString() },
+      "The app refused this runner's DPoP proof (HTTP 401): this clock is off or the request URL is not the app's; pairing again does not help",
+    ],
+    [
+      "a runner's, 59 s off the app's",
+      'deployment',
+      { Date: new Date(T0 - 59_000).toUTCString() },
+      "The app refused this runner's DPoP proof (HTTP 401): this clock is off or the request URL is not the app's; this clock is +59 s off the app's; pairing again does not help",
     ],
     [
       "a runner's, with no Date",
