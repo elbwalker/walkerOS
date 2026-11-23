@@ -45,6 +45,7 @@
     "@walkeros/server-destination-meta": "^4.9.0",
     "@walkeros/server-destination-mixpanel": "^4.9.0",
     "@walkeros/server-destination-mparticle": "^4.9.0",
+    "@walkeros/server-destination-openai-ads": "^4.9.0",
     "@walkeros/server-destination-pinterest": "^4.9.0",
     "@walkeros/server-destination-piwikpro": "^4.9.0",
     "@walkeros/server-destination-posthog": "^4.9.0",
