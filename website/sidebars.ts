@@ -498,6 +498,11 @@ const sidebars: SidebarsConfig = {
                 },
                 {
                   type: 'doc',
+                  id: 'destinations/server/reditus',
+                  className: 'sidebar-badge-server',
+                },
+                {
+                  type: 'doc',
                   id: 'destinations/server/slack',
                   className: 'sidebar-badge-server',
                 },
@@ -586,11 +591,6 @@ const sidebars: SidebarsConfig = {
                 {
                   type: 'doc',
                   id: 'destinations/server/kafka',
-                  className: 'sidebar-badge-server',
-                },
-                {
-                  type: 'doc',
-                  id: 'destinations/server/reditus',
                   className: 'sidebar-badge-server',
                 },
                 {

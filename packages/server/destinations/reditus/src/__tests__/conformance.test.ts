@@ -1,7 +1,9 @@
 import path from 'path';
-import { conformance } from '@walkeros/collector/dev';
+import { conformance, runExamples } from '@walkeros/collector/dev';
 import { destinationReditus } from '..';
 import { examples, schemas } from '../dev';
+
+const { settings } = examples.minimal;
 
 describe('reditus conformance', () => {
   beforeEach(() => {
@@ -13,9 +15,16 @@ describe('reditus conformance', () => {
       profile: 'http',
       examples: examples.step,
       schema: schemas.settings,
-      settings: examples.minimal.settings,
+      settings,
       minimal: examples.minimal,
       root: path.join(__dirname, '..', '..'),
+    });
+  });
+
+  it('runs every example: requests, vendor answers and failures', async () => {
+    await runExamples('destination', destinationReditus, examples.step, {
+      settings,
+      env: examples.env,
     });
   });
 });

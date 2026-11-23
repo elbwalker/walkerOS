@@ -60,8 +60,9 @@ export interface ConversionBody {
 
 /** POST /v1/payments: a referred customer paid */
 export interface PaymentBody {
+  /** The payment processor's payment id; a refund quotes it later */
   idempotency_key: string;
-  /** In cents */
+  /** Integer in minor units (cents) */
   amount: number;
   currency: string;
   referral_uid?: string;

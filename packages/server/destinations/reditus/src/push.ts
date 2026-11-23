@@ -1,6 +1,5 @@
 import type { CallType, ConversionBody, PaymentBody, PushFn } from './types';
-import type { WalkerOS } from '@walkeros/core';
-import { isObject, StepError } from '@walkeros/core';
+import { isObject, reportCause, StepError, stepId } from '@walkeros/core';
 import { sendServer } from '@walkeros/server-core';
 
 const DEFAULT_URL = 'https://api.getreditus.com/api';
@@ -8,55 +7,116 @@ const DEFAULT_URL = 'https://api.getreditus.com/api';
 interface Call {
   path: string;
   body: ConversionBody | PaymentBody;
-  /** HTTP status that means Reditus already has, or will never have, it */
-  accept: number;
+}
+
+/**
+ * A Reditus answer outside 2xx that is not a failure. It is told apart by
+ * the body Reditus documents for it, never by the status alone: a wrong
+ * `url` or a proxy answers the same status with another body.
+ */
+interface Accepted {
+  type: CallType;
+  status: number;
+  matches: (body: unknown) => boolean;
+  /** Why nothing new was recorded, for the log line. */
+  skipped: string;
+  /** Reported as a cause at warn: the same answer can hide a mapping mistake. */
+  cause?: string;
+}
+
+/** The `details` of each entry of a `{ errors: [{ title, details }] }` body. */
+function errorDetails(body: unknown): unknown[] {
+  if (!isObject(body) || !Array.isArray(body.errors)) return [];
+  return body.errors.map((entry: unknown) =>
+    isObject(entry) ? entry.details : undefined,
+  );
+}
+
+const ACCEPTED: Accepted[] = [
+  {
+    type: 'conversion',
+    status: 409,
+    matches: (body) =>
+      isObject(body) && body.error === 'Referral already exists',
+    skipped: 'referral already exists',
+  },
+  {
+    type: 'payment',
+    status: 400,
+    matches: (body) =>
+      errorDetails(body).some(
+        (details) =>
+          isObject(details) &&
+          Array.isArray(details.idempotency_key) &&
+          details.idempotency_key.includes('has already been taken'),
+      ),
+    skipped: 'idempotency_key already taken',
+  },
+  {
+    type: 'payment',
+    status: 404,
+    matches: (body) => errorDetails(body).includes('Referral not found'),
+    skipped:
+      'referral not found (a customer who was never referred, or uid or email mapped from the wrong field)',
+    cause: 'not-referred',
+  },
+];
+
+/** The accepted answer a failed request got, if it is one. */
+function acceptedAnswer(type: CallType, error: unknown): Accepted | undefined {
+  if (!(error instanceof StepError)) return undefined;
+  const { status, body } = error;
+  return ACCEPTED.find(
+    (answer) =>
+      answer.type === type && answer.status === status && answer.matches(body),
+  );
 }
 
 const text = (value: unknown): string | undefined =>
   typeof value === 'string' && value.trim() !== '' ? value.trim() : undefined;
 
-function withoutUndefined<T extends object>(value: T): T {
-  return Object.fromEntries(
-    Object.entries(value).filter(([, item]) => item !== undefined),
-  ) as T;
-}
-
 function inputError(message: string): StepError {
-  return new StepError(message, { code: 'mapping', retryable: false });
+  return new StepError(message, { code: 'missing-input' });
 }
 
 function conversionCall(data: Record<string, unknown>): Call {
-  const body: ConversionBody = withoutUndefined({
+  const body: ConversionBody = {
     affiliate_slug: text(data.affiliate_slug),
     advocate_slug: text(data.advocate_slug),
     email: text(data.email),
     uid: text(data.uid),
     gr_id: text(data.gr_id),
-  });
+  };
   if (!body.email && !body.uid)
     throw inputError('Reditus conversion needs email or uid');
-  if (!body.gr_id && !body.affiliate_slug && !body.advocate_slug)
+  if (!body.affiliate_slug && !body.advocate_slug)
     throw inputError(
-      'Reditus conversion needs gr_id, affiliate_slug or advocate_slug',
+      'Reditus conversion needs affiliate_slug or advocate_slug',
     );
-  // 409: the referral already exists.
-  return { path: '/v2/tracking/conversion', body, accept: 409 };
+  return { path: '/v2/tracking/conversion', body };
 }
 
-function paymentCall(
-  event: WalkerOS.Event,
-  data: Record<string, unknown>,
-): Call {
-  const amount = Number(data.amount);
-  if (!Number.isFinite(amount) || amount <= 0)
-    throw inputError('Reditus payment needs a positive amount');
-  const { interval, interval_count } = data;
-  const body: PaymentBody = withoutUndefined({
-    idempotency_key: text(data.idempotency_key) ?? String(event.id),
-    amount: Math.round(amount * 100),
-    currency: (text(data.currency) ?? 'eur').toLowerCase(),
-    referral_uid: text(data.uid),
-    referral_email: text(data.email),
+function paymentCall(data: Record<string, unknown>): Call {
+  const referral_uid = text(data.uid);
+  const referral_email = text(data.email);
+  const idempotency_key = text(data.idempotency_key);
+  const currency = text(data.currency);
+  const { amount, interval, interval_count } = data;
+  if (!referral_uid && !referral_email)
+    throw inputError('Reditus payment needs uid or email');
+  if (!idempotency_key)
+    throw inputError('Reditus payment needs idempotency_key');
+  if (typeof amount !== 'number' || !Number.isInteger(amount) || amount <= 0)
+    throw inputError(
+      'Reditus payment needs amount as a positive integer in minor units',
+    );
+  if (!currency) throw inputError('Reditus payment needs currency');
+  const body: PaymentBody = {
+    idempotency_key,
+    amount,
+    currency: currency.toLowerCase(),
+    referral_uid,
+    referral_email,
     subscription_id: text(data.subscription_id),
     interval:
       interval === 'month' || interval === 'year' ? interval : undefined,
@@ -64,11 +124,8 @@ function paymentCall(
       typeof interval_count === 'number' && Number.isInteger(interval_count)
         ? interval_count
         : undefined,
-  });
-  if (!body.referral_uid && !body.referral_email)
-    throw inputError('Reditus payment needs uid or email');
-  // 404: no referral for this customer, nothing to credit.
-  return { path: '/v1/payments', body, accept: 404 };
+  };
+  return { path: '/v1/payments', body };
 }
 
 // A silent rule has no Reditus call of its own: nothing to send.
@@ -78,7 +135,7 @@ export const push: PushFn = async function (event, context) {
 
 const send: PushFn = async function (
   event,
-  { config, data, rule, env, logger },
+  { config, data, rule, env, logger, collector, id },
 ) {
   const {
     apiKey,
@@ -93,7 +150,7 @@ const send: PushFn = async function (
   const type: CallType = rule?.settings?.type ?? defaultType ?? 'conversion';
   const mapped = isObject(data) ? data : {};
   const call =
-    type === 'payment' ? paymentCall(event, mapped) : conversionCall(mapped);
+    type === 'payment' ? paymentCall(mapped) : conversionCall(mapped);
   const endpoint = `${url.replace(/\/$/, '')}${call.path}`;
 
   logger.debug('Calling Reditus API', {
@@ -112,13 +169,22 @@ const send: PushFn = async function (
       },
     });
   } catch (error) {
-    if (error instanceof StepError && error.status === call.accept) {
-      logger.debug('Reditus already has this, skipped', {
-        status: error.status,
-        eventId: event.id,
-      });
-      return;
-    }
-    throw error;
+    const accepted = acceptedAnswer(type, error);
+    if (!accepted) throw error;
+    const message = `Reditus skipped ${type}: ${accepted.skipped}`;
+    if (accepted.cause)
+      reportCause(
+        collector,
+        logger,
+        {
+          step: stepId('destination', id),
+          code: accepted.cause,
+          status: accepted.status,
+        },
+        message,
+        { event: event.name },
+        'warn',
+      );
+    else logger.debug(message, { status: accepted.status, eventId: event.id });
   }
 };
