@@ -1,22 +1,23 @@
 import type {
   Mapping as WalkerOSMapping,
   Destination as CoreDestination,
+  HashSettings,
 } from '@walkeros/core';
 import type { DestinationServer, sendServer } from '@walkeros/server-core';
+import type { HashKey } from '../hash';
 
-export interface Settings {
-  /** Conversions API key (Ads Manager > Conversions), sent as Bearer token */
+export interface Settings extends HashSettings<HashKey> {
+  /** Conversions API key (not the Advertiser API key), sent as Bearer token */
   apiKey: string;
   /** Pixel ID of the web data source, sent as the `pid` query parameter */
   pixelId: string;
-  /** Where the conversion happened. @default 'web' */
+  /**
+   * Where the conversion happened. A mapped `action_source` wins.
+   * @default 'web'
+   */
   action_source?: ActionSource;
   /** `true`: OpenAI validates the request and records nothing */
   validate_only?: boolean;
-  /** Free label for the sending integration */
-  integration_source?: string;
-  /** Endpoint without query string. @default 'https://bzr.openai.com/v1/events' */
-  url?: string;
   /**
    * Client IP, sent as user.ip_address. Resolves against { ingest, event }.
    * `false` switches it off.
@@ -72,6 +73,8 @@ export type ActionSource =
   | 'other';
 
 export type StandardEventType =
+  | 'app_installed'
+  | 'app_opened'
   | 'appointment_scheduled'
   | 'checkout_started'
   | 'contents_viewed'
@@ -95,10 +98,28 @@ export interface UserData {
   emails_sha256?: string[];
   phone_numbers_sha256?: string[];
   external_ids_sha256?: string[];
+  first_names_sha256?: string[];
+  last_names_sha256?: string[];
   obref?: string;
   countries?: string[];
+  regions?: string[];
+  cities?: string[];
+  postal_codes?: string[];
+  android_advertising_id?: string;
   user_agent?: string;
   ip_address?: string;
+}
+
+export interface ContentItem {
+  id?: string;
+  group_id?: string;
+  name?: string;
+  content_type?: string;
+  quantity?: number;
+  /** Per-unit price in integer minor units */
+  amount?: number;
+  currency?: string;
+  variant_dict?: Record<string, string>;
 }
 
 export interface EventData {
@@ -106,6 +127,7 @@ export interface EventData {
   /** Integer minor units (99.90 USD → 9990) */
   amount?: number;
   currency?: string;
+  contents?: ContentItem[];
   plan_id?: string;
 }
 
@@ -123,6 +145,6 @@ export interface ConversionEvent {
 
 export interface RequestBody {
   validate_only?: boolean;
-  integration_source?: string;
+  integration_source: string;
   events: ConversionEvent[];
 }

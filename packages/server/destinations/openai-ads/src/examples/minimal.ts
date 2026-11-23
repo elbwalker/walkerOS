@@ -6,5 +6,5 @@ import type { Flow } from '@walkeros/core';
  */
 export const minimal: Flow.MinimalExample = {
   settings: { apiKey: 's3cr3t', pixelId: 'px_abc123' },
-  secrets: { apiKey: 'OPENAI_ADS_API_KEY' },
+  secrets: { apiKey: 'OPENAI_CONVERSIONS_API_KEY' },
 };

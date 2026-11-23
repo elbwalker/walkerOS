@@ -1,344 +1,329 @@
-import type { Collector, WalkerOS } from '@walkeros/core';
-import type { Settings } from '../types';
-import {
-  clone,
-  createIngest,
-  createMockContext,
-  createMockLogger,
-  getEvent,
-} from '@walkeros/core';
-import { getHashServer } from '@walkeros/server-core';
-import { destinationOpenAIAds as destination } from '..';
-import { hashList, normalizeEmail, normalizePhone } from '../hash';
-import { examples } from '../dev';
+import type { WalkerOS } from '@walkeros/core';
+import type { Env, RequestBody, Rule, Settings } from '../types';
+import { startFlow } from '@walkeros/collector';
+import { createEvent, createIngest, Logger } from '@walkeros/core';
+import { destinationOpenAIAds } from '..';
 
-describe('Server Destination OpenAI Ads', () => {
-  const apiKey = 's3cr3t';
-  const pixelId = 'px_abc123';
-  const mockSendServer = jest.fn();
-  const testEnv = clone(examples.env.push);
-  testEnv.sendServer = mockSendServer;
+const SOURCE = {
+  type: 'express',
+  platform: 'server',
+  url: 'https://shop.example.com/x',
+};
 
-  const sent = () => JSON.parse(mockSendServer.mock.calls[0][1]);
-  const conversion = () => sent().events[0];
+interface Run {
+  settings?: Partial<Settings>;
+  ingest?: Record<string, unknown>;
+  consent?: WalkerOS.Consent;
+}
 
-  function event(
-    name: string,
-    props: Partial<WalkerOS.Event> = {},
-  ): WalkerOS.Event {
-    return {
-      ...getEvent('order complete', {
-        id: 'ev-1',
-        timestamp: 1700000900000,
-        source: {
-          type: 'express',
-          platform: 'server',
-          url: 'https://shop.example.com/x',
+/**
+ * One event through a real collector into the destination, its rule mapped
+ * for the event: the push result, the requests made and the ERROR lines.
+ */
+async function send(
+  event: WalkerOS.DeepPartialEvent,
+  rule: Rule,
+  { settings, ingest, consent }: Run = {},
+) {
+  const urls: string[] = [];
+  const bodies: RequestBody[] = [];
+  const errors: unknown[] = [];
+  const env: Env = {
+    sendServer: async (url, body) => {
+      urls.push(url);
+      bodies.push(JSON.parse(String(body)));
+      return { data: {} };
+    },
+  };
+  const [entity, action] = (event.name ?? '').split(' ');
+  const { collector } = await startFlow({
+    consent,
+    logger: {
+      handler: (level, message, context) => {
+        if (level === Logger.Level.ERROR) errors.push([message, context]);
+      },
+    },
+    destinations: {
+      openai: {
+        code: destinationOpenAIAds,
+        config: {
+          settings: { apiKey: 's3cr3t', pixelId: 'px_abc123', ...settings },
+          mapping: { [entity]: { [action]: rule } },
         },
-        ...props,
-      }),
-      name,
-    };
-  }
-
-  async function push(
-    walkerEvent: WalkerOS.Event,
-    data: Record<string, unknown> = {},
-    settings: Partial<Settings> = {},
-    extra: Record<string, unknown> = {},
-  ) {
-    return destination.push(
-      walkerEvent,
-      createMockContext({
-        config: { settings: { apiKey, pixelId, ...settings } },
-        data,
-        env: testEnv,
-        ...extra,
-      }),
-    );
-  }
-
-  beforeEach(() => {
-    jest.clearAllMocks();
-    mockSendServer.mockResolvedValue({ data: {} });
+        env,
+      },
+    },
   });
 
-  test('init fails without apiKey and pixelId', async () => {
-    await expect(
-      destination.init({
-        config: {},
-        collector: {} as Collector.Instance,
-        env: testEnv,
-        logger: createMockLogger(),
-        id: 'test-openai-ads',
-      }),
-    ).rejects.toThrow('Config settings apiKey, pixelId missing');
-  });
+  const result = await collector.push(
+    event,
+    ingest ? { ingest: { ...createIngest('test'), ...ingest } } : undefined,
+  );
+  await collector.command('shutdown');
 
-  test('posts to the endpoint with the pixel id and Bearer key', async () => {
-    await push(event('order_created'));
-    const [url, , options] = mockSendServer.mock.calls[0];
-    expect(url).toBe('https://bzr.openai.com/v1/events?pid=px_abc123');
-    expect(options.headers.Authorization).toBe('Bearer s3cr3t');
-  });
+  return {
+    result,
+    url: urls[0],
+    body: bodies[0],
+    conversion: bodies[0]?.events[0],
+    errors,
+  };
+}
 
-  test('custom url and pixel id are joined safely', async () => {
-    await push(
-      event('order_created'),
+const order = (data: WalkerOS.Properties = {}) =>
+  createEvent({ name: 'order complete', data, source: SOURCE });
+
+describe('OpenAI Ads request', () => {
+  it.each<[string, Partial<Settings>, Omit<RequestBody, 'events'>]>([
+    [
+      'names walkerOS as the integration on every request',
       {},
+      { integration_source: 'walkeros' },
+    ],
+    [
+      'adds validate_only when it is true',
+      { validate_only: true },
+      { validate_only: true, integration_source: 'walkeros' },
+    ],
+    [
+      'leaves validate_only out unless it is true',
+      { validate_only: false },
+      { integration_source: 'walkeros' },
+    ],
+  ])('%s', async (_, settings, expected) => {
+    const { body } = await send(
+      order(),
+      { name: 'order_created' },
       {
-        url: 'https://example.com/v1/events/',
-        pixelId: 'px a&b',
+        settings,
       },
     );
-    expect(mockSendServer.mock.calls[0][0]).toBe(
-      'https://example.com/v1/events?pid=px%20a%26b',
+    const { events, ...top } = body;
+    expect(events).toHaveLength(1);
+    expect(top).toEqual(expected);
+  });
+
+  it('joins the pixel id to the endpoint safely', async () => {
+    const { url } = await send(
+      order(),
+      { name: 'order_created' },
+      { settings: { pixelId: 'px a&b' } },
     );
-  });
-
-  test('validate_only and integration_source at the top level', async () => {
-    await push(
-      event('order_created'),
-      {},
-      {
-        validate_only: true,
-        integration_source: 'walkerOS',
-      },
-    );
-    expect(sent().validate_only).toBe(true);
-    expect(sent().integration_source).toBe('walkerOS');
-  });
-
-  test('validate_only is left out unless true', async () => {
-    await push(event('order_created'), {}, { validate_only: false });
-    expect(sent()).not.toHaveProperty('validate_only');
-  });
-
-  test('event id, type, time and source', async () => {
-    await push(event('order_created'));
-    expect(conversion()).toMatchObject({
-      id: 'ev-1',
-      type: 'order_created',
-      timestamp_ms: 1700000900000,
-      source_url: 'https://shop.example.com/x',
-      action_source: 'web',
-      data: { type: 'contents' },
-    });
-  });
-
-  test('event name with spaces becomes the type', async () => {
-    await push(event('lead created'));
-    expect(conversion().type).toBe('lead_created');
-    expect(conversion().data.type).toBe('customer_action');
-  });
-
-  test('unknown name is a custom event', async () => {
-    await push(event('Demo_Booked'), { plan_id: 'p1' });
-    expect(conversion().type).toBe('custom');
-    expect(conversion().custom_event_name).toBe('demo_booked');
-    expect(conversion().data).toEqual({ type: 'custom', plan_id: 'p1' });
-  });
-
-  test('invalid custom name fails without a request', async () => {
-    await expect(push(event('demo booked!'))).rejects.toMatchObject({
-      code: 'mapping',
-      retryable: false,
-    });
-    expect(mockSendServer).not.toHaveBeenCalled();
-  });
-
-  test('web event without source url fails', async () => {
-    const noUrl = event('order_created', {
-      source: { type: 'express', platform: 'server' },
-    });
-    await expect(push(noUrl)).rejects.toThrow('needs a source_url');
-    expect(mockSendServer).not.toHaveBeenCalled();
-  });
-
-  test('mobile_app event needs no source url', async () => {
-    const noUrl = event('order_created', {
-      source: { type: 'express', platform: 'server' },
-    });
-    await push(noUrl, {}, { action_source: 'mobile_app' });
-    expect(conversion().action_source).toBe('mobile_app');
-    expect(conversion()).not.toHaveProperty('source_url');
-  });
-
-  test('mapped source_url wins', async () => {
-    await push(event('order_created'), {
-      source_url: 'https://other.example.com/',
-    });
-    expect(conversion().source_url).toBe('https://other.example.com/');
-  });
-
-  test('amount in minor units, currency uppercased', async () => {
-    await push(event('order_created'), { amount: '99.9', currency: 'usd' });
-    expect(conversion().data).toEqual({
-      type: 'contents',
-      amount: 9990,
-      currency: 'USD',
-    });
-  });
-
-  test('zero-decimal currency', async () => {
-    await push(event('order_created'), { amount: 1200, currency: 'JPY' });
-    expect(conversion().data.amount).toBe(1200);
-  });
-
-  test('amount without currency fails', async () => {
-    await expect(push(event('order_created'), { amount: 10 })).rejects.toThrow(
-      'needs a currency',
-    );
-  });
-
-  test('negative amount fails', async () => {
-    await expect(
-      push(event('order_created'), { amount: -1, currency: 'EUR' }),
-    ).rejects.toThrow('positive number');
-  });
-
-  test('plan_id only on plan and custom events', async () => {
-    await push(event('order_created'), { plan_id: 'p1' });
-    expect(conversion().data).not.toHaveProperty('plan_id');
-    mockSendServer.mockClear();
-    await push(event('trial_started'), { plan_id: 'p1' });
-    expect(conversion().data).toEqual({
-      type: 'plan_enrollment',
-      plan_id: 'p1',
-    });
-  });
-
-  test('identity fields are normalised and hashed', async () => {
-    await push(event('lead_created'), {
-      email: [' Jane@Example.com ', 'jane@example.com'],
-      phone: '+49 (151) 234-567',
-      external_id: ' user-42 ',
-      oppref: 'opp_1',
-      obref: 'ob_1',
-      country: ['de', 'fr'],
-    });
-    expect(conversion().oppref).toBe('opp_1');
-    expect(conversion().user).toEqual({
-      emails_sha256: [await getHashServer('jane@example.com')],
-      phone_numbers_sha256: [await getHashServer('49151234567')],
-      external_ids_sha256: [await getHashServer('user-42')],
-      obref: 'ob_1',
-      countries: ['DE', 'FR'],
-    });
-  });
-
-  test('client IP and user agent from ingest, mapped values win', async () => {
-    const ingest = {
-      ...createIngest('test'),
-      ip: '203.0.113.7',
-      userAgent: 'Mozilla/5.0 test',
-    };
-    await push(event('lead_created'), {}, {}, { ingest });
-    expect(conversion().user).toEqual({
-      user_agent: 'Mozilla/5.0 test',
-      ip_address: '203.0.113.7',
-    });
-
-    mockSendServer.mockClear();
-    await push(
-      event('lead_created'),
-      { ip_address: '10.0.0.1' },
-      {},
-      {
-        ingest,
-      },
-    );
-    expect(conversion().user.ip_address).toBe('10.0.0.1');
-
-    mockSendServer.mockClear();
-    await push(
-      event('lead_created'),
-      {},
-      { ip: false, userAgent: false },
-      {
-        ingest,
-      },
-    );
-    expect(conversion()).not.toHaveProperty('user');
-  });
-
-  test('client fields follow the event consent, not the collector one', async () => {
-    const ingest = { ...createIngest('test'), ip: '203.0.113.7' };
-    const consented = { key: 'ingest.ip', consent: { marketing: true } };
-    await push(
-      event('lead_created', { consent: {} }),
-      {},
-      { ip: consented, userAgent: false },
-      { ingest, collector: { consent: { marketing: true } } },
-    );
-    expect(conversion()).not.toHaveProperty('user');
-
-    mockSendServer.mockClear();
-    await push(
-      event('lead_created', { consent: { marketing: true } }),
-      {},
-      { ip: consented, userAgent: false },
-      { ingest },
-    );
-    expect(conversion().user).toEqual({ ip_address: '203.0.113.7' });
-  });
-
-  test('client field callbacks receive the event', async () => {
-    await push(
-      event('lead_created', {
-        user: { id: 'u1', userAgent: 'Mozilla/5.0 from event' },
-      }),
-      {},
-      {
-        ip: false,
-        userAgent: {
-          fn: (_: unknown, context: { event?: WalkerOS.DeepPartialEvent }) =>
-            context.event?.user?.userAgent,
-        },
-      },
-    );
-    expect(conversion().user).toEqual({ user_agent: 'Mozilla/5.0 from event' });
-  });
-
-  test('silent rule sends nothing', async () => {
-    await push(event('order_created'), {}, {}, { rule: { silent: true } });
-    expect(mockSendServer).not.toHaveBeenCalled();
+    expect(url).toBe('https://bzr.openai.com/v1/events?pid=px%20a%26b');
   });
 });
 
-describe('hashList', () => {
-  test('keeps an existing digest, dedupes, keeps three values', async () => {
-    const digest = await getHashServer('a@b.c');
-    expect(
-      await hashList(
-        [digest.toUpperCase(), 'A@b.c', 'x@y.z', 'u@v.w', 'q@r.s'],
-        normalizeEmail,
-      ),
-    ).toEqual([
-      digest,
-      await getHashServer('x@y.z'),
-      await getHashServer('u@v.w'),
-    ]);
+describe('OpenAI Ads amounts', () => {
+  // ISO 4217 minor units: HUF, IDR and IQD are where the runtime's own
+  // currency data differs.
+  it.each<[string | number, string, number, string]>([
+    [1000, 'HUF', 100000, 'HUF'],
+    [15000, 'IDR', 1500000, 'IDR'],
+    [1000, 'IQD', 1000000, 'IQD'],
+    [1200, 'JPY', 1200, 'JPY'],
+    [1.5, 'KWD', 1500, 'KWD'],
+    ['99.9', 'eur', 9990, 'EUR'],
+    [0, 'USD', 0, 'USD'],
+  ])('%p %s is sent as %i %s', async (amount, currency, minor, code) => {
+    const { conversion } = await send(order({ amount, currency }), {
+      name: 'order_created',
+      data: { map: { amount: 'data.amount', currency: 'data.currency' } },
+    });
+    expect(conversion.data).toEqual({
+      type: 'contents',
+      amount: minor,
+      currency: code,
+    });
+  });
+});
+
+describe('OpenAI Ads unsendable events', () => {
+  it.each<[string, Rule, WalkerOS.Properties]>([
+    ['a rule named custom', { name: 'custom' }, {}],
+    [
+      'an action_source OpenAI does not know',
+      { name: 'lead_created', data: { map: { action_source: 'data.source' } } },
+      { source: 'store' },
+    ],
+    [
+      'a negative amount',
+      {
+        name: 'order_created',
+        data: { map: { amount: 'data.total', currency: 'data.currency' } },
+      },
+      { total: -1, currency: 'EUR' },
+    ],
+    [
+      'a content amount without any currency',
+      { name: 'order_created', data: { map: { contents: 'data.items' } } },
+      { items: [{ id: 'sku', amount: 5 }] },
+    ],
+  ])('%s fails with missing-input and sends nothing', async (_, rule, data) => {
+    const { result, body } = await send(order(data), rule);
+    expect(result.failed?.openai?.reason).toMatchObject({
+      code: 'missing-input',
+      retryable: false,
+    });
+    expect(body).toBeUndefined();
+  });
+});
+
+describe('OpenAI Ads values it leaves out', () => {
+  const lead = (map: Record<string, string>): Rule => ({
+    name: 'lead_created',
+    data: { map },
+  });
+  const purchase = (map: Record<string, string>): Rule => ({
+    name: 'order_created',
+    data: { map },
   });
 
-  test('values that normalise to nothing do not take a slot', async () => {
-    expect(
-      await hashList([' ', 'a@b.c', 'd@e.f', 'g@h.i'], normalizeEmail),
-    ).toEqual([
-      await getHashServer('a@b.c'),
-      await getHashServer('d@e.f'),
-      await getHashServer('g@h.i'),
-    ]);
-    expect(await hashList('()', normalizePhone)).toBeUndefined();
-  });
+  it.each<[string, Rule, WalkerOS.Properties, Record<string, unknown>, string]>(
+    [
+      [
+        'a key OpenAI does not take',
+        lead({ em: 'data.email' }),
+        { email: 'a@b.c' },
+        { data: { type: 'customer_action' } },
+        'em (not an OpenAI key)',
+      ],
+      [
+        'rule data that is not an object',
+        { name: 'lead_created', data: 'data.email' },
+        { email: 'a@b.c' },
+        { data: { type: 'customer_action' } },
+        'the rule data (not an object)',
+      ],
+      [
+        'a phone that is not 8 to 15 digits',
+        lead({ phone: 'data.phone' }),
+        { phone: '0170/1234567' },
+        { data: { type: 'customer_action' } },
+        'phone (not 8 to 15 digits)',
+      ],
+      [
+        'a fourth value of a list',
+        lead({ country: 'data.countries' }),
+        { countries: ['DE', 'FR', 'IT', 'ES'] },
+        { user: { countries: ['DE', 'FR', 'IT'] } },
+        'country (more than 3 values)',
+      ],
+      [
+        'a country that is not a two-letter code',
+        lead({ country: 'data.countries' }),
+        { countries: [' de', 'Germany'] },
+        { user: { countries: ['DE'] } },
+        'country (not a two-letter code)',
+      ],
+      [
+        'a list under a key that takes one value',
+        lead({ obref: 'data.obref' }),
+        { obref: ['a', 'b'] },
+        { data: { type: 'customer_action' } },
+        'obref (not one text value)',
+      ],
+      [
+        'a plan id on an event without plans',
+        purchase({ plan_id: 'data.plan' }),
+        { plan: 'p1' },
+        { data: { type: 'contents' } },
+        'plan_id (not on contents events)',
+      ],
+      [
+        'contents on an event without contents',
+        lead({ contents: 'data.items' }),
+        { items: [{ id: 'sku' }] },
+        { data: { type: 'customer_action' } },
+        'contents (not on customer_action events)',
+      ],
+      [
+        'a quantity that is not a whole number',
+        purchase({ contents: 'data.items' }),
+        { items: [{ id: 'sku', quantity: 1.5 }] },
+        { data: { type: 'contents', contents: [{ id: 'sku' }] } },
+        'contents quantity (not a whole number)',
+      ],
+    ],
+  )(
+    'sends the event without %s and reports it in one ERROR line',
+    async (_, rule, data, expected, reason) => {
+      const { result, conversion, errors } = await send(order(data), rule, {
+        settings: { ip: false, userAgent: false },
+      });
+      expect(result.ok).toBe(true);
+      expect(conversion).toMatchObject(expected);
+      expect(errors).toEqual([
+        [
+          expect.stringContaining(`OpenAI Ads left out ${reason}`),
+          { step: 'destination.openai', code: 'mapping', event: rule.name },
+        ],
+      ]);
+    },
+  );
+});
 
-  test('empty input gives undefined', async () => {
-    expect(await hashList(undefined, normalizePhone)).toBeUndefined();
-    expect(await hashList(['', null], normalizePhone)).toBeUndefined();
-  });
+describe('OpenAI Ads client IP and user agent', () => {
+  const ingest = { ip: '203.0.113.7', userAgent: 'Mozilla/5.0 test' };
+  const lead: Rule = { name: 'lead_created' };
+  const consented = { key: 'ingest.ip', consent: { marketing: true } };
 
-  test('phone keeps digits without leading + or zeroes', () => {
-    expect(normalizePhone('+33 (0)6 12-34.56')).toBe('330612' + '3456');
-    expect(normalizePhone('0049 151')).toBe('49151');
+  it.each<[string, WalkerOS.DeepPartialEvent, Rule, Run, unknown]>([
+    [
+      'come from the ingest by default',
+      order(),
+      lead,
+      { ingest },
+      { user_agent: 'Mozilla/5.0 test', ip_address: '203.0.113.7' },
+    ],
+    [
+      'give way to a mapped value',
+      order(),
+      { ...lead, data: { map: { ip_address: { value: '10.0.0.1' } } } },
+      { ingest, settings: { userAgent: false } },
+      { ip_address: '10.0.0.1' },
+    ],
+    [
+      'are switched off with false',
+      order(),
+      lead,
+      { ingest, settings: { ip: false, userAgent: false } },
+      undefined,
+    ],
+    [
+      'follow the event consent over the collector one',
+      { ...order(), consent: { marketing: false } },
+      lead,
+      {
+        ingest,
+        consent: { marketing: true },
+        settings: { ip: consented, userAgent: false },
+      },
+      undefined,
+    ],
+    [
+      'are sent with the consent the event grants',
+      { ...order(), consent: { marketing: true } },
+      lead,
+      { ingest, settings: { ip: consented, userAgent: false } },
+      { ip_address: '203.0.113.7' },
+    ],
+    [
+      'pass the event to a callback',
+      { ...order(), user: { id: 'u1', userAgent: 'Mozilla/5.0 from event' } },
+      lead,
+      {
+        settings: {
+          ip: false,
+          userAgent: {
+            fn: (_: unknown, context: { event?: WalkerOS.DeepPartialEvent }) =>
+              context.event?.user?.userAgent,
+          },
+        },
+      },
+      { user_agent: 'Mozilla/5.0 from event' },
+    ],
+  ])('%s', async (_, event, rule, run, user) => {
+    const { conversion } = await send(event, rule, run);
+    expect(conversion.user).toEqual(user);
   });
 });

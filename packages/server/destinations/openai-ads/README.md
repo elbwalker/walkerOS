@@ -7,8 +7,8 @@
 # @walkeros/server-destination-openai-ads
 
 Server-side conversions to the OpenAI Ads (ChatGPT ads) Conversions API, with
-hashed identity fields, the `oppref` click reference and deduplication on the
-walkerOS event id.
+hashed identity fields, the `oppref` click reference and amounts in ISO 4217
+minor units.
 
 [Documentation](https://www.walkeros.io/docs/destinations/server/openai-ads)
 &bull;
@@ -35,7 +35,7 @@ npm install @walkeros/server-destination-openai-ads
           "package": "@walkeros/server-destination-openai-ads",
           "config": {
             "settings": {
-              "apiKey": "$secret.OPENAI_ADS_API_KEY",
+              "apiKey": "$secret.OPENAI_CONVERSIONS_API_KEY",
               "pixelId": "YOUR_PIXEL_ID"
             }
           }
@@ -45,6 +45,11 @@ npm install @walkeros/server-destination-openai-ads
   }
 }
 ```
+
+`apiKey` is the Conversions API key from Ads Manager, not the Advertiser API
+key. Without a `mapping`, page views, product views, product adds and completed
+orders are sent as `page_viewed`, `contents_viewed`, `items_added` and
+`order_created`, and every other event is ignored.
 
 This quick start sets no consent: add `consent: { marketing: true }` to `config`
 before you go live, see the docs.

@@ -22,56 +22,70 @@ Server-side conversions to the OpenAI Ads Conversions API, the conversion endpoi
   flowMap={{
     destinations: { default: { label: 'Destination', text: 'OpenAI Ads', highlight: true } },
   }}
-  post={<>Sends one event per request to <code>{'POST https://bzr.openai.com/v1/events?pid=<pixelId>'}</code> with the Conversions API key as Bearer token, using raw HTTP (no SDK). Email, phone and external id are normalised and SHA-256 hashed before sending. Each event carries the walkerOS event id, which OpenAI uses to deduplicate it.</>}
+  post={<>Sends one event per request to <code>{'POST https://bzr.openai.com/v1/events?pid=<pixelId>'}</code> with the Conversions API key as Bearer token, using raw HTTP (no SDK). Every request names walkerOS as its <code>integration_source</code>, as OpenAI asks integrations to. Email, phone, external id and names are normalised and SHA-256 hashed before sending.</>}
 />
 
 ## Installation
 
 <Quickstart data={data} />
 
+The `apiKey` is the Conversions API key from the conversions tab in Ads Manager, not the Advertiser API key.
+
 <Configuration type="destination" data={data} />
 
 ## Event types
 
-The mapped event name is the OpenAI event type; a space becomes `_`. Standard types and the shape of their `data`:
+The rule's `name` is the OpenAI event type; a space becomes `_`. Standard types and the shape of their `data`:
 
 | Type | `data.type` |
 |---|---|
 | `appointment_scheduled`, `lead_created`, `registration_completed` | `customer_action` |
+| `app_installed`, `app_opened` (need `action_source` `mobile_app`) | `customer_action` |
 | `checkout_started`, `contents_viewed`, `items_added`, `order_created`, `page_viewed` | `contents` |
 | `subscription_created`, `trial_started` | `plan_enrollment` |
 
-Any other name is sent as `type: "custom"` with that name, lowercased, as `custom_event_name` (lowercase letters, digits, `_` and `-`, at most 64 characters). An invalid name fails the push without a request.
+Any other name is sent as `type: "custom"` with that name, lowercased, as `custom_event_name` (letters, digits, `_` and `-`, at most 64 characters, and not `custom`).
 
-<CodeSnippet
-  code={`"mapping": {
-  "order": { "complete": { "name": "order_created", "data": { "map": {
-    "amount": "data.total",
-    "currency": "data.currency",
-    "email": "user.email",
-    "oppref": "globals.oppref"
-  } } } },
-  "demo": { "booked": { "name": "demo_booked" } }
-}`}
-  language="json"
-/>
+Without a `mapping` in your config, the destination uses its own rules: `page view` is sent as `page_viewed`, `product view` as `contents_viewed`, `product add` as `items_added` and `order complete` as `order_created`, each with the amounts and contents the Page view, Product view, Add to cart and Purchase examples above show, and every other event is ignored. A `mapping` in your config replaces these rules as a whole, so copy the rules you keep from those examples. An event whose rule has no `name` cannot be sent and fails.
 
 ## Mapped data
 
+A rule's `data` maps these keys:
+
 | Field | Sent as |
 |---|---|
-| `email` | `user.emails_sha256` (trimmed, lowercased, SHA-256) |
-| `phone` | `user.phone_numbers_sha256` (digits with country code, no leading `+` or zeroes, SHA-256) |
-| `external_id` | `user.external_ids_sha256` (trimmed, SHA-256) |
+| `id` | `id`, OpenAI's deduplication id (default: the walkerOS event id) |
+| `action_source` | `action_source` (default: `settings.action_source`, else `web`) |
+| `source_url` | `source_url` (default: `event.source.url`), required for `web` |
 | `oppref` | `oppref`, the OpenAI click reference from the landing URL, unchanged |
+| `email`, `phone`, `external_id`, `first_name`, `last_name` | `user.emails_sha256`, `user.phone_numbers_sha256`, `user.external_ids_sha256`, `user.first_names_sha256`, `user.last_names_sha256` (see [Hashing](#hashing)) |
 | `obref` | `user.obref`, the OpenAI pixel's `__obref` cookie, unchanged |
-| `country` | `user.countries`, uppercased |
+| `country` | `user.countries`, two-letter codes, uppercased |
+| `region`, `city`, `postal_code` | `user.regions`, `user.cities`, `user.postal_codes` (in clear) |
+| `android_advertising_id` | `user.android_advertising_id` (in clear) |
 | `user_agent`, `ip_address` | `user.user_agent`, `user.ip_address` (in clear) |
-| `amount`, `currency` | `data.amount` in integer minor units (99.90 USD is `9990`), `data.currency` uppercased |
-| `plan_id` | `data.plan_id`, on `plan_enrollment` and custom events |
-| `source_url` | `source_url` (default: `event.source.url`) |
+| `amount`, `currency` | `data.amount` in the ISO 4217 minor unit of `data.currency` (99.90 USD is `9990`, 1000 HUF is `100000`), `data.currency` uppercased |
+| `contents` | `data.contents`, a list of items with `id`, `group_id`, `name`, `content_type`, `quantity` (a whole number), `amount` (per unit, in minor units of the item's `currency` or the event's) and `variant_dict`; not on `customer_action` types |
+| `plan_id` | `data.plan_id`, on `plan_enrollment` and custom types |
 
-`email`, `phone`, `external_id` and `country` take a string or a list; at most three values are sent per field. A value that already is a SHA-256 hex digest is sent as it is, never hashed twice. Map personal data only to these keys.
+The user fields take a string or a list, with at most three values each. A mapped value the destination cannot send is left out and reported in one ERROR line: a key not in this table, a fourth value of a list, a phone that is not 8 to 15 digits, a country that is not a two-letter code, `contents` or `plan_id` on a type that does not take them. An `amount` whose `currency` is missing or not an ISO 4217 code cannot be sent in minor units and fails the event.
+
+OpenAI deduplicates on the Pixel ID, the event type (the `custom_event_name` for custom events) and `id`. If the OpenAI pixel tracks the same conversion in the browser, map the same id it sends as `event_id`, such as the order id:
+
+<StepExample example={data.examples.step.purchaseWithMatchKeys} />
+
+## Hashing
+
+The destination normalizes and SHA-256 hashes these keys, a list item by item. An empty value, or one that is empty after normalization, is left out.
+
+| Key | Normalization before hashing |
+|---|---|
+| `email` | Trim and lowercase. |
+| `phone` | Remove whitespace, parentheses, periods and hyphens, then a leading `+` and leading zeroes. The result must be 8 to 15 digits with the country calling code: `+1 (415) 555-2671` becomes `14155552671`. |
+| `external_id` | Trim; the case is kept. |
+| `first_name`, `last_name` | Lowercase, remove whitespace and ASCII punctuation; accented and non-Latin letters are kept (`O'Connor` becomes `oconnor`, `José` becomes `josé`). |
+
+If a value is already hashed, add its key to `doNotHash`: the destination sends it exactly as mapped, so it must already be a SHA-256 digest. Map personal data only to these keys.
 
 ## Client IP and user agent
 
@@ -79,29 +93,13 @@ The destination sends the client IP as `user.ip_address` and the user agent as `
 
 ## Consent
 
-The quickstart sets no `config.consent`, so OpenAI Ads receives every event, whatever consent the event carries. Add `consent: { marketing: true }` to `config`, next to `settings`, to send only events with marketing consent (see [Gate a destination with consent](/docs/guides/consent#gate-a-destination-with-consent)).
-
-## Failures
-
-- A web event (`action_source` `web`, the default) without a source URL, an `amount` without `currency`, a negative or non-numeric amount, or an invalid custom name fails with the code `mapping`, marked not retryable, and nothing is sent.
-- A response outside the 2xx range, a network error or no answer within 5 seconds fails with `transport` (with the HTTP status) or `timeout`, and the event goes to the dead-letter queue. 429 and 5xx are marked retryable, other 4xx not; nothing resends the event by itself.
-- Without `apiKey` or `pixelId` the destination does not start: every push answers `failed` with the code `config`.
-- A rule with `silent: true` sends nothing.
+The quickstart sets no `config.consent`, so OpenAI Ads receives every event, whatever consent the event carries. To send only events with consent, add `consent: { marketing: true }` to `config`, next to `settings` (with several keys listed, one granted key is enough). An event without that consent is skipped or queued, depending on the collector's `consentDenied`. Server flows built by the CLI skip it and count it in `skipped`. With `startFlow` it waits in the destination's queue by default: a later event that carries consent does not release it, and only a `walker consent` command does, which then sends the waiting events of every user at once. Pass `consentDenied: 'skip'` to `startFlow` to skip such events instead (see [Gate a destination with consent](/docs/guides/consent#gate-a-destination-with-consent) and [consent-denied events on a server](/docs/collector#consent-denied-events-on-a-server)).
 
 OpenAI refuses events older than 7 days or more than 10 minutes in the future: `timestamp_ms` is the walkerOS event timestamp.
 
 ## Testing
 
-Set `validate_only: true` in settings: OpenAI validates each request and records nothing.
-
-<CodeSnippet
-  code={`"settings": {
-  "apiKey": "$secret.OPENAI_ADS_API_KEY",
-  "pixelId": "YOUR_PIXEL_ID",
-  "validate_only": true
-}`}
-  language="json"
-/>
+Set `validate_only: true` in settings: OpenAI validates each request and records nothing. Validated events do not show in OpenAI's event monitoring, and a flow left with `validate_only: true` records no conversions while every push succeeds.
 
 ## Links
 

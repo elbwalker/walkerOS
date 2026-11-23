@@ -1,4 +1,5 @@
 import { schemas, z } from '@walkeros/core/dev';
+import { normalizers } from '../hash';
 import { ActionSourceSchema } from './primitives';
 
 const InputSchema = z.union([
@@ -12,7 +13,7 @@ export const SettingsSchema = z
       .string()
       .min(1)
       .describe(
-        'Conversions API key from Ads Manager > Conversions, sent as Bearer token (like sk-ads-...)',
+        'Conversions API key from Ads Manager > Conversions (not the Advertiser API key), sent as Bearer token',
       ),
     pixelId: z
       .string()
@@ -21,26 +22,15 @@ export const SettingsSchema = z
         'Pixel ID of the web data source, sent as the pid query parameter (like px_abc123)',
       ),
     action_source: ActionSourceSchema.describe(
-      'Where the conversion happened: web, mobile_app, offline, physical_store, phone_call, email or other. Default: web. A web event needs a source URL.',
+      'Where the conversion happened: web, mobile_app, offline, physical_store, phone_call, email or other. Default: web. A web event needs a source URL. An action_source mapped in the rule data wins.',
     ).optional(),
     validate_only: z
       .boolean()
       .describe(
-        'true: OpenAI validates the request and records nothing (like true)',
+        'true: OpenAI validates each request and records nothing; validated events do not show in event monitoring (like true)',
       )
       .optional(),
-    integration_source: z
-      .string()
-      .regex(/^[A-Za-z0-9][A-Za-z0-9._-]{0,63}$/)
-      .describe('Label of the sending integration (like walkerOS)')
-      .optional(),
-    url: z
-      .string()
-      .url()
-      .describe(
-        'Endpoint without query string; pid is appended (like https://bzr.openai.com/v1/events)',
-      )
-      .optional(),
+    ...schemas.createHashSettingsSchema(Object.keys(normalizers)).shape,
     ip: InputSchema.describe(
       'Client IP, sent as user.ip_address. Resolves against { ingest, event }. Default: ["ingest.ip", "event.user.ip"]. false switches it off. A mapped ip_address wins.',
     ).optional(),

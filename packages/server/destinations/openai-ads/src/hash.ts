@@ -1,45 +1,57 @@
-import { getHashServer } from '@walkeros/server-core';
+import type { Normalizer } from '@walkeros/server-core';
 
-const SHA256_HEX = /^[a-f0-9]{64}$/;
+// Lowercase, without whitespace and ASCII punctuation; other characters stay.
+const name: Normalizer = (value) =>
+  value.toLowerCase().replace(/[\s\x21-\x2f\x3a-\x40\x5b-\x60\x7b-\x7e]/g, '');
 
-export const normalizeEmail = (value: string) => value.trim().toLowerCase();
-
-// Digits with country code, no leading + or zeroes.
-export const normalizePhone = (value: string) =>
+// Digits with the country calling code, without a leading + or zeroes.
+const phone: Normalizer = (value) =>
   value
     .replace(/[\s().-]/g, '')
     .replace(/^\+/, '')
     .replace(/^0+/, '');
 
-export const normalizeExternalId = (value: string) => value.trim();
+/**
+ * The mapped keys OpenAI requires hashed, with OpenAI's normalization:
+ * https://developers.openai.com/ads/conversions-api#send-user-data
+ */
+export const normalizers = {
+  email: (value) => value.trim().toLowerCase(),
+  phone,
+  external_id: (value) => value.trim(),
+  first_name: name,
+  last_name: name,
+} satisfies Record<string, Normalizer>;
 
-/** Values from a string or a list, without empty ones. */
-export function toList(value: unknown): string[] {
-  const values = Array.isArray(value) ? value : [value];
-  return values
-    .filter((item) => item !== undefined && item !== null && item !== '')
-    .map((item) => String(item));
-}
+export type HashKey = keyof typeof normalizers;
+
+export const hashKeys = Object.keys(normalizers).filter((key): key is HashKey =>
+  Object.hasOwn(normalizers, key),
+);
+
+/** The user field OpenAI takes each hashed key's digests in. */
+export const hashedFields = {
+  email: 'emails_sha256',
+  phone: 'phone_numbers_sha256',
+  external_id: 'external_ids_sha256',
+  first_name: 'first_names_sha256',
+  last_name: 'last_names_sha256',
+} as const satisfies Record<HashKey, string>;
 
 /**
- * Normalised and SHA-256 hashed, unless the value already is a SHA-256 hex
- * digest. Deduplicated, at most three values (the API limit per field).
+ * The normalizers, with a phone that is not 8 to 15 digits after
+ * normalization left out (it cannot match) and passed to `invalid`.
  */
-export async function hashList(
-  value: unknown,
-  normalize: (value: string) => string,
-): Promise<string[] | undefined> {
-  const hashed = await Promise.all(
-    toList(value).map(async (item) => {
-      const digest = item.trim().toLowerCase();
-      if (SHA256_HEX.test(digest)) return digest;
-      const normalized = normalize(item);
-      return normalized ? getHashServer(normalized) : undefined;
-    }),
-  );
-  // Values that normalise to nothing are dropped before the three-value limit.
-  const unique = [
-    ...new Set(hashed.filter((item): item is string => !!item)),
-  ].slice(0, 3);
-  return unique.length ? unique : undefined;
+export function getNormalizers(
+  invalid: (key: HashKey) => void,
+): Record<HashKey, Normalizer> {
+  return {
+    ...normalizers,
+    phone: (value) => {
+      const digits = phone(value);
+      if (/^\d{8,15}$/.test(digits)) return digits;
+      invalid('phone');
+      return '';
+    },
+  };
 }

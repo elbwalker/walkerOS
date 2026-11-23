@@ -19,6 +19,8 @@ export const ActionSourceSchema = z.enum([
  * `custom` event with that name as `custom_event_name`.
  */
 export const EventTypeSchema = z.enum([
+  'app_installed',
+  'app_opened',
   'appointment_scheduled',
   'checkout_started',
   'contents_viewed',

@@ -1,6 +1,7 @@
 import type { Destination } from './types';
 import { getConfig } from './config';
 import { push } from './push';
+import { rules } from './rules';
 
 // Types
 export * as DestinationOpenAIAds from './types';
@@ -8,7 +9,7 @@ export * as DestinationOpenAIAds from './types';
 export const destinationOpenAIAds: Destination = {
   type: 'openai-ads',
 
-  config: {},
+  config: { mapping: rules },
 
   async init({ config: partialConfig }) {
     return getConfig(partialConfig);
