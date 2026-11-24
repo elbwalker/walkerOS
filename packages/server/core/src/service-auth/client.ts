@@ -52,19 +52,21 @@ const ENDED: Record<ServiceTargetKind, string> = {
 };
 
 /**
- * How far this clock may be off either way, by the error a refusal names,
+ * How far this clock may be off either way, by the check that refused,
  * before its line notes the offset: inside the window the check passed the
- * clock, so a note would point nowhere. The auth server takes an assertion
- * for an offset in (-30 s, +30 s]: it is signed for
- * `ASSERTION_LIFETIME_SECONDS`, and the auth server takes an `exp` in the
- * future and at most 60 s ahead (the app's
- * `src/lib/auth-server/service-token.ts:177-188`). It takes a proof within
- * 60 s either way (the app's `src/lib/security/dpop.ts:19`). Each window is
- * 2 s less, for the `Date` header's whole seconds and the transit.
+ * clock, so a note would point nowhere. The walkerOS app's auth server takes
+ * an assertion for an offset in (-30 s, +30 s]: it is signed for
+ * `ASSERTION_LIFETIME_SECONDS`, and the server takes an `exp` in the future
+ * and at most 60 s ahead (its `ASSERTION_MAX_AHEAD_SECONDS`). The app and its
+ * auth server take a proof's `iat` within 60 s either way (their
+ * `DPOP_MAX_SKEW_SECONDS`), and the app a signature's `created` within 60 s
+ * either way (`verifyRequestSignature`'s default). Each window is 2 s less,
+ * for the `Date` header's whole seconds and the transit.
  */
 const CLOCK_WINDOW_SECONDS = {
-  invalid_client: 28,
-  invalid_dpop_proof: 58,
+  assertion: 28,
+  proof: 58,
+  signature: 58,
 };
 
 /**
@@ -144,12 +146,23 @@ type FailureKind = 'refused' | 'failed';
 class TokenRequestError extends Error {
   readonly kind: FailureKind;
   readonly retryAfterMs?: number;
+  /**
+   * The state its line stands for: the kind, and for a refusal its OAuth
+   * error, so a refusal for another reason (an end after a refused proof)
+   * writes its own line while a repeat, whose clock note may differ, does not.
+   */
+  readonly state: string;
 
-  constructor(message: string, kind: FailureKind, retryAfterMs?: number) {
+  constructor(
+    message: string,
+    kind: FailureKind,
+    options: { retryAfterMs?: number; error?: string } = {},
+  ) {
     super(message);
     this.name = 'TokenRequestError';
     this.kind = kind;
-    this.retryAfterMs = retryAfterMs;
+    this.retryAfterMs = options.retryAfterMs;
+    this.state = options.error ? `${kind} ${options.error}` : kind;
   }
 }
 
@@ -293,7 +306,8 @@ export function createServiceAuth(
   let failures = 0;
   let notBefore = 0;
   let lastFailure: TokenRequestError | undefined;
-  let loggedFailure: FailureKind | undefined;
+  /** The state of the last failure line written, until a purchase passes. */
+  let loggedFailure: string | undefined;
   let sending: 'token' | 'signature' | undefined;
   /** Which refused line the app's last refusal wrote, until an answer below 400 ends it. */
   let refusedAs: string | undefined;
@@ -364,19 +378,19 @@ export function createServiceAuth(
   }
 
   /**
-   * This clock against an answer's `Date`, when it carries one; for a
-   * refusal naming `error`, only past that check's window.
+   * This clock against an answer's `Date`, when it carries one and the
+   * offset is past the window of the check that refused.
    */
   function clockOffset(
     headers: Headers | undefined,
     server: string,
-    error?: keyof typeof CLOCK_WINDOW_SECONDS,
+    check: keyof typeof CLOCK_WINDOW_SECONDS,
   ): string {
     const date = headers ? headers.get('date') : null;
     const at = date === null ? NaN : Date.parse(date);
     if (Number.isNaN(at)) return '';
     const offset = Math.round((now() - at) / 1000);
-    if (error && Math.abs(offset) <= CLOCK_WINDOW_SECONDS[error]) return '';
+    if (Math.abs(offset) <= CLOCK_WINDOW_SECONDS[check]) return '';
     return `; this clock is ${offset >= 0 ? '+' : ''}${offset} s off the ${server}'s`;
   }
 
@@ -478,22 +492,26 @@ export function createServiceAuth(
         : `HTTP ${status}`;
       if (answer.error === 'invalid_client')
         throw new TokenRequestError(
-          `The auth server refused this ${HOLDER[kind]}'s credential (${what}): ${ENDED[kind]}${clockOffset(response.headers, 'auth server', answer.error)}`,
+          `The auth server refused this ${HOLDER[kind]}'s credential (${what}): ${ENDED[kind]}${clockOffset(response.headers, 'auth server', 'assertion')}`,
           'refused',
+          { error: answer.error },
         );
       const clock =
         answer.error === 'invalid_dpop_proof'
-          ? clockOffset(response.headers, 'auth server', answer.error)
+          ? clockOffset(response.headers, 'auth server', 'proof')
           : '';
       throw new TokenRequestError(
         `The auth server refused this credential's token request (${what})${clock}`,
         'refused',
+        { error: answer.error },
       );
     }
     throw new TokenRequestError(
       `The token endpoint answered HTTP ${status}`,
       'failed',
-      retryAfterMs(response.headers.get('retry-after'), now()),
+      {
+        retryAfterMs: retryAfterMs(response.headers.get('retry-after'), now()),
+      },
     );
   }
 
@@ -549,8 +567,8 @@ export function createServiceAuth(
         const asked = Math.min(failure.retryAfterMs ?? 0, BACKOFF_CAP_MS);
         notBefore = now() + Math.max(wait, asked);
         lastFailure = failure;
-        if (failure.kind !== loggedFailure) logger.error(failure.message);
-        loggedFailure = failure.kind;
+        if (failure.state !== loggedFailure) logger.error(failure.message);
+        loggedFailure = failure.state;
       }
       throw failure;
     } finally {
@@ -686,9 +704,9 @@ export function createServiceAuth(
       if (line !== refusedAs)
         logger.error(
           proof
-            ? `${line}${clockOffset(headers, 'app', 'invalid_dpop_proof')}; ${NO_NEW_CREDENTIAL[kind]}`
+            ? `${line}${clockOffset(headers, 'app', 'proof')}; ${NO_NEW_CREDENTIAL[kind]}`
             : signed
-              ? line + clockOffset(headers, 'app')
+              ? line + clockOffset(headers, 'app', 'signature')
               : line,
         );
       refusedAs = line;

@@ -21,6 +21,7 @@ const ENDED_AUTOMATION_LINE =
   "The auth server refused this automation's credential (invalid_client: The client assertion is not valid.): (revoked or ended)";
 const PROOF_REFUSED_LINE =
   "The auth server refused this credential's token request (invalid_dpop_proof: The DPoP proof is not valid.)";
+const DOWN_LINE = 'The token request failed: fetch failed';
 const SIGNING_LINE =
   'No live token: requests to https://app.walkeros.io are signed until a token is bought';
 const SIGNED_REFUSED_LINE =
@@ -435,6 +436,20 @@ describe('the service credential client', () => {
     return s.lines;
   }
 
+  /** The lines a runner writes when the app refuses its signed request, this clock `aheadMs` ahead of the answer's `Date`. */
+  async function refusedSignatureLines(aheadMs: number): Promise<string[]> {
+    const s = stub('deployment', ['down']);
+    await s.auth.authorize(get);
+    s.auth.answered({
+      status: 401,
+      headers: new Headers({
+        'WWW-Authenticate': 'DPoP algs="ES256"',
+        Date: new Date(s.now() - aheadMs).toUTCString(),
+      }),
+    });
+    return s.lines;
+  }
+
   it.each<[string, () => Promise<string[]>, string[]]>([
     [
       'an app that refuses every token at one route: one line naming the resource, two purchases, no end',
@@ -529,6 +544,35 @@ describe('the service credential client', () => {
       () =>
         refusedPurchaseLines({ error: 'invalid_dpop_proof', aheadMs: 59_000 }),
       [`${PROOF_REFUSED_LINE}; this clock is +59 s off the auth server's`],
+    ],
+    [
+      'a refused proof, then the end at the next purchase: both lines, the end never swallowed',
+      async () => {
+        const s = stub('automation', [
+          { error: 'invalid_dpop_proof', aheadMs: 0 },
+          { error: 'invalid_client', aheadMs: 0 },
+        ]);
+        await expect(s.auth.authorize(get)).rejects.toThrow(PROOF_REFUSED_LINE);
+        await expect(s.auth.authorize(get)).rejects.toThrow(
+          ENDED_AUTOMATION_LINE,
+        );
+        return s.lines;
+      },
+      [PROOF_REFUSED_LINE, ENDED_AUTOMATION_LINE],
+    ],
+    [
+      'a signed request refused 57 s off the app: no clock note',
+      () => refusedSignatureLines(57_000),
+      [DOWN_LINE, SIGNING_LINE, SIGNED_REFUSED_LINE],
+    ],
+    [
+      'a signed request refused 59 s off the app: the clock note',
+      () => refusedSignatureLines(59_000),
+      [
+        DOWN_LINE,
+        SIGNING_LINE,
+        `${SIGNED_REFUSED_LINE}; this clock is +59 s off the app's`,
+      ],
     ],
   ])('names a refusal by what it holds: %s', async (_name, run, lines) => {
     expect(await run()).toEqual(lines);
