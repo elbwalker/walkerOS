@@ -1,5 +1,37 @@
 # @walkeros/server-destination-reddit
 
+## 4.10.0
+
+### Patch Changes
+
+- 720b23b: Send the Conversions API v2.0 body (`{ test_mode?, events }`) instead
+  of the v3 `data` envelope, which v2.0 ignores. The user agent is sent as is
+  (`userAgent: false` keeps it out), identity fields are brought into Reddit's
+  canonical form per key before hashing (`phone_number` is hashed now too, and a
+  list under a hashed key is left out with an ERROR line), and the
+  `action_source` setting reaches Reddit. A 200 answer that does not count the
+  event as processed, such as `Successfully processed 0 conversion events.`, now
+  fails the push.
+- Updated dependencies [61030f8]
+- Updated dependencies [527c632]
+- Updated dependencies [0af174a]
+- Updated dependencies [61030f8]
+- Updated dependencies [61030f8]
+- Updated dependencies [777c48d]
+- Updated dependencies [4938120]
+- Updated dependencies [777c48d]
+- Updated dependencies [6d59900]
+- Updated dependencies [6d59900]
+- Updated dependencies [e3744e4]
+- Updated dependencies [28df061]
+- Updated dependencies [527c632]
+- Updated dependencies [ffd9795]
+- Updated dependencies [425c9b0]
+- Updated dependencies [777c48d]
+- Updated dependencies [f1745d7]
+  - @walkeros/core@4.10.0
+  - @walkeros/server-core@4.10.0
+
 ## 4.9.0
 
 ### Patch Changes

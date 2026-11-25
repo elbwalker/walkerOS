@@ -1,5 +1,37 @@
 # @walkeros/explorer
 
+## 4.10.0
+
+### Patch Changes
+
+- bd6fa01: New design components for walk-throughs and posts: `TitleCover`,
+  `Slide`, `Captions`, `StepMarker`, `EndCard` and `Terminal`, built on the
+  design tokens. `TaggingViz` shows markup being tagged, the element lighting up
+  and the events it sends, from a script and a time; the home page demo now runs
+  on it, a caller can show some of its panes (`panes`), and a long line wraps at
+  a space. The static code view can mark lines, number them and type the whole
+  code or one line inside it (`typing`).
+- Updated dependencies [61030f8]
+- Updated dependencies [527c632]
+- Updated dependencies [0af174a]
+- Updated dependencies [61030f8]
+- Updated dependencies [61030f8]
+- Updated dependencies [777c48d]
+- Updated dependencies [777c48d]
+- Updated dependencies [6d59900]
+- Updated dependencies [6d59900]
+- Updated dependencies [e3744e4]
+- Updated dependencies [28df061]
+- Updated dependencies [ffd9795]
+- Updated dependencies [425c9b0]
+- Updated dependencies [777c48d]
+- Updated dependencies [f1745d7]
+  - @walkeros/core@4.10.0
+  - @walkeros/collector@4.10.0
+  - @walkeros/web-core@4.10.0
+  - @walkeros/web-destination-gtag@4.10.0
+  - @walkeros/web-source-browser@4.10.0
+
 ## 4.9.0
 
 ### Patch Changes

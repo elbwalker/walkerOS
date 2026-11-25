@@ -1,5 +1,36 @@
 # @walkeros/server-destination-meta
 
+## 4.10.0
+
+### Patch Changes
+
+- 0069cf2: Send the Events API 2.0 body the `/open_api/v1.3/event/track/`
+  endpoint expects (`event_source`, `event_source_id`, and `user`, `page`,
+  `event_time` in seconds per event) instead of the 1.0 `pixel_code`/`context`
+  body, which TikTok does not record. `phone_number` is sent as `phone`; email,
+  phone and external_id are normalized before hashing, and a list is hashed item
+  by item. `doNotHash` takes only these keys, whose values must already be
+  SHA-256 digests.
+- Updated dependencies [61030f8]
+- Updated dependencies [527c632]
+- Updated dependencies [0af174a]
+- Updated dependencies [61030f8]
+- Updated dependencies [61030f8]
+- Updated dependencies [777c48d]
+- Updated dependencies [4938120]
+- Updated dependencies [777c48d]
+- Updated dependencies [6d59900]
+- Updated dependencies [6d59900]
+- Updated dependencies [e3744e4]
+- Updated dependencies [28df061]
+- Updated dependencies [527c632]
+- Updated dependencies [ffd9795]
+- Updated dependencies [425c9b0]
+- Updated dependencies [777c48d]
+- Updated dependencies [f1745d7]
+  - @walkeros/core@4.10.0
+  - @walkeros/server-core@4.10.0
+
 ## 4.9.0
 
 ### Patch Changes

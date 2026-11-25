@@ -1,5 +1,46 @@
 # @walkeros/server-destination-clickhouse
 
+## 4.10.0
+
+### Patch Changes
+
+- 61030f8: `credentials` takes a `{ token }` in place of
+  `{ username, password }`, sent as `Authorization: Bearer`, for an endpoint
+  that takes one, such as a proxy in front of ClickHouse. A token beside a
+  username or password, an empty token and an `access_token` in the query of
+  `settings.url` fail init with code `config`. The `@clickhouse/client` logger
+  is off unless `settings.clickhouse.log` sets it, and a refusal of the walkerOS
+  data proxy is quoted in the failure.
+
+  Migration: a path in `settings.url` is now the path every insert is sent to.
+  Before, the client read it as the database and it overrode
+  `settings.database`. Name the database in `settings.database`.
+
+- f1745d7: A paired runner now signs its writes to walkerOS hosted ingest with
+  its own credential key, so a flow needs no ingest token: the usage report
+  signs each report when it names no token, and the ClickHouse destination signs
+  each insert when its settings set `signed: true`. Any other endpoint or
+  ClickHouse keeps its token or credentials as before and is never signed for.
+- Updated dependencies [61030f8]
+- Updated dependencies [527c632]
+- Updated dependencies [0af174a]
+- Updated dependencies [61030f8]
+- Updated dependencies [61030f8]
+- Updated dependencies [777c48d]
+- Updated dependencies [4938120]
+- Updated dependencies [777c48d]
+- Updated dependencies [6d59900]
+- Updated dependencies [6d59900]
+- Updated dependencies [e3744e4]
+- Updated dependencies [28df061]
+- Updated dependencies [527c632]
+- Updated dependencies [ffd9795]
+- Updated dependencies [425c9b0]
+- Updated dependencies [777c48d]
+- Updated dependencies [f1745d7]
+  - @walkeros/core@4.10.0
+  - @walkeros/server-core@4.10.0
+
 ## 4.9.0
 
 ### Patch Changes

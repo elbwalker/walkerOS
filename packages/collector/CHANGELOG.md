@@ -1,5 +1,122 @@
 # @walkeros/collector
 
+## 4.10.0
+
+### Minor Changes
+
+- 61030f8: `status.destinations[id].count` and `status.out` count delivered
+  events, one per event for a single push, a batch and a before-chain fan-out
+  alike. A rule's `ignore: true` now counts in
+  `status.destinations[id].ignored`, and `skipped` counts consent skips only.
+  `status.dropped` also holds the routine drops at the source and collector
+  positions (`consent`, `ignored`, `stopped`), and `destinations[id].latency` is
+  a delivery latency histogram (`LATENCY_BOUNDS_MS` and `latencyBucket` are
+  exported by `@walkeros/core`).
+
+  Migration:
+  - An alarm that sums every entry of `status.dropped` now fires on intended
+    drops. Read the `queue` and `dlq` counters for buffer overflow.
+  - A consumer that read `skipped` for rule ignores reads `ignored`.
+  - A destination's counts, failure lines and cause steps sit under `config.id`,
+    else its key. A destination whose `config.id` differs from its key now
+    counts everything under the id.
+  - A destination-level drop (a `before` chain drop, a cache hit) is still
+    counted nowhere.
+
+- 61030f8: `startFlow({ observe })`, or `collector.observe` in a flow file,
+  starts the Observe reporter: `usage` posts counters, gauges and issues every
+  `interval` (10 to 300 seconds, default 60), and `preview` posts one row per
+  event and per destination outcome, as NDJSON with a Bearer token. It is never
+  awaited on the event path, and a failing report is one ERROR line a minute. A
+  production web bundle carries no reporter; only a preview build, whose browser
+  wrap is given `observe: { preview: { url, token } }`, does. On the minimal
+  flow that build grows by 16,064 bytes raw and 6,308 gzipped. `walkeros push`
+  and simulate send nothing.
+
+  Migration:
+  - `Logger.Config.mask` is optional and `Logger.Instance.mask(text)` is
+    required. A logger built by hand needs a `mask`; `mask: (text) => text` is
+    enough.
+  - `createBatchedPoster` posts rows of any shape and returns
+    `{ push, flush, send, dropped }`; its versioned envelope, `onError` and
+    `onStatus` are gone, and `onResult` says whether a post was a page leave's
+    `keepalive` one. A page-leave body is at most `KEEPALIVE_BODY_BYTES`
+    (16,384).
+  - `redactLine` is exported from `@walkeros/core` too (`scrubSecrets` stays in
+    `@walkeros/core/node`). Both mask every `wos_` token and the credential
+    after `Bearer` or `Basic`.
+  - `FlowState.seq` and `'sampled_out'` are removed from `skipReason`; nothing
+    set them.
+
+- 61030f8: Observe v1 is removed: no `elbObserve` URL parameter, no Observe
+  sessions, no journey assembly and no trace-level capture of vendor calls. The
+  new Observe reporter replaces it (see the Observe reporter changeset).
+
+  Migration:
+  - Delete `config.observe`, `collector.observe` of the old shape, the `observe`
+    `startFlow` option, `pageObserveSlot`, `elbPreviewSession` and the `observe`
+    wrap option. `flows.<name>.config` now accepts only `platform`, `url`,
+    `settings` and `bundle`; any other key fails `walkeros validate` with
+    `UNKNOWN_KEY` at its path.
+  - `observeEnv` is now `recordEnv` and `ObservedEnv` is `RecordedEnv`, with no
+    alias. The recorder takes no `record` callback and reports no `unresolved`
+    paths, and `wrapEnv` no longer returns `unresolved`.
+  - Removed from `@walkeros/core`: `observeFromEnv`, `assembleJourneys` and the
+    journey types, `createTelemetryObserver`, the trace state helpers,
+    `Destination.Instance.calls`, `Collector.Instance.observeLevel` and
+    `FlowState.calls`. The `observers` option and `FlowState` stay.
+  - A page on the new web-core no longer strips the old `elbObserve` and
+    `elbPreviewSession` URL parameters (`elbPreview` is still stripped). The
+    preview grant verifier takes a page and its origin only (`origin` is
+    required); the `ses` and `sb` claims are gone.
+  - The runner no longer reads `WALKEROS_OBSERVE_LEVEL`, the observer variables
+    or the `WALKEROS_PREVIEW_*` intake variables, and `createHealthServer` takes
+    `(port, logger)`. The `previewGrantTargets` wrap option is removed.
+
+- e3744e4: The Observe usage report carries the memory, CPU time and event loop
+  delay of the process that runs the flow, as `runtime` rows. `runneros` fills
+  them every 10 seconds through the new `status.runtime`
+  (`Collector.RuntimeStatus`); a collector without such a host sends none, and a
+  flow that reports changes no option.
+
+### Patch Changes
+
+- 527c632: The shutdown waits for pushes in flight, and a push that arrives
+  after it began answers `ok: false` with the retryable reason `shutting-down`.
+  Pushes still running at the deadline make the command answer `ok: false` with
+  the reason `timeout`. Core gains the runner's release contracts. walker.js
+  grows by 531 gzip bytes (41,545 to 42,076, gzip level 9) for this standard
+  shutdown behaviour.
+- 777c48d: Shutdown drains within one 8 second deadline. The result names each
+  failed destination and whether its flush or its close failed, and the runner
+  exits 1 when events were lost or a destination did not close cleanly.
+
+  Migration: set the platform's grace period to at least 10 seconds. Sources
+  close first and their close counts toward the 8 seconds, so a source
+  `shutdownTimeoutMs` above 5000 takes time from the batch flush.
+
+- f1745d7: A paired runner now signs its writes to walkerOS hosted ingest with
+  its own credential key, so a flow needs no ingest token: the usage report
+  signs each report when it names no token, and the ClickHouse destination signs
+  each insert when its settings set `signed: true`. Any other endpoint or
+  ClickHouse keeps its token or credentials as before and is never signed for.
+- Updated dependencies [61030f8]
+- Updated dependencies [527c632]
+- Updated dependencies [0af174a]
+- Updated dependencies [61030f8]
+- Updated dependencies [61030f8]
+- Updated dependencies [777c48d]
+- Updated dependencies [777c48d]
+- Updated dependencies [6d59900]
+- Updated dependencies [6d59900]
+- Updated dependencies [e3744e4]
+- Updated dependencies [28df061]
+- Updated dependencies [ffd9795]
+- Updated dependencies [425c9b0]
+- Updated dependencies [777c48d]
+- Updated dependencies [f1745d7]
+  - @walkeros/core@4.10.0
+
 ## 4.9.0
 
 ### Minor Changes

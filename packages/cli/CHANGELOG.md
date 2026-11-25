@@ -1,5 +1,152 @@
 # @walkeros/cli
 
+## 4.10.0
+
+### Minor Changes
+
+- 61030f8: `startFlow({ observe })`, or `collector.observe` in a flow file,
+  starts the Observe reporter: `usage` posts counters, gauges and issues every
+  `interval` (10 to 300 seconds, default 60), and `preview` posts one row per
+  event and per destination outcome, as NDJSON with a Bearer token. It is never
+  awaited on the event path, and a failing report is one ERROR line a minute. A
+  production web bundle carries no reporter; only a preview build, whose browser
+  wrap is given `observe: { preview: { url, token } }`, does. On the minimal
+  flow that build grows by 16,064 bytes raw and 6,308 gzipped. `walkeros push`
+  and simulate send nothing.
+
+  Migration:
+  - `Logger.Config.mask` is optional and `Logger.Instance.mask(text)` is
+    required. A logger built by hand needs a `mask`; `mask: (text) => text` is
+    enough.
+  - `createBatchedPoster` posts rows of any shape and returns
+    `{ push, flush, send, dropped }`; its versioned envelope, `onError` and
+    `onStatus` are gone, and `onResult` says whether a post was a page leave's
+    `keepalive` one. A page-leave body is at most `KEEPALIVE_BODY_BYTES`
+    (16,384).
+  - `redactLine` is exported from `@walkeros/core` too (`scrubSecrets` stays in
+    `@walkeros/core/node`). Both mask every `wos_` token and the credential
+    after `Bearer` or `Basic`.
+  - `FlowState.seq` and `'sampled_out'` are removed from `skipReason`; nothing
+    set them.
+
+- 61030f8: Observe v1 is removed: no `elbObserve` URL parameter, no Observe
+  sessions, no journey assembly and no trace-level capture of vendor calls. The
+  new Observe reporter replaces it (see the Observe reporter changeset).
+
+  Migration:
+  - Delete `config.observe`, `collector.observe` of the old shape, the `observe`
+    `startFlow` option, `pageObserveSlot`, `elbPreviewSession` and the `observe`
+    wrap option. `flows.<name>.config` now accepts only `platform`, `url`,
+    `settings` and `bundle`; any other key fails `walkeros validate` with
+    `UNKNOWN_KEY` at its path.
+  - `observeEnv` is now `recordEnv` and `ObservedEnv` is `RecordedEnv`, with no
+    alias. The recorder takes no `record` callback and reports no `unresolved`
+    paths, and `wrapEnv` no longer returns `unresolved`.
+  - Removed from `@walkeros/core`: `observeFromEnv`, `assembleJourneys` and the
+    journey types, `createTelemetryObserver`, the trace state helpers,
+    `Destination.Instance.calls`, `Collector.Instance.observeLevel` and
+    `FlowState.calls`. The `observers` option and `FlowState` stay.
+  - A page on the new web-core no longer strips the old `elbObserve` and
+    `elbPreviewSession` URL parameters (`elbPreview` is still stripped). The
+    preview grant verifier takes a page and its origin only (`origin` is
+    required); the `ses` and `sb` claims are gone.
+  - The runner no longer reads `WALKEROS_OBSERVE_LEVEL`, the observer variables
+    or the `WALKEROS_PREVIEW_*` intake variables, and `createHealthServer` takes
+    `(port, logger)`. The `previewGrantTargets` wrap option is removed.
+
+- 425c9b0: Runners, scripts and CI now connect to the walkerOS app with one
+  credential in `WALKEROS_CREDENTIAL`: pair a runner on its flow part's
+  Self-hosted tab, or create an automation under Account, and the auth host
+  shows it once. The credential itself is never sent: it buys short-lived tokens
+  bound to its key, and a runner signs its requests when the auth server cannot
+  be reached, so it keeps serving. `walkeros auth token` prints a 1-hour bearer
+  token of an automation for `curl`.
+
+  Migration: `WALKEROS_TOKEN` and `WALKEROS_DEPLOY_TOKEN` are gone, and so are
+  `runneros start`'s `--flow-id` and `--project` and its `WALKEROS_APP_URL`,
+  `WALKEROS_PROJECT_ID`, `WALKEROS_FLOW_ID` and `WALKEROS_DEPLOYMENT_ID`, the
+  CLI's `resolveAccessToken` and the runner's `resolveRunToken` and
+  `resolveAppUrl`; set `WALKEROS_CREDENTIAL` from a pairing or an automation.
+
+### Patch Changes
+
+- 3a4d76a: The complete example flow's Data Manager step uses a numeric Google
+  Ads customer ID and conversion action ID, the format Google requires. A flow
+  copied from the example needs its own customer ID and conversion action ID in
+  the same numeric format.
+- 61030f8: A local package (`config.bundle.packages.<name>.path`) whose `main`,
+  `module`, `exports` or `bin` points outside `dist/` is copied whole (leaving
+  out `node_modules` and `.env` files at any depth, and `.turbo` and `.git` at
+  the top; type declarations and `.json` exports do not count), so a package
+  with its Node entry in `lib/` loads. A declared package whose installed copy
+  has none of its entries is now named as such ("its installed copy has no
+  <entry>") and no longer reported as unused.
+- 3a4d76a: `walkeros login` signs a person in with the walkerOS app in a
+  browser, on the sign-in host the app names (`auth.walkeros.io`), and
+  `walkeros logout` revokes that sign-in; with `--no-browser` the page after
+  Allow shows a one-time code to paste, for a container or another machine. The
+  new `resolveCredential()` export returns the credential a command would send,
+  including a `walkeros login`.
+- 3a4d76a: `walkeros bundle --manifest` takes an optional `packages` field:
+  `resolve` installs only versions published at or before a cutoff and reports
+  the tree it installed, and `tree` installs exactly a recorded tree, checked
+  against each tarball's sha512, without resolving anything.
+- 4938120: A refused service credential's line now says only what is known. When
+  the auth server refuses the credential, the line names its end (replaced,
+  revoked or ended) and, for a self-hosted runner, that it is paired again on
+  its Self-hosted tab, and an earlier refusal never hides that line. When the
+  app refuses a token the auth server had just issued, the line names the
+  resource the credential's tokens are for and no end. The note on how far this
+  clock is off shows only past what the refusing check allows.
+- 777c48d: A server artifact now names the secrets and environment values its
+  flow reads. The runner sets only those names, refuses a reserved or already
+  set name, masks every declared value and reports its release. A name the app
+  delivers that the flow reads only from code (a `$code:` value, or a package
+  that reads `process.env` itself, such as an SDK's default credential name) is
+  no longer set. The reserved names include every `LD_` and `DYLD_` name.
+
+  Migration: a name that is both in the environment and in the app now stops the
+  boot, so keep one source. App values are now set after the artifact is
+  imported and before it starts, so a package that reads such a name at import
+  time no longer sees it, while inline code is not affected.
+
+- 6d59900: A remote runner fetches the web files its server release lists and
+  replaces them with no restart when a web part is released. A web file is
+  checked against its own release before it is placed, and a fetch that fails
+  keeps the file that serves.
+- ffd9795: A server flow lists the web flows it serves in `config.bundle.flows`.
+  `walkeros bundle`, `flow_bundle` and manifest builds build each one beside the
+  server bundle or into its archive, and a manifest can upload each as an output
+  of its own. `walkeros validate` checks the listing.
+- f1745d7: A paired runner now signs its writes to walkerOS hosted ingest with
+  its own credential key, so a flow needs no ingest token: the usage report
+  signs each report when it names no token, and the ClickHouse destination signs
+  each insert when its settings set `signed: true`. Any other endpoint or
+  ClickHouse keeps its token or credentials as before and is never signed for.
+- Updated dependencies [61030f8]
+- Updated dependencies [527c632]
+- Updated dependencies [0af174a]
+- Updated dependencies [61030f8]
+- Updated dependencies [61030f8]
+- Updated dependencies [777c48d]
+- Updated dependencies [4938120]
+- Updated dependencies [777c48d]
+- Updated dependencies [6d59900]
+- Updated dependencies [6d59900]
+- Updated dependencies [e3744e4]
+- Updated dependencies [28df061]
+- Updated dependencies [527c632]
+- Updated dependencies [ffd9795]
+- Updated dependencies [425c9b0]
+- Updated dependencies [777c48d]
+- Updated dependencies [f1745d7]
+  - @walkeros/core@4.10.0
+  - @walkeros/collector@4.10.0
+  - @walkeros/web-core@4.10.0
+  - @walkeros/server-core@4.10.0
+  - @walkeros/server-destination-api@4.10.0
+  - @walkeros/transformer-validate@4.10.0
+
 ## 4.9.0
 
 ### Patch Changes
