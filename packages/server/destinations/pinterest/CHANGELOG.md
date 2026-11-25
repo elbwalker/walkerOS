@@ -1,5 +1,40 @@
 # @walkeros/server-destination-pinterest
 
+## 4.10.0
+
+### Patch Changes
+
+- 28df061: The Meta, Bing, Pinterest, Snapchat, X, LinkedIn and Criteo server
+  destinations leave out an empty value under a key they hash, so an X event
+  whose only primary identifier is a blank email or phone, or a LinkedIn event
+  whose only one is a blank email, now fails with `missing-input`. Snapchat
+  hashes a list item by item, and a list under a key that takes one value (Bing
+  `em` and `ph`, Snapchat `external_id`, X `email` and `phone`, LinkedIn and
+  Criteo `email`) is left out with an ERROR line. `doNotHash` takes values that
+  are already SHA-256 digests and sends them as mapped, validation refuses a key
+  the destination does not hash, and Criteo no longer detects digests: use
+  `doNotHash: ['email']` for a SHA-256 digest (sent without the `md5` and
+  `sha256_md5` keys) and map the raw email instead of an MD5 digest.
+- Updated dependencies [61030f8]
+- Updated dependencies [527c632]
+- Updated dependencies [0af174a]
+- Updated dependencies [61030f8]
+- Updated dependencies [61030f8]
+- Updated dependencies [777c48d]
+- Updated dependencies [4938120]
+- Updated dependencies [777c48d]
+- Updated dependencies [6d59900]
+- Updated dependencies [6d59900]
+- Updated dependencies [e3744e4]
+- Updated dependencies [28df061]
+- Updated dependencies [527c632]
+- Updated dependencies [ffd9795]
+- Updated dependencies [425c9b0]
+- Updated dependencies [777c48d]
+- Updated dependencies [f1745d7]
+  - @walkeros/core@4.10.0
+  - @walkeros/server-core@4.10.0
+
 ## 4.9.0
 
 ### Patch Changes

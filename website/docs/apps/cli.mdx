@@ -1802,9 +1802,9 @@ With `WALKEROS_CREDENTIAL` set, the last line reads `Credential: WALKEROS_CREDEN
 | Code | Meaning |
 |------|---------|
 | `0` | The app answered with any 2xx status |
-| `1` | The app answered with any other HTTP status. The error body is still printed on stdout, and one line on stderr names the status and the app's message; for a 401 or 403 to `WALKEROS_CREDENTIAL` that one line is the credential's own (`The app refused this automation's credential ...`). Also: `WALKEROS_CREDENTIAL` is for another app than the app URL set, and nothing is sent |
+| `1` | The app answered with any other HTTP status. The error body is still printed on stdout, and one line on stderr names the status and the app's message; for a 403 to `WALKEROS_CREDENTIAL` that one line is the credential's own (`The app's route refused this automation's credential ...`). Also: `WALKEROS_CREDENTIAL` is for another app than the app URL set, and nothing is sent |
 | `2` | Usage error (unknown method, `DELETE` without `--yes`, an unfilled placeholder, an unreadable `--data` file). Nothing is sent |
-| `3` | No usable credential (none, an unreadable `WALKEROS_CREDENTIAL`, or no token for it), or the app answered 401 |
+| `3` | No usable credential (none, an unreadable `WALKEROS_CREDENTIAL`, or no token for it), or the app answered 401. For `WALKEROS_CREDENTIAL` the line says which: `The auth server refused this automation's credential (...): (revoked or ended)` when it can buy no token, or `The app refused a token the auth server had just issued for this automation's credential ...` when the route takes none of its tokens; that line names the resource they are for |
 | `4` | The app could not be reached, or the connection broke while the answer was arriving |
 
 ### List operations

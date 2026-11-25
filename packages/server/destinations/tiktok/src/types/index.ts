@@ -1,25 +1,26 @@
 import type {
   Mapping as WalkerOSMapping,
   Destination as CoreDestination,
+  HashSettings,
 } from '@walkeros/core';
 import type { DestinationServer, sendServer } from '@walkeros/server-core';
+import type { HashKey } from '../hash';
 
-export interface Settings {
+export interface Settings extends HashSettings<HashKey> {
   pixelCode: string;
   accessToken: string;
   url?: string;
   test_event_code?: string;
-  doNotHash?: string[];
   user_data?: WalkerOSMapping.Map;
   partner_name?: string;
   /**
-   * Client IP, sent as context.ip. Resolves against { ingest, event }.
+   * Client IP, sent as user.ip. Resolves against { ingest, event }.
    * `false` switches it off.
    * @default ['ingest.ip', 'event.user.ip']
    */
   ip?: WalkerOSMapping.Value | false;
   /**
-   * Client user agent, sent as context.user_agent. Resolves against
+   * Client user agent, sent as user.user_agent. Resolves against
    * { ingest, event }. `false` switches it off.
    * @default ['ingest.userAgent', 'event.user.userAgent']
    */
@@ -54,9 +55,10 @@ export type PushEvents = DestinationServer.PushEvents<Mapping>;
 export type Rule = WalkerOSMapping.Rule<Mapping>;
 export type Rules = WalkerOSMapping.Rules<Rule>;
 
-// TikTok Events API Request Body
+// TikTok Events API 2.0 request body (POST /open_api/v1.3/event/track/)
 export interface RequestBody {
-  pixel_code: string;
+  event_source: 'web';
+  event_source_id: string;
   partner_name?: string;
   test_event_code?: string;
   data: EventData[];
@@ -66,39 +68,32 @@ export interface RequestBody {
 export interface EventData {
   event: string;
   event_id: string;
-  timestamp: string;
-  context?: EventContext;
+  /** Unix time in seconds */
+  event_time: number;
+  user?: UserData;
+  page?: PageContext;
   properties?: Record<string, unknown>;
 }
 
-// Context object within each event
-export interface EventContext {
-  ip?: string;
-  user_agent?: string;
-  user?: UserData;
-  page?: PageContext;
-  ad?: AdContext;
-}
-
-// User identity fields
+// User identity and client fields
 export interface UserData {
-  email?: string;
-  phone_number?: string;
-  external_id?: string;
+  /** A list is hashed item by item and sent as a list */
+  email?: string | string[];
+  /** Sent as `phone`; `phone_number` is accepted as a mapping key */
+  phone?: string | string[];
+  phone_number?: string | string[];
+  external_id?: string | string[];
   ttp?: string;
   ttclid?: string;
   locale?: string;
+  ip?: string;
+  user_agent?: string;
 }
 
 // Page context
 export interface PageContext {
   url?: string;
   referrer?: string;
-}
-
-// Ad attribution context
-export interface AdContext {
-  callback?: string;
 }
 
 // TikTok API response

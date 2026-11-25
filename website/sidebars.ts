@@ -443,6 +443,11 @@ const sidebars: SidebarsConfig = {
                 },
                 {
                   type: 'doc',
+                  id: 'destinations/server/gravity',
+                  className: 'sidebar-badge-server',
+                },
+                {
+                  type: 'doc',
                   id: 'destinations/server/hubspot',
                   className: 'sidebar-badge-server',
                 },
@@ -478,12 +483,22 @@ const sidebars: SidebarsConfig = {
                 },
                 {
                   type: 'doc',
+                  id: 'destinations/server/openai-ads',
+                  className: 'sidebar-badge-server',
+                },
+                {
+                  type: 'doc',
                   id: 'destinations/server/pinterest',
                   className: 'sidebar-badge-server',
                 },
                 {
                   type: 'doc',
                   id: 'destinations/server/reddit',
+                  className: 'sidebar-badge-server',
+                },
+                {
+                  type: 'doc',
+                  id: 'destinations/server/reditus',
                   className: 'sidebar-badge-server',
                 },
                 {
@@ -556,6 +571,11 @@ const sidebars: SidebarsConfig = {
                 {
                   type: 'doc',
                   id: 'destinations/server/file',
+                  className: 'sidebar-badge-server',
+                },
+                {
+                  type: 'doc',
+                  id: 'destinations/server/ga4',
                   className: 'sidebar-badge-server',
                 },
                 {

@@ -1,10 +1,12 @@
 import type {
   Mapping as WalkerOSMapping,
   Destination as CoreDestination,
+  HashSettings,
 } from '@walkeros/core';
 import type { DestinationServer, sendServer } from '@walkeros/server-core';
+import type { HashKey } from '../hash';
 
-export interface Settings {
+export interface Settings extends HashSettings<HashKey> {
   /** Criteo Partner ID (numeric string, provided by Criteo) */
   partnerId: string;
   /** Caller ID for user mapping (provided by Criteo) */

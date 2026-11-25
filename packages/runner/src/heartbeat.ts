@@ -289,7 +289,8 @@ export function createHeartbeat(
       }
 
       // A 401 or 403 is the credential's refusal: the client wrote its line
-      // (replaced, revoked or ended) once, and the runner keeps serving.
+      // once, naming an end only where the token endpoint refused the
+      // credential, and the runner keeps serving.
       if (!response.ok && response.status !== 401 && response.status !== 403) {
         // Nothing is lost (the deltas carry over), but the app did not take
         // this beat, so the operator should know.

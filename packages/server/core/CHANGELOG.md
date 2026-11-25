@@ -1,5 +1,74 @@
 # @walkeros/server-core
 
+## 4.10.0
+
+### Minor Changes
+
+- 425c9b0: Runners, scripts and CI now connect to the walkerOS app with one
+  credential in `WALKEROS_CREDENTIAL`: pair a runner on its flow part's
+  Self-hosted tab, or create an automation under Account, and the auth host
+  shows it once. The credential itself is never sent: it buys short-lived tokens
+  bound to its key, and a runner signs its requests when the auth server cannot
+  be reached, so it keeps serving. `walkeros auth token` prints a 1-hour bearer
+  token of an automation for `curl`.
+
+  Migration: `WALKEROS_TOKEN` and `WALKEROS_DEPLOY_TOKEN` are gone, and so are
+  `runneros start`'s `--flow-id` and `--project` and its `WALKEROS_APP_URL`,
+  `WALKEROS_PROJECT_ID`, `WALKEROS_FLOW_ID` and `WALKEROS_DEPLOYMENT_ID`, the
+  CLI's `resolveAccessToken` and the runner's `resolveRunToken` and
+  `resolveAppUrl`; set `WALKEROS_CREDENTIAL` from a pairing or an automation.
+
+### Patch Changes
+
+- 4938120: A refused service credential's line now says only what is known. When
+  the auth server refuses the credential, the line names its end (replaced,
+  revoked or ended) and, for a self-hosted runner, that it is paired again on
+  its Self-hosted tab, and an earlier refusal never hides that line. When the
+  app refuses a token the auth server had just issued, the line names the
+  resource the credential's tokens are for and no end. The note on how far this
+  clock is off shows only past what the refusing check allows.
+- 6d59900: `runneros remote` takes releases from the walkerOS app with the
+  runner's credential, keeps their secret values sealed in its cache and signs
+  its flow's ingest writes through the supervisor. `runneros start` no longer
+  reads `WALKEROS_FLOW_RELEASE` or `WALKEROS_FLOW_NAME`, since a remote release
+  checks its artifact's sha256 before any code runs.
+- 28df061: The Meta, Bing, Pinterest, Snapchat, X, LinkedIn and Criteo server
+  destinations leave out an empty value under a key they hash, so an X event
+  whose only primary identifier is a blank email or phone, or a LinkedIn event
+  whose only one is a blank email, now fails with `missing-input`. Snapchat
+  hashes a list item by item, and a list under a key that takes one value (Bing
+  `em` and `ph`, Snapchat `external_id`, X `email` and `phone`, LinkedIn and
+  Criteo `email`) is left out with an ERROR line. `doNotHash` takes values that
+  are already SHA-256 digests and sends them as mapped, validation refuses a key
+  the destination does not hash, and Criteo no longer detects digests: use
+  `doNotHash: ['email']` for a SHA-256 digest (sent without the `md5` and
+  `sha256_md5` keys) and map the raw email instead of an MD5 digest.
+- 527c632: Server-core gains the channel a runner uses to talk to the app: a
+  conditional GET with ETag, a JSON POST, capped streams that follow one
+  redirect without credentials, and a check-in loop with full-jitter back-off
+  and Retry-After. `ChannelError` names the failure and its hop.
+- f1745d7: A paired runner now signs its writes to walkerOS hosted ingest with
+  its own credential key, so a flow needs no ingest token: the usage report
+  signs each report when it names no token, and the ClickHouse destination signs
+  each insert when its settings set `signed: true`. Any other endpoint or
+  ClickHouse keeps its token or credentials as before and is never signed for.
+- Updated dependencies [61030f8]
+- Updated dependencies [527c632]
+- Updated dependencies [0af174a]
+- Updated dependencies [61030f8]
+- Updated dependencies [61030f8]
+- Updated dependencies [777c48d]
+- Updated dependencies [777c48d]
+- Updated dependencies [6d59900]
+- Updated dependencies [6d59900]
+- Updated dependencies [e3744e4]
+- Updated dependencies [28df061]
+- Updated dependencies [ffd9795]
+- Updated dependencies [425c9b0]
+- Updated dependencies [777c48d]
+- Updated dependencies [f1745d7]
+  - @walkeros/core@4.10.0
+
 ## 4.9.0
 
 ### Patch Changes

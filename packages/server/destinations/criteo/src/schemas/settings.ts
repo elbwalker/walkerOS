@@ -1,4 +1,5 @@
 import { schemas, z } from '@walkeros/core/dev';
+import { normalizers } from '../hash';
 
 const InputSchema = z.union([
   schemas.MappingSchemas.ValueSchema,
@@ -42,6 +43,7 @@ export const SettingsSchema = z
         "Mapping for identity fields (like { email: 'user.email', mapped_user_id: 'user.id' })",
       )
       .optional(),
+    ...schemas.createHashSettingsSchema(Object.keys(normalizers)).shape,
     ip: InputSchema.describe(
       'Client IP, sent as ip. Resolves against { ingest, event }. Default: ["ingest.ip", "event.user.ip"]. false switches it off. A mapped user_data.ip wins.',
     ).optional(),

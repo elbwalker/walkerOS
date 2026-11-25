@@ -118,11 +118,15 @@ describe('walkeros api: exit codes by answer', () => {
   });
   afterEach(() => errorSpy.mockRestore());
 
-  /** The lines the credential's client wrote for the app's refusal. */
+  /** The lines the credential's client wrote for the app's refusal: a refused fresh token, or the route's. */
   const refusedLines = () =>
     errorSpy.mock.calls
       .map((call) => call.map(String).join(' '))
-      .filter((text) => /refused this automation's credential/.test(text));
+      .filter((text) =>
+        /The app refused a token the auth server had just issued for this automation's credential|The app's route refused this automation's credential/.test(
+          text,
+        ),
+      );
 
   it.each([
     [200, EXIT.ok],

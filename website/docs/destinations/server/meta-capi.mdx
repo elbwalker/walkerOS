@@ -61,7 +61,7 @@ A response outside the 2xx range, a network error, or no answer within 5 seconds
 
 `user_data` keys must be Meta's parameter names from [Meta's customer information parameters](https://developers.facebook.com/docs/marketing-api/conversions-api/parameters/customer-information-parameters), such as `em` for email and `ph` for phone. `fbclid` is also accepted and becomes `fbc`. The settings schema and the TypeScript types list only these parameter names, so a key like `email` is rejected by this package's schema and by type checking. Any other key that reaches `user_data`, for example through a `data` mapping, is dropped before the request is sent, and the push still answers `done`. The only report is a WARN line (`Unknown Meta user_data keys dropped`) that names no key and does not show at the default log level, so map only Meta's parameter names.
 
-The destination normalizes and SHA-256 hashes these keys. Arrays are handled item by item.
+The destination normalizes and SHA-256 hashes these keys. A list is hashed item by item. An empty value, or one that is empty after normalization, is left out.
 
 | Key | Normalization before hashing |
 | --- | --- |
@@ -75,7 +75,7 @@ The destination normalizes and SHA-256 hashes these keys. Arrays are handled ite
 | `country` | Trim and lowercase. Map the ISO 3166-1 alpha-2 code, since country names are not converted. |
 | `external_id` | None. The value is hashed as it is. |
 
-The other parameters, such as `client_ip_address`, `client_user_agent`, `fbc`, or `fbp`, are sent unchanged. If a value is already hashed, add its key to `doNotHash` and the destination sends it exactly as mapped.
+The other parameters, such as `client_ip_address`, `client_user_agent`, `fbc`, or `fbp`, are sent unchanged. If a value is already hashed, add its key to `doNotHash`: the destination sends it exactly as mapped, so it must already be a SHA-256 digest.
 
 ## Client IP and user agent
 

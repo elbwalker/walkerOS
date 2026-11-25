@@ -1,7 +1,7 @@
 {
   "name": "@walkeros/web-source-cmp-cookieconsent",
   "description": "CookieConsent (orestbida) consent management source for walkerOS",
-  "version": "4.9.0",
+  "version": "4.10.0",
   "license": "MIT",
   "walkerOS": {
     "type": "source",
@@ -46,8 +46,8 @@
     "update": "npx npm-check-updates -u && npm update"
   },
   "dependencies": {
-    "@walkeros/core": "4.9.0",
-    "@walkeros/collector": "4.9.0"
+    "@walkeros/core": "4.10.0",
+    "@walkeros/collector": "4.10.0"
   },
   "devDependencies": {},
   "repository": {

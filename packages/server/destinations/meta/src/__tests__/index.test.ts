@@ -11,7 +11,6 @@ import {
 } from '@walkeros/core';
 import { startFlow } from '@walkeros/collector';
 import { examples } from '../dev';
-import { hashEvent } from '../hash';
 
 const { env } = examples;
 
@@ -418,26 +417,6 @@ describe('Server Destination Meta', () => {
         '9176e6f336dbdb4f99b0e45cbd7e41e0e2323812b236822842a61ffbd362ac8c',
       ], // from custom user_data
       ph: expect.any(String), // from mapping
-    });
-  });
-
-  test('hashing', async () => {
-    expect(await hashEvent('test')).toEqual('test');
-    expect(await hashEvent({ user_data: { em: 'm@i.l', foo: 'bar' } })).toEqual(
-      {
-        user_data: {
-          em: 'd42649b85459f1140acba6d88f5325256ad2519782c520b7666c51390d9744f0',
-          foo: 'bar',
-        },
-      },
-    );
-    expect(
-      await hashEvent({ user_data: { em: 'm@i.l', foo: 'bar' } }, ['em']),
-    ).toEqual({
-      user_data: {
-        em: 'm@i.l',
-        foo: 'bar',
-      },
     });
   });
 

@@ -1,15 +1,16 @@
 import type {
   Mapping as WalkerOSMapping,
   Destination as CoreDestination,
+  HashSettings,
 } from '@walkeros/core';
 import type { DestinationServer, sendServer } from '@walkeros/server-core';
+import type { HashKey } from '../hash';
 import type { userDataKeys } from '../userData';
 
-export interface Settings {
+export interface Settings extends HashSettings<HashKey> {
   accessToken: string;
   pixelId: string;
   action_source?: ActionSource;
-  doNotHash?: string[];
   test_event_code?: string;
   url?: string;
   user_data?: UserDataMap;

@@ -43,7 +43,7 @@ The quickstart sets no `config.consent`, so LinkedIn receives every event, whate
 
 The destination builds a `userIds` array from the event data. At least one identifier is required; an event without one fails with `missing-input`.
 
-**SHA256_EMAIL**: resolved from `event.user.email` or a `user_data.email` mapping. The email is normalized (trimmed, lowercased) and SHA-256 hashed before sending. Set `doNotHash: ['email']` if you are pre-hashing upstream: the email is then sent trimmed and lowercased, but not hashed.
+**SHA256_EMAIL**: resolved from `event.user.email` or a `user_data.email` mapping. The email is normalized (trimmed, lowercased) and SHA-256 hashed before sending, and an email that is empty after trimming is left out, so an event whose only primary identifier is a blank email fails with `missing-input`. Set `doNotHash: ['email']` if you hash it upstream: the value is then sent exactly as mapped, so it must already be a SHA-256 digest.
 
 **userInfo**: `firstName` and `lastName` mapped in `user_data` are sent together as `user.userInfo`, with `title`, `companyName` and `countryCode` when mapped; with only one of the two names, none of these fields is sent. LinkedIn takes them in plain text, so they leave your server unhashed.
 
@@ -60,7 +60,7 @@ The destination builds a `userIds` array from the event data. At least one ident
   language="json"
 />
 
-Every other key in `user_data` (besides `email`, `li_fat_id` and the five `userInfo` keys) is dropped without a log line, and a list mapped to `email` is ignored in favour of `event.user.email`.
+Every other key in `user_data` (besides `email`, `li_fat_id` and the five `userInfo` keys) is dropped without a log line, and a list mapped to `email` is left out, with one ERROR line naming the key, as LinkedIn takes one email.
 
 ## Per-event conversion override
 

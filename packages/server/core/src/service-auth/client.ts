@@ -40,7 +40,10 @@ const HOLDER: Record<ServiceTargetKind, string> = {
   automation: 'automation',
 };
 
-/** What the app's 401 means for each kind, and what to do. */
+/**
+ * What the token endpoint's `invalid_client` means for each kind, and what to
+ * do: the end is named there, since a credential that ended can buy no token.
+ */
 const ENDED: Record<ServiceTargetKind, string> = {
   deployment:
     '(replaced, revoked or ended); a self-hosted runner is paired again on its Self-hosted tab',
@@ -49,13 +52,44 @@ const ENDED: Record<ServiceTargetKind, string> = {
 };
 
 /**
- * The line the app's refusal writes: a 401 refuses the credential itself, a
- * 403 only this route (its scope or the holder's role), so it says no end.
+ * How far this clock may be off either way, by the check that refused,
+ * before its line notes the offset: inside the window the check passed the
+ * clock, so a note would point nowhere. The walkerOS app's auth server takes
+ * an assertion for an offset in (-30 s, +30 s]: it is signed for
+ * `ASSERTION_LIFETIME_SECONDS`, and the server takes an `exp` in the future
+ * and at most 60 s ahead (its `ASSERTION_MAX_AHEAD_SECONDS`). The app and its
+ * auth server take a proof's `iat` within 60 s either way (their
+ * `DPOP_MAX_SKEW_SECONDS`), and the app a signature's `created` within 60 s
+ * either way (`verifyRequestSignature`'s default). Each window is 2 s less,
+ * for the `Date` header's whole seconds and the transit.
+ */
+const CLOCK_WINDOW_SECONDS = {
+  assertion: 28,
+  proof: 58,
+  signature: 58,
+};
+
+/**
+ * The line of the other refusals: a 401 tied to no token the client holds
+ * tells no end (the token endpoint tells it), a 403 refuses only this route
+ * (its scope or the holder's role).
  */
 function refusedLine(kind: ServiceTargetKind, status: number): string {
   return status === 401
-    ? `The app refused this ${HOLDER[kind]}'s credential ${ENDED[kind]} (HTTP 401)`
+    ? `The app refused this ${HOLDER[kind]}'s credential (HTTP 401)`
     : `The app's route refused this ${HOLDER[kind]}'s credential (scope or role; HTTP ${status})`;
+}
+
+/**
+ * A 401 to a token bought since the app refused the one before: the auth
+ * server sells this credential tokens the app does not take here, so the
+ * line names what they are for and no end.
+ */
+function refusedFreshTokenLine(
+  kind: ServiceTargetKind,
+  resource: string,
+): string {
+  return `The app refused a token the auth server had just issued for this ${HOLDER[kind]}'s credential (HTTP 401); its tokens are for ${resource}`;
 }
 
 /** RFC 9449 section 8.1: a nonce is one or more NQCHAR. */
@@ -96,6 +130,8 @@ export interface ServiceAuth {
    * refused line once per change of state. Answers true when one retry of
    * that request may pass: a 401 asking for a DPoP nonce, or a 401 naming the
    * token invalid, which is dropped so the next `authorize` buys once more.
+   * That drop writes no line: the next answer, or the purchase's refusal,
+   * writes it.
    */
   answered(answer: { status: number; headers?: Headers }): boolean;
   /** The credential's resource origin, the one origin `authorize` serves. */
@@ -110,12 +146,23 @@ type FailureKind = 'refused' | 'failed';
 class TokenRequestError extends Error {
   readonly kind: FailureKind;
   readonly retryAfterMs?: number;
+  /**
+   * The state its line stands for: the kind, and for a refusal its OAuth
+   * error, so a refusal for another reason (an end after a refused proof)
+   * writes its own line while a repeat, whose clock note may differ, does not.
+   */
+  readonly state: string;
 
-  constructor(message: string, kind: FailureKind, retryAfterMs?: number) {
+  constructor(
+    message: string,
+    kind: FailureKind,
+    options: { retryAfterMs?: number; error?: string } = {},
+  ) {
     super(message);
     this.name = 'TokenRequestError';
     this.kind = kind;
-    this.retryAfterMs = retryAfterMs;
+    this.retryAfterMs = options.retryAfterMs;
+    this.state = options.error ? `${kind} ${options.error}` : kind;
   }
 }
 
@@ -259,11 +306,15 @@ export function createServiceAuth(
   let failures = 0;
   let notBefore = 0;
   let lastFailure: TokenRequestError | undefined;
-  let loggedFailure: FailureKind | undefined;
+  /** The state of the last failure line written, until a purchase passes. */
+  let loggedFailure: string | undefined;
   let sending: 'token' | 'signature' | undefined;
   /** Which refused line the app's last refusal wrote, until an answer below 400 ends it. */
   let refusedAs: string | undefined;
-  /** One retry per refusal: set by a dropped token, ended by any answer but a 401. */
+  /**
+   * One retry per refusal: set by a dropped token, ended by any answer but a
+   * 401. While it is set, a token the client holds was bought since the drop.
+   */
   let retriedRefusal = false;
 
   /**
@@ -326,12 +377,20 @@ export function createServiceAuth(
     return metadata;
   }
 
-  /** This clock against an answer's `Date`, when it carries one. */
-  function clockOffset(headers: Headers | undefined, server: string): string {
+  /**
+   * This clock against an answer's `Date`, when it carries one and the
+   * offset is past the window of the check that refused.
+   */
+  function clockOffset(
+    headers: Headers | undefined,
+    server: string,
+    check: keyof typeof CLOCK_WINDOW_SECONDS,
+  ): string {
     const date = headers ? headers.get('date') : null;
     const at = date === null ? NaN : Date.parse(date);
     if (Number.isNaN(at)) return '';
     const offset = Math.round((now() - at) / 1000);
+    if (Math.abs(offset) <= CLOCK_WINDOW_SECONDS[check]) return '';
     return `; this clock is ${offset >= 0 ? '+' : ''}${offset} s off the ${server}'s`;
   }
 
@@ -431,20 +490,28 @@ export function createServiceAuth(
           ? `${answer.error}: ${answer.description}`
           : answer.error
         : `HTTP ${status}`;
+      if (answer.error === 'invalid_client')
+        throw new TokenRequestError(
+          `The auth server refused this ${HOLDER[kind]}'s credential (${what}): ${ENDED[kind]}${clockOffset(response.headers, 'auth server', 'assertion')}`,
+          'refused',
+          { error: answer.error },
+        );
       const clock =
-        answer.error === 'invalid_client' ||
         answer.error === 'invalid_dpop_proof'
-          ? clockOffset(response.headers, 'auth server')
+          ? clockOffset(response.headers, 'auth server', 'proof')
           : '';
       throw new TokenRequestError(
         `The auth server refused this credential's token request (${what})${clock}`,
         'refused',
+        { error: answer.error },
       );
     }
     throw new TokenRequestError(
       `The token endpoint answered HTTP ${status}`,
       'failed',
-      retryAfterMs(response.headers.get('retry-after'), now()),
+      {
+        retryAfterMs: retryAfterMs(response.headers.get('retry-after'), now()),
+      },
     );
   }
 
@@ -500,8 +567,8 @@ export function createServiceAuth(
         const asked = Math.min(failure.retryAfterMs ?? 0, BACKOFF_CAP_MS);
         notBefore = now() + Math.max(wait, asked);
         lastFailure = failure;
-        if (failure.kind !== loggedFailure) logger.error(failure.message);
-        loggedFailure = failure.kind;
+        if (failure.state !== loggedFailure) logger.error(failure.message);
+        loggedFailure = failure.state;
       }
       throw failure;
     } finally {
@@ -605,24 +672,9 @@ export function createServiceAuth(
         if (status < 400) refusedAs = undefined;
         return false;
       }
-      const proof =
-        status === 401 && sending === 'token' && refusesProof(headers);
-      const signed =
-        status === 401 && sending === 'signature' && namesNoError(headers);
-      const line = proof
-        ? refusedProofLine(kind)
-        : signed
-          ? refusedSignatureLine(kind)
-          : refusedLine(kind, status);
-      if (line !== refusedAs)
-        logger.error(
-          proof
-            ? `${line}${clockOffset(headers, 'app')}; ${NO_NEW_CREDENTIAL[kind]}`
-            : signed
-              ? line + clockOffset(headers, 'app')
-              : line,
-        );
-      refusedAs = line;
+      // A refused token tells nothing yet: an ended credential's purchase is
+      // refused at the token endpoint, whose line names the end, and a new
+      // token may pass. So the one retry decides the line.
       if (
         status === 401 &&
         current &&
@@ -633,6 +685,31 @@ export function createServiceAuth(
         retriedRefusal = true;
         return true;
       }
+      const proof =
+        status === 401 && sending === 'token' && refusesProof(headers);
+      const signed =
+        status === 401 && sending === 'signature' && namesNoError(headers);
+      const fresh =
+        status === 401 &&
+        sending === 'token' &&
+        retriedRefusal &&
+        current !== undefined;
+      const line = proof
+        ? refusedProofLine(kind)
+        : signed
+          ? refusedSignatureLine(kind)
+          : fresh
+            ? refusedFreshTokenLine(kind, credential.resource)
+            : refusedLine(kind, status);
+      if (line !== refusedAs)
+        logger.error(
+          proof
+            ? `${line}${clockOffset(headers, 'app', 'proof')}; ${NO_NEW_CREDENTIAL[kind]}`
+            : signed
+              ? line + clockOffset(headers, 'app', 'signature')
+              : line,
+        );
+      refusedAs = line;
       return false;
     },
     close() {

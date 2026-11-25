@@ -1,14 +1,16 @@
 import type {
   Mapping as WalkerOSMapping,
   Destination as CoreDestination,
+  HashSettings,
 } from '@walkeros/core';
 import type { DestinationServer, sendServer } from '@walkeros/server-core';
+import type { HashKey } from '../hash';
 
-export interface Settings {
+export interface Settings extends HashSettings<HashKey> {
   accessToken: string;
   pixelId: string;
+  /** Sent as events[].action_source; Reddit takes WEBSITE when it is unset */
   action_source?: ActionSource;
-  doNotHash?: string[];
   test_mode?: boolean;
   url?: string;
   user_data?: WalkerOSMapping.Map;
@@ -19,7 +21,7 @@ export interface Settings {
    */
   ip?: WalkerOSMapping.Value | false;
   /**
-   * Client user agent, sent as user.user_agent (hashed). Resolves against
+   * Client user agent, sent as user.user_agent (as is, never hashed). Resolves against
    * { ingest, event }. `false` switches it off.
    * @default ['ingest.userAgent', 'event.user.userAgent']
    */
@@ -57,7 +59,7 @@ export type Rules = WalkerOSMapping.Rules<Rule>;
 // Reddit Conversions API types
 // https://ads-api.reddit.com/docs/v2/#tag/Conversions-API
 
-export type ActionSource = 'WEBSITE' | 'APP' | 'PHYSICAL_STORE';
+export type ActionSource = 'WEBSITE' | 'APP' | 'PHYSICAL_STORE' | 'OTHER';
 
 export type TrackingType =
   | 'PageVisit'
@@ -104,15 +106,16 @@ export interface DataProcessingOptions {
 }
 
 export interface UserData {
-  // Hashable fields (SHA-256)
+  // Hashed (SHA-256) after Reddit's canonicalization; one value each
   email?: string;
   external_id?: string;
   ip_address?: string;
-  user_agent?: string;
+  phone_number?: string;
   idfa?: string;
   aaid?: string;
 
   // Pass-through fields (not hashed)
+  user_agent?: string;
   uuid?: string;
   opt_out?: boolean;
   screen_dimensions?: ScreenDimensions;
@@ -124,18 +127,19 @@ export interface ConversionEvent {
   event_at: string;
   event_at_ms?: number;
   event_type: EventType;
+  action_source?: ActionSource;
   event_metadata?: EventMetadata;
   user: UserData;
 }
 
+// v2.0 body: `events` at the top level (the `data` envelope belongs to v3).
 export interface RequestBody {
   test_mode?: boolean;
-  data: {
-    events: ConversionEvent[];
-  };
+  events: ConversionEvent[];
 }
 
+// v2.0 answers 200 with { message }, such as
+// "Successfully processed 1 conversion events."
 export interface ResponseBody {
-  success?: boolean;
-  message?: string;
+  message: string;
 }

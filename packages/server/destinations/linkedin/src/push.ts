@@ -13,10 +13,12 @@ import {
   isArray,
   isObject,
   isString,
+  reportCause,
   StepError,
+  stepId,
 } from '@walkeros/core';
-import { sendServer } from '@walkeros/server-core';
-import { getHashServer } from '@walkeros/server-core';
+import { hashUserData, sendServer } from '@walkeros/server-core';
+import { normalizers, oneValue } from './hash';
 
 // A silent rule has no linkedin call of its own: nothing to send.
 export const push: PushFn = async function (event, context) {
@@ -25,7 +27,7 @@ export const push: PushFn = async function (event, context) {
 
 const send: PushFn = async function (
   event,
-  { config, rule, data, env, logger, collector },
+  { config, rule, data, env, logger, collector, id },
 ) {
   const {
     accessToken,
@@ -48,29 +50,30 @@ const send: PushFn = async function (
     ...(isObject(eventData.user_data) ? eventData.user_data : {}),
   };
 
-  // Always try to get email from event.user.email if not already mapped
-  const email = isString(userData.email)
-    ? userData.email
-    : isString(event.user.email)
-      ? event.user.email
-      : undefined;
+  // A mapped email wins over event.user.email
+  const {
+    userData: { email },
+    dropped,
+  } = await hashUserData(
+    { email: userData.email ?? event.user.email },
+    normalizers,
+    doNotHash,
+    oneValue,
+  );
+  if (dropped.length)
+    reportCause(
+      collector,
+      logger,
+      { step: stepId('destination', id), code: 'mapping' },
+      `LinkedIn user_data ${dropped.join(', ')} left out: LinkedIn takes one value, not a list`,
+      { event: event.name },
+    );
 
   // Build userIds array
   const userIds: UserIdentifier[] = [];
 
   // SHA256_EMAIL
-  if (email) {
-    const normalizedEmail = email.trim().toLowerCase();
-    const shouldHash = !doNotHash?.includes('email');
-    const idValue = shouldHash
-      ? await getHashServer(normalizedEmail)
-      : normalizedEmail;
-
-    userIds.push({
-      idType: 'SHA256_EMAIL',
-      idValue,
-    });
-  }
+  if (isString(email)) userIds.push({ idType: 'SHA256_EMAIL', idValue: email });
 
   // LINKEDIN_FIRST_PARTY_ADS_TRACKING_UUID from li_fat_id
   // Handle both string and context tuple [value, order] formats

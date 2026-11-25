@@ -11,7 +11,6 @@ import {
 } from '@walkeros/core';
 import { startFlow } from '@walkeros/collector';
 import { examples } from '../dev';
-import { hashUserData } from '../hash';
 
 const { env } = examples;
 
@@ -290,35 +289,6 @@ describe('Server Destination Bing', () => {
     expect(body.continueOnValidationError).toBe(true);
   });
 
-  test('user data is hashed (em)', async () => {
-    const event = createEvent({
-      name: 'form submit',
-      user: { email: 'test@example.com' },
-    });
-    const config: Config = {
-      settings: {
-        accessToken,
-        tagId,
-        user_data: { em: 'user.email' },
-      },
-    };
-
-    await destination.push(
-      event,
-      createMockContext({
-        config,
-        env: testEnv,
-        id: 'test-bing',
-      }),
-    );
-
-    const body = JSON.parse(mockSendServer.mock.calls[0][1]);
-    const userData = body.data[0].userData;
-    expect(userData.em).toBeDefined();
-    expect(userData.em).toMatch(/^[a-f0-9]{64}$/);
-    expect(userData.em).not.toBe('test@example.com');
-  });
-
   test('user_data mapping resolves from settings', async () => {
     const event = createEvent({
       name: 'form submit',
@@ -343,25 +313,8 @@ describe('Server Destination Bing', () => {
 
     const body = JSON.parse(mockSendServer.mock.calls[0][1]);
     const userData = body.data[0].userData;
-    expect(userData.em).toMatch(/^[a-f0-9]{64}$/);
     // externalId is NOT hashed in Bing CAPI
     expect(userData.externalId).toBe('user-123');
-  });
-
-  test('hashing via hashUserData helper', async () => {
-    const result = await hashUserData({
-      em: 'user@example.com',
-      externalId: 'ext-1',
-    });
-    expect(result.em).toMatch(/^[a-f0-9]{64}$/);
-    expect(result.externalId).toBe('ext-1');
-
-    const result2 = await hashUserData(
-      { em: 'user@example.com', ph: '+1234' },
-      ['em'],
-    );
-    expect(result2.em).toBe('user@example.com');
-    expect(result2.ph).toMatch(/^[a-f0-9]{64}$/);
   });
 
   test('environment customization', async () => {

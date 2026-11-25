@@ -1,4 +1,5 @@
 import { schemas, z } from '@walkeros/core/dev';
+import { normalizers } from '../hash';
 
 const InputSchema = z.union([
   schemas.MappingSchemas.ValueSchema,
@@ -21,10 +22,7 @@ export const SettingsSchema = z
         'Custom Bing UET CAPI base URL, ending in / (default https://capi.uet.microsoft.com/v1/)',
       )
       .optional(),
-    doNotHash: z
-      .array(z.string())
-      .describe("User data fields to skip hashing (like ['em', 'ph'])")
-      .optional(),
+    ...schemas.createHashSettingsSchema(Object.keys(normalizers)).shape,
     user_data: z
       .record(z.string(), z.string())
       .describe(

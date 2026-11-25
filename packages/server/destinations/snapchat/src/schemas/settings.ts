@@ -1,4 +1,5 @@
 import { schemas, z } from '@walkeros/core/dev';
+import { normalizers } from '../hash';
 
 const InputSchema = z.union([
   schemas.MappingSchemas.ValueSchema,
@@ -25,10 +26,7 @@ export const SettingsSchema = z
       .enum(['WEB', 'MOBILE_APP', 'OFFLINE'])
       .describe('Event action source (default WEB)')
       .optional(),
-    doNotHash: z
-      .array(z.string())
-      .describe("User data fields to skip hashing (like ['em', 'ph'])")
-      .optional(),
+    ...schemas.createHashSettingsSchema(Object.keys(normalizers)).shape,
     user_data: z
       .record(z.string(), z.string())
       .describe("Mapping for user data fields (like { em: 'user.email' })")

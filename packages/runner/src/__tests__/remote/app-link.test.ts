@@ -40,8 +40,8 @@ import {
 
 const METADATA = `${TEST_ISSUER}/.well-known/oauth-authorization-server`;
 const TOKEN_ENDPOINT = `${TEST_ISSUER}/api/services/token`;
-const REFUSED_LINE =
-  "The app refused this runner's credential (replaced, revoked or ended); a self-hosted runner is paired again on its Self-hosted tab (HTTP 401)";
+/** A 401 tied to no token the client holds: it tells no end. */
+const REFUSED_LINE = "The app refused this runner's credential (HTTP 401)";
 /** What `answered` is handed. */
 type Answer = { status: number; headers?: Headers };
 /** A fixed clock for the rows that read the clock offset. */

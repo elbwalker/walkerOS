@@ -81,9 +81,10 @@ The destination SHA-256 hashes these `user_data` keys before sending: `em`, `ph`
 
 - **Every other key is sent in clear text.** `sc_cookie1`, `client_ip_address`, `client_user_agent`, `sc_click_id`, `idfv` and `madid` are sent as mapped, and so is any other key: nothing checks the names under `user_data`, so `email` or `phone` instead of `em` and `ph` reaches Snapchat unhashed. A key mapped outside `user_data` lands in `custom_data`, unhashed.
 - **Values are hashed exactly as mapped**, without normalization. Map them in the form Snapchat expects, for example the email trimmed and lowercased and the phone number as digits with the country code (see [CAPI parameters](https://developers.snap.com/api/marketing-api/Conversions-API/Parameters)).
-- **Map one value per key.** A list is joined with commas and hashed as one string.
+- **A list is hashed item by item**, except under `external_id`, which Snapchat takes as one value: a list there is left out, and the collector logs one ERROR line naming the key.
+- **An empty value under a hashed key is left out.** Other keys are sent as mapped.
 
-If a value is already hashed or you want to skip hashing for a specific field, use `doNotHash`:
+If a value is already hashed, add its key to `doNotHash`: it is sent as mapped, so it must already be a SHA-256 digest.
 
 <CodeSnippet
   code={`"settings": {

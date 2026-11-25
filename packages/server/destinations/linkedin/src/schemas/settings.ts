@@ -1,4 +1,5 @@
-import { z } from '@walkeros/core/dev';
+import { schemas, z } from '@walkeros/core/dev';
+import { normalizers } from '../hash';
 import { ApiVersionSchema } from './primitives';
 
 export const SettingsSchema = z
@@ -18,12 +19,7 @@ export const SettingsSchema = z
     apiVersion: ApiVersionSchema.describe(
       'Linkedin-Version header value in YYYYMM format (like 202604)',
     ).optional(),
-    doNotHash: z
-      .array(z.string())
-      .describe(
-        "Array of user data fields that should not be hashed (like ['email'])",
-      )
-      .optional(),
+    ...schemas.createHashSettingsSchema(Object.keys(normalizers)).shape,
     url: z
       .string()
       .url()

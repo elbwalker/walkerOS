@@ -15,6 +15,7 @@ export type { ServiceAccount, Credential } from './credentials';
 export * as Destination from './destination';
 export * as Elb from './elb';
 export type { Flow } from './flow';
+export type { HashSettings } from './hash';
 export * as Hooks from './hooks';
 export * as Logger from './logger';
 export * as Mapping from './mapping';

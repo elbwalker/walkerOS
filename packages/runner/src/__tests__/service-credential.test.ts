@@ -43,8 +43,8 @@ import { runCommand } from '../run.js';
 const ARCHIVE = `${TEST_APP}/api/runner/versions/dv_1/bundle-archive`;
 const STORAGE = 'https://storage.example.test/flow.mjs?X-Amz-Signature=abc';
 const CDN = 'https://cdn.example.test/flow.mjs';
-const REFUSED_LINE =
-  "The app refused this runner's credential (replaced, revoked or ended); a self-hosted runner is paired again on its Self-hosted tab (HTTP 401)";
+/** The app refuses every token the auth server sells: the line names what they are for, and no end. */
+const REFUSED_TOKEN_LINE = `The app refused a token the auth server had just issued for this runner's credential (HTTP 401); its tokens are for ${TEST_APP}/api`;
 
 interface Seen {
   url: string;
@@ -299,9 +299,7 @@ describe('the runner with WALKEROS_CREDENTIAL', () => {
         const beat = heartbeat(connect());
         await expect(beat.sendOnce()).resolves.toBeUndefined();
         await expect(beat.sendOnce()).resolves.toBeUndefined();
-        expect(lines.errors.filter((line) => line === REFUSED_LINE)).toEqual([
-          REFUSED_LINE,
-        ]);
+        expect(lines.errors).toEqual([REFUSED_TOKEN_LINE]);
       },
     ],
     [

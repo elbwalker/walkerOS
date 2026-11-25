@@ -205,62 +205,6 @@ describe('Server Destination LinkedIn', () => {
     expect(options.headers['Linkedin-Version']).toBe('202501');
   });
 
-  test('email hashing - email is SHA-256 hashed, lowercase trimmed', async () => {
-    const event = createEvent({
-      name: 'form submit',
-      user: { email: '  User@Example.COM  ' },
-    });
-    const config: Config = {
-      settings: { accessToken, conversionRuleId, apiVersion: '202604' },
-    };
-
-    await destination.push(
-      event,
-      createMockContext({
-        config,
-        env: testEnv,
-        id: 'test-linkedin',
-      }),
-    );
-
-    const requestBody = JSON.parse(mockSendServer.mock.calls[0][1]);
-    const userIds = requestBody.elements[0].user.userIds;
-    expect(userIds).toHaveLength(1);
-    expect(userIds[0].idType).toBe('SHA256_EMAIL');
-    // Should be SHA-256 of "user@example.com" (trimmed + lowered)
-    expect(userIds[0].idValue).toBe(
-      'b4c9a289323b21a01c3e940f150eb9b8c542587f1abfd8f0e1cc1ffc5e475514',
-    );
-  });
-
-  test('email hashing - doNotHash skips hashing', async () => {
-    const event = createEvent({
-      name: 'form submit',
-      user: { email: 'already-hashed-value' },
-    });
-    const config: Config = {
-      settings: {
-        accessToken,
-        conversionRuleId,
-        apiVersion: '202604',
-        doNotHash: ['email'],
-      },
-    };
-
-    await destination.push(
-      event,
-      createMockContext({
-        config,
-        env: testEnv,
-        id: 'test-linkedin',
-      }),
-    );
-
-    const requestBody = JSON.parse(mockSendServer.mock.calls[0][1]);
-    const userIds = requestBody.elements[0].user.userIds;
-    expect(userIds[0].idValue).toBe('already-hashed-value');
-  });
-
   test('no userIds fails - event without email or li_fat_id is not sent', async () => {
     const event = createEvent({
       name: 'form submit',

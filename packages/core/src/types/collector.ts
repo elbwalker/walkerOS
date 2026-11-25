@@ -284,6 +284,36 @@ export interface Status {
    *    `'error'` events reported between pushes.
    */
   connectionErrors: Record<string, number>;
+  /**
+   * The host's measure of its own process, written and refreshed by the
+   * host that runs the collector, such as the runner. The collector never
+   * fills it: it stays unset wherever no host measures, and the Observe
+   * usage report sends it only while it is set.
+   */
+  runtime?: RuntimeStatus;
+}
+
+/**
+ * A process's own numbers, as its host last measured them. The memory
+ * figures hold at that measure; CPU time and the event loop figures count
+ * up from the host's start, so a period's share is the difference of two
+ * records.
+ */
+export interface RuntimeStatus {
+  /** Resident memory of the process, in bytes. */
+  memoryBytes: number;
+  /** The memory the process may use, in bytes. */
+  memoryLimitBytes: number;
+  /** User and system CPU time since the process started, in milliseconds. */
+  cpuMs: number;
+  /**
+   * Event loop delay beyond the sampling interval, summed over its samples,
+   * in milliseconds: a sample that comes exactly one interval after the last
+   * adds 0.
+   */
+  loopDelayMs: number;
+  /** Event loop delay samples taken. */
+  loopSamples: number;
 }
 
 export interface SourceStatus {

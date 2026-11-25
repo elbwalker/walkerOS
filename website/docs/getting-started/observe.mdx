@@ -106,8 +106,9 @@ down. Every row carries `instance` (16 hex characters naming this process),
 `final` (1 on the report at shutdown), `interval_s`, `release`, `part` (the
 collector's `name`, else `default`) and `reported_at`.
 
-Counters are cumulative since the collector started, so a lost or repeated
-report changes nothing about the totals. A counter at 0 is left out, except
+Counters are cumulative since the collector started (the `runtime` counters
+since their host started), so a lost or repeated report changes nothing about
+the totals. A counter at 0 is left out, except
 `collector.in`, which every report carries. Gauges go in every report, zero
 included.
 
@@ -120,12 +121,20 @@ included.
 | `destination.<id>`        | gauges: `queue`, `dlq`, `in_flight`                                                                    |
 | a step with a breaker     | gauge: `breaker_open` (1 or 0)                                                                         |
 | a step                    | `connection_errors`                                                                                    |
+| `runtime`                 | `cpu_ms`, `loop_delay_ms`, `loop_samples`                                                              |
+| `runtime`                 | gauges: `memory_bytes`, `memory_limit_bytes`                                                           |
 | the step that failed      | `issue`, with `code`, `status`, `retryable`, a masked `message` and the count in `value`               |
 
 `latency_ms_le_<bound>` is one count per delivery or batch flush that took at
 most `<bound>` milliseconds, for the bounds 5, 10, 25, 50, 100, 250, 500, 1000,
 2500, 5000 and 10000, plus `latency_ms_le_inf` above the last. `@walkeros/core`
 exports them as `LATENCY_BOUNDS_MS`.
+
+The `runtime` rows describe the process that runs the collector, and only a
+host fills them: `runneros` measures its process every 10 seconds (resident
+memory against the memory it may use, CPU time, and event loop delay with its
+sample count). A web page, and a collector started without such a host, send
+none.
 
 Every issue the collector holds goes in every report, one row per step, code
 and status. Each is a line the logger writes at most once a minute, so a

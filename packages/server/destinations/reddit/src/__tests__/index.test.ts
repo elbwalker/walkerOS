@@ -1,5 +1,5 @@
 import type { WalkerOS, Collector } from '@walkeros/core';
-import type { Config, Destination, Rules, Settings } from '../types';
+import type { Config, Destination, Env, Rules, Settings } from '../types';
 import {
   clone,
   createIngest,
@@ -9,8 +9,8 @@ import {
   StepError,
 } from '@walkeros/core';
 import { startFlow } from '@walkeros/collector';
+import { destinationReddit } from '..';
 import { examples } from '../dev';
-import { hashEvent } from '../hash';
 
 const { env } = examples;
 
@@ -28,7 +28,7 @@ describe('Server Destination Reddit', () => {
     jest.clearAllMocks();
 
     mockSendServer.mockResolvedValue({
-      data: { success: true },
+      data: { message: 'Successfully processed 1 conversion events.' },
     });
 
     destination = jest.requireActual('../').default;
@@ -204,7 +204,7 @@ describe('Server Destination Reddit', () => {
     await elb(event);
 
     const requestBody = JSON.parse(mockSendServer.mock.calls[0][1]);
-    expect(requestBody.data.events[0].event_type).toEqual({
+    expect(requestBody.events[0].event_type).toEqual({
       tracking_type: 'Purchase',
     });
   });
@@ -227,7 +227,7 @@ describe('Server Destination Reddit', () => {
     await elb(event);
 
     const requestBody = JSON.parse(mockSendServer.mock.calls[0][1]);
-    expect(requestBody.data.events[0].event_type).toEqual({
+    expect(requestBody.events[0].event_type).toEqual({
       tracking_type: 'Custom',
       custom_event_name: 'my_custom_event',
     });
@@ -249,10 +249,10 @@ describe('Server Destination Reddit', () => {
     );
 
     const requestBody = JSON.parse(mockSendServer.mock.calls[0][1]);
-    expect(requestBody.data.events[0].event_at).toBe(
+    expect(requestBody.events[0].event_at).toBe(
       new Date(event.timestamp!).toISOString(),
     );
-    expect(requestBody.data.events[0].event_at_ms).toBe(event.timestamp);
+    expect(requestBody.events[0].event_at_ms).toBe(event.timestamp);
   });
 
   test('conversion_id from event.id', async () => {
@@ -271,12 +271,10 @@ describe('Server Destination Reddit', () => {
     );
 
     const requestBody = JSON.parse(mockSendServer.mock.calls[0][1]);
-    expect(requestBody.data.events[0].event_metadata.conversion_id).toBe(
-      event.id,
-    );
+    expect(requestBody.events[0].event_metadata.conversion_id).toBe(event.id);
   });
 
-  test('nested payload structure', async () => {
+  test('v2.0 payload structure', async () => {
     const event = getEvent();
     const config: Config = {
       settings: { accessToken, pixelId },
@@ -292,67 +290,10 @@ describe('Server Destination Reddit', () => {
     );
 
     const requestBody = JSON.parse(mockSendServer.mock.calls[0][1]);
-    // Nested data.events (not flat data[])
-    expect(requestBody.data).toHaveProperty('events');
-    expect(Array.isArray(requestBody.data.events)).toBe(true);
-    expect(requestBody.data.events).toHaveLength(1);
-  });
-
-  test('hashing', async () => {
-    expect(await hashEvent('test')).toEqual('test');
-    // email is hashed
-    expect(await hashEvent({ user: { email: 'm@i.l', uuid: '123' } })).toEqual({
-      user: {
-        email:
-          'd42649b85459f1140acba6d88f5325256ad2519782c520b7666c51390d9744f0',
-        uuid: '123',
-      },
-    });
-    // doNotHash skips hashing
-    expect(
-      await hashEvent({ user: { email: 'm@i.l', uuid: '123' } }, ['email']),
-    ).toEqual({
-      user: {
-        email: 'm@i.l',
-        uuid: '123',
-      },
-    });
-    // ip_address and user_agent ARE hashed (unlike Meta/Pinterest)
-    expect(
-      await hashEvent({
-        user: {
-          ip_address: '1.2.3.4',
-          user_agent: 'Mozilla/5.0',
-        },
-      }),
-    ).toEqual({
-      user: {
-        ip_address: expect.any(String),
-        user_agent: expect.any(String),
-      },
-    });
-    // opt_out pass-through
-    expect(
-      await hashEvent({
-        user: { email: 'test@example.com', opt_out: false },
-      }),
-    ).toEqual({
-      user: {
-        email: expect.any(String),
-        opt_out: false,
-      },
-    });
-    // idfa and aaid are hashed
-    expect(
-      await hashEvent({
-        user: { idfa: 'idfa-value', aaid: 'aaid-value' },
-      }),
-    ).toEqual({
-      user: {
-        idfa: expect.any(String),
-        aaid: expect.any(String),
-      },
-    });
+    // v2.0 body: events at the top level, no v3 data envelope
+    expect(requestBody).not.toHaveProperty('data');
+    expect(Array.isArray(requestBody.events)).toBe(true);
+    expect(requestBody.events).toHaveLength(1);
   });
 
   test('userData merge', async () => {
@@ -400,7 +341,7 @@ describe('Server Destination Reddit', () => {
     await elb(event);
 
     const requestBody = JSON.parse(mockSendServer.mock.calls[0][1]);
-    const user = requestBody.data.events[0].user;
+    const user = requestBody.events[0].user;
     // All three sources of user data are merged (email, external_id, aaid are hashed)
     expect(user.email).toEqual(expect.any(String));
     expect(user.external_id).toEqual(expect.any(String));
@@ -428,7 +369,7 @@ describe('Server Destination Reddit', () => {
     expect(result.done).toBeDefined();
     expect(Object.keys(result.done!)).toHaveLength(1);
     const requestBody = JSON.parse(mockSendServer.mock.calls[0][1]);
-    const capiEvent = requestBody.data.events[0];
+    const capiEvent = requestBody.events[0];
     expect(capiEvent.event_type.tracking_type).toBe('Purchase');
     expect(capiEvent.event_at).toBe(new Date(event.timestamp!).toISOString());
     expect(capiEvent.event_at_ms).toBe(event.timestamp);
@@ -449,8 +390,14 @@ describe('Server Destination Reddit', () => {
       userAgent: 'Mozilla/5.0 test',
     };
     const sent = () => JSON.parse(mockSendServer.mock.calls[0][1]);
-    const expected = async (value: string) =>
-      (await hashEvent({ user: { ip_address: value } })).user.ip_address;
+    // sha256('203.0.113.7'), sha256('198.51.100.2') and sha256('10.0.0.1')
+    const hashedIp = {
+      ingest:
+        'fec52565aa0cf18f57d7cf5b3ac728503b8992d2d6f7d46da1d1201090902b02',
+      event: '8c9bbd8a13b8a1f9016d2b64ef226bfdca4945918f299b5a34141013b8ae8ecc',
+      mapped:
+        'f5047344122f0dee9974ba6761e61c6b8649e1f3968d13a635ebbf7be53a3a0d',
+    };
 
     test('fills client IP and user agent from ingest by default', async () => {
       await destination.push(
@@ -461,10 +408,8 @@ describe('Server Destination Reddit', () => {
           ingest,
         }),
       );
-      expect(sent().data.events[0].user.ip_address).toBe(
-        await expected('203.0.113.7'),
-      );
-      expect(sent().data.events[0].user.user_agent).toBeDefined();
+      expect(sent().events[0].user.ip_address).toBe(hashedIp.ingest);
+      expect(sent().events[0].user.user_agent).toBe('Mozilla/5.0 test');
     });
 
     test('falls back to event.user.ip and userAgent', async () => {
@@ -477,10 +422,8 @@ describe('Server Destination Reddit', () => {
           env: testEnv,
         }),
       );
-      expect(sent().data.events[0].user.ip_address).toBe(
-        await expected('198.51.100.2'),
-      );
-      expect(sent().data.events[0].user.user_agent).toBeDefined();
+      expect(sent().events[0].user.ip_address).toBe(hashedIp.event);
+      expect(sent().events[0].user.user_agent).toBe('UA2');
     });
 
     test('sends neither when disabled with false', async () => {
@@ -494,8 +437,8 @@ describe('Server Destination Reddit', () => {
           ingest,
         }),
       );
-      expect(sent().data.events[0].user.ip_address).toBeUndefined();
-      expect(sent().data.events[0].user.user_agent).toBeUndefined();
+      expect(sent().events[0].user.ip_address).toBeUndefined();
+      expect(sent().events[0].user.user_agent).toBeUndefined();
     });
 
     test('lets an explicitly mapped value win', async () => {
@@ -508,9 +451,73 @@ describe('Server Destination Reddit', () => {
           ingest,
         }),
       );
-      expect(sent().data.events[0].user.ip_address).toBe(
-        await expected('10.0.0.1'),
-      );
+      expect(sent().events[0].user.ip_address).toBe(hashedIp.mapped);
     });
+  });
+});
+
+describe('Reddit request and answer', () => {
+  const settings: Settings = { accessToken: 's3cr3t', pixelId: 'a2_abcdef' };
+
+  /** One page view through a real collector, with Reddit answering `answer`. */
+  async function push(answer: unknown, extra: Partial<Settings> = {}) {
+    const bodies: string[] = [];
+    const env: Env = {
+      sendServer: async (_url, body) => {
+        bodies.push(String(body));
+        return { data: answer };
+      },
+    };
+    const { collector } = await startFlow({
+      destinations: {
+        reddit: {
+          code: destinationReddit,
+          config: { settings: { ...settings, ...extra } },
+          env,
+        },
+      },
+    });
+    const result = await collector.push(getEvent('page view'));
+    await collector.command('shutdown');
+    return { result, event: JSON.parse(bodies[0]).events[0] };
+  }
+
+  const processed = { message: 'Successfully processed 1 conversion events.' };
+
+  it('sends the action_source setting per event', async () => {
+    const { event } = await push(processed, { action_source: 'OTHER' });
+    expect(event.action_source).toBe('OTHER');
+  });
+
+  it.each<[string, unknown, Partial<Settings>, string | undefined]>([
+    ['one processed event is delivered', processed, {}, undefined],
+    [
+      'one event validated in test mode is delivered',
+      {
+        message:
+          'In test mode. 1 conversion events were validated but not processed.',
+      },
+      { test_mode: true },
+      undefined,
+    ],
+    [
+      'no processed event fails',
+      { message: 'Successfully processed 0 conversion events.' },
+      {},
+      'transport',
+    ],
+    [
+      'a message without a count fails',
+      { message: 'Request received' },
+      {},
+      'transport',
+    ],
+  ])('%s', async (_, answer, extra, failed) => {
+    const { result } = await push(answer, extra);
+    expect(result.failed?.reddit?.reason).toEqual(
+      failed
+        ? expect.objectContaining({ code: failed, retryable: false })
+        : undefined,
+    );
   });
 });

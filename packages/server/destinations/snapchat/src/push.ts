@@ -8,9 +8,15 @@ import type {
   UserData,
 } from './types';
 import type { Collector, Mapping as WalkerOSMapping } from '@walkeros/core';
-import { createMappingRoot, getMappingValue, isObject } from '@walkeros/core';
-import { sendServer } from '@walkeros/server-core';
-import { hashUserData } from './hash';
+import {
+  createMappingRoot,
+  getMappingValue,
+  isObject,
+  reportCause,
+  stepId,
+} from '@walkeros/core';
+import { hashUserData, sendServer } from '@walkeros/server-core';
+import { normalizers, oneValue } from './hash';
 
 // A silent rule has no snapchat call of its own: nothing to send.
 export const push: PushFn = async function (event, context) {
@@ -19,7 +25,7 @@ export const push: PushFn = async function (event, context) {
 
 const send: PushFn = async function (
   event,
-  { config, rule, data, ingest, collector, env, logger },
+  { config, rule, data, ingest, collector, env, logger, id },
 ) {
   const {
     accessToken,
@@ -72,7 +78,20 @@ const send: PushFn = async function (
   };
 
   // Hash identity fields
-  const hashedUserData = await hashUserData(userData, doNotHash);
+  const { userData: hashedUserData, dropped } = await hashUserData(
+    userData,
+    normalizers,
+    doNotHash,
+    oneValue,
+  );
+  if (dropped.length)
+    reportCause(
+      collector,
+      logger,
+      { step: stepId('destination', id), code: 'mapping' },
+      `Snapchat user_data ${dropped.join(', ')} left out: Snapchat takes one value, not a list`,
+      { event: event.name },
+    );
 
   // Build custom_data from mapped event data, excluding the user_data key
   // and any explicit custom_data nesting from the mapping

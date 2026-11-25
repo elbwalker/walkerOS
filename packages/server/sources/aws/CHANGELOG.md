@@ -1,5 +1,31 @@
 # @walkeros/server-source-aws
 
+## 4.10.0
+
+### Patch Changes
+
+- 777c48d: The SQS source now ends a waiting long poll at once on shutdown and
+  waits at most 5000 ms for messages in flight instead of 30000, so its close
+  fits the collector's 8 second shutdown and leaves time for the batch flush. A
+  message not yet deleted when it closes redelivers after its visibility
+  timeout.
+- Updated dependencies [61030f8]
+- Updated dependencies [527c632]
+- Updated dependencies [0af174a]
+- Updated dependencies [61030f8]
+- Updated dependencies [61030f8]
+- Updated dependencies [777c48d]
+- Updated dependencies [777c48d]
+- Updated dependencies [6d59900]
+- Updated dependencies [6d59900]
+- Updated dependencies [e3744e4]
+- Updated dependencies [28df061]
+- Updated dependencies [ffd9795]
+- Updated dependencies [425c9b0]
+- Updated dependencies [777c48d]
+- Updated dependencies [f1745d7]
+  - @walkeros/core@4.10.0
+
 ## 4.9.0
 
 ### Patch Changes

@@ -1,4 +1,5 @@
 import { schemas, z } from '@walkeros/core/dev';
+import { normalizers } from '../hash';
 import { userDataKeys } from '../userData';
 import { ActionSourceSchema } from './primitives';
 
@@ -24,12 +25,7 @@ export const SettingsSchema = z
     action_source: ActionSourceSchema.describe(
       'Source of the event (website, app, phone_call, etc.) (like website)',
     ).optional(),
-    doNotHash: z
-      .array(z.string())
-      .describe(
-        "user_data keys to send without normalizing and hashing, for values that are already hashed. Only em, ph, fn, ln, db, ge, ct, st, zp, country and external_id are hashed (like ['external_id'])",
-      )
-      .optional(),
+    ...schemas.createHashSettingsSchema(Object.keys(normalizers)).shape,
     test_event_code: z
       .string()
       .describe(
